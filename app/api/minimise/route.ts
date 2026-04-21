@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 function getClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }
 
@@ -125,7 +125,7 @@ export async function GET() {
     )
   } catch (e) {
     console.error(e)
-    return NextResponse.json({ error: 'Failed', detail: String(e) }, { status: 500 })
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }
 
