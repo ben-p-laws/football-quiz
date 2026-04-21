@@ -112,6 +112,8 @@ export default function MinimiseGame() {
   const [pidRanks, setPidRanks] = useState<Record<string, Record<string, number>>>({})
   const [weightedPool, setWeightedPool] = useState<PoolEntry[]>([])
   const [leaderboard, setLeaderboard] = useState<LbEntry[]>([])
+  const [clubs, setClubs] = useState<string[]>([])
+  const [selectedClub, setSelectedClub] = useState<string>('')
 
   const [username, setUsername] = useState("")
   const [usernameInput, setUsernameInput] = useState("")
@@ -130,15 +132,17 @@ export default function MinimiseGame() {
 
   const [hint, setHint] = useState<{ playerName: string; bestCatLabel: string; bestRank: number } | null>(null)
 
-  const fetchData = useCallback(async (showLoading = false) => {
+  const fetchData = useCallback(async (showLoading = false, club = '') => {
     if (showLoading) setLoading(true)
     try {
-      const res = await fetch("/api/minimise")
+      const url = club ? `/api/minimise?club=${encodeURIComponent(club)}` : '/api/minimise'
+      const res = await fetch(url)
       if (res.ok) {
         const d = await res.json()
         setPidRanks(d.pidRanks)
         setWeightedPool(d.weightedPool)
         setLeaderboard(d.leaderboard)
+        if (d.clubs?.length) setClubs(d.clubs)
       }
     } finally {
       if (showLoading) setLoading(false)
@@ -146,7 +150,7 @@ export default function MinimiseGame() {
   }, [])
 
   useEffect(() => {
-    fetchData(true)
+    fetchData(true, '')
     const saved = localStorage.getItem(LS_USERNAME)
     if (saved) { setUsername(saved); setUsernameSet(true) }
     else setShowRulesLobby(true)
@@ -282,8 +286,25 @@ export default function MinimiseGame() {
           <p style={{ fontSize: 13, color: "#8899bb", margin: 0 }}>8 players revealed one at a time. Assign each to a category for the lowest total rank.</p>
         </div>
 
+        {clubs.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Filter by Club</div>
+            <select
+              value={selectedClub}
+              onChange={e => {
+                setSelectedClub(e.target.value)
+                fetchData(true, e.target.value)
+              }}
+              style={{ ...s.input, cursor: "pointer" }}
+            >
+              <option value="">All Clubs</option>
+              {clubs.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        )}
+
         <button onClick={startGame} style={{ ...s.btn(), width: "100%", fontSize: 15, padding: "14px", marginBottom: 16 }}>
-          Start Game
+          {selectedClub ? `Start Game — ${selectedClub}` : "Start Game"}
         </button>
 
         <div style={{ marginBottom: 16 }}>
