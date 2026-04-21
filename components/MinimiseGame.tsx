@@ -344,70 +344,7 @@ export default function MinimiseGame() {
     </div>
   )
 
-  // ── Game over ─────────────────────────────────────────────────────────────────
-  if (gameOver) return (
-    <div style={s.page}>
-      <Nav onRules={() => setShowRules(v => !v)} />
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ ...s.card, textAlign: "center", marginBottom: 24, borderColor: "rgba(232,50,26,0.4)", padding: 32 }}>
-          <div style={{ fontSize: 12, letterSpacing: "0.1em", color: "#8899bb", marginBottom: 8 }}>YOUR SCORE</div>
-          <div style={{ fontSize: 72, fontWeight: 800, color: "#E8321A", lineHeight: 1 }}>{totalScore}</div>
-          <div style={{ fontSize: 13, color: "#8899bb", marginTop: 8 }}>out of {N * 100} · lower is better · perfect = {N}</div>
-          <div style={{ display: "flex", gap: 12, marginTop: 24, justifyContent: "center", flexWrap: "wrap" }}>
-            <button style={s.btn()} onClick={startGame}>Play again →</button>
-            <button style={s.ghost} onClick={() => setStarted(false)}>← Lobby</button>
-          </div>
-        </div>
-
-        <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600, marginBottom: 12 }}>YOUR ASSIGNMENTS</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 32 }}>
-          {CATS.map(cat => {
-            const a = assignments[cat.id]
-            const rank = a?.rank ?? 100
-            const color = getRankColor(rank)
-            return (
-              <div key={cat.id} style={{
-                ...s.card,
-                display: "flex", alignItems: "center", gap: 16,
-                background: a ? getRankBg(rank) : "#111827",
-                borderColor: a ? `${color}50` : "#1e2d4a",
-              }}>
-                <span style={{ fontSize: 18 }}>{cat.icon}</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11, color: "#8899bb", fontWeight: 600, letterSpacing: "0.04em" }}>{cat.label}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, marginTop: 2 }}>{a?.playerName ?? "—"}</div>
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: a ? color : "#8899bb" }}>{a ? getRankLabel(rank) : "—"}</div>
-              </div>
-            )
-          })}
-        </div>
-
-        <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600, marginBottom: 12 }}>LEADERBOARD</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {leaderboard.map((e, i) => {
-            const isYou = e.username === username && e.score === totalScore
-            return (
-              <div key={i} style={{
-                ...s.card,
-                display: "flex", alignItems: "center", gap: 16, padding: "12px 16px",
-                background: isYou ? "rgba(232,50,26,0.1)" : "#111827",
-                borderColor: isYou ? "rgba(232,50,26,0.4)" : "#1e2d4a",
-              }}>
-                <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? "#E8321A" : "#8899bb", minWidth: 24 }}>{i + 1}</span>
-                <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>
-                  {e.username}{isYou && <span style={{ color: "#E8321A", fontSize: 12 }}> · you</span>}
-                </span>
-                <span style={{ fontSize: 20, fontWeight: 800, color: i === 0 ? "#E8321A" : "white" }}>{e.score}</span>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    </div>
-  )
-
-  // ── Active game ───────────────────────────────────────────────────────────────
+  // ── Active game + game over (same view) ──────────────────────────────────────
   const currentPlayer = gamePlayers[currentIdx]
 
   return (
@@ -420,17 +357,27 @@ export default function MinimiseGame() {
           {gamePlayers.map((_, i) => (
             <div key={i} style={{
               flex: 1, height: 4, borderRadius: 2,
-              background: i < currentIdx ? "#E8321A" : i === currentIdx ? "#ff6b55" : "#1e2d4a",
+              background: i < currentIdx ? "#E8321A" : i === currentIdx && !gameOver ? "#ff6b55" : "#1e2d4a",
             }} />
           ))}
         </div>
 
-        {/* Current player */}
+        {/* Current player / score box */}
         <div style={{ ...s.card, textAlign: "center", marginBottom: 16, padding: 28 }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", marginBottom: 12 }}>
-            PLAYER {currentIdx + 1} OF {N}
-          </div>
-          <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.02em" }}>{currentPlayer.name}</div>
+          {gameOver ? (
+            <>
+              <div style={{ fontSize: 12, letterSpacing: "0.1em", color: "#8899bb", marginBottom: 8 }}>FINAL SCORE</div>
+              <div style={{ fontSize: 64, fontWeight: 800, color: "#E8321A", lineHeight: 1 }}>{totalScore}</div>
+              <div style={{ fontSize: 13, color: "#8899bb", marginTop: 8 }}>lower is better · perfect = {N}</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", marginBottom: 12 }}>
+                PLAYER {currentIdx + 1} OF {N}
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.02em" }}>{currentPlayer.name}</div>
+            </>
+          )}
         </div>
 
         {/* Hint */}
@@ -443,10 +390,15 @@ export default function MinimiseGame() {
           </div>
         )}
 
-        {/* Category picker */}
-        <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600, marginBottom: 12 }}>
-          CHOOSE A CATEGORY
+        {/* Restart button + category label */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600 }}>
+            {gameOver ? "YOUR ASSIGNMENTS" : "CHOOSE A CATEGORY"}
+          </div>
+          <button style={s.ghost} onClick={startGame}>↺ Restart</button>
         </div>
+
+        {/* Category grid — fixed height cards */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {CATS.map(cat => {
             const used = usedCats.includes(cat.id)
@@ -457,32 +409,47 @@ export default function MinimiseGame() {
             return (
               <button
                 key={cat.id}
-                onClick={() => !used && assign(cat.id)}
+                onClick={() => !used && !gameOver && assign(cat.id)}
                 style={{
                   background: used ? getRankBg(rank) : "#111827",
                   border: `1px solid ${used ? color + "60" : "#1e2d4a"}`,
                   borderRadius: 12,
                   padding: "14px 16px",
                   textAlign: "left",
-                  cursor: used ? "default" : "pointer",
-                  opacity: used ? 0.7 : 1,
+                  cursor: used || gameOver ? "default" : "pointer",
+                  opacity: used ? 0.85 : 1,
                   transition: "border-color 0.15s",
+                  height: 96,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  boxSizing: "border-box",
                 }}
               >
-                <div style={{ fontSize: 18, marginBottom: 4 }}>{cat.icon}</div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: used ? "rgba(255,255,255,0.6)" : "white" }}>
-                  {cat.label}
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 16 }}>{cat.icon}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: used ? "rgba(255,255,255,0.6)" : "white" }}>
+                    {cat.label}
+                  </span>
                 </div>
-                {used && (
-                  <>
-                    <div style={{ fontSize: 11, color: "#8899bb", marginTop: 2 }}>{a?.playerName}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, color, marginTop: 4 }}>{getRankLabel(rank)}</div>
-                  </>
-                )}
+                <div style={{ fontSize: 11, color: used ? "#8899bb" : "transparent", marginTop: 2, lineHeight: 1.4 }}>
+                  {a?.playerName ?? "·"}
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: used ? color : "transparent" }}>
+                  {used ? getRankLabel(rank) : "·"}
+                </div>
               </button>
             )
           })}
         </div>
+
+        {/* Post-game actions */}
+        {gameOver && (
+          <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+            <button style={{ ...s.btn(), flex: 1, padding: 14 }} onClick={startGame}>Play again →</button>
+            <button style={{ ...s.ghost, flex: 1, padding: 14 }} onClick={() => setStarted(false)}>← Lobby</button>
+          </div>
+        )}
       </div>
     </div>
   )
