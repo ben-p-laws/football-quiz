@@ -102,7 +102,7 @@ export async function GET() {
     }
 
     // Leaderboard
-    const { data: lbData } = await supabase
+    const { data: lbData } = await getClient()
       .from('minimise_scores')
       .select('username, score, player_slots, created_at')
       .order('score', { ascending: true })
