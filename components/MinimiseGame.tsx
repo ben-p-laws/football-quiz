@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import NavBar from "./NavBar"
 
 const CATS = [
   { id: "goals",            label: "Most Goals",          unit: "goals",  icon: "⚽", dir: "higher" },
@@ -10,7 +11,7 @@ const CATS = [
   { id: "red_cards",        label: "Red Cards",            unit: "RC",     icon: "🟥", dir: "higher" },
   { id: "youngest_scorer",  label: "Youngest Goalscorer",  unit: "age",    icon: "👶", dir: "lower"  },
   { id: "oldest_player",    label: "Oldest Player",        unit: "age",    icon: "👴", dir: "higher" },
-  { id: "penalties_scored", label: "Penalties Scored",     unit: "pens",   icon: "🎯", dir: "higher" },
+  { id: "penalties_scored", label: "Penalties Scored",     unit: "pens",   icon: "🥅", dir: "higher" },
 ] as const
 
 type CatId = typeof CATS[number]["id"]
@@ -72,7 +73,7 @@ const s = {
     borderRadius: 12,
     padding: "16px 20px",
   } as React.CSSProperties,
-  btn: (color = "#E8321A"): React.CSSProperties => ({
+  btn: (color = "#f97316"): React.CSSProperties => ({
     background: color,
     border: "none",
     borderRadius: 10,
@@ -106,21 +107,6 @@ const s = {
   } as React.CSSProperties,
 }
 
-function Nav({ onRules }: { onRules: () => void }) {
-  return (
-    <nav style={{
-      display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "0 24px", height: 56, borderBottom: "1px solid #1e2d4a",
-    }}>
-      <a href="/" style={{ fontWeight: 800, fontSize: 16, textDecoration: "none", color: "white", display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ background: "#E8321A", borderRadius: 6, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 }}>⚽</span>
-        Top Bins
-      </a>
-      <button style={s.ghost} onClick={onRules}>? Rules</button>
-    </nav>
-  )
-}
-
 export default function MinimiseGame() {
   const [loading, setLoading] = useState(true)
   const [pidRanks, setPidRanks] = useState<Record<string, Record<string, number>>>({})
@@ -133,6 +119,7 @@ export default function MinimiseGame() {
 
   const [started, setStarted] = useState(false)
   const [showRules, setShowRules] = useState(false)
+  const [showRulesLobby, setShowRulesLobby] = useState(false)
 
   const [gamePlayers, setGamePlayers] = useState<PoolEntry[]>([])
   const [currentIdx, setCurrentIdx] = useState(0)
@@ -141,7 +128,7 @@ export default function MinimiseGame() {
   const [gameOver, setGameOver] = useState(false)
   const [totalScore, setTotalScore] = useState(0)
 
-  const [hint, setHint] = useState<{ bestCatLabel: string; bestRank: number } | null>(null)
+  const [hint, setHint] = useState<{ playerName: string; bestCatLabel: string; bestRank: number } | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -161,10 +148,8 @@ export default function MinimiseGame() {
   useEffect(() => {
     fetchData()
     const saved = localStorage.getItem(LS_USERNAME)
-    if (saved) {
-      setUsername(saved)
-      setUsernameSet(true)
-    }
+    if (saved) { setUsername(saved); setUsernameSet(true) }
+    else setShowRulesLobby(true)
   }, [fetchData])
 
   function handleSetUsername() {
@@ -185,13 +170,13 @@ export default function MinimiseGame() {
     setHint(null)
     setTotalScore(0)
     setStarted(true)
+    setShowRules(false)
   }
 
   function assign(catId: CatId) {
     const player = gamePlayers[currentIdx]
     const rank = pidRanks[player.pid]?.[catId] ?? 100
 
-    // Find best available rank for this player across all still-available cats
     const available = CATS.filter(c => !usedCats.includes(c.id)).map(c => c.id)
     let bestRank = rank
     let bestCatId: CatId = catId
@@ -199,10 +184,11 @@ export default function MinimiseGame() {
       const r = pidRanks[player.pid]?.[cid] ?? 100
       if (r < bestRank) { bestRank = r; bestCatId = cid }
     }
+
     setHint(null)
     if (bestCatId !== catId) {
       const label = CATS.find(c => c.id === bestCatId)!.label
-      setHint({ bestCatLabel: label, bestRank })
+      setHint({ playerName: player.name, bestCatLabel: label, bestRank })
       setTimeout(() => setHint(null), 4000)
     }
 
@@ -231,15 +217,24 @@ export default function MinimiseGame() {
     }
   }
 
+  const currentPlayer = gamePlayers[currentIdx]
+
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) return (
     <div style={s.page}>
-      <Nav onRules={() => {}} />
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", gap: 20 }}>
-        <div style={{ width: 200, height: 4, background: "#1e2d4a", borderRadius: 2, overflow: "hidden" }}>
-          <div style={{ height: "100%", width: "55%", background: "#E8321A", borderRadius: 2 }} />
+      <NavBar />
+      <style>{`
+        @keyframes progress { from { width: 0% } to { width: 100% } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+      `}</style>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh", gap: 20 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.12em", textTransform: "uppercase", animation: "pulse 1.5s ease infinite" }}>
+          Loading Minimise
         </div>
-        <p style={{ color: "#8899bb", fontSize: 14, margin: 0 }}>Loading game data…</p>
+        <div style={{ width: 200, height: 4, background: "#1e2d4a", borderRadius: 2, overflow: "hidden" }}>
+          <div style={{ height: "100%", background: "#f97316", borderRadius: 2, animation: "progress 8s ease-out forwards" }} />
+        </div>
+        <div style={{ fontSize: 12, color: "#4a5568" }}>Crunching Premier League stats...</div>
       </div>
     </div>
   )
@@ -247,26 +242,27 @@ export default function MinimiseGame() {
   // ── Username entry ────────────────────────────────────────────────────────────
   if (!usernameSet) return (
     <div style={s.page}>
-      <Nav onRules={() => setShowRules(v => !v)} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "calc(100vh - 56px)", padding: 24 }}>
-        <div style={{ ...s.card, width: "100%", maxWidth: 440, padding: 32 }}>
-          <h2 style={{ fontSize: 24, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.02em" }}>Minimise</h2>
-          <p style={{ fontSize: 14, color: "#8899bb", margin: "0 0 28px", lineHeight: 1.6 }}>
-            Assign 8 players to 8 stat categories. Score = sum of their ranks. Lowest wins.
-          </p>
-          <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#8899bb", letterSpacing: "0.06em", marginBottom: 8 }}>USERNAME</label>
+      <NavBar />
+      <div style={{ maxWidth: 400, margin: "80px auto", padding: "0 20px" }}>
+        <div style={{ marginBottom: 32, textAlign: "center" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>TopBins</div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: "white", margin: "0 0 8px" }}>Football Minimise</h1>
+          <p style={{ fontSize: 13, color: "#8899bb", margin: 0 }}>Assign 8 players to categories where they rank highest. Lowest total rank wins.</p>
+        </div>
+        <div style={{ ...s.card, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Your name</div>
           <input
             style={s.input}
-            placeholder="e.g. FootballFan99"
+            placeholder="Enter your name"
             value={usernameInput}
             onChange={e => setUsernameInput(e.target.value)}
             onKeyDown={e => e.key === "Enter" && handleSetUsername()}
             maxLength={20}
+            autoFocus
           />
-          <button style={{ ...s.btn(), width: "100%", marginTop: 12, padding: 14, fontSize: 15 }} onClick={handleSetUsername}>
-            Continue →
-          </button>
+          <p style={{ fontSize: 11, color: "#4a5568", margin: "8px 0 0" }}>Saved for the leaderboard</p>
         </div>
+        <button onClick={handleSetUsername} style={{ ...s.btn(), width: "100%", fontSize: 15, padding: "14px" }}>Continue</button>
       </div>
     </div>
   )
@@ -274,182 +270,252 @@ export default function MinimiseGame() {
   // ── Lobby ────────────────────────────────────────────────────────────────────
   if (!started) return (
     <div style={s.page}>
-      <Nav onRules={() => setShowRules(v => !v)} />
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600, marginBottom: 6 }}>TOP BINS</div>
-          <h1 style={{ fontSize: 28, fontWeight: 800, margin: "0 0 8px", letterSpacing: "-0.02em" }}>Minimise</h1>
-          <p style={{ fontSize: 14, color: "#8899bb", margin: 0, lineHeight: 1.6 }}>
-            8 players revealed one at a time. Assign each to a category. Score = sum of ranks. Perfect score = 8.
+      <NavBar />
+      <div style={{ maxWidth: 480, margin: "40px auto", padding: "0 20px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>TopBins</div>
+          <h1 style={{ fontSize: 32, fontWeight: 800, color: "white", margin: "0 0 6px", letterSpacing: "-0.5px" }}>Football Minimise</h1>
+          <p style={{ fontSize: 13, color: "#8899bb", margin: "0 0 2px" }}>
+            Playing as <strong style={{ color: "#f97316" }}>{username}</strong> ·{" "}
+            <span style={{ color: "#4a5568", cursor: "pointer", textDecoration: "underline" }} onClick={() => setUsernameSet(false)}>change</span>
           </p>
+          <p style={{ fontSize: 13, color: "#8899bb", margin: 0 }}>8 players revealed one at a time. Assign each to a category for the lowest total rank.</p>
         </div>
 
-        {showRules && (
-          <div style={{ ...s.card, marginBottom: 24, borderColor: "rgba(232,50,26,0.3)" }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, margin: "0 0 12px" }}>How to play</h3>
-            <ul style={{ fontSize: 13, color: "#8899bb", lineHeight: 2, paddingLeft: 20, margin: 0 }}>
-              <li>8 players are drawn from the eligible pool across all categories</li>
-              <li>Each player must be assigned to exactly one category</li>
-              <li>Each category can only be used once</li>
-              <li>Your score = sum of each player's rank in their assigned category</li>
-              <li>Rank 1 = best in that category · Perfect score = 8</li>
-              <li>A hint appears after each pick if you missed a better option</li>
-            </ul>
-          </div>
-        )}
+        <button onClick={startGame} style={{ ...s.btn(), width: "100%", fontSize: 15, padding: "14px", marginBottom: 16 }}>
+          Start Game
+        </button>
 
-        <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600, marginBottom: 12 }}>CATEGORIES</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 32 }}>
-          {CATS.map(c => (
-            <div key={c.id} style={{ ...s.card, display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontSize: 20 }}>{c.icon}</span>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{c.label}</div>
-                <div style={{ fontSize: 11, color: "#8899bb", marginTop: 2 }}>
-                  {c.dir === "higher" ? "↑ higher is better" : "↓ lower is better"}
-                </div>
+        <div style={{ marginBottom: 16 }}>
+          <button
+            onClick={() => setShowRulesLobby(v => !v)}
+            style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, marginBottom: showRulesLobby ? 10 : 0 }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.08em" }}>How to play</span>
+            <span style={{ fontSize: 10, color: "#4a5568" }}>{showRulesLobby ? "▲" : "▼"}</span>
+          </button>
+          {showRulesLobby && (
+            <div style={{ ...s.card, background: "#0a0f1e" }}>
+              <div style={{ fontSize: 12, color: "#8899bb", lineHeight: 1.7 }}>
+                Each round a player is revealed. Click the category where they rank highest. You can only use each category once. Lowest total rank wins — perfect score is 8.
               </div>
             </div>
-          ))}
+          )}
         </div>
 
-        {leaderboard.length > 0 && (
-          <>
-            <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600, marginBottom: 12 }}>LEADERBOARD</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 32 }}>
-              {leaderboard.slice(0, 5).map((e, i) => (
-                <div key={i} style={{ ...s.card, display: "flex", alignItems: "center", gap: 16, padding: "10px 16px" }}>
-                  <span style={{ fontSize: 14, fontWeight: 800, color: i === 0 ? "#E8321A" : "#8899bb", minWidth: 24 }}>{i + 1}</span>
-                  <span style={{ flex: 1, fontSize: 14, fontWeight: 600 }}>{e.username}</span>
-                  <span style={{ fontSize: 18, fontWeight: 800, color: i === 0 ? "#E8321A" : "white" }}>{e.score}</span>
+        <div style={{ ...s.card, marginBottom: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>The 8 Categories</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {CATS.map(c => (
+              <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 13, color: "white" }}>{c.icon} {c.label}</span>
+                <span style={{ fontSize: 11, color: "#4a5568", textAlign: "right", flexShrink: 0 }}>
+                  {c.dir === "higher" ? "↑ higher better" : "↓ lower better"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {leaderboard.length > 0 && (() => {
+          const top10 = leaderboard.slice(0, 10)
+          const userIdx = leaderboard.findIndex(r => r.username === username)
+          const userInTop10 = userIdx >= 0 && userIdx < 10
+          return (
+            <div style={s.card}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 12 }}>🏆 Leaderboard</div>
+              {top10.map((row, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #1e2d4a" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: i === 0 ? "#f59e0b" : "#4a5568", width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
+                    <span style={{ fontSize: 13, color: row.username === username ? "#f97316" : "white", fontWeight: row.username === username ? 700 : 400 }}>{row.username}</span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: row.username === username ? "#f97316" : "#8899bb" }}>{row.score}</span>
                 </div>
               ))}
+              {!userInTop10 && userIdx >= 0 && (() => {
+                const row = leaderboard[userIdx]
+                return (
+                  <>
+                    <div style={{ padding: "4px 0", color: "#2a3d5e", fontSize: 11 }}>···</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 4px", background: "rgba(249,115,22,0.06)", borderRadius: 6 }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "#f97316", width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                        <span style={{ fontSize: 13, color: "#f97316", fontWeight: 700 }}>{row.username}</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#f97316" }}>{row.score}</span>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
-          </>
-        )}
-
-        <button style={{ ...s.btn(), width: "100%", padding: "16px", fontSize: 16 }} onClick={startGame}>
-          Start game →
-        </button>
-        <p style={{ textAlign: "center", fontSize: 12, color: "#8899bb", marginTop: 12 }}>
-          Playing as <strong style={{ color: "white" }}>{username}</strong> ·{" "}
-          <span
-            style={{ cursor: "pointer", textDecoration: "underline" }}
-            onClick={() => { localStorage.removeItem(LS_USERNAME); setUsernameSet(false) }}
-          >
-            change
-          </span>
-        </p>
+          )
+        })()}
       </div>
     </div>
   )
 
   // ── Active game + game over (same view) ──────────────────────────────────────
-  const currentPlayer = gamePlayers[currentIdx]
-
   return (
     <div style={s.page}>
-      <Nav onRules={() => setShowRules(v => !v)} />
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "32px 24px" }}>
+      <NavBar />
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');`}</style>
+      <div style={{ maxWidth: 520, margin: "0 auto", padding: "16px 20px 0" }}>
 
-        {/* Progress bar */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 24 }}>
-          {gamePlayers.map((_, i) => (
-            <div key={i} style={{
-              flex: 1, height: 4, borderRadius: 2,
-              background: i < currentIdx ? "#E8321A" : i === currentIdx && !gameOver ? "#ff6b55" : "#1e2d4a",
-            }} />
-          ))}
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#4a5568", letterSpacing: "0.08em", textTransform: "uppercase" }}>
+              {gameOver ? "Game Over" : `Player ${currentIdx + 1} of ${N}`}
+            </div>
+            <div style={{ fontSize: 13, color: "#8899bb" }}>
+              {gameOver
+                ? <strong style={{ color: "#f97316" }}>Final score: {totalScore} 🏆</strong>
+                : <>Score so far: <strong style={{ color: "#f97316" }}>{Object.values(assignments).reduce((s, a) => s + (a?.rank ?? 0), 0)}</strong></>
+              }
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button onClick={() => setShowRules(v => !v)} style={{ ...s.ghost, padding: "8px 10px", fontSize: 16 }} title="Rules">❓</button>
+            {gameOver && <button onClick={startGame} style={s.btn()}>Play Again</button>}
+            <button onClick={startGame} style={s.ghost}>Restart</button>
+          </div>
         </div>
 
-        {/* Current player / score box */}
-        <div style={{ ...s.card, textAlign: "center", marginBottom: 16, padding: 28 }}>
-          {gameOver ? (
-            <>
-              <div style={{ fontSize: 12, letterSpacing: "0.1em", color: "#8899bb", marginBottom: 8 }}>FINAL SCORE</div>
-              <div style={{ fontSize: 64, fontWeight: 800, color: "#E8321A", lineHeight: 1 }}>{totalScore}</div>
-              <div style={{ fontSize: 13, color: "#8899bb", marginTop: 8 }}>lower is better · perfect = {N}</div>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", marginBottom: 12 }}>
-                PLAYER {currentIdx + 1} OF {N}
-              </div>
-              <div style={{ fontSize: 32, fontWeight: 800, letterSpacing: "-0.02em" }}>{currentPlayer.name}</div>
-            </>
-          )}
-        </div>
-
-        {/* Hint */}
-        {hint && (
-          <div style={{
-            background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)",
-            borderRadius: 10, padding: "12px 16px", marginBottom: 16, fontSize: 13, color: "#fbbf24",
-          }}>
-            💡 Best option was <strong>{hint.bestCatLabel}</strong> (rank #{hint.bestRank})
+        {showRules && (
+          <div style={{ ...s.card, marginBottom: 16, background: "#0a0f1e", position: "relative" }}>
+            <button onClick={() => setShowRules(false)} style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: "#4a5568", cursor: "pointer", fontSize: 16 }}>✕</button>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#f97316", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>How to play</div>
+            <div style={{ fontSize: 12, color: "#8899bb", lineHeight: 1.7 }}>
+              Each round a player is revealed. Click the category where they rank highest (lowest number = better rank). You can only use each category once. Lowest total rank wins — perfect score is 8.
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 12, marginBottom: 6 }}>Categories</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {CATS.map(c => (
+                <div key={c.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, gap: 8 }}>
+                  <span style={{ color: "white" }}>{c.icon} {c.label}</span>
+                  <span style={{ color: "#4a5568", textAlign: "right", flexShrink: 0 }}>{c.dir === "higher" ? "↑ higher better" : "↓ lower better"}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* Restart button + category label */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.1em", color: "#8899bb", fontWeight: 600 }}>
-            {gameOver ? "YOUR ASSIGNMENTS" : "CHOOSE A CATEGORY"}
+        {/* Current player / final score card */}
+        {gameOver ? (
+          <div style={{ ...s.card, marginBottom: 16, textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1f35 100%)", padding: "14px 20px" }}>
+            <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Final Score</div>
+            <div style={{ fontSize: 56, fontWeight: 800, color: "#f97316", letterSpacing: "-3px", lineHeight: 1 }}>{totalScore}</div>
+            <div style={{ fontSize: 12, color: "#4a5568", marginTop: 6 }}>total rank · lower is better</div>
           </div>
-          <button style={s.ghost} onClick={startGame}>↺ Restart</button>
+        ) : currentPlayer && (
+          <div style={{ ...s.card, marginBottom: 16, textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1f35 100%)", padding: "14px 20px" }}>
+            <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Assign this player</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "white", letterSpacing: "-0.5px" }}>{currentPlayer.name}</div>
+            <div style={{ fontSize: 12, color: "#4a5568", marginTop: 6 }}>Click a category below to assign</div>
+          </div>
+        )}
+
+        {/* Hint */}
+        {hint && (
+          <div style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#fbbf24", display: "flex", alignItems: "center", gap: 8 }}>
+            💡 <span><strong>{hint.playerName}</strong>'s best available was <strong>{hint.bestCatLabel}</strong> (#{hint.bestRank})</span>
+          </div>
+        )}
+
+        <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
+          {gameOver ? "Results" : "Choose a category"}
         </div>
 
-        {/* Category grid — fixed height cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {/* Category grid — fixed 72px height */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
           {CATS.map(cat => {
-            const used = usedCats.includes(cat.id)
             const a = assignments[cat.id]
+            const used = !!a
             const rank = a?.rank ?? 0
-            const color = used ? getRankColor(rank) : "#8899bb"
+            const color = getRankColor(rank)
+
+            if (used) {
+              return (
+                <div key={cat.id} style={{
+                  background: getRankBg(rank),
+                  border: `1px solid ${color}44`,
+                  borderRadius: 12, padding: "10px 12px", height: 72,
+                  display: "flex", justifyContent: "space-between", alignItems: "center", overflow: "hidden",
+                }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "white", lineHeight: 1.3 }}>{cat.icon} {cat.label}</div>
+                    <div style={{ fontSize: 12, color: "#8899bb", marginTop: 3 }}>{a.playerName}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color }}>{getRankLabel(rank)}</div>
+                  </div>
+                </div>
+              )
+            }
 
             return (
-              <button
-                key={cat.id}
-                onClick={() => !used && !gameOver && assign(cat.id)}
+              <button key={cat.id}
+                onClick={() => !gameOver && assign(cat.id)}
+                disabled={gameOver}
                 style={{
-                  background: used ? getRankBg(rank) : "#111827",
-                  border: `1px solid ${used ? color + "60" : "#1e2d4a"}`,
-                  borderRadius: 12,
-                  padding: "14px 16px",
-                  textAlign: "left",
-                  cursor: used || gameOver ? "default" : "pointer",
-                  opacity: used ? 0.85 : 1,
+                  background: "#111827",
+                  border: "1px solid #1e2d4a",
+                  borderRadius: 12, padding: "10px 12px", height: 72,
+                  cursor: gameOver ? "default" : "pointer", overflow: "hidden",
+                  textAlign: "left", width: "100%",
+                  display: "flex", alignItems: "center", gap: 8,
                   transition: "border-color 0.15s",
-                  height: 96,
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  boxSizing: "border-box",
-                }}
+                } as React.CSSProperties}
+                onMouseEnter={e => { if (!gameOver) (e.currentTarget as HTMLElement).style.borderColor = "#f97316" }}
+                onMouseLeave={e => { if (!gameOver) (e.currentTarget as HTMLElement).style.borderColor = "#1e2d4a" }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ fontSize: 16 }}>{cat.icon}</span>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: used ? "rgba(255,255,255,0.6)" : "white" }}>
-                    {cat.label}
-                  </span>
-                </div>
-                <div style={{ fontSize: 11, color: used ? "#8899bb" : "transparent", marginTop: 2, lineHeight: 1.4 }}>
-                  {a?.playerName ?? "·"}
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: used ? color : "transparent" }}>
-                  {used ? getRankLabel(rank) : "·"}
+                <div style={{ fontSize: 14, fontWeight: 600, color: gameOver ? "#2a3d5e" : "white" }}>
+                  {cat.icon} {cat.label}
                 </div>
               </button>
             )
           })}
         </div>
 
-        {/* Post-game actions */}
-        {gameOver && (
-          <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
-            <button style={{ ...s.btn(), flex: 1, padding: 14 }} onClick={startGame}>Play again →</button>
-            <button style={{ ...s.ghost, flex: 1, padding: 14 }} onClick={() => setStarted(false)}>← Lobby</button>
-          </div>
-        )}
+        {/* Post-game leaderboard */}
+        {gameOver && leaderboard.length > 0 && (() => {
+          const top10 = leaderboard.slice(0, 10)
+          const userIdx = leaderboard.findIndex(r => r.username === username)
+          const userInTop10 = userIdx >= 0 && userIdx < 10
+          return (
+            <div style={{ ...s.card, marginTop: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "white", marginBottom: 12 }}>🏆 Leaderboard</div>
+              {top10.map((row, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #1e2d4a" }}>
+                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <span style={{ fontSize: 12, color: i === 0 ? "#f59e0b" : "#4a5568", width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
+                    <span style={{ fontSize: 13, color: row.username === username ? "#f97316" : "white", fontWeight: row.username === username ? 700 : 400 }}>
+                      {row.username}{row.username === username && totalScore === row.score && <span style={{ color: "#f97316", fontSize: 12 }}> · you</span>}
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: i === 0 ? "#f97316" : "white" }}>{row.score}</span>
+                </div>
+              ))}
+              {!userInTop10 && userIdx >= 0 && (() => {
+                const row = leaderboard[userIdx]
+                return (
+                  <>
+                    <div style={{ padding: "4px 0", color: "#2a3d5e", fontSize: 11 }}>···</div>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 4px", background: "rgba(249,115,22,0.06)", borderRadius: 6 }}>
+                      <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                        <span style={{ fontSize: 12, color: "#f97316", width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                        <span style={{ fontSize: 13, color: "#f97316", fontWeight: 700 }}>{row.username}</span>
+                      </div>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#f97316" }}>{row.score}</span>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          )
+        })()}
+
       </div>
     </div>
   )
