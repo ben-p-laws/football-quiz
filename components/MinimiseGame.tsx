@@ -408,10 +408,10 @@ export default function MinimiseGame() {
             <div style={{ fontSize: 56, fontWeight: 800, color: "#f97316", letterSpacing: "-3px", lineHeight: 1 }}>{totalScore}</div>
             <div style={{ fontSize: 12, color: "#4a5568", marginTop: 6 }}>total rank · lower is better</div>
           </div>
-        ) : currentPlayer && (
+        ) : (
           <div style={{ ...s.card, marginBottom: 16, textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1f35 100%)", padding: "14px 20px" }}>
             <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Assign this player</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "white", letterSpacing: "-0.5px" }}>{currentPlayer.name}</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "white", letterSpacing: "-0.5px" }}>{currentPlayer?.name ?? "..."}</div>
             <div style={{ fontSize: 12, color: "#4a5568", marginTop: 6 }}>Click a category below to assign</div>
           </div>
         )}
