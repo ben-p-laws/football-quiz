@@ -215,7 +215,7 @@ export default function MinimiseGame() {
             category: cat, player: a?.playerName, rank: a?.rank,
           })),
         }),
-      }).then(() => fetchData())
+      }).then(() => fetchData(false, selectedClub))
     } else {
       setCurrentIdx(i => i + 1)
     }
