@@ -130,8 +130,8 @@ export default function MinimiseGame() {
 
   const [hint, setHint] = useState<{ playerName: string; bestCatLabel: string; bestRank: number } | null>(null)
 
-  const fetchData = useCallback(async () => {
-    setLoading(true)
+  const fetchData = useCallback(async (showLoading = false) => {
+    if (showLoading) setLoading(true)
     try {
       const res = await fetch("/api/minimise")
       if (res.ok) {
@@ -141,12 +141,12 @@ export default function MinimiseGame() {
         setLeaderboard(d.leaderboard)
       }
     } finally {
-      setLoading(false)
+      if (showLoading) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
-    fetchData()
+    fetchData(true)
     const saved = localStorage.getItem(LS_USERNAME)
     if (saved) { setUsername(saved); setUsernameSet(true) }
     else setShowRulesLobby(true)
