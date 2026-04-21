@@ -143,10 +143,12 @@ export default function MinimiseGame() {
         setWeightedPool(d.weightedPool)
         setLeaderboard(d.leaderboard)
         if (d.clubs?.length) setClubs(d.clubs)
+        return d
       }
     } finally {
       if (showLoading) setLoading(false)
     }
+    return null
   }, [])
 
   useEffect(() => {
@@ -164,8 +166,8 @@ export default function MinimiseGame() {
     setUsernameSet(true)
   }
 
-  function startGame() {
-    const players = weightedSample(weightedPool, N)
+  function startGame(pool?: PoolEntry[]) {
+    const players = weightedSample(pool !== undefined ? pool : weightedPool, N)
     setGamePlayers(players)
     setCurrentIdx(0)
     setAssignments({})
@@ -303,7 +305,7 @@ export default function MinimiseGame() {
           </div>
         )}
 
-        <button onClick={startGame} style={{ ...s.btn(), width: "100%", fontSize: 15, padding: "14px", marginBottom: 16 }}>
+        <button onClick={() => startGame()} style={{ ...s.btn(), width: "100%", fontSize: 15, padding: "14px", marginBottom: 16 }}>
           {selectedClub ? `Start Game — ${selectedClub}` : "Start Game"}
         </button>
 
@@ -395,11 +397,27 @@ export default function MinimiseGame() {
                 : <>Score so far: <strong style={{ color: "#f97316" }}>{Object.values(assignments).reduce((s, a) => s + (a?.rank ?? 0), 0)}</strong></>
               }
             </div>
+            <div style={{ fontSize: 11, color: selectedClub ? "#f97316" : "#4a5568", marginTop: 2 }}>
+              {selectedClub ? `⚽ ${selectedClub}` : "🌍 All Clubs"}
+            </div>
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
             <button onClick={() => setShowRules(v => !v)} style={{ ...s.ghost, padding: "8px 10px", fontSize: 16 }} title="Rules">❓</button>
-            {gameOver && <button onClick={startGame} style={s.btn()}>Play Again</button>}
-            <button onClick={startGame} style={s.ghost}>Restart</button>
+            {gameOver && <button onClick={() => startGame()} style={s.btn()}>Play Again</button>}
+            <select
+              value={selectedClub}
+              onChange={async e => {
+                const club = e.target.value
+                setSelectedClub(club)
+                const d = await fetchData(true, club)
+                if (d) startGame(d.weightedPool)
+              }}
+              style={{ ...s.ghost, cursor: "pointer", fontSize: 11, padding: "6px 10px" }}
+            >
+              <option value="">All Clubs</option>
+              {clubs.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button onClick={() => startGame()} style={s.ghost}>Restart</button>
           </div>
         </div>
 

@@ -73,9 +73,11 @@ function buildRankings(rows: any[]) {
       .map(([name, p]) => ({ name, val: getValue(p) }))
       .filter((x): x is { name: string; val: number } => x.val !== null && x.val > 0)
     pool.sort((a, b) => higherBetter ? b.val - a.val : a.val - b.val)
-    pool.slice(0, 50).forEach((x, i) => {
+    pool.slice(0, 50).forEach((x, _i, arr) => {
       if (!pidRanks[x.name]) pidRanks[x.name] = {}
-      pidRanks[x.name][catKey] = i + 1
+      // All tied players share the rank of the first in their group
+      const tiedRank = arr.findIndex(y => y.val === x.val) + 1
+      pidRanks[x.name][catKey] = tiedRank
     })
   }
 
