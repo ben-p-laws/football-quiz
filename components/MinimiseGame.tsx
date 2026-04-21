@@ -3,14 +3,14 @@
 import { useEffect, useState, useCallback } from "react"
 
 const CATS = [
-  { id: "np_goals_per90",      label: "Non-Pen Goals / 90", unit: "G/90",  icon: "⚽", dir: "higher" },
-  { id: "assists_per90",       label: "Assists / 90",        unit: "A/90",  icon: "🎯", dir: "higher" },
-  { id: "yellow_pct",          label: "Yellow Card %",       unit: "%",     icon: "🟨", dir: "lower"  },
-  { id: "red_pct",             label: "Red Card %",          unit: "%",     icon: "🟥", dir: "lower"  },
-  { id: "subbed_on_pct",       label: "Subbed On %",         unit: "%",     icon: "🔄", dir: "higher" },
-  { id: "total_goals_assists", label: "Goals + Assists",     unit: "G+A",   icon: "📊", dir: "higher" },
-  { id: "missed_pens",         label: "Missed Penalties",    unit: "pens",  icon: "😬", dir: "lower"  },
-  { id: "games_per_goal",      label: "Games per Goal",      unit: "games", icon: "🧱", dir: "lower"  },
+  { id: "goals",            label: "Most Goals",          unit: "goals",  icon: "⚽", dir: "higher" },
+  { id: "assists",          label: "Most Assists",         unit: "assists",icon: "🎯", dir: "higher" },
+  { id: "appearances",      label: "Appearances",          unit: "games",  icon: "🎮", dir: "higher" },
+  { id: "yellow_cards",     label: "Yellow Cards",         unit: "YC",     icon: "🟨", dir: "higher" },
+  { id: "red_cards",        label: "Red Cards",            unit: "RC",     icon: "🟥", dir: "higher" },
+  { id: "youngest_scorer",  label: "Youngest Goalscorer",  unit: "age",    icon: "👶", dir: "lower"  },
+  { id: "oldest_player",    label: "Oldest Player",        unit: "age",    icon: "👴", dir: "higher" },
+  { id: "penalties_scored", label: "Penalties Scored",     unit: "pens",   icon: "🎯", dir: "higher" },
 ] as const
 
 type CatId = typeof CATS[number]["id"]

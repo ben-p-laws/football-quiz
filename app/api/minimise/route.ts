@@ -6,7 +6,8 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 )
 
-async function fetchAll(table: string, columns: string) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAll(table: string, columns: string): Promise<any[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let all: any[] = []
   let offset = 0
@@ -20,27 +21,83 @@ async function fetchAll(table: string, columns: string) {
   return all
 }
 
+type PlayerAgg = {
+  games: number
+  goals: number
+  assists: number
+  cards_yellow: number
+  cards_red: number
+  pens_made: number
+  min_score_age: number | null
+  max_age: number
+}
+
 export async function GET() {
   try {
-    const rows = await fetchAll('minimise_rankings', 'player_name,category,stat_value,rank')
+    const rows = await fetchAll(
+      'player_seasons',
+      'name_display,games,goals,assists,cards_yellow,cards_red,pens_made,age'
+    )
 
-    const pidRanks: Record<string, Record<string, number>> = {}
+    // Aggregate career totals per player
+    const agg: Record<string, PlayerAgg> = {}
     for (const row of rows) {
-      const name = row.player_name as string
-      const cat = row.category as string
-      const rank = row.rank as number
-      if (!pidRanks[name]) pidRanks[name] = {}
-      pidRanks[name][cat] = rank
+      const name = row.name_display as string
+      if (!agg[name]) {
+        agg[name] = { games: 0, goals: 0, assists: 0, cards_yellow: 0, cards_red: 0, pens_made: 0, min_score_age: null, max_age: 0 }
+      }
+      const p = agg[name]
+      const age   = (row.age   as number) || 0
+      const games = (row.games as number) || 0
+      const goals = (row.goals as number) || 0
+      p.games       += games
+      p.goals       += goals
+      p.assists     += (row.assists     as number) || 0
+      p.cards_yellow += (row.cards_yellow as number) || 0
+      p.cards_red   += (row.cards_red   as number) || 0
+      p.pens_made   += (row.pens_made   as number) || 0
+      if (games > 0 && age > p.max_age) p.max_age = age
+      if (goals > 0 && age > 0 && (p.min_score_age === null || age < p.min_score_age)) {
+        p.min_score_age = age
+      }
     }
 
+    const entries = Object.entries(agg)
+    const pidRanks: Record<string, Record<string, number>> = {}
+
+    function rankCategory(
+      catKey: string,
+      getValue: (p: PlayerAgg) => number | null,
+      higherBetter: boolean
+    ) {
+      const pool = entries
+        .map(([name, p]) => ({ name, val: getValue(p) }))
+        .filter((x): x is { name: string; val: number } => x.val !== null && x.val > 0)
+      pool.sort((a, b) => higherBetter ? b.val - a.val : a.val - b.val)
+      pool.slice(0, 50).forEach((x, i) => {
+        if (!pidRanks[x.name]) pidRanks[x.name] = {}
+        pidRanks[x.name][catKey] = i + 1
+      })
+    }
+
+    rankCategory('goals',            p => p.goals,          true)
+    rankCategory('assists',          p => p.assists,         true)
+    rankCategory('appearances',      p => p.games,           true)
+    rankCategory('yellow_cards',     p => p.cards_yellow,    true)
+    rankCategory('red_cards',        p => p.cards_red,       true)
+    rankCategory('youngest_scorer',  p => p.min_score_age,   false)
+    rankCategory('oldest_player',    p => p.max_age,         true)
+    rankCategory('penalties_scored', p => p.pens_made,       true)
+
+    // Weighted pool: one entry per top-50 appearance
     const weightedPool: { pid: string; name: string }[] = []
-    for (const name of Object.keys(pidRanks)) {
-      const catCount = Object.keys(pidRanks[name]).length
-      for (let i = 0; i < catCount; i++) {
+    for (const [name, ranks] of Object.entries(pidRanks)) {
+      for (let i = 0; i < Object.keys(ranks).length; i++) {
         weightedPool.push({ pid: name, name })
       }
     }
 
+    // Leaderboard
     const { data: lbData } = await supabase
       .from('minimise_scores')
       .select('username, score, player_slots, created_at')
