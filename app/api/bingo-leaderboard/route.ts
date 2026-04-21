@@ -3,13 +3,15 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 async function buildLeaderboard() {
-  const { data } = await supabase.from('bingo_leaderboard').select('username')
+  const { data } = await getClient().from('bingo_leaderboard').select('username')
   const counts: Record<string, number> = {}
   for (const row of data || []) {
     counts[row.username] = (counts[row.username] || 0) + 1
@@ -27,6 +29,6 @@ export async function GET() {
 export async function POST(req: Request) {
   const { username } = await req.json()
   if (!username) return NextResponse.json({ error: 'Missing username' }, { status: 400 })
-  await supabase.from('bingo_leaderboard').insert({ username })
+  await getClient().from('bingo_leaderboard').insert({ username })
   return NextResponse.json({ leaderboard: await buildLeaderboard() })
 }

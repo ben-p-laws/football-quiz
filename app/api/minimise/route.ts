@@ -3,10 +3,12 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchAll(table: string, columns: string): Promise<any[]> {
@@ -14,7 +16,7 @@ async function fetchAll(table: string, columns: string): Promise<any[]> {
   let all: any[] = []
   let offset = 0
   while (true) {
-    const { data } = await supabase.from(table).select(columns).range(offset, offset + 999)
+    const { data } = await getClient().from(table).select(columns).range(offset, offset + 999)
     if (!data || data.length === 0) break
     all = all.concat(data)
     if (data.length < 1000) break
@@ -133,7 +135,7 @@ export async function POST(req: Request) {
     if (!username || score === undefined) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
-    await supabase.from('minimise_scores').insert({ username, score, player_slots })
+    await getClient().from('minimise_scores').insert({ username, score, player_slots })
     return NextResponse.json({ ok: true })
   } catch (e) {
     console.error(e)

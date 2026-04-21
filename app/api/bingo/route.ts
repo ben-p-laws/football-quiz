@@ -3,10 +3,12 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+}
 
 // How many top players (by career appearances) to include in the pool
 const PLAYER_LIMIT = 100
@@ -60,7 +62,7 @@ async function fetchAll(columns: string) {
   let all: any[] = []
   let offset = 0
   while (true) {
-    const { data } = await supabase
+    const { data } = await getClient()
       .from('player_seasons')
       .select(columns)
       .range(offset, offset + 999)
