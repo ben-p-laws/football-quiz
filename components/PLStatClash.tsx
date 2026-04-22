@@ -289,65 +289,74 @@ export default function PLStatClash() {
     return (
       <div style={s.page}>
         <NavBar />
-        <div style={{ maxWidth: 520, margin: '32px auto', padding: '0 20px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 24 }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>🏆</div>
-            <h2 style={{ fontSize: 26, fontWeight: 800, color: 'white', margin: '0 0 8px' }}>
-              {winner ? (winner === 'Tie' ? "It's a Tie!" : `${winner} Wins!`) : 'Game Over'}
+        <div style={{ maxWidth: 520, margin: '20px auto', padding: '0 20px' }}>
+          <button onClick={() => { setStarted(false); setGameOver(false) }} style={{ ...s.btn(), width: '100%', marginBottom: 16 }}>
+            Play Again
+          </button>
+          <div style={{ ...s.card, textAlign: 'center', marginBottom: 20 }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>🏆</div>
+            <h2 style={{ color: 'white', margin: '0 0 8px', fontSize: 22, fontWeight: 800 }}>
+              {winner ? (winner === 'Tie' ? "It's a Tie!" : `${winner} Wins!`) : 'Game Over!'}
             </h2>
-            {mode === 'vs' ? (
-              <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 12 }}>
-                {([1, 2] as const).map(w => (
-                  <div key={w} style={{ ...s.card, flex: 1, textAlign: 'center' }}>
-                    <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 4 }}>{w === 1 ? p1Label : p2Label}</div>
-                    <div style={{ fontSize: 30, fontWeight: 800, color: '#f97316' }}>{totalScore(w)}</div>
+            {mode === 'solo' ? (
+              <p style={{ color: '#8899bb', margin: 0 }}>Total: <strong style={{ color: '#f97316' }}>{s1} pts</strong></p>
+            ) : (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 40, marginTop: 8 }}>
+                {[{ n: p1Label, t: s1, o: s2! }, { n: p2Label, t: s2!, o: s1 }].map((p, i) => (
+                  <div key={i} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 12, color: '#8899bb' }}>{p.n}</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: p.t <= p.o ? '#22c55e' : '#ef4444' }}>{p.t}</div>
                     <div style={{ fontSize: 11, color: '#4a5568' }}>pts</div>
                   </div>
                 ))}
               </div>
-            ) : (
-              <div style={{ fontSize: 52, fontWeight: 800, color: '#f97316' }}>{s1} pts</div>
             )}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-            {rounds.map((r, i) => (
-              <div key={i} style={s.card}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <div style={{ fontSize: 11, color: '#f97316', fontWeight: 700 }}>{r.category.label}</div>
-                  <div style={{ fontSize: 11, color: '#4a5568' }}>Target: {r.target} {r.category.unit}</div>
+
+          {mode === 'vs' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {[
+                { name: p1Label, picks: rounds.map(r => ({ r, pick: r.p1, sl: r.p1 ? scoreLabel(r.p1.score) : null })) },
+                { name: p2Label, picks: rounds.map(r => ({ r, pick: r.p2, sl: r.p2 ? scoreLabel(r.p2.score) : null })) },
+              ].map((col, ci) => (
+                <div key={ci}>
+                  <div style={{ fontSize: 11, color: '#8899bb', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 8, textAlign: 'center' as const }}>{col.name}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+                    {col.picks.map(({ r, pick, sl }, i) => (
+                      <div key={i} style={{ ...s.card, padding: '10px', display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between', height: 90, minWidth: 0, overflow: 'hidden', borderColor: (sl?.color || '#1e2d4a') + '55' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: 10, color: '#4a5568', fontWeight: 600 }}>R{i + 1}</span>
+                          <span style={{ fontSize: 20, fontWeight: 800, color: sl?.color, lineHeight: 1 }}>{pick?.score}<span style={{ fontSize: 9, fontWeight: 400 }}>pts</span></span>
+                        </div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: 'white', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{pick?.player?.name}</div>
+                        <div style={{ fontSize: 10, color: '#4a5568', lineHeight: 1.4, marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                          {r.category.label} · {pick?.value} / {r.target}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {([r.p1, r.p2] as const).map((entry, j) => {
-                  if (!entry) return null
-                  const sl = scoreLabel(entry.score)
-                  return (
-                    <div key={j} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, marginTop: j > 0 ? 4 : 0 }}>
-                      <span style={{ color: '#8899bb' }}>
-                        {mode === 'vs' ? `${j === 0 ? p1Label : p2Label}: ` : ''}{entry.player.name} — {entry.value}
-                      </span>
-                      <span style={{ color: sl.color, fontWeight: 700 }}>{entry.score} pts</span>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+              {rounds.map((r, i) => {
+                const a = r.p1 ? scoreLabel(r.p1.score) : null
+                return (
+                  <div key={i} style={{ ...s.card, padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: 90, minWidth: 0, overflow: 'hidden', borderColor: (a?.color || '#1e2d4a') + '55' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: 10, color: '#4a5568', fontWeight: 600 }}>R{i + 1}</span>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: a?.color, lineHeight: 1 }}>{r.p1?.score}<span style={{ fontSize: 9, fontWeight: 400 }}>pts</span></span>
                     </div>
-                  )
-                })}
-                {(() => {
-                  const closest = findClosest(r.category, r.target)
-                  if (!closest) return null
-                  const picks = [r.p1?.player.name, r.p2?.player.name].filter(Boolean)
-                  const userGotIt = picks.includes(closest.name)
-                  return (
-                    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #1e2d4a', display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                      <span style={{ color: userGotIt ? '#22c55e' : '#4a5568' }}>
-                        {userGotIt ? '✓ Perfect answer!' : `Closest: ${closest.name}`}
-                      </span>
-                      {!userGotIt && <span style={{ color: '#4a5568' }}>{closest.value} {r.category.unit}</span>}
+                    <div style={{ fontSize: 13, fontWeight: 700, color: 'white', lineHeight: 1.25, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{r.p1?.player?.name}</div>
+                    <div style={{ fontSize: 10, color: '#4a5568', lineHeight: 1.4, marginTop: 4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>
+                      {r.category.label} · {r.p1?.value} / {r.target}
                     </div>
-                  )
-                })()}
-              </div>
-            ))}
-          </div>
-          <button onClick={() => { setStarted(false); setGameOver(false) }} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14 }}>
-            Play Again
-          </button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
     )
@@ -367,6 +376,10 @@ export default function PLStatClash() {
               : 'A mix of career and club-specific targets. Pick the player closest to each stat.'}
           </p>
         </div>
+
+        <button onClick={() => startGame()} disabled={fetching} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14, opacity: fetching ? 0.5 : 1, marginBottom: 16 }}>
+          {fetching ? 'Loading...' : selectedClub ? `Start — ${selectedClub} only` : 'Start Game'}
+        </button>
 
         <div style={{ ...s.card, marginBottom: 16 }}>
           <div style={{ ...s.label, marginBottom: 12 }}>Mode</div>
@@ -388,11 +401,14 @@ export default function PLStatClash() {
         )}
 
         <div style={{ ...s.card, marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <div style={s.label}>Rounds</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#f97316' }}>{numRounds}</div>
+          <div style={{ ...s.label, marginBottom: 10 }}>Rounds</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {[5, 10, 20, 30].map(n => (
+              <button key={n} onClick={() => setNumRounds(n)} style={{ ...s.btn(numRounds === n ? '#f97316' : '#1e2d4a'), flex: 1, fontSize: 14, padding: '10px 0' }}>
+                {n}
+              </button>
+            ))}
           </div>
-          <input type="range" min={5} max={30} value={numRounds} onChange={e => setNumRounds(Number(e.target.value))} style={{ width: '100%', accentColor: '#f97316' }} />
         </div>
 
         {clubs.length > 0 && (
@@ -430,9 +446,6 @@ export default function PLStatClash() {
           ))}
         </div>
 
-        <button onClick={() => startGame()} disabled={fetching} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14, opacity: fetching ? 0.5 : 1 }}>
-          {fetching ? 'Loading...' : selectedClub ? `Start — ${selectedClub} only` : 'Start Game'}
-        </button>
       </div>
     </div>
   )
@@ -539,25 +552,41 @@ export default function PLStatClash() {
         {currentRound > 0 && (
           <div style={{ marginTop: 20 }}>
             <div style={{ ...s.label, marginBottom: 10 }}>Previous Rounds</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {[...rounds.slice(0, currentRound)].reverse().map((r, i) => (
-                <div key={i} style={{ ...s.card, opacity: 0.65 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#4a5568', marginBottom: 4 }}>
-                    <span>{r.category.label}</span><span>Target: {r.target}</span>
-                  </div>
-                  {([r.p1, r.p2] as const).map((entry, j) => {
-                    if (!entry) return null
-                    const sl = scoreLabel(entry.score)
-                    return (
-                      <div key={j} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginTop: j > 0 ? 3 : 0 }}>
-                        <span style={{ color: '#8899bb' }}>{mode === 'vs' ? `${j === 0 ? p1Label : p2Label}: ` : ''}{entry.player.name} ({entry.value})</span>
-                        <span style={{ color: sl.color, fontWeight: 700 }}>{entry.score}pts</span>
+            {mode === 'vs' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                {[...rounds.slice(0, currentRound)].reverse().map((r, i) => {
+                  const sl1 = r.p1 ? scoreLabel(r.p1.score) : null
+                  return (
+                    <div key={i} style={{ ...s.card, padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: 90, minWidth: 0, overflow: 'hidden', opacity: 0.75, borderColor: (sl1?.color || '#1e2d4a') + '55' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 10, color: '#4a5568', fontWeight: 600 }}>R{currentRound - i}</span>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {([r.p1, r.p2] as const).map((e, j) => e ? <span key={j} style={{ fontSize: 12, fontWeight: 800, color: scoreLabel(e.score).color }}>{e.score}</span> : null)}
+                        </div>
                       </div>
-                    )
-                  })}
-                </div>
-              ))}
-            </div>
+                      <div style={{ fontSize: 11, color: 'white', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{r.category.label}</div>
+                      <div style={{ fontSize: 10, color: '#4a5568' }}>Target: {r.target}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                {[...rounds.slice(0, currentRound)].reverse().map((r, i) => {
+                  const a = r.p1 ? scoreLabel(r.p1.score) : null
+                  return (
+                    <div key={i} style={{ ...s.card, padding: '10px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: 90, minWidth: 0, overflow: 'hidden', opacity: 0.75, borderColor: (a?.color || '#1e2d4a') + '55' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 10, color: '#4a5568', fontWeight: 600 }}>R{currentRound - i}</span>
+                        <span style={{ fontSize: 20, fontWeight: 800, color: a?.color, lineHeight: 1 }}>{r.p1?.score}<span style={{ fontSize: 9, fontWeight: 400 }}>pts</span></span>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'white', lineHeight: 1.2, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' } as React.CSSProperties}>{r.p1?.player?.name}</div>
+                      <div style={{ fontSize: 10, color: '#4a5568' }}>{r.p1?.value} / {r.target}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
