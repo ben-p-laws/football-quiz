@@ -300,7 +300,7 @@ export default function MinimiseGame() {
               style={{ ...s.input, cursor: "pointer" }}
             >
               <option value="">All Clubs</option>
-              {clubs.map(c => <option key={c} value={c}>{c}</option>)}
+              {clubs.filter(c => c !== '2 Teams').map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         )}
