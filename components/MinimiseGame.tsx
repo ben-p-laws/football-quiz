@@ -446,7 +446,7 @@ export default function MinimiseGame() {
           {gameOver
             ? <span style={{ color: "#4a5568", textTransform: "uppercase" }}>Results</span>
             : hint
-              ? <span style={{ color: "#fbbf24" }}>💡 Best available: <strong>{hint.bestCatLabel}</strong> (#{hint.bestRank})</span>
+              ? <span style={{ color: "#fbbf24" }}>💡 Best for {hint.playerName}: <strong>{hint.bestCatLabel}</strong> (#{hint.bestRank})</span>
               : <span style={{ color: "#4a5568", textTransform: "uppercase" }}>Choose a category</span>
           }
         </div>
