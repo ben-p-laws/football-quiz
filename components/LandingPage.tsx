@@ -249,20 +249,20 @@ export default function LandingPage() {
               <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their teammates</div>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
-              <div style={{ display: 'flex', gap: 5, height: '100%' }}>
-                <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, width: '38%', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 4, padding: '8px 4px' }}>
-                  <span style={{ fontSize: 30, opacity: 0.65 }}>👤</span>
-                  <span style={{ fontSize: 8, color: '#8899bb', textAlign: 'center' as const }}>Who am I?</span>
+              <div style={{ display: 'flex', gap: 5, height: 90 }}>
+                <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, width: 28, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                  <span style={{ fontSize: 18, opacity: 0.65 }}>👤</span>
+                  <span style={{ fontSize: 6, color: '#8899bb', textAlign: 'center' as const, lineHeight: 1.2 }}>Who?</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, flex: 1 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 4, flex: 1 }}>
                   {[
                     { name: 'Gerrard',    team: 'LIV', bg: 'rgba(200,16,46,0.2)',   border: 'rgba(200,16,46,0.45)',   color: '#f87171' },
-                    { name: 'De Bruyne', team: 'MC',  bg: 'rgba(97,218,251,0.12)', border: 'rgba(97,218,251,0.38)',  color: '#7dd3fc' },
-                    { name: 'Lampard',   team: 'CHE', bg: 'rgba(3,70,148,0.22)',   border: 'rgba(3,70,148,0.5)',     color: '#93c5fd' },
+                    { name: 'De Bruyne',  team: 'MC',  bg: 'rgba(97,218,251,0.12)', border: 'rgba(97,218,251,0.38)',  color: '#7dd3fc' },
+                    { name: 'Lampard',    team: 'CHE', bg: 'rgba(3,70,148,0.22)',   border: 'rgba(3,70,148,0.5)',     color: '#93c5fd' },
                     { name: '?',          team: '',    bg: '#0a0f1e',               border: '#4a5568',                color: '#8899bb' },
                   ].map((c, i) => (
-                    <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 5, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', padding: '5px 3px', gap: 2 }}>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: c.color, lineHeight: 1.1 }}>{c.name}</span>
+                    <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 5, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 2, minWidth: 0, overflow: 'hidden' }}>
+                      <span style={{ fontSize: 10, fontWeight: 800, color: c.color, lineHeight: 1.1, textAlign: 'center' as const }}>{c.name}</span>
                       {c.team && <span style={{ fontSize: 8, color: c.color, opacity: 0.65 }}>{c.team}</span>}
                     </div>
                   ))}
