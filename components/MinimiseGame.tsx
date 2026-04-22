@@ -404,19 +404,6 @@ export default function MinimiseGame() {
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
             <button onClick={() => setShowRules(v => !v)} style={{ ...s.ghost, padding: "8px 10px", fontSize: 16 }} title="Rules">❓</button>
             {gameOver && <button onClick={() => startGame()} style={s.btn()}>Play Again</button>}
-            <select
-              value={selectedClub}
-              onChange={async e => {
-                const club = e.target.value
-                setSelectedClub(club)
-                const d = await fetchData(true, club)
-                if (d) startGame(d.weightedPool)
-              }}
-              style={{ ...s.ghost, cursor: "pointer", fontSize: 11, padding: "6px 10px" }}
-            >
-              <option value="">All Clubs</option>
-              {clubs.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
             <button onClick={() => startGame()} style={s.ghost}>Restart</button>
           </div>
         </div>
