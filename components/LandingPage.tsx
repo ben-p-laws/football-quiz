@@ -149,7 +149,7 @@ export default function LandingPage() {
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
             <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '8px 10px', textAlign: 'center', marginBottom: 8 }}>
               <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target</div>
-              <div style={{ fontSize: 32, fontWeight: 800, color: '#dc2626', lineHeight: 1.1 }}>150</div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: '#e2e8f0', lineHeight: 1.1 }}>150</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>career PL goals</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, flex: 1 }}>
@@ -257,7 +257,7 @@ export default function LandingPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, flex: 1 }}>
                   {[
                     { name: 'Gerrard',    team: 'LIV', bg: 'rgba(200,16,46,0.2)',   border: 'rgba(200,16,46,0.45)',   color: '#f87171' },
-                    { name: 'Ferdinand', team: 'MU',  bg: 'rgba(218,41,28,0.18)',  border: 'rgba(218,41,28,0.45)',   color: '#fca5a5' },
+                    { name: 'De Bruyne', team: 'MC',  bg: 'rgba(97,218,251,0.12)', border: 'rgba(97,218,251,0.38)',  color: '#7dd3fc' },
                     { name: 'Lampard',   team: 'CHE', bg: 'rgba(3,70,148,0.22)',   border: 'rgba(3,70,148,0.5)',     color: '#93c5fd' },
                     { name: '?',          team: '',    bg: '#0a0f1e',               border: '#4a5568',                color: '#8899bb' },
                   ].map((c, i) => (
