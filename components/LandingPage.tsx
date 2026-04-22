@@ -103,7 +103,7 @@ export default function LandingPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', gap: 3, flex: 1 }}>
               <MCat icon="⚽" label="Most Goals" />
-              <MCat icon="🅰️" label="Most Assists" player="Fàbregas" rank="#8" color="green" />
+              <MCat icon="🅰️" label="Most Assists" player="Fàbregas" rank="#2" color="green" />
               <MCat icon="📊" label="Appearances" player="Milner" rank="#1" color="green" />
               <MCat icon="⚡" label="Pens Scored" />
               <MCat icon="👴" label="Oldest Player" />
