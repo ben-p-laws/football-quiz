@@ -94,10 +94,9 @@ export default function LandingPage() {
           <div style={s.cardHead}>
             <div style={s.cardTitle}>Minimise</div>
             <div style={s.cardDesc}>Assign each player to their best PL stat category</div>
-            <div style={s.tag}>Strategy · Leaderboard</div>
           </div>
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
-            <div style={{ background: '#0a0f1e', border: '1px solid #dc2626', borderRadius: 6, padding: '5px 10px', marginBottom: 6, textAlign: 'center' }}>
+            <div style={{ background: '#0a0f1e', border: '1px solid #2d3f5e', borderRadius: 6, padding: '5px 10px', marginBottom: 6, textAlign: 'center' }}>
               <div style={{ fontSize: 10, color: '#4a5568', marginBottom: 1 }}>Assign this player</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>Erling Haaland</div>
             </div>
@@ -121,7 +120,6 @@ export default function LandingPage() {
           <div style={s.cardHead}>
             <div style={s.cardTitle}>Bingo</div>
             <div style={s.cardDesc}>Fill the 3×3 PL achievements grid</div>
-            <div style={s.tag}>Perfect 9 · Leaderboard</div>
           </div>
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridAutoRows: '1fr', gap: 4, flex: 1 }}>
@@ -147,7 +145,6 @@ export default function LandingPage() {
           <div style={s.cardHead}>
             <div style={s.cardTitle}>Stat Clash</div>
             <div style={s.cardDesc}>Find the player closest to a random PL stat target</div>
-            <div style={s.tag}>Solo · vs Friend</div>
           </div>
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
             <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '8px 10px', textAlign: 'center', marginBottom: 8 }}>
