@@ -438,14 +438,12 @@ export default function MinimiseGame() {
           <div style={{ ...s.card, marginBottom: 16, textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1f35 100%)", padding: "14px 20px" }}>
             <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Assign this player</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "white", letterSpacing: "-0.5px" }}>{currentPlayer?.name ?? "..."}</div>
-            <div style={{ fontSize: 12, color: "#4a5568", marginTop: 6 }}>Click a category below to assign</div>
-          </div>
-        )}
-
-        {/* Hint */}
-        {hint && (
-          <div style={{ background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", borderRadius: 10, padding: "10px 14px", marginBottom: 12, fontSize: 13, color: "#fbbf24", display: "flex", alignItems: "center", gap: 8 }}>
-            💡 <span><strong>{hint.playerName}</strong>'s best available was <strong>{hint.bestCatLabel}</strong> (#{hint.bestRank})</span>
+            <div style={{ fontSize: 12, marginTop: 6, minHeight: 18 }}>
+              {hint
+                ? <span style={{ color: "#fbbf24" }}>💡 Best available: <strong>{hint.bestCatLabel}</strong> (#{hint.bestRank})</span>
+                : <span style={{ color: "#4a5568" }}>Click a category below to assign</span>
+              }
+            </div>
           </div>
         )}
 
