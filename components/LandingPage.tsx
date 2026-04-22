@@ -102,12 +102,12 @@ export default function LandingPage() {
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>Erling Haaland</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', gap: 3, flex: 1 }}>
-              <MCat icon="⚽" label="Most Goals" player="Shearer" rank="#1" color="green" />
+              <MCat icon="⚽" label="Most Goals" />
               <MCat icon="🅰️" label="Most Assists" player="Fàbregas" rank="#8" color="green" />
-              <MCat icon="📊" label="Appearances" player="G. Barry" rank="#15" color="yellow" />
-              <MCat icon="🟡" label="Yellow Cards" />
+              <MCat icon="📊" label="Appearances" player="Milner" rank="#1" color="green" />
               <MCat icon="⚡" label="Pens Scored" />
               <MCat icon="👴" label="Oldest Player" />
+              <MCat icon="🟡" label="Yellow Cards" player="Cattermole" rank="#12" color="yellow" />
             </div>
           </div>
           <div style={s.cta}><span style={s.ctaText}>Play Minimise →</span></div>
@@ -125,11 +125,11 @@ export default function LandingPage() {
           </div>
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridAutoRows: '1fr', gap: 4, flex: 1 }}>
-              <BCell label="100+ PL Goals"     player="Alan Shearer"    state="green" />
+              <BCell label="100+ PL Goals"     player="M. Salah"        state="green" />
               <BCell label="PL Title Winner"                            state="none" />
               <BCell label="Never won PL"      player="T. Henry"        state="red" />
               <BCell label="5+ PL Clubs"       player="N. Anelka"       state="green" />
-              <BCell label="PL Golden Boot"                             state="none" />
+              <BCell label="10+ PL Seasons"    player="Ronaldo"         state="red" />
               <BCell label="300+ PL Apps"                               state="none" />
               <BCell label="20+ Goals Season"                           state="none" />
               <BCell label="PL Top Scorer"                              state="none" />
@@ -183,13 +183,13 @@ export default function LandingPage() {
           <div style={{ ...s.card, cursor: 'default', opacity: 0.7 }}>
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Name the top 10 PL goal scorers</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Name the top 10 PL assist makers</div>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
               {[
-                { n: 1, name: 'Shearer', val: '260', pct: 100, found: true },
-                { n: 2, name: 'Rooney',  val: '208', pct: 80,  found: true },
-                { n: 3, name: '?',       val: '187', pct: 0,   found: false },
+                { n: 1, name: 'R. Giggs',    val: '162', pct: 100, found: true },
+                { n: 2, name: 'Fàbregas', val: '111', pct: 68,  found: true },
+                { n: 3, name: '?',            val: '103', pct: 0,   found: false },
               ].map(r => (
                 <div key={r.n} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ fontSize: 9, color: '#2a3d5e', width: 10 }}>{r.n}</span>
