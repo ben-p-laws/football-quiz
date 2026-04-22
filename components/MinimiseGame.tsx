@@ -438,17 +438,17 @@ export default function MinimiseGame() {
           <div style={{ ...s.card, marginBottom: 16, textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1f35 100%)", padding: "14px 20px" }}>
             <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Assign this player</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "white", letterSpacing: "-0.5px" }}>{currentPlayer?.name ?? "..."}</div>
-            <div style={{ fontSize: 12, marginTop: 6, minHeight: 18 }}>
-              {hint
-                ? <span style={{ color: "#fbbf24" }}>💡 Best available: <strong>{hint.bestCatLabel}</strong> (#{hint.bestRank})</span>
-                : <span style={{ color: "#4a5568" }}>Click a category below to assign</span>
-              }
-            </div>
+            <div style={{ fontSize: 12, color: "#4a5568", marginTop: 6 }}>Click a category below to assign</div>
           </div>
         )}
 
-        <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>
-          {gameOver ? "Results" : "Choose a category"}
+        <div style={{ fontSize: 11, letterSpacing: "0.08em", marginBottom: 8, minHeight: 16 }}>
+          {gameOver
+            ? <span style={{ color: "#4a5568", textTransform: "uppercase" }}>Results</span>
+            : hint
+              ? <span style={{ color: "#fbbf24" }}>💡 Best available: <strong>{hint.bestCatLabel}</strong> (#{hint.bestRank})</span>
+              : <span style={{ color: "#4a5568", textTransform: "uppercase" }}>Choose a category</span>
+          }
         </div>
 
         {/* Category grid — fixed 72px height */}
