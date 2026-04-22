@@ -181,6 +181,7 @@ function buildRounds(
 
 export default function PLStatClash() {
   const [loading, setLoading]       = useState(true)
+  const [fetching, setFetching]     = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [clubData, setClubData]     = useState<ClubData>({})
   const [allPlayers, setAllPlayers] = useState<Entity[]>([])
@@ -200,12 +201,17 @@ export default function PLStatClash() {
   const [lockedIn, setLockedIn]             = useState<{ p1?: Entity; p2?: Entity }>({})
 
   const fetchData = useCallback(async (club?: string) => {
+    setFetching(true)
+    // Clear club data immediately so stale rounds can't be generated while fetching
+    setClubData({})
+    setCategories([])
     const url = club ? `/api/stat-clash?club=${encodeURIComponent(club)}` : '/api/stat-clash'
     const data = await fetch(url).then(r => r.json())
     setCategories(data.categories ?? [])
     setClubData(data.clubData ?? {})
     setAllPlayers(data.allPlayers ?? [])
     if (!club && (data.clubs ?? []).length) setClubs(data.clubs)
+    setFetching(false)
   }, [])
 
   useEffect(() => { fetchData().finally(() => setLoading(false)) }, [fetchData])
@@ -322,6 +328,20 @@ export default function PLStatClash() {
                     </div>
                   )
                 })}
+                {(() => {
+                  const closest = findClosest(r.category, r.target)
+                  if (!closest) return null
+                  const picks = [r.p1?.player.name, r.p2?.player.name].filter(Boolean)
+                  const userGotIt = picks.includes(closest.name)
+                  return (
+                    <div style={{ marginTop: 6, paddingTop: 6, borderTop: '1px solid #1e2d4a', display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                      <span style={{ color: userGotIt ? '#22c55e' : '#4a5568' }}>
+                        {userGotIt ? '✓ Perfect answer!' : `Closest: ${closest.name}`}
+                      </span>
+                      {!userGotIt && <span style={{ color: '#4a5568' }}>{closest.value} {r.category.unit}</span>}
+                    </div>
+                  )
+                })()}
               </div>
             ))}
           </div>
@@ -410,8 +430,8 @@ export default function PLStatClash() {
           ))}
         </div>
 
-        <button onClick={() => startGame()} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14 }}>
-          {selectedClub ? `Start — ${selectedClub} only` : 'Start Game'}
+        <button onClick={() => startGame()} disabled={fetching} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14, opacity: fetching ? 0.5 : 1 }}>
+          {fetching ? 'Loading...' : selectedClub ? `Start — ${selectedClub} only` : 'Start Game'}
         </button>
       </div>
     </div>
