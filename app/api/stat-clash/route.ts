@@ -45,27 +45,51 @@ function aggregate(rows: any[]): Record<string, Totals> {
   return map
 }
 
-function getRange(vals: number[]): { min: number; max: number } {
-  const sorted = [...vals].sort((a, b) => a - b)
-  const p10 = sorted[Math.floor(sorted.length * 0.1)]
-  const p90 = sorted[Math.floor(sorted.length * 0.9)]
-  return { min: p10, max: p90 }
+type PMEntry = { playerMap: Record<number, { name: string; value: number }>; range: { min: number; max: number } }
+
+function buildPM(
+  totals: Record<string, Totals>,
+  key: keyof Omit<Totals, 'name'>,
+  nameToId: Map<string, number>,
+  minVal: number
+): PMEntry | null {
+  const eligible = Object.values(totals).filter(p => (p[key] as number) > 0)
+  if (eligible.length < 5) return null
+  const vals = eligible.map(p => p[key] as number)
+  const max = vals.reduce((m, v) => Math.max(m, v), 0)
+  if (max <= minVal) return null
+  const playerMap: Record<number, { name: string; value: number }> = {}
+  for (const p of eligible) playerMap[nameToId.get(p.name)!] = { name: p.name, value: p[key] as number }
+  return { playerMap, range: { min: minVal, max } }
 }
 
-function buildClubList(rows: any[]): string[] {
-  const clubSeasons: Record<string, Set<string>> = {}
+// Single pass: group rows by club AND collect season counts
+function groupByClub(rows: any[]) {
+  const seasons: Record<string, Set<string>> = {}
+  const rowsByClub: Record<string, any[]> = {}
   for (const row of rows) {
     const yearId = row.year_id as string
     const teams = String(row.teams_played_for || '').split(',').map((t: string) => t.trim()).filter(Boolean)
     for (const team of teams) {
-      if (!clubSeasons[team]) clubSeasons[team] = new Set()
-      clubSeasons[team].add(yearId)
+      if (!seasons[team]) { seasons[team] = new Set(); rowsByClub[team] = [] }
+      seasons[team].add(yearId)
+      rowsByClub[team].push(row)
     }
   }
-  return Object.entries(clubSeasons)
-    .filter(([name, seasons]) => seasons.size >= MIN_CLUB_SEASONS && name !== '2 Teams')
+  const clubs = Object.entries(seasons)
+    .filter(([name, s]) => s.size >= MIN_CLUB_SEASONS && name !== '2 Teams')
     .map(([name]) => name)
     .sort()
+  return { clubs, rowsByClub }
+}
+
+export type ClubStatKey = 'goals' | 'assists' | 'games' | 'clean_sheets'
+export type ClubData = Record<string, Partial<Record<ClubStatKey, PMEntry>>>
+
+type Category = {
+  id: string; label: string; unit: string; weight: number; floor: number
+  range: { min: number; max: number }
+  playerMap: Record<number, { name: string; value: number }>
 }
 
 export async function GET(req: Request) {
@@ -75,79 +99,80 @@ export async function GET(req: Request) {
 
     const rows = await fetchAll()
 
-    // Assign each unique player name a stable numeric ID
     const nameToId = new Map<string, number>()
     for (const row of rows) {
       const name = row.name_display as string
       if (!nameToId.has(name)) nameToId.set(name, nameToId.size + 1)
     }
 
+    const allEntities = new Map<number, string>()
+    function track(pm: Record<number, { name: string; value: number }>) {
+      for (const [pid, d] of Object.entries(pm)) allEntities.set(Number(pid), d.name)
+    }
+
+    if (club) {
+      // Club-selected mode: only stats for this club
+      const { rowsByClub } = groupByClub(rows)
+      const clubRows = rowsByClub[club] ?? []
+      const t = aggregate(clubRows)
+
+      const categories: Category[] = []
+      const defs: [string, string, string, keyof Omit<Totals,'name'>, number, number][] = [
+        ['club_goals',        `Goals for ${club}`,        'goals',        'goals',        1, 1],
+        ['club_assists',      `Assists for ${club}`,      'assists',      'assists',      1, 1],
+        ['club_appearances',  `Apps for ${club}`,         'apps',         'games',        5, 1],
+        ['club_clean_sheets', `Clean Sheets for ${club}`, 'clean sheets', 'clean_sheets', 1, 1],
+      ]
+      for (const [id, label, unit, key, minVal, weight] of defs) {
+        const pm = buildPM(t, key, nameToId, minVal)
+        if (pm) { categories.push({ id, label, unit, weight, floor: minVal, ...pm }); track(pm.playerMap) }
+      }
+
+      return NextResponse.json(
+        { categories, clubData: {}, allPlayers: Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name })), clubs: [] },
+        { headers: { 'Cache-Control': 'no-store' } }
+      )
+    }
+
+    // All-clubs mode: career categories + per-club data
     const career = aggregate(rows)
 
-    // Club-specific aggregation: seasons where teams_played_for exactly contains the club
-    const clubTotals: Record<string, Totals> = club
-      ? aggregate(
-          rows.filter(r =>
-            String(r.teams_played_for || '')
-              .split(',')
-              .map((t: string) => t.trim())
-              .some(t => t.toLowerCase() === club.toLowerCase())
-          )
-        )
-      : {}
-
-    type CategoryOut = {
-      id: string; label: string; unit: string; weight: number; floor: number
-      range: { min: number; max: number }
-      playerMap: Record<number, { name: string; value: number }>
+    const careerDefs: [string, string, string, keyof Omit<Totals,'name'>, number, number][] = [
+      ['career_goals',        'Career PL Goals',    'goals',        'goals',        5,  1  ],
+      ['career_assists',      'Career PL Assists',  'assists',      'assists',      3,  1  ],
+      ['career_appearances',  'Career PL Apps',     'apps',         'games',        10, 1  ],
+      ['career_clean_sheets', 'Career Clean Sheets','clean sheets', 'clean_sheets', 5,  1  ],
+      ['career_red_cards',    'Career Red Cards',   'red cards',    'cards_red',    1,  0.5],
+    ]
+    const categories: Category[] = []
+    for (const [id, label, unit, key, minVal, weight] of careerDefs) {
+      const pm = buildPM(career, key, nameToId, minVal)
+      if (pm) { categories.push({ id, label, unit, weight, floor: minVal, ...pm }); track(pm.playerMap) }
     }
-    const categories: CategoryOut[] = []
 
-    function addCat(
-      id: string, label: string, unit: string,
-      totalsMap: Record<string, Totals>, key: keyof Totals,
-      floor: number, weight: number
-    ) {
-      const eligible = Object.values(totalsMap).filter(p => (p[key] as number) > 0)
-      if (eligible.length < 10) return
-      const vals = eligible.map(p => p[key] as number)
-      const range = getRange(vals)
-      if (range.min >= range.max) return
-      const playerMap: Record<number, { name: string; value: number }> = {}
-      for (const p of eligible) {
-        playerMap[nameToId.get(p.name)!] = { name: p.name, value: p[key] as number }
+    // Per-club data for random club rounds
+    const { clubs, rowsByClub } = groupByClub(rows)
+    const clubStatDefs: [ClubStatKey, keyof Omit<Totals,'name'>, number][] = [
+      ['goals',        'goals',        1],
+      ['assists',      'assists',      1],
+      ['games',        'games',        5],
+      ['clean_sheets', 'clean_sheets', 1],
+    ]
+    const clubData: ClubData = {}
+    for (const c of clubs) {
+      const t = aggregate(rowsByClub[c] ?? [])
+      const entry: Partial<Record<ClubStatKey, PMEntry>> = {}
+      for (const [statKey, totalsKey, minVal] of clubStatDefs) {
+        const pm = buildPM(t, totalsKey, nameToId, minVal)
+        if (pm) { entry[statKey] = pm; track(pm.playerMap) }
       }
-      categories.push({ id, label, unit, weight, floor, range, playerMap })
+      if (Object.keys(entry).length > 0) clubData[c] = entry
     }
-
-    // Career categories
-    addCat('career_goals',        'Career PL Goals',        'goals',       career, 'goals',        5,  1)
-    addCat('career_assists',      'Career PL Assists',       'assists',     career, 'assists',      3,  1)
-    addCat('career_appearances',  'Career PL Apps',          'apps',        career, 'games',        10, 1)
-    addCat('career_clean_sheets', 'Career Clean Sheets',     'clean sheets',career, 'clean_sheets', 3,  1)
-    addCat('career_red_cards',    'Career Red Cards',        'red cards',   career, 'cards_red',    1,  0.5)
-
-    // Club-specific categories
-    if (club) {
-      addCat('club_goals',        `Goals for ${club}`,        'goals',       clubTotals, 'goals',        3, 1)
-      addCat('club_assists',      `Assists for ${club}`,      'assists',     clubTotals, 'assists',      2, 1)
-      addCat('club_appearances',  `Apps for ${club}`,         'apps',        clubTotals, 'games',        5, 1)
-      addCat('club_clean_sheets', `Clean Sheets for ${club}`, 'clean sheets',clubTotals, 'clean_sheets', 2, 1)
-    }
-
-    // Union of all players across all categories
-    const allEntities = new Map<number, string>()
-    for (const cat of categories) {
-      for (const [pid, d] of Object.entries(cat.playerMap)) {
-        allEntities.set(Number(pid), d.name)
-      }
-    }
-
-    const clubs = !club ? buildClubList(rows) : []
 
     return NextResponse.json(
       {
         categories,
+        clubData,
         allPlayers: Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name })),
         clubs,
       },

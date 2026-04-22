@@ -11,10 +11,22 @@ interface Category {
   range: { min: number; max: number }
   playerMap: Record<number, { name: string; value: number }>
 }
+type ClubStatKey = 'goals' | 'assists' | 'games' | 'clean_sheets'
+type PMEntry = { playerMap: Record<number, { name: string; value: number }>; range: { min: number; max: number } }
+type ClubData = Record<string, Partial<Record<ClubStatKey, PMEntry>>>
 interface RoundResult {
   category: Category; target: number
   p1: { player: Entity; value: number; score: number } | null
   p2: { player: Entity; value: number; score: number } | null
+}
+
+// ─── Club stat display config ─────────────────────────────────────────────────
+
+const CLUB_STAT: Record<ClubStatKey, { labelPrefix: string; unit: string; floor: number }> = {
+  goals:        { labelPrefix: 'Goals for',        unit: 'goals',        floor: 1 },
+  assists:      { labelPrefix: 'Assists for',      unit: 'assists',      floor: 1 },
+  games:        { labelPrefix: 'Apps for',         unit: 'apps',         floor: 5 },
+  clean_sheets: { labelPrefix: 'Clean Sheets for', unit: 'clean sheets', floor: 1 },
 }
 
 // ─── Scoring ──────────────────────────────────────────────────────────────────
@@ -28,11 +40,11 @@ function calcScore(guess: number, target: number, floor: number): number {
 }
 
 function scoreLabel(score: number): { text: string; color: string } {
-  if (score === 0)  return { text: 'Perfect!',   color: '#22c55e' }
+  if (score === 0)  return { text: 'Perfect!',    color: '#22c55e' }
   if (score <= 3)   return { text: 'Very close!', color: '#86efac' }
-  if (score <= 6)   return { text: 'Close',       color: '#fbbf24' }
-  if (score <= 10)  return { text: 'Not bad',     color: '#f97316' }
-  if (score <= 20)  return { text: 'Far off',     color: '#ef4444' }
+  if (score <= 6)   return { text: 'Close',        color: '#fbbf24' }
+  if (score <= 10)  return { text: 'Not bad',      color: '#f97316' }
+  if (score <= 20)  return { text: 'Far off',      color: '#ef4444' }
   return { text: 'No stat!', color: '#7f1d1d' }
 }
 
@@ -68,27 +80,19 @@ function PlayerSearch({
     ? allPlayers.filter(p => p.pid !== excludePid && p.name.toLowerCase().includes(search.toLowerCase())).slice(0, 8)
     : []
 
-  function pick(p: Entity) {
-    setSearch('')
-    setOpen(false)
-    onLock(p)
-  }
+  function pick(p: Entity) { setSearch(''); setOpen(false); onLock(p) }
 
-  if (lockedPlayer) {
-    return (
-      <div style={{ ...s.card, textAlign: 'center', padding: '12px 20px' }}>
-        <div style={{ fontSize: 11, color: '#22c55e', fontWeight: 700, marginBottom: 3 }}>✓ Locked in</div>
-        <div style={{ fontSize: 15, fontWeight: 700, color: 'white' }}>{lockedPlayer.name}</div>
-      </div>
-    )
-  }
+  if (lockedPlayer) return (
+    <div style={{ ...s.card, textAlign: 'center', padding: '12px 20px' }}>
+      <div style={{ fontSize: 11, color: '#22c55e', fontWeight: 700, marginBottom: 3 }}>✓ Locked in</div>
+      <div style={{ fontSize: 15, fontWeight: 700, color: 'white' }}>{lockedPlayer.name}</div>
+    </div>
+  )
 
   return (
     <div style={{ position: 'relative' }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: '#8899bb', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>{label}</div>
-      <input
-        ref={inputRef}
-        value={search}
+      <input ref={inputRef} value={search}
         onChange={e => { setSearch(e.target.value); setOpen(true) }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
@@ -112,57 +116,91 @@ function PlayerSearch({
   )
 }
 
+// ─── Round generation ─────────────────────────────────────────────────────────
+
+function buildRounds(
+  n: number,
+  careerCats: Category[],
+  clubData: ClubData
+): RoundResult[] {
+  const clubNames = Object.keys(clubData)
+  const hasClubs = clubNames.length > 0
+
+  // Build weighted career pool
+  const careerPool: Category[] = []
+  for (const cat of careerCats) {
+    const times = Math.max(1, Math.round(cat.weight * 4))
+    for (let i = 0; i < times; i++) careerPool.push(cat)
+  }
+
+  return Array.from({ length: n }, () => {
+    // 50% career, 50% club-specific when club data is available
+    if (hasClubs && Math.random() < 0.5) {
+      const club = clubNames[Math.floor(Math.random() * clubNames.length)]
+      const statKeys = (Object.keys(clubData[club]) as ClubStatKey[])
+      const statKey = statKeys[Math.floor(Math.random() * statKeys.length)]
+      const pm = clubData[club][statKey]!
+      const cfg = CLUB_STAT[statKey]
+      const cat: Category = {
+        id: `${statKey}_${club}`,
+        label: `${cfg.labelPrefix} ${club}`,
+        unit: cfg.unit,
+        weight: 1,
+        floor: cfg.floor,
+        range: pm.range,
+        playerMap: pm.playerMap,
+      }
+      const target = Math.round(cat.range.min + Math.random() * (cat.range.max - cat.range.min))
+      return { category: cat, target, p1: null, p2: null }
+    }
+
+    // Career round
+    if (!careerPool.length) {
+      // Fallback: shouldn't happen but guard anyway
+      return { category: careerCats[0], target: 10, p1: null, p2: null }
+    }
+    const cat = careerPool[Math.floor(Math.random() * careerPool.length)]
+    const target = Math.round(cat.range.min + Math.random() * (cat.range.max - cat.range.min))
+    return { category: cat, target, p1: null, p2: null }
+  })
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function PLStatClash() {
   const [loading, setLoading]       = useState(true)
   const [categories, setCategories] = useState<Category[]>([])
+  const [clubData, setClubData]     = useState<ClubData>({})
   const [allPlayers, setAllPlayers] = useState<Entity[]>([])
   const [clubs, setClubs]           = useState<string[]>([])
   const [selectedClub, setSelectedClub] = useState('')
 
-  const [mode, setMode]         = useState<'solo' | 'vs'>('solo')
-  const [numRounds, setNumRounds] = useState(10)
-  const [p1Name, setP1Name]     = useState('')
-  const [p2Name, setP2Name]     = useState('')
+  const [mode, setMode]             = useState<'solo' | 'vs'>('solo')
+  const [numRounds, setNumRounds]   = useState(10)
+  const [p1Name, setP1Name]         = useState('')
+  const [p2Name, setP2Name]         = useState('')
 
-  const [started, setStarted]           = useState(false)
-  const [rounds, setRounds]             = useState<RoundResult[]>([])
-  const [currentRound, setCurrentRound] = useState(0)
-  const [roundRevealed, setRoundRevealed] = useState(false)
-  const [gameOver, setGameOver]         = useState(false)
-  const [lockedIn, setLockedIn]         = useState<{ p1?: Entity; p2?: Entity }>({})
+  const [started, setStarted]               = useState(false)
+  const [rounds, setRounds]                 = useState<RoundResult[]>([])
+  const [currentRound, setCurrentRound]     = useState(0)
+  const [roundRevealed, setRoundRevealed]   = useState(false)
+  const [gameOver, setGameOver]             = useState(false)
+  const [lockedIn, setLockedIn]             = useState<{ p1?: Entity; p2?: Entity }>({})
 
   const fetchData = useCallback(async (club?: string) => {
     const url = club ? `/api/stat-clash?club=${encodeURIComponent(club)}` : '/api/stat-clash'
-    const res = await fetch(url)
-    const data = await res.json()
+    const data = await fetch(url).then(r => r.json())
     setCategories(data.categories ?? [])
+    setClubData(data.clubData ?? {})
     setAllPlayers(data.allPlayers ?? [])
     if (!club && (data.clubs ?? []).length) setClubs(data.clubs)
   }, [])
 
-  useEffect(() => {
-    fetchData().finally(() => setLoading(false))
-  }, [fetchData])
+  useEffect(() => { fetchData().finally(() => setLoading(false)) }, [fetchData])
 
-  function generateRounds(n: number, cats: Category[]): RoundResult[] {
-    // Build weighted pool so higher-weight categories appear more often
-    const pool: Category[] = []
-    for (const cat of cats) {
-      const times = Math.max(1, Math.round(cat.weight * 4))
-      for (let i = 0; i < times; i++) pool.push(cat)
-    }
-    return Array.from({ length: n }, () => {
-      const cat = pool[Math.floor(Math.random() * pool.length)]
-      const target = Math.round(cat.range.min + Math.random() * (cat.range.max - cat.range.min))
-      return { category: cat, target, p1: null, p2: null }
-    })
-  }
-
-  function startGame() {
-    if (!categories.length) return
-    setRounds(generateRounds(numRounds, categories))
+  function startGame(cats = categories, cd = clubData) {
+    if (!cats.length && !Object.keys(cd).length) return
+    setRounds(buildRounds(numRounds, cats, cd))
     setCurrentRound(0)
     setRoundRevealed(false)
     setGameOver(false)
@@ -202,20 +240,15 @@ export default function PLStatClash() {
   }
 
   function nextRound() {
-    if (currentRound + 1 >= rounds.length) {
-      setGameOver(true)
-    } else {
-      setCurrentRound(i => i + 1)
-      setRoundRevealed(false)
-      setLockedIn({})
-    }
+    if (currentRound + 1 >= rounds.length) { setGameOver(true) }
+    else { setCurrentRound(i => i + 1); setRoundRevealed(false); setLockedIn({}) }
   }
 
-  const totalScore = (which: 1 | 2) =>
-    rounds.reduce((sum, r) => sum + ((which === 1 ? r.p1 : r.p2)?.score ?? 0), 0)
+  const totalScore = (w: 1 | 2) =>
+    rounds.reduce((sum, r) => sum + ((w === 1 ? r.p1 : r.p2)?.score ?? 0), 0)
 
   const p1Label = mode === 'vs' ? (p1Name || 'Player 1') : 'You'
-  const p2Label = mode === 'vs' ? (p2Name || 'Player 2') : ''
+  const p2Label = p2Name || 'Player 2'
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) return (
@@ -258,7 +291,6 @@ export default function PLStatClash() {
               <div style={{ fontSize: 52, fontWeight: 800, color: '#f97316' }}>{s1} pts</div>
             )}
           </div>
-
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
             {rounds.map((r, i) => (
               <div key={i} style={s.card}>
@@ -281,7 +313,6 @@ export default function PLStatClash() {
               </div>
             ))}
           </div>
-
           <button onClick={() => { setStarted(false); setGameOver(false) }} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14 }}>
             Play Again
           </button>
@@ -298,10 +329,13 @@ export default function PLStatClash() {
         <div style={{ marginBottom: 24 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>TopBins</div>
           <h1 style={{ fontSize: 32, fontWeight: 800, color: 'white', margin: '0 0 8px', letterSpacing: '-0.5px' }}>Stat Clash</h1>
-          <p style={{ fontSize: 13, color: '#8899bb', margin: 0 }}>A stat target is shown each round. Pick the player closest to it. Lowest total score wins.</p>
+          <p style={{ fontSize: 13, color: '#8899bb', margin: 0 }}>
+            {selectedClub
+              ? `All stats are for ${selectedClub} only. Pick the player closest to each target.`
+              : 'A mix of career and club-specific targets. Pick the player closest to each stat.'}
+          </p>
         </div>
 
-        {/* Mode */}
         <div style={{ ...s.card, marginBottom: 16 }}>
           <div style={{ ...s.label, marginBottom: 12 }}>Mode</div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -313,7 +347,6 @@ export default function PLStatClash() {
           </div>
         </div>
 
-        {/* Player names */}
         {mode === 'vs' && (
           <div style={{ ...s.card, marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div style={{ ...s.label, marginBottom: 4 }}>Player Names</div>
@@ -322,7 +355,6 @@ export default function PLStatClash() {
           </div>
         )}
 
-        {/* Rounds */}
         <div style={{ ...s.card, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <div style={s.label}>Rounds</div>
@@ -331,35 +363,33 @@ export default function PLStatClash() {
           <input type="range" min={5} max={30} value={numRounds} onChange={e => setNumRounds(Number(e.target.value))} style={{ width: '100%', accentColor: '#f97316' }} />
         </div>
 
-        {/* Club filter */}
         {clubs.length > 0 && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ ...s.label, marginBottom: 8 }}>Filter by Club</div>
             <select
               value={selectedClub}
               onChange={async e => {
-                const club = e.target.value
-                setSelectedClub(club)
-                await fetchData(club || undefined)
+                const c = e.target.value
+                setSelectedClub(c)
+                await fetchData(c || undefined)
               }}
               style={{ ...s.input, cursor: 'pointer' }}
             >
-              <option value="">All Clubs</option>
+              <option value="">All Clubs (mixed career + club stats)</option>
               {clubs.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
         )}
 
-        {/* Scoring guide */}
         <div style={{ ...s.card, marginBottom: 20 }}>
           <div style={{ ...s.label, marginBottom: 10 }}>Scoring</div>
           {[
-            { pts: '0',    text: 'Perfect match',           color: '#22c55e' },
-            { pts: '1–3',  text: 'Very close',              color: '#86efac' },
-            { pts: '4–6',  text: 'Close',                   color: '#fbbf24' },
-            { pts: '7–10', text: 'Not bad',                 color: '#f97316' },
-            { pts: '11–20',text: 'Far off',                 color: '#ef4444' },
-            { pts: '30',   text: 'No stat in that category',color: '#7f1d1d' },
+            { pts: '0',    text: 'Perfect match',            color: '#22c55e' },
+            { pts: '1–3',  text: 'Very close',               color: '#86efac' },
+            { pts: '4–6',  text: 'Close',                    color: '#fbbf24' },
+            { pts: '7–10', text: 'Not bad',                  color: '#f97316' },
+            { pts: '11–20',text: 'Far off',                  color: '#ef4444' },
+            { pts: '30',   text: 'No stat in that category', color: '#7f1d1d' },
           ].map(row => (
             <div key={row.pts} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#8899bb', marginBottom: 4 }}>
               <span>{row.text}</span>
@@ -368,8 +398,8 @@ export default function PLStatClash() {
           ))}
         </div>
 
-        <button onClick={startGame} disabled={!categories.length} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14, opacity: categories.length ? 1 : 0.5 }}>
-          {selectedClub ? `Start Game — ${selectedClub}` : 'Start Game'}
+        <button onClick={() => startGame()} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: 14 }}>
+          {selectedClub ? `Start — ${selectedClub} only` : 'Start Game'}
         </button>
       </div>
     </div>
@@ -377,20 +407,18 @@ export default function PLStatClash() {
 
   // ── Game loop ─────────────────────────────────────────────────────────────────
   const round = rounds[currentRound]
-  const isP2Turn = mode === 'vs' && !!lockedIn.p1 && !roundRevealed
 
   return (
     <div style={s.page}>
       <NavBar />
       <div style={{ maxWidth: 480, margin: '32px auto', padding: '0 20px' }}>
 
-        {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               Round {currentRound + 1} / {rounds.length}
             </div>
-            {selectedClub && <div style={{ fontSize: 11, color: '#4a5568', marginTop: 2 }}>⚽ {selectedClub}</div>}
+            {selectedClub && <div style={{ fontSize: 11, color: '#4a5568', marginTop: 2 }}>⚽ {selectedClub} only</div>}
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             {mode === 'vs' ? (
@@ -409,21 +437,18 @@ export default function PLStatClash() {
           </div>
         </div>
 
-        {/* Stat card */}
         <div style={{ ...s.card, textAlign: 'center', padding: '28px 20px', marginBottom: 20 }}>
           <div style={{ ...s.label, marginBottom: 10 }}>{round.category.label}</div>
           <div style={{ fontSize: 64, fontWeight: 800, color: 'white', letterSpacing: '-3px', lineHeight: 1 }}>{round.target}</div>
           <div style={{ fontSize: 14, color: '#8899bb', marginTop: 8 }}>{round.category.unit}</div>
         </div>
 
-        {/* Turn label */}
         {mode === 'vs' && !roundRevealed && (
           <div style={{ textAlign: 'center', fontSize: 13, color: '#8899bb', marginBottom: 14 }}>
-            <span style={{ color: '#f97316', fontWeight: 700 }}>{isP2Turn ? p2Label : p1Label}</span>'s turn
+            <span style={{ color: '#f97316', fontWeight: 700 }}>{lockedIn.p1 ? p2Label : p1Label}</span>'s turn
           </div>
         )}
 
-        {/* Search inputs */}
         {!roundRevealed && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 16 }}>
             {mode === 'solo' ? (
@@ -439,7 +464,6 @@ export default function PLStatClash() {
           </div>
         )}
 
-        {/* Round result */}
         {roundRevealed && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
             {([rounds[currentRound].p1, rounds[currentRound].p2] as const).map((entry, j) => {
@@ -462,7 +486,6 @@ export default function PLStatClash() {
           </div>
         )}
 
-        {/* Previous rounds */}
         {currentRound > 0 && (
           <div style={{ marginTop: 20 }}>
             <div style={{ ...s.label, marginBottom: 10 }}>Previous Rounds</div>
