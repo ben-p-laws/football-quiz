@@ -16,9 +16,9 @@ export default function LandingPage() {
     cardHead: { padding: '12px 14px 10px' } as React.CSSProperties,
     cardTitle: { fontSize: 15, fontWeight: 800, color: 'white', marginBottom: 2 } as React.CSSProperties,
     cardDesc: { fontSize: 11, color: '#8899bb' } as React.CSSProperties,
-    tag: { display: 'inline-block', fontSize: 10, fontWeight: 700, color: '#f97316', background: 'rgba(249,115,22,0.12)', padding: '2px 8px', borderRadius: 20, marginTop: 6 } as React.CSSProperties,
+    tag: { display: 'inline-block', fontSize: 10, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.12)', padding: '2px 8px', borderRadius: 20, marginTop: 6 } as React.CSSProperties,
     preview: { padding: '0 12px 10px', flex: 1 } as React.CSSProperties,
-    cta: { background: '#f97316', padding: '11px 14px', textAlign: 'center' as const, cursor: 'pointer' } as React.CSSProperties,
+    cta: { background: '#dc2626', padding: '11px 14px', textAlign: 'center' as const, cursor: 'pointer' } as React.CSSProperties,
     ctaText: { fontSize: 13, fontWeight: 800, color: 'white' } as React.CSSProperties,
   }
 
@@ -88,7 +88,7 @@ export default function LandingPage() {
 
         {/* ---- MINIMISE ---- */}
         <div style={s.card}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#f97316'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
           onClick={() => router.push('/minimise')}>
           <div style={s.cardHead}>
@@ -97,7 +97,7 @@ export default function LandingPage() {
             <div style={s.tag}>Strategy · Leaderboard</div>
           </div>
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
-            <div style={{ background: '#0a0f1e', border: '1px solid #f97316', borderRadius: 6, padding: '5px 10px', marginBottom: 6, textAlign: 'center' }}>
+            <div style={{ background: '#0a0f1e', border: '1px solid #dc2626', borderRadius: 6, padding: '5px 10px', marginBottom: 6, textAlign: 'center' }}>
               <div style={{ fontSize: 10, color: '#4a5568', marginBottom: 1 }}>Assign this player</div>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>Erling Haaland</div>
             </div>
@@ -115,7 +115,7 @@ export default function LandingPage() {
 
         {/* ---- BINGO ---- */}
         <div style={s.card}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#f97316'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
           onClick={() => router.push('/bingo')}>
           <div style={s.cardHead}>
@@ -141,7 +141,7 @@ export default function LandingPage() {
 
         {/* ---- STAT CLASH ---- */}
         <div style={s.card}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#f97316'}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
           onClick={() => router.push('/stat-clash')}>
           <div style={s.cardHead}>
@@ -152,7 +152,7 @@ export default function LandingPage() {
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
             <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '8px 10px', textAlign: 'center', marginBottom: 8 }}>
               <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target</div>
-              <div style={{ fontSize: 32, fontWeight: 800, color: '#f97316', lineHeight: 1.1 }}>150</div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: '#dc2626', lineHeight: 1.1 }}>150</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>career PL goals</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, flex: 1 }}>
@@ -207,7 +207,7 @@ export default function LandingPage() {
             const cols = ['Man Utd', 'Chelsea', 'City']
             const rows = ['Arsenal', 'Liverpool', 'Spurs']
             const cells: Array<{ color: string } | null> = [
-              { color: '#22c55e' }, null, { color: '#f97316' },
+              { color: '#22c55e' }, null, { color: '#dc2626' },
               null, { color: '#ef4444' }, null,
               { color: '#22c55e' }, null, { color: '#fbbf24' },
             ]
