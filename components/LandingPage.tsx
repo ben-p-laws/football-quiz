@@ -54,7 +54,7 @@ export default function LandingPage() {
         <div style={{ fontSize: 10, fontWeight: 600, color: assigned ? 'white' : '#8899bb', lineHeight: 1.2 }}>{icon} {label}</div>
         {assigned && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 9, color: '#8899bb' }}>{player}</span>
+            <span style={{ fontSize: 11, color: '#8899bb' }}>{player}</span>
             <span style={{ fontSize: 13, fontWeight: 800, color: rankColor }}>{rank}</span>
           </div>
         )}
@@ -250,9 +250,9 @@ export default function LandingPage() {
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
               <div style={{ display: 'flex', gap: 5, height: 90 }}>
-                <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, width: 28, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <span style={{ fontSize: 18, opacity: 0.65 }}>👤</span>
-                  <span style={{ fontSize: 6, color: '#8899bb', textAlign: 'center' as const, lineHeight: 1.2 }}>Who?</span>
+                <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, width: 56, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+                  <span style={{ fontSize: 22, opacity: 0.65 }}>👤</span>
+                  <span style={{ fontSize: 8, color: '#8899bb', textAlign: 'center' as const, lineHeight: 1.2 }}>Who am I?</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 4, flex: 1 }}>
                   {[
