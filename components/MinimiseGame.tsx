@@ -1,5 +1,4 @@
 "use client"
-// test
 
 import { useEffect, useState, useCallback } from "react"
 import NavBar from "./NavBar"
