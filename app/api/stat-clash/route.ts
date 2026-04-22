@@ -51,12 +51,15 @@ function buildPM(
   totals: Record<string, Totals>,
   key: keyof Omit<Totals, 'name'>,
   nameToId: Map<string, number>,
-  minVal: number
+  minVal: number,
+  useP90Max = false
 ): PMEntry | null {
   const eligible = Object.values(totals).filter(p => (p[key] as number) > 0)
   if (eligible.length < 5) return null
-  const vals = eligible.map(p => p[key] as number)
-  const max = vals.reduce((m, v) => Math.max(m, v), 0)
+  const vals = eligible.map(p => p[key] as number).sort((a, b) => a - b)
+  const max = useP90Max
+    ? vals[Math.min(vals.length - 1, Math.floor(vals.length * 0.9))]
+    : vals[vals.length - 1]
   if (max <= minVal) return null
   const playerMap: Record<number, { name: string; value: number }> = {}
   for (const p of eligible) playerMap[nameToId.get(p.name)!] = { name: p.name, value: p[key] as number }
@@ -124,7 +127,7 @@ export async function GET(req: Request) {
         ['club_clean_sheets', `Clean Sheets for ${club}`, 'clean sheets', 'clean_sheets', 1, 1],
       ]
       for (const [id, label, unit, key, minVal, weight] of defs) {
-        const pm = buildPM(t, key, nameToId, minVal)
+        const pm = buildPM(t, key, nameToId, minVal, true)
         if (pm) { categories.push({ id, label, unit, weight, floor: minVal, ...pm }); track(pm.playerMap) }
       }
 
@@ -163,7 +166,7 @@ export async function GET(req: Request) {
       const t = aggregate(rowsByClub[c] ?? [])
       const entry: Partial<Record<ClubStatKey, PMEntry>> = {}
       for (const [statKey, totalsKey, minVal] of clubStatDefs) {
-        const pm = buildPM(t, totalsKey, nameToId, minVal)
+        const pm = buildPM(t, totalsKey, nameToId, minVal, true)
         if (pm) { entry[statKey] = pm; track(pm.playerMap) }
       }
       if (Object.keys(entry).length > 0) clubData[c] = entry

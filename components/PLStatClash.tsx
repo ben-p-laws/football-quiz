@@ -20,6 +20,18 @@ interface RoundResult {
   p2: { player: Entity; value: number; score: number } | null
 }
 
+// ─── Closest answer helper ────────────────────────────────────────────────────
+
+function findClosest(cat: Category, target: number): { name: string; value: number } | null {
+  let best: { name: string; value: number } | null = null
+  let minDiff = Infinity
+  for (const d of Object.values(cat.playerMap as Record<string, { name: string; value: number }>)) {
+    const diff = Math.abs(d.value - target)
+    if (diff < minDiff) { minDiff = diff; best = d }
+  }
+  return best
+}
+
 // ─── Club stat display config ─────────────────────────────────────────────────
 
 const CLUB_STAT: Record<ClubStatKey, { labelPrefix: string; unit: string; floor: number }> = {
@@ -464,27 +476,45 @@ export default function PLStatClash() {
           </div>
         )}
 
-        {roundRevealed && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
-            {([rounds[currentRound].p1, rounds[currentRound].p2] as const).map((entry, j) => {
-              if (!entry) return null
-              const sl = scoreLabel(entry.score)
-              return (
-                <div key={j} style={{ ...s.card, background: 'rgba(249,115,22,0.06)' }}>
-                  {mode === 'vs' && <div style={{ fontSize: 11, color: '#8899bb', marginBottom: 4 }}>{j === 0 ? p1Label : p2Label}</div>}
-                  <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 6 }}>{entry.player.name}</div>
+        {roundRevealed && (() => {
+          const closest = findClosest(round.category, round.target)
+          const p1Pick = rounds[currentRound].p1
+          const p2Pick = rounds[currentRound].p2
+          const pickedNames = [p1Pick?.player.name, p2Pick?.player.name].filter(Boolean)
+          const userFoundClosest = closest && pickedNames.includes(closest.name)
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
+              {([p1Pick, p2Pick] as const).map((entry, j) => {
+                if (!entry) return null
+                const sl = scoreLabel(entry.score)
+                return (
+                  <div key={j} style={{ ...s.card, background: 'rgba(249,115,22,0.06)' }}>
+                    {mode === 'vs' && <div style={{ fontSize: 11, color: '#8899bb', marginBottom: 4 }}>{j === 0 ? p1Label : p2Label}</div>}
+                    <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 6 }}>{entry.player.name}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ fontSize: 13, color: '#8899bb' }}>{entry.value} {round.category.unit} (target: {round.target})</div>
+                      <div style={{ fontSize: 15, fontWeight: 800, color: sl.color }}>{entry.score} pts — {sl.text}</div>
+                    </div>
+                  </div>
+                )
+              })}
+              {closest && (
+                <div style={{ ...s.card, border: userFoundClosest ? '1px solid #22c55e' : '1px solid #1e2d4a', background: userFoundClosest ? 'rgba(34,197,94,0.08)' : '#111827' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: userFoundClosest ? '#22c55e' : '#8899bb', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 6 }}>
+                    {userFoundClosest ? '✓ Perfect answer!' : 'Closest answer'}
+                  </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontSize: 13, color: '#8899bb' }}>{entry.value} {round.category.unit} (target: {round.target})</div>
-                    <div style={{ fontSize: 15, fontWeight: 800, color: sl.color }}>{entry.score} pts — {sl.text}</div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'white' }}>{closest.name}</div>
+                    <div style={{ fontSize: 13, color: '#8899bb' }}>{closest.value} {round.category.unit}</div>
                   </div>
                 </div>
-              )
-            })}
-            <button onClick={nextRound} style={{ ...s.btn(), width: '100%' }}>
-              {currentRound + 1 >= rounds.length ? 'See Results' : 'Next Round →'}
-            </button>
-          </div>
-        )}
+              )}
+              <button onClick={nextRound} style={{ ...s.btn(), width: '100%' }}>
+                {currentRound + 1 >= rounds.length ? 'See Results' : 'Next Round →'}
+              </button>
+            </div>
+          )
+        })()}
 
         {currentRound > 0 && (
           <div style={{ marginTop: 20 }}>
