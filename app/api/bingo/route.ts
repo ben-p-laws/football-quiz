@@ -161,9 +161,14 @@ export async function GET() {
     p.maxGoalsAssistsInSeason = Math.max(p.maxGoalsAssistsInSeason, row.goals_assists ?? 0)
   }
 
-  // Select top N players by career appearances
+  // Weighted pool: goals and assists score heavily to favour attackers,
+  // clean sheets kept to ensure GKs make the cut, appearances as base
   const topPlayers = [...statsMap.values()]
-    .sort((a, b) => b.games - a.games)
+    .sort((a, b) => {
+      const scoreA = a.games + (a.goals * 4) + (a.assists * 3) + (a.gk_clean_sheets * 2)
+      const scoreB = b.games + (b.goals * 4) + (b.assists * 3) + (b.gk_clean_sheets * 2)
+      return scoreB - scoreA
+    })
     .slice(0, PLAYER_LIMIT)
 
   // Build playerAchievements map
