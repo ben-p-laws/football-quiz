@@ -11,15 +11,22 @@ function getClient() {
 }
 
 async function buildLeaderboard() {
-  const { data } = await getClient().from('bingo_leaderboard').select('username')
-  const counts: Record<string, number> = {}
+  const { data } = await getClient()
+    .from('bingo_leaderboard')
+    .select('username, score, created_at')
+    .order('score', { ascending: false })
+    .limit(200)
+
+  const best: Record<string, { score: number; created_at: string }> = {}
   for (const row of data || []) {
-    counts[row.username] = (counts[row.username] || 0) + 1
+    if (!best[row.username] || row.score > best[row.username].score) {
+      best[row.username] = { score: row.score, created_at: row.created_at }
+    }
   }
-  return Object.entries(counts)
-    .map(([username, perfect_9s]) => ({ username, perfect_9s }))
-    .sort((a, b) => b.perfect_9s - a.perfect_9s)
-    .slice(0, 50)
+  return Object.entries(best)
+    .map(([username, d]) => ({ username, score: d.score, created_at: d.created_at }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 20)
 }
 
 export async function GET() {
@@ -27,8 +34,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { username } = await req.json()
-  if (!username) return NextResponse.json({ error: 'Missing username' }, { status: 400 })
-  await getClient().from('bingo_leaderboard').insert({ username })
+  const { username, score } = await req.json()
+  if (!username || score === undefined) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  await getClient().from('bingo_leaderboard').insert({ username, score })
   return NextResponse.json({ leaderboard: await buildLeaderboard() })
 }
