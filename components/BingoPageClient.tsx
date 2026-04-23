@@ -226,6 +226,44 @@ export default function BingoPageClient() {
     page: { background: '#0a0f1e', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   }
 
+  const bingoGrid = puzzle && (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+      {puzzle.achievements.map(ach => {
+        const assigned = assignments[ach.position]
+        const isSelected = selectedSquare === ach.position
+        let bg      = '#111827'
+        let border  = '#1e2d4a'
+        let cursor  = 'default'
+
+        if (assigned) {
+          bg     = assigned.correct ? '#0d2818' : '#2a1010'
+          border = assigned.correct ? '#22c55e' : '#ef4444'
+        } else if (!gameOver && displayName && !spinning) {
+          bg     = '#1a2535'
+          border = '#2a3d5e'
+          cursor = 'pointer'
+        }
+
+        if (isSelected) border = assigned?.correct ? '#22c55e' : '#ef4444'
+
+        return (
+          <div key={ach.position}
+            onClick={() => !assigned && !spinning && displayName && !gameOver && assignToSquare(ach.position)}
+            style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '10px 8px', minHeight: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', cursor, transition: 'all 0.2s' }}>
+            <div style={{ fontSize: '11px', fontWeight: 700, color: assigned ? (assigned.correct ? '#22c55e' : '#ef4444') : '#cbd5e1', lineHeight: 1.3, marginBottom: assigned ? '6px' : 0 }}>
+              {ach.name}
+            </div>
+            {assigned && (
+              <div style={{ fontSize: '10px', color: assigned.correct ? '#22c55e' : '#ef444480', marginTop: '2px' }}>
+                {assigned.correct ? '✓' : '✗'} {assigned.playerName}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+
   if (!puzzle) return (
     <div style={s.page}>
       <NavBar />
@@ -276,23 +314,31 @@ export default function BingoPageClient() {
           <p style={{ fontSize: '13px', color: '#8899bb', margin: '0 0 12px' }}>
             Assign each player to an achievement square — can you go 9/9?
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', alignItems: 'center' }}>
-            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '8px 20px', textAlign: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: '10px', padding: '8px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: '16px', fontWeight: 800, color: '#cbd5e1' }}>{MODE_LABELS[mode]}</div>
+              <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mode</div>
+            </div>
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '8px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{score}/9</div>
               <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Score</div>
             </div>
-            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '8px 20px', textAlign: 'center' }}>
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '8px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{gameOver ? 0 : playersLeft}</div>
               <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Players left</div>
             </div>
             <button onClick={regenerate}
-              style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: '10px', padding: '8px 20px', fontSize: '13px', fontWeight: 700, color: '#cbd5e1', cursor: 'pointer' }}>
+              style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: '#cbd5e1', cursor: 'pointer' }}>
               Restart
+            </button>
+            <button onClick={regenerate}
+              style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: '#cbd5e1', cursor: 'pointer' }}>
+              Change Mode
             </button>
           </div>
         </div>
 
-        {/* Mode selector — only before game starts */}
+        {/* Mode selector + grid in lobby */}
         {!gameStarted && !gameOver && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Mode</div>
@@ -312,6 +358,9 @@ export default function BingoPageClient() {
             </div>
           </div>
         )}
+
+        {/* Grid shown in lobby (before leaderboard) */}
+        {!gameStarted && !gameOver && bingoGrid}
 
         {/* Leaderboard in lobby */}
         {!gameStarted && !gameOver && leaderboard.length > 0 && (() => {
@@ -364,7 +413,7 @@ export default function BingoPageClient() {
                 {/* Skip on left — fixed width so card height stays constant */}
                 <div style={{ width: 72, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {!spinning && displayName && skipsLeft > 0 ? (
-                    <button onClick={handleSkip} style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#8899bb', cursor: 'pointer', textAlign: 'center', width: '100%' }}>
+                    <button onClick={handleSkip} style={{ background: '#dc2626', border: 'none', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 700, color: 'white', cursor: 'pointer', textAlign: 'center', width: '100%' }}>
                       Skip<br /><span style={{ fontSize: 10 }}>({skipsLeft} left)</span>
                     </button>
                   ) : !spinning && displayName && skipsLeft === 0 ? (
@@ -387,42 +436,8 @@ export default function BingoPageClient() {
           </div>
         )}
 
-        {/* Bingo grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '16px' }}>
-          {puzzle.achievements.map(ach => {
-            const assigned = assignments[ach.position]
-            const isSelected = selectedSquare === ach.position
-            let bg      = '#111827'
-            let border  = '#1e2d4a'
-            let cursor  = 'default'
-
-            if (assigned) {
-              bg     = assigned.correct ? '#0d2818' : '#2a1010'
-              border = assigned.correct ? '#22c55e' : '#ef4444'
-            } else if (!gameOver && displayName && !spinning) {
-              bg     = '#1a2535'
-              border = '#2a3d5e'
-              cursor = 'pointer'
-            }
-
-            if (isSelected) border = assigned?.correct ? '#22c55e' : '#ef4444'
-
-            return (
-              <div key={ach.position}
-                onClick={() => !assigned && !spinning && displayName && !gameOver && assignToSquare(ach.position)}
-                style={{ background: bg, border: `1px solid ${border}`, borderRadius: '10px', padding: '10px 8px', minHeight: '90px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', cursor, transition: 'all 0.2s' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: assigned ? (assigned.correct ? '#22c55e' : '#ef4444') : '#cbd5e1', lineHeight: 1.3, marginBottom: assigned ? '6px' : 0 }}>
-                  {ach.name}
-                </div>
-                {assigned && (
-                  <div style={{ fontSize: '10px', color: assigned.correct ? '#22c55e' : '#ef444480', marginTop: '2px' }}>
-                    {assigned.correct ? '✓' : '✗'} {assigned.playerName}
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        {/* Grid shown in-game / game-over (after player card) */}
+        {(gameStarted || gameOver) && bingoGrid}
 
         {/* Tap hint */}
         {!gameOver && displayName && !spinning && currentPlayerIdx < puzzle.players.length && (
