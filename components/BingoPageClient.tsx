@@ -206,6 +206,42 @@ export default function BingoPageClient() {
       <NavBar />
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '20px 16px' }}>
 
+        {/* Leaderboard in lobby (before game starts) */}
+        {currentPlayerIdx === 0 && !gameOver && leaderboard.length > 0 && (() => {
+          const top10 = leaderboard.slice(0, 10)
+          const userIdx = leaderboard.findIndex(r => r.username === userName)
+          const userInTop10 = userIdx >= 0 && userIdx < 10
+          return (
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '12px' }}>🏆 Perfect 9 Leaderboard</div>
+              {top10.map((row, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e2d4a' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: i === 0 ? '#f59e0b' : '#4a5568', width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
+                    <span style={{ fontSize: '13px', color: row.username === userName ? '#dc2626' : 'white', fontWeight: row.username === userName ? 700 : 400 }}>{row.username}</span>
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: row.username === userName ? '#dc2626' : '#8899bb' }}>{row.perfect_9s} perfect{row.perfect_9s === 1 ? '' : 's'}</span>
+                </div>
+              ))}
+              {!userInTop10 && userIdx >= 0 && (() => {
+                const row = leaderboard[userIdx]
+                return (
+                  <>
+                    <div style={{ padding: '4px 0', color: '#2a3d5e', fontSize: '11px' }}>···</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(220,38,38,0.06)', borderRadius: '6px' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#dc2626', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                        <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: 700 }}>{row.username}</span>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>{row.perfect_9s} perfect{row.perfect_9s === 1 ? '' : 's'}</span>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          )
+        })()}
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'white', margin: '0 0 4px', letterSpacing: '-0.5px' }}>

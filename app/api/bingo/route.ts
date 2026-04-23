@@ -19,14 +19,7 @@ type PlayerStats = {
   goals: number
   assists: number
   goals_assists: number
-  pens_made: number
-  pens_missed: number
-  pens_won: number
-  cards_yellow: number
   cards_red: number
-  tackles_won: number
-  interceptions: number
-  own_goals: number
   gk_clean_sheets: number
   clubs: Set<string>
   maxGoalsInSeason: number
@@ -35,27 +28,21 @@ type PlayerStats = {
 }
 
 const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boolean }[] = [
-  { id: 'goals_100',         name: '100+ Career PL Goals',          check: p => p.goals >= 100 },
-  { id: 'goals_50',          name: '50+ Career PL Goals',           check: p => p.goals >= 50 },
-  { id: 'goals_season_20',   name: '20+ Goals in a Season',         check: p => p.maxGoalsInSeason >= 20 },
-  { id: 'assists_50',        name: '50+ Career PL Assists',         check: p => p.assists >= 50 },
-  { id: 'assists_season_15', name: '15+ Assists in a Season',       check: p => p.maxAssistsInSeason >= 15 },
-  { id: 'ga_150',            name: '150+ Career Goal Contributions', check: p => p.goals_assists >= 150 },
+  { id: 'goals_100',         name: '100+ Career PL Goals',               check: p => p.goals >= 100 },
+  { id: 'goals_50',          name: '50+ Career PL Goals',                check: p => p.goals >= 50 },
+  { id: 'goals_season_20',   name: '20+ Goals in a Season',              check: p => p.maxGoalsInSeason >= 20 },
+  { id: 'assists_50',        name: '50+ Career PL Assists',              check: p => p.assists >= 50 },
+  { id: 'assists_season_15', name: '15+ Assists in a Season',            check: p => p.maxAssistsInSeason >= 15 },
+  { id: 'ga_150',            name: '150+ Career Goal Contributions',     check: p => p.goals_assists >= 150 },
   { id: 'ga_season_25',      name: '25+ Goal Contributions in a Season', check: p => p.maxGoalsAssistsInSeason >= 25 },
-  { id: 'apps_300',          name: '300+ PL Appearances',           check: p => p.games >= 300 },
-  { id: 'apps_200',          name: '200+ PL Appearances',           check: p => p.games >= 200 },
-  { id: 'clubs_4',           name: 'Played for 4+ PL Clubs',        check: p => p.clubs.size >= 4 },
-  { id: 'clubs_3',           name: 'Played for 3+ PL Clubs',        check: p => p.clubs.size >= 3 },
-  { id: 'never_sent_off',    name: 'Never Sent Off (100+ apps)',     check: p => p.cards_red === 0 && p.games >= 100 },
-  { id: 'reds_3',            name: '3+ Career Red Cards',           check: p => p.cards_red >= 3 },
-  { id: 'yellows_50',        name: '50+ Career Yellow Cards',       check: p => p.cards_yellow >= 50 },
-  { id: 'pens_missed_3',     name: 'Missed 3+ Penalties',           check: p => p.pens_missed >= 3 },
-  { id: 'pens_scored_10',    name: 'Scored 10+ Penalties',          check: p => p.pens_made >= 10 },
-  { id: 'pens_won_5',        name: 'Won 5+ Penalties',              check: p => p.pens_won >= 5 },
-  { id: 'tackles_100',       name: '100+ Career Tackles Won',       check: p => p.tackles_won >= 100 },
-  { id: 'interceptions_100', name: '100+ Career Interceptions',     check: p => p.interceptions >= 100 },
-  { id: 'clean_sheets_50',   name: '50+ PL Clean Sheets',           check: p => p.gk_clean_sheets >= 50 },
-  { id: 'own_goal',          name: 'Scored an Own Goal',            check: p => p.own_goals >= 1 },
+  { id: 'apps_300',          name: '300+ PL Appearances',                check: p => p.games >= 300 },
+  { id: 'apps_200',          name: '200+ PL Appearances',                check: p => p.games >= 200 },
+  { id: 'clubs_4',           name: 'Played for 4+ PL Clubs',             check: p => p.clubs.size >= 4 },
+  { id: 'clubs_3',           name: 'Played for 3+ PL Clubs',             check: p => p.clubs.size >= 3 },
+  { id: 'never_sent_off',    name: 'Never Sent Off (100+ apps)',          check: p => p.cards_red === 0 && p.games >= 100 },
+  { id: 'reds_3',            name: '3+ Career Red Cards',                check: p => p.cards_red >= 3 },
+  { id: 'clean_sheets_50',   name: '50+ PL Clean Sheets (GK only)',      check: p => p.gk_clean_sheets >= 50 },
+  { id: 'clean_sheets_100',  name: '100+ PL Clean Sheets (GK only)',     check: p => p.gk_clean_sheets >= 100 },
 ]
 
 async function fetchAll(columns: string) {
@@ -76,7 +63,7 @@ async function fetchAll(columns: string) {
 
 export async function GET() {
   const rows = await fetchAll(
-    'name_display,games,goals,assists,goals_assists,pens_made,pens_missed,pens_won,cards_yellow,cards_red,tackles_won,interceptions,own_goals,gk_clean_sheets,teams_played_for'
+    'name_display,games,goals,assists,goals_assists,cards_red,gk_clean_sheets,teams_played_for'
   )
 
   // Aggregate per player
@@ -87,10 +74,7 @@ export async function GET() {
       statsMap.set(name, {
         name,
         games: 0, goals: 0, assists: 0, goals_assists: 0,
-        pens_made: 0, pens_missed: 0, pens_won: 0,
-        cards_yellow: 0, cards_red: 0,
-        tackles_won: 0, interceptions: 0,
-        own_goals: 0, gk_clean_sheets: 0,
+        cards_red: 0, gk_clean_sheets: 0,
         clubs: new Set(),
         maxGoalsInSeason: 0,
         maxAssistsInSeason: 0,
@@ -98,18 +82,11 @@ export async function GET() {
       })
     }
     const p = statsMap.get(name)!
-    p.games         += row.games ?? 0
-    p.goals         += row.goals ?? 0
-    p.assists       += row.assists ?? 0
-    p.goals_assists += row.goals_assists ?? 0
-    p.pens_made     += row.pens_made ?? 0
-    p.pens_missed   += row.pens_missed ?? 0
-    p.pens_won      += row.pens_won ?? 0
-    p.cards_yellow  += row.cards_yellow ?? 0
-    p.cards_red     += row.cards_red ?? 0
-    p.tackles_won   += row.tackles_won ?? 0
-    p.interceptions += row.interceptions ?? 0
-    p.own_goals     += row.own_goals ?? 0
+    p.games           += row.games ?? 0
+    p.goals           += row.goals ?? 0
+    p.assists         += row.assists ?? 0
+    p.goals_assists   += row.goals_assists ?? 0
+    p.cards_red       += row.cards_red ?? 0
     p.gk_clean_sheets += row.gk_clean_sheets ?? 0
 
     if (row.teams_played_for) {
