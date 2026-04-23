@@ -179,6 +179,46 @@ function buildRounds(
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+const LS_USERNAME = 'topbins_statclash_username'
+
+type LbEntry = { display_name: string; username: string; score: number; created_at: string }
+
+function LeaderboardPanel({ leaderboard, currentDisplayName }: { leaderboard: LbEntry[]; currentDisplayName: string }) {
+  if (!leaderboard.length) return null
+  const top10 = leaderboard.slice(0, 10)
+  const userIdx = leaderboard.findIndex(r => r.display_name === currentDisplayName)
+  const userInTop10 = userIdx >= 0 && userIdx < 10
+  return (
+    <div style={s.card}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'white', marginBottom: 12 }}>🏆 Leaderboard</div>
+      {top10.map((row, i) => (
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e2d4a' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <span style={{ fontSize: 12, color: i === 0 ? '#f59e0b' : '#4a5568', width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
+            <span style={{ fontSize: 13, color: row.display_name === currentDisplayName ? '#f97316' : 'white', fontWeight: row.display_name === currentDisplayName ? 700 : 400 }}>{row.display_name}</span>
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: row.display_name === currentDisplayName ? '#f97316' : '#8899bb' }}>{row.score}</span>
+        </div>
+      ))}
+      {!userInTop10 && userIdx >= 0 && (() => {
+        const row = leaderboard[userIdx]
+        return (
+          <>
+            <div style={{ padding: '4px 0', color: '#2a3d5e', fontSize: 11 }}>···</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(249,115,22,0.06)', borderRadius: 6 }}>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: '#f97316', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                <span style={{ fontSize: 13, color: '#f97316', fontWeight: 700 }}>{row.display_name}</span>
+              </div>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#f97316' }}>{row.score}</span>
+            </div>
+          </>
+        )
+      })()}
+    </div>
+  )
+}
+
 export default function PLStatClash() {
   const [loading, setLoading]       = useState(true)
   const [fetching, setFetching]     = useState(false)
@@ -187,6 +227,11 @@ export default function PLStatClash() {
   const [allPlayers, setAllPlayers] = useState<Entity[]>([])
   const [clubs, setClubs]           = useState<string[]>([])
   const [selectedClub, setSelectedClub] = useState('')
+
+  const [username, setUsername]         = useState('')
+  const [usernameSet, setUsernameSet]   = useState(false)
+  const [leaderboard, setLeaderboard]   = useState<LbEntry[]>([])
+  const [submitted, setSubmitted]       = useState(false)
 
   const [mode, setMode]             = useState<'solo' | 'vs'>('solo')
   const [numRounds, setNumRounds]   = useState(10)
@@ -200,21 +245,59 @@ export default function PLStatClash() {
   const [gameOver, setGameOver]             = useState(false)
   const [lockedIn, setLockedIn]             = useState<{ p1?: Entity; p2?: Entity }>({})
 
-  const fetchData = useCallback(async (club?: string) => {
+  // Load saved username
+  useEffect(() => {
+    const saved = localStorage.getItem(LS_USERNAME)
+    if (saved) { setUsername(saved); setUsernameSet(true) }
+  }, [])
+
+  const fetchData = useCallback(async (club?: string, rounds = 10) => {
     setFetching(true)
-    // Clear club data immediately so stale rounds can't be generated while fetching
     setClubData({})
     setCategories([])
-    const url = club ? `/api/stat-clash?club=${encodeURIComponent(club)}` : '/api/stat-clash'
-    const data = await fetch(url).then(r => r.json())
+    const params = new URLSearchParams()
+    if (club) params.set('club', club)
+    params.set('rounds', String(rounds))
+    const data = await fetch(`/api/stat-clash?${params}`).then(r => r.json())
     setCategories(data.categories ?? [])
     setClubData(data.clubData ?? {})
     setAllPlayers(data.allPlayers ?? [])
+    setLeaderboard(data.leaderboard ?? [])
     if (!club && (data.clubs ?? []).length) setClubs(data.clubs)
     setFetching(false)
   }, [])
 
-  useEffect(() => { fetchData().finally(() => setLoading(false)) }, [fetchData])
+  useEffect(() => { fetchData(undefined, 10).finally(() => setLoading(false)) }, [fetchData])
+
+  // Lightweight leaderboard refresh when rounds slider changes (lobby only)
+  const isFirstRender = useRef(true)
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (started) return
+    fetch(`/api/stat-clash?leaderboard_only=true&rounds=${numRounds}`)
+      .then(r => r.json())
+      .then(d => setLeaderboard(d.leaderboard ?? []))
+  }, [numRounds, started])
+
+  async function submitScore(finalScore: number) {
+    if (submitted) return
+    setSubmitted(true)
+    await fetch('/api/stat-clash', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, score: finalScore, num_rounds: numRounds, selected_club: selectedClub }),
+    })
+    const data = await fetch(`/api/stat-clash?leaderboard_only=true&rounds=${numRounds}`).then(r => r.json())
+    setLeaderboard(data.leaderboard ?? [])
+  }
+
+  function handleSetUsername() {
+    const trimmed = username.trim()
+    if (!trimmed) return
+    setUsername(trimmed)
+    localStorage.setItem(LS_USERNAME, trimmed)
+    setUsernameSet(true)
+  }
 
   function startGame(cats = categories, cd = clubData) {
     if (!cats.length && !Object.keys(cd).length) return
@@ -223,6 +306,7 @@ export default function PLStatClash() {
     setRoundRevealed(false)
     setGameOver(false)
     setLockedIn({})
+    setSubmitted(false)
     setStarted(true)
   }
 
@@ -258,8 +342,15 @@ export default function PLStatClash() {
   }
 
   function nextRound() {
-    if (currentRound + 1 >= rounds.length) { setGameOver(true) }
-    else { setCurrentRound(i => i + 1); setRoundRevealed(false); setLockedIn({}) }
+    if (currentRound + 1 >= rounds.length) {
+      setGameOver(true)
+      if (mode === 'solo' && username) {
+        const finalScore = rounds.reduce((sum, r) => sum + (r.p1?.score ?? 0), 0)
+        submitScore(finalScore)
+      }
+    } else {
+      setCurrentRound(i => i + 1); setRoundRevealed(false); setLockedIn({})
+    }
   }
 
   const totalScore = (w: 1 | 2) =>
@@ -267,6 +358,23 @@ export default function PLStatClash() {
 
   const p1Label = mode === 'vs' ? (p1Name || 'Player 1') : 'You'
   const p2Label = p2Name || 'Player 2'
+
+  const currentDisplayName = selectedClub ? `${username} (${selectedClub})` : username
+
+  // ── Username entry ────────────────────────────────────────────────────────────
+  if (!loading && !usernameSet) return (
+    <div style={s.page}>
+      <NavBar />
+      <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 20px' }}>
+        <div style={{ ...s.card, marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'white', marginBottom: 12 }}>Choose a username</div>
+          <input value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSetUsername()} placeholder="Your name..." style={s.input} autoFocus />
+          <p style={{ fontSize: 11, color: '#4a5568', margin: '8px 0 0' }}>Saved for the leaderboard</p>
+        </div>
+        <button onClick={handleSetUsername} style={{ ...s.btn(), width: '100%', fontSize: 15, padding: '14px' }}>Continue</button>
+      </div>
+    </div>
+  )
 
   // ── Loading ──────────────────────────────────────────────────────────────────
   if (loading) return (
@@ -357,6 +465,13 @@ export default function PLStatClash() {
               })}
             </div>
           )}
+
+          <div style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 11, color: '#4a5568', textAlign: 'center', marginBottom: 12 }}>
+              {numRounds}-round leaderboard
+            </div>
+            <LeaderboardPanel leaderboard={leaderboard} currentDisplayName={currentDisplayName} />
+          </div>
         </div>
       </div>
     )
@@ -381,7 +496,12 @@ export default function PLStatClash() {
           {fetching ? 'Loading...' : selectedClub ? `Start — ${selectedClub} only` : 'Start Game'}
         </button>
 
-        <div style={{ ...s.card, marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: '#4a5568', textAlign: 'center', marginBottom: 12 }}>
+          {numRounds}-round leaderboard
+        </div>
+        <LeaderboardPanel leaderboard={leaderboard} currentDisplayName={currentDisplayName} />
+
+        <div style={{ ...s.card, marginBottom: 16, marginTop: 16 }}>
           <div style={{ ...s.label, marginBottom: 12 }}>Mode</div>
           <div style={{ display: 'flex', gap: 8 }}>
             {(['solo', 'vs'] as const).map(m => (

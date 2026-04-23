@@ -95,10 +95,44 @@ type Category = {
   playerMap: Record<number, { name: string; value: number }>
 }
 
+type LbEntry = { display_name: string; username: string; score: number; created_at: string }
+
+async function fetchLeaderboard(numRounds: number): Promise<LbEntry[]> {
+  const { data } = await getClient()
+    .from('stat_clash_scores')
+    .select('username, score, selected_club, created_at')
+    .eq('num_rounds', numRounds)
+    .order('score', { ascending: true })
+    .limit(200)
+
+  const best: Record<string, { score: number; selected_club: string; created_at: string }> = {}
+  for (const row of data || []) {
+    const key = `${row.username}:::${row.selected_club || ''}`
+    if (!best[key] || row.score < best[key].score) {
+      best[key] = { score: row.score, selected_club: row.selected_club || '', created_at: row.created_at }
+    }
+  }
+  return Object.entries(best)
+    .map(([key, d]) => {
+      const username = key.split(':::')[0]
+      const display_name = d.selected_club ? `${username} (${d.selected_club})` : username
+      return { display_name, username, score: d.score, created_at: d.created_at }
+    })
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 20)
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const club = searchParams.get('club') || undefined
+    const numRounds = parseInt(searchParams.get('rounds') || '10')
+    const leaderboardOnly = searchParams.get('leaderboard_only') === 'true'
+
+    if (leaderboardOnly) {
+      const leaderboard = await fetchLeaderboard(numRounds)
+      return NextResponse.json({ leaderboard }, { headers: { 'Cache-Control': 'no-store' } })
+    }
 
     const rows = await fetchAll()
 
@@ -131,8 +165,9 @@ export async function GET(req: Request) {
         if (pm) { categories.push({ id, label, unit, weight, floor: minVal, ...pm }); track(pm.playerMap) }
       }
 
+      const leaderboard = await fetchLeaderboard(numRounds)
       return NextResponse.json(
-        { categories, clubData: {}, allPlayers: Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name })), clubs: [] },
+        { categories, clubData: {}, allPlayers: Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name })), clubs: [], leaderboard },
         { headers: { 'Cache-Control': 'no-store' } }
       )
     }
@@ -172,15 +207,31 @@ export async function GET(req: Request) {
       if (Object.keys(entry).length > 0) clubData[c] = entry
     }
 
+    const leaderboard = await fetchLeaderboard(numRounds)
     return NextResponse.json(
       {
         categories,
         clubData,
         allPlayers: Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name })),
         clubs,
+        leaderboard,
       },
-      { headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate' } }
+      { headers: { 'Cache-Control': 'no-store' } }
     )
+  } catch (e) {
+    console.error(e)
+    return NextResponse.json({ error: 'Failed' }, { status: 500 })
+  }
+}
+
+export async function POST(req: Request) {
+  try {
+    const { username, score, num_rounds, selected_club } = await req.json()
+    if (!username || score === undefined || !num_rounds) {
+      return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+    }
+    await getClient().from('stat_clash_scores').insert({ username, score, num_rounds, selected_club: selected_club || '' })
+    return NextResponse.json({ ok: true })
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
