@@ -27,14 +27,14 @@ function getRankColor(rank: number) {
   if (rank <= 10) return "#22c55e"
   if (rank <= 20) return "#86efac"
   if (rank <= 30) return "#fbbf24"
-  if (rank <= 40) return "#f97316"
+  if (rank <= 40) return "#dc2626"
   return "#ef4444"
 }
 function getRankBg(rank: number) {
   if (rank <= 10) return "rgba(34,197,94,0.15)"
   if (rank <= 20) return "rgba(134,239,172,0.08)"
   if (rank <= 30) return "rgba(251,191,36,0.1)"
-  if (rank <= 40) return "rgba(249,115,22,0.1)"
+  if (rank <= 40) return "rgba(220,38,38,0.1)"
   return "rgba(239,68,68,0.1)"
 }
 function getRankLabel(rank: number) {
@@ -73,7 +73,7 @@ const s = {
     borderRadius: 12,
     padding: "16px 20px",
   } as React.CSSProperties,
-  btn: (color = "#f97316"): React.CSSProperties => ({
+  btn: (color = "#dc2626"): React.CSSProperties => ({
     background: color,
     border: "none",
     borderRadius: 10,
@@ -234,11 +234,11 @@ export default function MinimiseGame() {
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
       `}</style>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh", gap: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.12em", textTransform: "uppercase", animation: "pulse 1.5s ease infinite" }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.12em", textTransform: "uppercase", animation: "pulse 1.5s ease infinite" }}>
           Loading Minimise
         </div>
         <div style={{ width: 200, height: 4, background: "#1e2d4a", borderRadius: 2, overflow: "hidden" }}>
-          <div style={{ height: "100%", background: "#f97316", borderRadius: 2, animation: "progress 8s ease-out forwards" }} />
+          <div style={{ height: "100%", background: "#dc2626", borderRadius: 2, animation: "progress 8s ease-out forwards" }} />
         </div>
         <div style={{ fontSize: 12, color: "#4a5568" }}>Crunching Premier League stats...</div>
       </div>
@@ -251,12 +251,12 @@ export default function MinimiseGame() {
       <NavBar />
       <div style={{ maxWidth: 400, margin: "80px auto", padding: "0 20px" }}>
         <div style={{ marginBottom: 32, textAlign: "center" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>TopBins</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 8 }}>TopBins</div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: "white", margin: "0 0 8px" }}>Football Minimise</h1>
           <p style={{ fontSize: 13, color: "#8899bb", margin: 0 }}>Assign 8 players to categories where they rank highest. Lowest total rank wins.</p>
         </div>
         <div style={{ ...s.card, marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Your name</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10 }}>Your name</div>
           <input
             style={s.input}
             placeholder="Enter your name"
@@ -279,10 +279,10 @@ export default function MinimiseGame() {
       <NavBar />
       <div style={{ maxWidth: 480, margin: "40px auto", padding: "0 20px" }}>
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>TopBins</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: 6 }}>TopBins</div>
           <h1 style={{ fontSize: 32, fontWeight: 800, color: "white", margin: "0 0 6px", letterSpacing: "-0.5px" }}>Football Minimise</h1>
           <p style={{ fontSize: 13, color: "#8899bb", margin: "0 0 2px" }}>
-            Playing as <strong style={{ color: "#f97316" }}>{username}</strong> ·{" "}
+            Playing as <strong style={{ color: "#dc2626" }}>{username}</strong> ·{" "}
             <span style={{ color: "#4a5568", cursor: "pointer", textDecoration: "underline" }} onClick={() => setUsernameSet(false)}>change</span>
           </p>
           <p style={{ fontSize: 13, color: "#8899bb", margin: 0 }}>8 players revealed one at a time. Assign each to a category for the lowest total rank.</p>
@@ -290,7 +290,7 @@ export default function MinimiseGame() {
 
         {clubs.length > 0 && (
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Filter by Club</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 8 }}>Filter by Club</div>
             <select
               value={selectedClub}
               onChange={e => {
@@ -327,7 +327,7 @@ export default function MinimiseGame() {
         </div>
 
         <div style={{ ...s.card, marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>The 8 Categories</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.08em", textTransform: "uppercase", marginBottom: 12 }}>The 8 Categories</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {CATS.map(c => (
               <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -351,9 +351,9 @@ export default function MinimiseGame() {
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #1e2d4a" }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <span style={{ fontSize: 12, color: i === 0 ? "#f59e0b" : "#4a5568", width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
-                    <span style={{ fontSize: 13, color: row.username === username ? "#f97316" : "white", fontWeight: row.username === username ? 700 : 400 }}>{row.username}</span>
+                    <span style={{ fontSize: 13, color: row.username === username ? "#dc2626" : "white", fontWeight: row.username === username ? 700 : 400 }}>{row.username}</span>
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: row.username === username ? "#f97316" : "#8899bb" }}>{row.score}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: row.username === username ? "#dc2626" : "#8899bb" }}>{row.score}</span>
                 </div>
               ))}
               {!userInTop10 && userIdx >= 0 && (() => {
@@ -361,12 +361,12 @@ export default function MinimiseGame() {
                 return (
                   <>
                     <div style={{ padding: "4px 0", color: "#2a3d5e", fontSize: 11 }}>···</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 4px", background: "rgba(249,115,22,0.06)", borderRadius: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 4px", background: "rgba(220,38,38,0.06)", borderRadius: 6 }}>
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: "#f97316", width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
-                        <span style={{ fontSize: 13, color: "#f97316", fontWeight: 700 }}>{row.username}</span>
+                        <span style={{ fontSize: 12, color: "#dc2626", width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                        <span style={{ fontSize: 13, color: "#dc2626", fontWeight: 700 }}>{row.username}</span>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#f97316" }}>{row.score}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626" }}>{row.score}</span>
                     </div>
                   </>
                 )
@@ -393,11 +393,11 @@ export default function MinimiseGame() {
             </div>
             <div style={{ fontSize: 13, color: "#8899bb" }}>
               {gameOver
-                ? <strong style={{ color: "#f97316" }}>Final score: {totalScore} 🏆</strong>
-                : <>Score so far: <strong style={{ color: "#f97316" }}>{Object.values(assignments).reduce((s, a) => s + (a?.rank ?? 0), 0)}</strong></>
+                ? <strong style={{ color: "#dc2626" }}>Final score: {totalScore} 🏆</strong>
+                : <>Score so far: <strong style={{ color: "#dc2626" }}>{Object.values(assignments).reduce((s, a) => s + (a?.rank ?? 0), 0)}</strong></>
               }
             </div>
-            <div style={{ fontSize: 11, color: selectedClub ? "#f97316" : "#4a5568", marginTop: 2 }}>
+            <div style={{ fontSize: 11, color: selectedClub ? "#dc2626" : "#4a5568", marginTop: 2 }}>
               {selectedClub ? `⚽ ${selectedClub}` : "🌍 All Clubs"}
             </div>
           </div>
@@ -411,11 +411,11 @@ export default function MinimiseGame() {
         {showRules && (
           <div style={{ ...s.card, marginBottom: 16, background: "#0a0f1e", position: "relative" }}>
             <button onClick={() => setShowRules(false)} style={{ position: "absolute", top: 10, right: 12, background: "none", border: "none", color: "#4a5568", cursor: "pointer", fontSize: 16 }}>✕</button>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#f97316", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>How to play</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>How to play</div>
             <div style={{ fontSize: 12, color: "#8899bb", lineHeight: 1.7 }}>
               Each round a player is revealed. Click the category where they rank highest (lowest number = better rank). You can only use each category once. Lowest total rank wins — perfect score is 8.
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "#f97316", textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 12, marginBottom: 6 }}>Categories</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 12, marginBottom: 6 }}>Categories</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
               {CATS.map(c => (
                 <div key={c.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, gap: 8 }}>
@@ -431,7 +431,7 @@ export default function MinimiseGame() {
         {gameOver ? (
           <div style={{ ...s.card, marginBottom: 16, textAlign: "center", background: "linear-gradient(135deg, #111827 0%, #0f1f35 100%)", padding: "14px 20px" }}>
             <div style={{ fontSize: 11, color: "#4a5568", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 8 }}>Final Score</div>
-            <div style={{ fontSize: 56, fontWeight: 800, color: "#f97316", letterSpacing: "-3px", lineHeight: 1 }}>{totalScore}</div>
+            <div style={{ fontSize: 56, fontWeight: 800, color: "#dc2626", letterSpacing: "-3px", lineHeight: 1 }}>{totalScore}</div>
             <div style={{ fontSize: 12, color: "#4a5568", marginTop: 6 }}>total rank · lower is better</div>
           </div>
         ) : (
@@ -491,7 +491,7 @@ export default function MinimiseGame() {
                   display: "flex", alignItems: "center", gap: 8,
                   transition: "border-color 0.15s",
                 } as React.CSSProperties}
-                onMouseEnter={e => { if (!gameOver) (e.currentTarget as HTMLElement).style.borderColor = "#f97316" }}
+                onMouseEnter={e => { if (!gameOver) (e.currentTarget as HTMLElement).style.borderColor = "#dc2626" }}
                 onMouseLeave={e => { if (!gameOver) (e.currentTarget as HTMLElement).style.borderColor = "#1e2d4a" }}
               >
                 <div style={{ fontSize: 14, fontWeight: 600, color: gameOver ? "#2a3d5e" : "white" }}>
@@ -514,11 +514,11 @@ export default function MinimiseGame() {
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid #1e2d4a" }}>
                   <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <span style={{ fontSize: 12, color: i === 0 ? "#f59e0b" : "#4a5568", width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
-                    <span style={{ fontSize: 13, color: row.username === username ? "#f97316" : "white", fontWeight: row.username === username ? 700 : 400 }}>
-                      {row.username}{row.username === username && totalScore === row.score && <span style={{ color: "#f97316", fontSize: 12 }}> · you</span>}
+                    <span style={{ fontSize: 13, color: row.username === username ? "#dc2626" : "white", fontWeight: row.username === username ? 700 : 400 }}>
+                      {row.username}{row.username === username && totalScore === row.score && <span style={{ color: "#dc2626", fontSize: 12 }}> · you</span>}
                     </span>
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: i === 0 ? "#f97316" : "white" }}>{row.score}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: i === 0 ? "#dc2626" : "white" }}>{row.score}</span>
                 </div>
               ))}
               {!userInTop10 && userIdx >= 0 && (() => {
@@ -526,12 +526,12 @@ export default function MinimiseGame() {
                 return (
                   <>
                     <div style={{ padding: "4px 0", color: "#2a3d5e", fontSize: 11 }}>···</div>
-                    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 4px", background: "rgba(249,115,22,0.06)", borderRadius: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 4px", background: "rgba(220,38,38,0.06)", borderRadius: 6 }}>
                       <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                        <span style={{ fontSize: 12, color: "#f97316", width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
-                        <span style={{ fontSize: 13, color: "#f97316", fontWeight: 700 }}>{row.username}</span>
+                        <span style={{ fontSize: 12, color: "#dc2626", width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                        <span style={{ fontSize: 13, color: "#dc2626", fontWeight: 700 }}>{row.username}</span>
                       </div>
-                      <span style={{ fontSize: 13, fontWeight: 700, color: "#f97316" }}>{row.score}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626" }}>{row.score}</span>
                     </div>
                   </>
                 )

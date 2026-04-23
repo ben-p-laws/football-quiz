@@ -55,7 +55,7 @@ function scoreLabel(score: number): { text: string; color: string } {
   if (score === 0)  return { text: 'Perfect!',    color: '#22c55e' }
   if (score <= 3)   return { text: 'Very close!', color: '#86efac' }
   if (score <= 6)   return { text: 'Close',        color: '#fbbf24' }
-  if (score <= 10)  return { text: 'Not bad',      color: '#f97316' }
+  if (score <= 10)  return { text: 'Not bad',      color: '#dc2626' }
   if (score <= 20)  return { text: 'Far off',      color: '#ef4444' }
   return { text: 'No stat!', color: '#7f1d1d' }
 }
@@ -65,9 +65,9 @@ function scoreLabel(score: number): { text: string; color: string } {
 const s = {
   page:  { minHeight: '100vh', background: '#0a0f1e', fontFamily: "'DM Sans', -apple-system, sans-serif", paddingBottom: 60 } as React.CSSProperties,
   card:  { background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '16px 20px' } as React.CSSProperties,
-  btn:   (color = '#f97316'): React.CSSProperties => ({ background: color, border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, color: 'white', cursor: 'pointer' }),
+  btn:   (color = '#dc2626'): React.CSSProperties => ({ background: color, border: 'none', borderRadius: 10, padding: '12px 24px', fontSize: 14, fontWeight: 700, color: 'white', cursor: 'pointer' }),
   ghost: { background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 600, color: '#8899bb', cursor: 'pointer' } as React.CSSProperties,
-  label: { fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.1em', textTransform: 'uppercase' } as React.CSSProperties,
+  label: { fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' } as React.CSSProperties,
   input: { background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 15, color: 'white', outline: 'none', width: '100%', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties,
 }
 
@@ -195,9 +195,9 @@ function LeaderboardPanel({ leaderboard, currentDisplayName }: { leaderboard: Lb
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e2d4a' }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <span style={{ fontSize: 12, color: i === 0 ? '#f59e0b' : '#4a5568', width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
-            <span style={{ fontSize: 13, color: row.display_name === currentDisplayName ? '#f97316' : 'white', fontWeight: row.display_name === currentDisplayName ? 700 : 400 }}>{row.display_name}</span>
+            <span style={{ fontSize: 13, color: row.display_name === currentDisplayName ? '#dc2626' : 'white', fontWeight: row.display_name === currentDisplayName ? 700 : 400 }}>{row.display_name}</span>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 700, color: row.display_name === currentDisplayName ? '#f97316' : '#8899bb' }}>{row.score}</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: row.display_name === currentDisplayName ? '#dc2626' : '#8899bb' }}>{row.score}</span>
         </div>
       ))}
       {!userInTop10 && userIdx >= 0 && (() => {
@@ -205,12 +205,12 @@ function LeaderboardPanel({ leaderboard, currentDisplayName }: { leaderboard: Lb
         return (
           <>
             <div style={{ padding: '4px 0', color: '#2a3d5e', fontSize: 11 }}>···</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(249,115,22,0.06)', borderRadius: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(220,38,38,0.06)', borderRadius: 6 }}>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span style={{ fontSize: 12, color: '#f97316', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
-                <span style={{ fontSize: 13, color: '#f97316', fontWeight: 700 }}>{row.display_name}</span>
+                <span style={{ fontSize: 12, color: '#dc2626', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                <span style={{ fontSize: 13, color: '#dc2626', fontWeight: 700 }}>{row.display_name}</span>
               </div>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#f97316' }}>{row.score}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#dc2626' }}>{row.score}</span>
             </div>
           </>
         )
@@ -381,7 +381,7 @@ export default function PLStatClash() {
     <div style={s.page}>
       <NavBar />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 16 }}>
-        <div style={{ width: 40, height: 40, border: '3px solid #1e2d4a', borderTop: '3px solid #f97316', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+        <div style={{ width: 40, height: 40, border: '3px solid #1e2d4a', borderTop: '3px solid #dc2626', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
         <div style={{ color: '#8899bb', fontSize: 14 }}>Loading stats...</div>
         <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
       </div>
@@ -407,7 +407,7 @@ export default function PLStatClash() {
               {winner ? (winner === 'Tie' ? "It's a Tie!" : `${winner} Wins!`) : 'Game Over!'}
             </h2>
             {mode === 'solo' ? (
-              <p style={{ color: '#8899bb', margin: 0 }}>Total: <strong style={{ color: '#f97316' }}>{s1} pts</strong></p>
+              <p style={{ color: '#8899bb', margin: 0 }}>Total: <strong style={{ color: '#dc2626' }}>{s1} pts</strong></p>
             ) : (
               <div style={{ display: 'flex', justifyContent: 'center', gap: 40, marginTop: 8 }}>
                 {[{ n: p1Label, t: s1, o: s2! }, { n: p2Label, t: s2!, o: s1 }].map((p, i) => (
@@ -483,7 +483,7 @@ export default function PLStatClash() {
       <NavBar />
       <div style={{ maxWidth: 480, margin: '40px auto', padding: '0 20px' }}>
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>TopBins</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 6 }}>TopBins</div>
           <h1 style={{ fontSize: 32, fontWeight: 800, color: 'white', margin: '0 0 8px', letterSpacing: '-0.5px' }}>Stat Clash</h1>
           <p style={{ fontSize: 13, color: '#8899bb', margin: 0 }}>
             {selectedClub
@@ -505,7 +505,7 @@ export default function PLStatClash() {
           <div style={{ ...s.label, marginBottom: 12 }}>Mode</div>
           <div style={{ display: 'flex', gap: 8 }}>
             {(['solo', 'vs'] as const).map(m => (
-              <button key={m} onClick={() => setMode(m)} style={{ ...s.btn(mode === m ? '#f97316' : '#1e2d4a'), flex: 1, fontSize: 13 }}>
+              <button key={m} onClick={() => setMode(m)} style={{ ...s.btn(mode === m ? '#dc2626' : '#1e2d4a'), flex: 1, fontSize: 13 }}>
                 {m === 'solo' ? '🏆 Solo' : '⚔️ vs Friend'}
               </button>
             ))}
@@ -524,7 +524,7 @@ export default function PLStatClash() {
           <div style={{ ...s.label, marginBottom: 10 }}>Rounds</div>
           <div style={{ display: 'flex', gap: 8 }}>
             {[5, 10, 20, 30].map(n => (
-              <button key={n} onClick={() => setNumRounds(n)} style={{ ...s.btn(numRounds === n ? '#f97316' : '#1e2d4a'), flex: 1, fontSize: 14, padding: '10px 0' }}>
+              <button key={n} onClick={() => setNumRounds(n)} style={{ ...s.btn(numRounds === n ? '#dc2626' : '#1e2d4a'), flex: 1, fontSize: 14, padding: '10px 0' }}>
                 {n}
               </button>
             ))}
@@ -555,7 +555,7 @@ export default function PLStatClash() {
             { pts: '0',    text: 'Perfect match',            color: '#22c55e' },
             { pts: '1–3',  text: 'Very close',               color: '#86efac' },
             { pts: '4–6',  text: 'Close',                    color: '#fbbf24' },
-            { pts: '7–10', text: 'Not bad',                  color: '#f97316' },
+            { pts: '7–10', text: 'Not bad',                  color: '#dc2626' },
             { pts: '11–20',text: 'Far off',                  color: '#ef4444' },
             { pts: '30',   text: 'No stat in that category', color: '#7f1d1d' },
           ].map(row => (
@@ -580,7 +580,7 @@ export default function PLStatClash() {
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
               Round {currentRound + 1} / {rounds.length}
             </div>
             {selectedClub && <div style={{ fontSize: 11, color: '#4a5568', marginTop: 2 }}>⚽ {selectedClub} only</div>}
@@ -591,12 +591,12 @@ export default function PLStatClash() {
                 {([1, 2] as const).map(w => (
                   <div key={w} style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: 10, color: '#8899bb' }}>{w === 1 ? p1Label : p2Label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: '#f97316' }}>{totalScore(w)}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#dc2626' }}>{totalScore(w)}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 22, fontWeight: 800, color: '#f97316' }}>{totalScore(1)} pts</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#dc2626' }}>{totalScore(1)} pts</div>
             )}
             <button onClick={() => { setStarted(false); setGameOver(false) }} style={s.ghost}>Restart</button>
           </div>
@@ -610,7 +610,7 @@ export default function PLStatClash() {
 
         {mode === 'vs' && !roundRevealed && (
           <div style={{ textAlign: 'center', fontSize: 13, color: '#8899bb', marginBottom: 14 }}>
-            <span style={{ color: '#f97316', fontWeight: 700 }}>{lockedIn.p1 ? p2Label : p1Label}</span>'s turn
+            <span style={{ color: '#dc2626', fontWeight: 700 }}>{lockedIn.p1 ? p2Label : p1Label}</span>'s turn
           </div>
         )}
 
@@ -641,7 +641,7 @@ export default function PLStatClash() {
                 if (!entry) return null
                 const sl = scoreLabel(entry.score)
                 return (
-                  <div key={j} style={{ ...s.card, background: 'rgba(249,115,22,0.06)' }}>
+                  <div key={j} style={{ ...s.card, background: 'rgba(220,38,38,0.06)' }}>
                     {mode === 'vs' && <div style={{ fontSize: 11, color: '#8899bb', marginBottom: 4 }}>{j === 0 ? p1Label : p2Label}</div>}
                     <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 6 }}>{entry.player.name}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

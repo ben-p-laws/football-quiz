@@ -73,7 +73,7 @@ export default function NavBar() {
           const active = pathname === href || (href !== '/' && pathname.startsWith(href))
           return (
             <span key={label} onClick={() => navigate(href)}
-              style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: active ? 'white' : '#8899bb', borderBottom: active ? '2px solid #f97316' : '2px solid transparent', paddingBottom: '2px' }}>
+              style={{ fontSize: '13px', fontWeight: 500, cursor: 'pointer', color: active ? 'white' : '#8899bb', borderBottom: active ? '2px solid #dc2626' : '2px solid transparent', paddingBottom: '2px' }}>
               {label}
             </span>
           )
@@ -85,9 +85,9 @@ export default function NavBar() {
         className="mobile-menu-btn"
         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, display: 'none', flexDirection: 'column', gap: 5 }}
       >
-        <span style={{ display: 'block', width: 22, height: 2, background: menuOpen ? '#f97316' : 'white', transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
+        <span style={{ display: 'block', width: 22, height: 2, background: menuOpen ? '#dc2626' : 'white', transition: 'all 0.2s', transform: menuOpen ? 'rotate(45deg) translate(5px, 5px)' : 'none' }} />
         <span style={{ display: 'block', width: 22, height: 2, background: menuOpen ? 'transparent' : 'white', transition: 'all 0.2s' }} />
-        <span style={{ display: 'block', width: 22, height: 2, background: menuOpen ? '#f97316' : 'white', transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
+        <span style={{ display: 'block', width: 22, height: 2, background: menuOpen ? '#dc2626' : 'white', transition: 'all 0.2s', transform: menuOpen ? 'rotate(-45deg) translate(5px, -5px)' : 'none' }} />
       </button>
 
       {menuOpen && (
@@ -96,7 +96,7 @@ export default function NavBar() {
             const active = pathname === href || (href !== '/' && pathname.startsWith(href))
             return (
               <div key={label} onClick={() => navigate(href)}
-                style={{ padding: '14px 24px', fontSize: '15px', fontWeight: 500, cursor: 'pointer', color: active ? 'white' : '#8899bb', borderLeft: active ? '3px solid #f97316' : '3px solid transparent', borderBottom: '1px solid #1e2d4a' }}>
+                style={{ padding: '14px 24px', fontSize: '15px', fontWeight: 500, cursor: 'pointer', color: active ? 'white' : '#8899bb', borderLeft: active ? '3px solid #dc2626' : '3px solid transparent', borderBottom: '1px solid #1e2d4a' }}>
                 {label}
               </div>
             )

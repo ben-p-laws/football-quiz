@@ -179,12 +179,12 @@ export default function BingoPageClient() {
       <NavBar />
       <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 20px' }}>
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>FootballIQ</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>FootballIQ</div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: 'white', margin: '0 0 8px' }}>Footballer Bingo</h1>
           <p style={{ fontSize: 13, color: '#8899bb', margin: 0 }}>Enter your name to track your scores on the leaderboard.</p>
         </div>
         <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#f97316', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Your name</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Your name</div>
           <input
             style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 15, color: 'white', outline: 'none', width: '100%', fontFamily: 'inherit', boxSizing: 'border-box' }}
             placeholder="Enter your name" value={userName}
@@ -192,7 +192,7 @@ export default function BingoPageClient() {
             onKeyDown={e => e.key === 'Enter' && saveUsername()} autoFocus />
           <p style={{ fontSize: 11, color: '#4a5568', margin: '8px 0 0' }}>Saved across all FootballIQ games</p>
         </div>
-        <button onClick={saveUsername} style={{ background: '#f97316', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer', width: '100%' }}>
+        <button onClick={saveUsername} style={{ background: '#dc2626', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer', width: '100%' }}>
           Continue
         </button>
       </div>
@@ -216,11 +216,11 @@ export default function BingoPageClient() {
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', alignItems: 'center' }}>
             <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '8px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: '#f97316' }}>{score}/9</div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{score}/9</div>
               <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Score</div>
             </div>
             <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '8px 20px', textAlign: 'center' }}>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: '#f97316' }}>{gameOver ? 0 : playersLeft}</div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{gameOver ? 0 : playersLeft}</div>
               <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Players left</div>
             </div>
             <button onClick={regenerate}
@@ -236,7 +236,7 @@ export default function BingoPageClient() {
             {currentPlayerIdx === 0 && !spinning && !displayName ? (
             <>
                 <p style={{ color: '#8899bb', fontSize: '13px', marginBottom: '12px' }}>Tap reveal to get your first player!</p>
-                <button onClick={spinAndReveal} style={{ background: '#f97316', border: 'none', borderRadius: '8px', padding: '12px 32px', fontSize: '15px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+                <button onClick={spinAndReveal} style={{ background: '#dc2626', border: 'none', borderRadius: '8px', padding: '12px 32px', fontSize: '15px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
                 Reveal player →
                 </button>
             </>
@@ -247,7 +247,7 @@ export default function BingoPageClient() {
                     <div style={{ fontSize: '11px', color: '#8899bb', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                       {spinning ? 'Your player is...' : 'Assign to a square'}
                     </div>
-                    <div style={{ fontSize: '28px', fontWeight: 800, color: spinning ? '#f97316' : 'white' }}>{displayName || '...'}</div>
+                    <div style={{ fontSize: '28px', fontWeight: 800, color: spinning ? '#dc2626' : 'white' }}>{displayName || '...'}</div>
                   </>
                 ) : (
                   <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e2d4a' }}>···</div>
@@ -315,9 +315,9 @@ export default function BingoPageClient() {
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e2d4a' }}>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', color: i === 0 ? '#f59e0b' : '#4a5568', width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
-                    <span style={{ fontSize: '13px', color: row.username === userName ? '#f97316' : 'white', fontWeight: row.username === userName ? 700 : 400 }}>{row.username}</span>
+                    <span style={{ fontSize: '13px', color: row.username === userName ? '#dc2626' : 'white', fontWeight: row.username === userName ? 700 : 400 }}>{row.username}</span>
                   </div>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: row.username === userName ? '#f97316' : '#8899bb' }}>{row.perfect_9s} perfect{row.perfect_9s === 1 ? '' : 's'}</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: row.username === userName ? '#dc2626' : '#8899bb' }}>{row.perfect_9s} perfect{row.perfect_9s === 1 ? '' : 's'}</span>
                 </div>
               ))}
               {!userInTop10 && userIdx >= 0 && (() => {
@@ -325,12 +325,12 @@ export default function BingoPageClient() {
                 return (
                   <>
                     <div style={{ padding: '4px 0', color: '#2a3d5e', fontSize: '11px' }}>···</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(249,115,22,0.06)', borderRadius: '6px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(220,38,38,0.06)', borderRadius: '6px' }}>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', color: '#f97316', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
-                        <span style={{ fontSize: '13px', color: '#f97316', fontWeight: 700 }}>{row.username}</span>
+                        <span style={{ fontSize: '12px', color: '#dc2626', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                        <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: 700 }}>{row.username}</span>
                       </div>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#f97316' }}>{row.perfect_9s} perfect{row.perfect_9s === 1 ? '' : 's'}</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>{row.perfect_9s} perfect{row.perfect_9s === 1 ? '' : 's'}</span>
                     </div>
                   </>
                 )
