@@ -11,9 +11,9 @@ const CONUNDRUM_TIME = 30
 const LS_USERNAME   = 'topbins_countdown_username'
 
 type NumberPlayer = {
-  name: string; seasons: number; goals: number
+  name: string; seasons: number; appearances: number; goals: number
   clubs: number; assists: number; reds: number
-  position: string; nationality: string
+  position: string; nationality: string; clubList: string
 }
 type SurnameEntry = { surname: string; fullName: string }
 type ConundrumCandidate = { name: string; surname: string }
@@ -117,7 +117,7 @@ export default function FootyCountdown() {
 
   // Numbers state
   const [currentPlayer, setCurrentPlayer]   = useState<NumberPlayer | null>(null)
-  const [cluesShown, setCluesShown]         = useState<0 | 1 | 2>(0)
+  const [cluesShown, setCluesShown]         = useState<0 | 1 | 2 | 3>(0)
   const [numberSearch, setNumberSearch]     = useState('')
   const [selectedGuess, setSelectedGuess]   = useState<NumberPlayer | null>(null)
   const [showDropdown, setShowDropdown]     = useState(false)
@@ -311,7 +311,7 @@ export default function FootyCountdown() {
   }
 
   const totalScore  = roundScores.reduce((a, b) => a + b, 0)
-  const pointsAvail = cluesShown === 0 ? 10 : cluesShown === 1 ? 7 : 5
+  const pointsAvail = cluesShown === 0 ? 10 : cluesShown === 1 ? 7 : cluesShown === 2 ? 5 : 3
 
   const renderHeader = () => (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -410,7 +410,7 @@ export default function FootyCountdown() {
           <div style={{ ...s.label, marginBottom: 12 }}>How to Play</div>
           {[
             { icon: '🔤', title: 'Letters (×4)', desc: '10 random letters · 30 seconds · Find the longest PL player surname you can make · score = surname length' },
-            { icon: '🔢', title: 'Numbers (×2)', desc: 'Guess the mystery player from their 5 stats · 10 pts · Reveal position (7 pts) or nationality (5 pts) for clues' },
+            { icon: '🔢', title: 'Numbers (×2)', desc: 'Guess the mystery player from their 6 stats · 10 pts · Reveal position (7), nationality (5) or clubs (3) for clues' },
             { icon: '🔀', title: 'Conundrum (×1)', desc: 'Unscramble a jumbled PL player surname · 30 seconds · 10 pts' },
           ].map(({ icon, title, desc }) => (
             <div key={title} style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
@@ -444,10 +444,14 @@ export default function FootyCountdown() {
           <div style={{ ...s.card, textAlign: 'center', marginBottom: 16 }}>
             <div style={{ ...s.label, marginBottom: 16 }}>Your Letters</div>
 
-            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
-              {letters.map((l, i) => (
-                <div key={i} style={{ width: 34, height: 42, background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'white' }}>
-                  {l}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', marginBottom: 20 }}>
+              {[letters.slice(0, 8), letters.slice(8)].map((row, ri) => (
+                <div key={ri} style={{ display: 'flex', gap: 5 }}>
+                  {row.map((l, i) => (
+                    <div key={i} style={{ width: 34, height: 42, background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'white' }}>
+                      {l}
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
@@ -493,10 +497,14 @@ export default function FootyCountdown() {
         <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 16px' }}>
           {renderHeader()}
 
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 16 }}>
-            {letters.map((l, i) => (
-              <div key={i} style={{ width: 38, height: 46, background: '#0a0f1e', border: '1px solid #2a3d5e', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#4a5568' }}>
-                {l}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5, alignItems: 'center', marginBottom: 16 }}>
+            {[letters.slice(0, 8), letters.slice(8)].map((row, ri) => (
+              <div key={ri} style={{ display: 'flex', gap: 5 }}>
+                {row.map((l, i) => (
+                  <div key={i} style={{ width: 34, height: 42, background: '#0a0f1e', border: '1px solid #2a3d5e', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: '#4a5568' }}>
+                    {l}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
@@ -571,49 +579,67 @@ export default function FootyCountdown() {
             <div style={{ ...s.label, marginBottom: 12 }}>Mystery Player</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
               {[
-                { label: 'PL Seasons', val: currentPlayer.seasons },
-                { label: 'PL Goals',   val: currentPlayer.goals },
-                { label: 'PL Clubs',   val: currentPlayer.clubs },
-                { label: 'PL Assists', val: currentPlayer.assists },
-                { label: 'Red Cards',  val: currentPlayer.reds },
+                { label: 'PL Seasons',     val: currentPlayer.seasons },
+                { label: 'Appearances',    val: currentPlayer.appearances },
+                { label: 'PL Goals',       val: currentPlayer.goals },
+                { label: 'PL Assists',     val: currentPlayer.assists },
+                { label: 'PL Clubs',       val: currentPlayer.clubs },
+                { label: 'Red Cards',      val: currentPlayer.reds },
               ].map(({ label, val }) => (
                 <div key={label} style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 8, padding: '12px 8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: 'white' }}>{val}</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, color: 'white' }}>{val}</div>
                   <div style={{ fontSize: 10, color: '#8899bb', marginTop: 4 }}>{label}</div>
                 </div>
               ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               <button
                 onClick={() => cluesShown < 1 && setCluesShown(1)}
                 style={{
-                  borderRadius: 8, padding: '10px 12px', textAlign: 'center', width: '100%', fontSize: 12, fontWeight: 700, border: 'none',
+                  borderRadius: 8, padding: '10px 8px', textAlign: 'center', width: '100%', fontSize: 11, fontWeight: 700, border: 'none',
                   ...(cluesShown >= 1
                     ? { background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', cursor: 'default', color: '#dc2626' }
-                    : { ...s.ghost, fontSize: 12 })
+                    : { ...s.ghost, fontSize: 11 })
                 }}
               >
                 {cluesShown >= 1
                   ? `🏃 ${currentPlayer.position}`
-                  : <><span>Reveal Position</span><br /><span style={{ fontWeight: 400, fontSize: 11 }}>10 → 7 pts</span></>
+                  : <><span>Position</span><br /><span style={{ fontWeight: 400, fontSize: 10 }}>10 → 7 pts</span></>
                 }
               </button>
               <button
                 onClick={() => cluesShown === 1 && setCluesShown(2)}
                 disabled={cluesShown < 1}
                 style={{
-                  borderRadius: 8, padding: '10px 12px', textAlign: 'center', width: '100%', fontSize: 12, fontWeight: 700, border: 'none',
+                  borderRadius: 8, padding: '10px 8px', textAlign: 'center', width: '100%', fontSize: 11, fontWeight: 700, border: 'none',
                   ...(cluesShown >= 2
                     ? { background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', cursor: 'default', color: '#dc2626' }
                     : cluesShown === 1
-                    ? { ...s.ghost, fontSize: 12 }
-                    : { ...s.ghost, fontSize: 12, opacity: 0.4, cursor: 'not-allowed' })
+                    ? { ...s.ghost, fontSize: 11 }
+                    : { ...s.ghost, fontSize: 11, opacity: 0.4, cursor: 'not-allowed' })
                 }}
               >
                 {cluesShown >= 2
                   ? `🌍 ${currentPlayer.nationality}`
-                  : <><span style={{ color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>Reveal Nationality</span><br /><span style={{ fontWeight: 400, fontSize: 11, color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>7 → 5 pts</span></>
+                  : <><span style={{ color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>Nationality</span><br /><span style={{ fontWeight: 400, fontSize: 10, color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>7 → 5 pts</span></>
+                }
+              </button>
+              <button
+                onClick={() => cluesShown === 2 && setCluesShown(3)}
+                disabled={cluesShown < 2}
+                style={{
+                  borderRadius: 8, padding: '10px 8px', textAlign: 'center', width: '100%', fontSize: 11, fontWeight: 700, border: 'none',
+                  ...(cluesShown >= 3
+                    ? { background: 'rgba(220,38,38,0.12)', border: '1px solid rgba(220,38,38,0.3)', cursor: 'default', color: '#dc2626' }
+                    : cluesShown === 2
+                    ? { ...s.ghost, fontSize: 11 }
+                    : { ...s.ghost, fontSize: 11, opacity: 0.4, cursor: 'not-allowed' })
+                }}
+              >
+                {cluesShown >= 3
+                  ? <span style={{ fontSize: 10, lineHeight: 1.3 }}>⚽ {currentPlayer.clubList}</span>
+                  : <><span style={{ color: cluesShown >= 2 ? '#8899bb' : '#2a3d5e' }}>Clubs</span><br /><span style={{ fontWeight: 400, fontSize: 10, color: cluesShown >= 2 ? '#8899bb' : '#2a3d5e' }}>5 → 3 pts</span></>
                 }
               </button>
             </div>
@@ -680,19 +706,23 @@ export default function FootyCountdown() {
             <div style={{ fontSize: 28, marginBottom: 8 }}>{numberResult.correct ? '✅' : '❌'}</div>
             <div style={{ fontSize: 13, color: '#8899bb', marginBottom: 4 }}>The answer was</div>
             <div style={{ fontSize: 26, fontWeight: 800, color: 'white', marginBottom: 12 }}>{numberResult.player.name}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
               {[
-                { label: 'Seasons', val: numberResult.player.seasons },
-                { label: 'Goals',   val: numberResult.player.goals },
-                { label: 'Clubs',   val: numberResult.player.clubs },
-                { label: 'Assists', val: numberResult.player.assists },
-                { label: 'Reds',    val: numberResult.player.reds },
+                { label: 'Seasons',     val: numberResult.player.seasons },
+                { label: 'Appearances', val: numberResult.player.appearances },
+                { label: 'Goals',       val: numberResult.player.goals },
+                { label: 'Assists',     val: numberResult.player.assists },
+                { label: 'Clubs',       val: numberResult.player.clubs },
+                { label: 'Reds',        val: numberResult.player.reds },
               ].map(({ label, val }) => (
                 <div key={label} style={{ background: '#0a0f1e', borderRadius: 6, padding: '8px', textAlign: 'center' }}>
                   <div style={{ fontSize: 18, fontWeight: 800, color: 'white' }}>{val}</div>
                   <div style={{ fontSize: 10, color: '#8899bb' }}>{label}</div>
                 </div>
               ))}
+            </div>
+            <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 16, lineHeight: 1.5 }}>
+              ⚽ {numberResult.player.clubList}
             </div>
             <div style={{ fontSize: 11, color: '#8899bb', textTransform: 'uppercase', marginBottom: 4 }}>Points this round</div>
             <div style={{ fontSize: 44, fontWeight: 800, color: numberResult.correct ? '#22c55e' : '#ef4444' }}>

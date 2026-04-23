@@ -11,7 +11,7 @@ function getClient() {
 }
 
 async function fetchAll() {
-  const cols = 'name_display,goals,assists,cards_red,teams_played_for,year_id,nationality,pos'
+  const cols = 'name_display,games,goals,assists,cards_red,teams_played_for,year_id,nationality,pos'
   let all: any[] = []
   let offset = 0
   while (true) {
@@ -47,9 +47,9 @@ async function fetchLeaderboard() {
 }
 
 export type NumberPlayer = {
-  name: string; seasons: number; goals: number
+  name: string; seasons: number; appearances: number; goals: number
   clubs: number; assists: number; reds: number
-  position: string; nationality: string
+  position: string; nationality: string; clubList: string
 }
 
 export type SurnameEntry = { surname: string; fullName: string }
@@ -68,8 +68,9 @@ export async function GET() {
     const rows = await fetchAll()
 
     type Agg = {
-      goals: number; assists: number; reds: number
+      goals: number; assists: number; reds: number; appearances: number
       seasons: Set<string>; clubs: Set<string>
+      yearClubs: { yearId: string; clubs: string[] }[]
       posFreq: Record<string, number>
       natFreq: Record<string, number>
     }
@@ -78,18 +79,20 @@ export async function GET() {
     for (const row of rows) {
       const name = row.name_display as string
       if (!map[name]) {
-        map[name] = { goals: 0, assists: 0, reds: 0, seasons: new Set(), clubs: new Set(), posFreq: {}, natFreq: {} }
+        map[name] = { goals: 0, assists: 0, reds: 0, appearances: 0, seasons: new Set(), clubs: new Set(), yearClubs: [], posFreq: {}, natFreq: {} }
       }
       const p = map[name]
-      p.goals   += (row.goals     as number) || 0
-      p.assists += (row.assists   as number) || 0
-      p.reds    += (row.cards_red as number) || 0
+      p.goals       += (row.goals     as number) || 0
+      p.assists     += (row.assists   as number) || 0
+      p.reds        += (row.cards_red as number) || 0
+      p.appearances += (row.games     as number) || 0
       if (row.year_id) p.seasons.add(row.year_id as string)
       if (row.pos)         p.posFreq[row.pos]         = (p.posFreq[row.pos]         || 0) + 1
       if (row.nationality) p.natFreq[row.nationality] = (p.natFreq[row.nationality] || 0) + 1
-      for (const club of String(row.teams_played_for || '').split(',')) {
-        const t = club.trim()
-        if (t && t !== '2 Teams') p.clubs.add(t)
+      const rowClubs = String(row.teams_played_for || '').split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
+      for (const club of rowClubs) p.clubs.add(club)
+      if (row.year_id && rowClubs.length > 0) {
+        p.yearClubs.push({ yearId: row.year_id as string, clubs: rowClubs })
       }
     }
 
@@ -109,16 +112,28 @@ export async function GET() {
     // Players for numbers rounds (3+ seasons, 10+ goal contributions)
     const numberPlayers: NumberPlayer[] = Object.entries(map)
       .filter(([, p]) => p.seasons.size >= 3 && (p.goals + p.assists) >= 10)
-      .map(([name, p]) => ({
-        name,
-        seasons:     p.seasons.size,
-        goals:       p.goals,
-        clubs:       p.clubs.size,
-        assists:     p.assists,
-        reds:        p.reds,
-        position:    mostFrequent(p.posFreq),
-        nationality: mostFrequent(p.natFreq),
-      }))
+      .map(([name, p]) => {
+        // Build club list in chronological order (deduplicated, first appearance wins)
+        const seen = new Set<string>()
+        const orderedClubs: string[] = []
+        for (const { clubs } of p.yearClubs.sort((a, b) => a.yearId.localeCompare(b.yearId))) {
+          for (const club of clubs) {
+            if (!seen.has(club)) { seen.add(club); orderedClubs.push(club) }
+          }
+        }
+        return {
+          name,
+          seasons:     p.seasons.size,
+          appearances: p.appearances,
+          goals:       p.goals,
+          clubs:       p.clubs.size,
+          assists:     p.assists,
+          reds:        p.reds,
+          position:    mostFrequent(p.posFreq),
+          nationality: mostFrequent(p.natFreq),
+          clubList:    orderedClubs.join(', '),
+        }
+      })
 
     // Conundrum candidates: 5+ seasons, surname 6–10 letters
     const conundrumCandidates = Object.entries(map)
