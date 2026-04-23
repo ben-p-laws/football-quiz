@@ -13,11 +13,12 @@ const LS_USERNAME   = 'topbins_countdown_username'
 type NumberPlayer = {
   name: string; seasons: number; goals: number
   clubs: number; assists: number; reds: number
-  nationality: string; position: string
+  position: string; nationality: string
 }
+type SurnameEntry = { surname: string; fullName: string }
 type ConundrumCandidate = { name: string; surname: string }
 type LbEntry = { username: string; score: number; created_at: string }
-type LetterResult = { word: string; valid: boolean; score: number; best: string; bestScore: number }
+type LetterResult = { word: string; valid: boolean; score: number; best: string; bestFullName: string; bestScore: number }
 type NumberResult  = { correct: boolean; score: number; player: NumberPlayer }
 type ConundrumResult = { correct: boolean; answer: string }
 
@@ -25,10 +26,12 @@ type ConundrumResult = { correct: boolean; answer: string }
 const VOWELS     = 'AAAAAAAAAAEEEEEEEEEEEEEEEIIIIIIIIIOOOOOOOOOUUUU'.split('')
 const CONSONANTS = 'BBBCCCCDDDDDDFFFFFFGGGGHHHHHJJKKLLLLLLLMMMMMMNNNNNNNNNNPPPPQRRRRRRRRSSSSSSSSSSTTTTTTTTTTTTVVWWXXYYZZ'.split('')
 
+const LETTERS_COUNT = 16
+
 function generateLetters(): string[] {
-  const nVow = 3 + Math.floor(Math.random() * 3)
+  const nVow = 5 + Math.floor(Math.random() * 3) // 5–7 vowels from 16
   const v = [...VOWELS].sort(() => Math.random() - 0.5).slice(0, nVow)
-  const c = [...CONSONANTS].sort(() => Math.random() - 0.5).slice(0, 10 - nVow)
+  const c = [...CONSONANTS].sort(() => Math.random() - 0.5).slice(0, LETTERS_COUNT - nVow)
   return [...v, ...c].sort(() => Math.random() - 0.5)
 }
 
@@ -46,10 +49,10 @@ function canFormWord(word: string, letters: string[]): boolean {
   return true
 }
 
-function getBestWord(letters: string[], surnames: string[]): string {
-  return surnames
-    .filter(s => canFormWord(s, letters))
-    .sort((a, b) => b.length - a.length)[0] || ''
+function getBestEntry(letters: string[], entries: SurnameEntry[]): SurnameEntry | null {
+  return entries
+    .filter(e => canFormWord(e.surname, letters))
+    .sort((a, b) => b.surname.length - a.surname.length)[0] || null
 }
 
 function jumble(word: string): string {
@@ -88,7 +91,7 @@ const s = {
 
 export default function FootyCountdown() {
   const [loading, setLoading]                     = useState(true)
-  const [surnames, setSurnames]                   = useState<string[]>([])
+  const [surnameEntries, setSurnameEntries]       = useState<SurnameEntry[]>([])
   const [numberPlayers, setNumberPlayers]         = useState<NumberPlayer[]>([])
   const [conundrumCandidates, setConundrumCandidates] = useState<ConundrumCandidate[]>([])
   const [leaderboard, setLeaderboard]             = useState<LbEntry[]>([])
@@ -135,7 +138,7 @@ export default function FootyCountdown() {
     fetch('/api/countdown')
       .then(r => r.json())
       .then(d => {
-        setSurnames(d.surnames || [])
+        setSurnameEntries(d.surnameEntries || [])
         setNumberPlayers(d.numberPlayers || [])
         setConundrumCandidates(d.conundrumCandidates || [])
         setLeaderboard(d.leaderboard || [])
@@ -233,14 +236,19 @@ export default function FootyCountdown() {
   }
 
   function finishLetters(word: string) {
-    const upper = normalize(word)
-    const best  = getBestWord(letters, surnames)
+    const upper    = normalize(word)
+    const bestEntry = getBestEntry(letters, surnameEntries)
     let score = 0, valid = false
-    if (upper.length > 0 && canFormWord(upper, letters) && surnames.includes(upper)) {
+    if (upper.length > 0 && canFormWord(upper, letters) && surnameEntries.some(e => e.surname === upper)) {
       score = upper.length
       valid = true
     }
-    setLetterResult({ word: upper, valid, score, best, bestScore: best.length })
+    setLetterResult({
+      word: upper, valid, score,
+      best: bestEntry?.surname || '',
+      bestFullName: bestEntry?.fullName || '',
+      bestScore: bestEntry?.surname.length || 0,
+    })
     setRoundScores(prev => [...prev, score])
     setPhase('result')
   }
@@ -436,9 +444,9 @@ export default function FootyCountdown() {
           <div style={{ ...s.card, textAlign: 'center', marginBottom: 16 }}>
             <div style={{ ...s.label, marginBottom: 16 }}>Your Letters</div>
 
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
+            <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 20 }}>
               {letters.map((l, i) => (
-                <div key={i} style={{ width: 46, height: 56, background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, fontWeight: 800, color: 'white' }}>
+                <div key={i} style={{ width: 34, height: 42, background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 800, color: 'white' }}>
                   {l}
                 </div>
               ))}
@@ -464,7 +472,7 @@ export default function FootyCountdown() {
               }}
               onKeyDown={e => e.key === 'Enter' && handleLettersSubmit()}
               placeholder="Type surname..."
-              maxLength={10}
+              maxLength={16}
               autoFocus
             />
             <button onClick={handleLettersSubmit} style={{ ...s.btn(), width: '100%' }}>Submit →</button>
@@ -512,8 +520,11 @@ export default function FootyCountdown() {
           <div style={{ ...s.card, textAlign: 'center', marginBottom: 12 }}>
             <div style={{ fontSize: 11, color: '#8899bb', textTransform: 'uppercase', marginBottom: 6 }}>Best possible answer</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: '#dc2626' }}>{letterResult.best || '—'}</div>
+            {letterResult.bestFullName && (
+              <div style={{ fontSize: 13, color: '#8899bb', marginTop: 4 }}>{letterResult.bestFullName}</div>
+            )}
             {letterResult.best && (
-              <div style={{ fontSize: 12, color: '#8899bb', marginTop: 2 }}>{letterResult.bestScore} letters · {letterResult.bestScore} pts</div>
+              <div style={{ fontSize: 12, color: '#4a5568', marginTop: 2 }}>{letterResult.bestScore} letters · {letterResult.bestScore} pts</div>
             )}
           </div>
 
@@ -531,6 +542,20 @@ export default function FootyCountdown() {
   }
 
   // ── Numbers playing ───────────────────────────────────────────────────────
+  if (phase === 'playing' && roundType === 'numbers' && !currentPlayer) {
+    return (
+      <div style={s.page}>
+        <NavBar />
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '24px 16px' }}>
+          {renderHeader()}
+          <div style={{ ...s.card, textAlign: 'center', padding: 40 }}>
+            <div style={{ fontSize: 24, marginBottom: 12 }}>⚠️</div>
+            <div style={{ fontSize: 14, color: '#8899bb' }}>No players loaded. Please refresh and try again.</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
   if (phase === 'playing' && roundType === 'numbers' && currentPlayer) {
     const filtered = numberPlayers
       .filter(p => p.name.toLowerCase().includes(numberSearch.toLowerCase()))
