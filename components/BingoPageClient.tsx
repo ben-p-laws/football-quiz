@@ -452,12 +452,12 @@ export default function BingoPageClient() {
         {/* Game over: score + play again side by side */}
         {gameOver && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
-            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '14px 16px', textAlign: 'center' }}>
-              <div style={{ fontSize: 11, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{score === GRID_SIZE ? '🎉 Perfect!' : 'Final Score'}</div>
-              <div style={{ fontSize: 32, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{score}/9</div>
-              <div style={{ fontSize: 10, color: '#4a5568', marginTop: 4 }}>{MODE_LABELS[mode]} mode</div>
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#8899bb' }}>Final score</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#dc2626' }}>{score}/9</span>
+              {score === GRID_SIZE && <span style={{ fontSize: 13 }}>🎉</span>}
             </div>
-            <button onClick={regenerate} style={{ background: '#dc2626', border: 'none', borderRadius: '12px', padding: '14px 16px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+            <button onClick={regenerate} style={{ background: '#dc2626', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
               Play Again →
             </button>
           </div>
