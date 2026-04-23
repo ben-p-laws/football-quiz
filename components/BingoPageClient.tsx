@@ -359,6 +359,16 @@ export default function BingoPageClient() {
           </div>
         )}
 
+        {/* Reveal card shown in lobby (above grid) */}
+        {!gameStarted && !gameOver && (
+          <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px', textAlign: 'center' }}>
+            <p style={{ color: '#8899bb', fontSize: '13px', marginBottom: '12px', margin: '0 0 12px' }}>Tap reveal to get your first player!</p>
+            <button onClick={spinAndReveal} style={{ background: '#dc2626', border: 'none', borderRadius: '8px', padding: '12px 32px', fontSize: '15px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+              Reveal player →
+            </button>
+          </div>
+        )}
+
         {/* Grid shown in lobby (before leaderboard) */}
         {!gameStarted && !gameOver && bingoGrid}
 
@@ -398,18 +408,10 @@ export default function BingoPageClient() {
           )
         })()}
 
-        {/* Current player card */}
-        {!gameOver && (
+        {/* Current player card — only shown in-game */}
+        {!gameOver && gameStarted && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
-            {!gameStarted ? (
-              <div style={{ textAlign: 'center' }}>
-                <p style={{ color: '#8899bb', fontSize: '13px', marginBottom: '12px' }}>Tap reveal to get your first player!</p>
-                <button onClick={spinAndReveal} style={{ background: '#dc2626', border: 'none', borderRadius: '8px', padding: '12px 32px', fontSize: '15px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
-                  Reveal player →
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
                 {/* Skip on left — fixed width so card height stays constant */}
                 <div style={{ width: 72, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {!spinning && displayName && skipsLeft > 0 ? (
@@ -432,7 +434,6 @@ export default function BingoPageClient() {
                 {/* Spacer to balance */}
                 <div style={{ width: 72, flexShrink: 0 }} />
               </div>
-            )}
           </div>
         )}
 
@@ -448,14 +449,17 @@ export default function BingoPageClient() {
           </div>
         )}
 
-        {/* Game over leaderboard */}
+        {/* Game over: score + play again side by side */}
         {gameOver && (
-          <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: 16, textAlign: 'center' }}>
-            <div style={{ fontSize: score === GRID_SIZE ? 32 : 24, marginBottom: 6 }}>{score === GRID_SIZE ? '🎉' : '⭐'}</div>
-            <div style={{ fontSize: 36, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{score}/9</div>
-            <div style={{ fontSize: 13, color: '#8899bb', marginTop: 6 }}>
-              {score === GRID_SIZE ? 'Perfect! Added to the leaderboard.' : `${MODE_LABELS[mode]} mode · no leaderboard entry unless 9/9`}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 16 }}>
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '14px 16px', textAlign: 'center' }}>
+              <div style={{ fontSize: 11, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{score === GRID_SIZE ? '🎉 Perfect!' : 'Final Score'}</div>
+              <div style={{ fontSize: 32, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{score}/9</div>
+              <div style={{ fontSize: 10, color: '#4a5568', marginTop: 4 }}>{MODE_LABELS[mode]} mode</div>
             </div>
+            <button onClick={regenerate} style={{ background: '#dc2626', border: 'none', borderRadius: '12px', padding: '14px 16px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+              Play Again →
+            </button>
           </div>
         )}
 
@@ -494,11 +498,6 @@ export default function BingoPageClient() {
           )
         })()}
 
-        {gameOver && (
-          <button onClick={regenerate} style={{ background: '#dc2626', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer', width: '100%' }}>
-            Play Again →
-          </button>
-        )}
 
       </div>
     </div>
