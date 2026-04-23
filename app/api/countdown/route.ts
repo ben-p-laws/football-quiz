@@ -49,7 +49,7 @@ async function fetchLeaderboard() {
 export type NumberPlayer = {
   name: string; seasons: number; appearances: number; goals: number
   clubs: number; assists: number; reds: number
-  position: string; nationality: string; clubList: string
+  nationality: string; seasonRange: string; clubList: string
 }
 
 export type SurnameEntry = { surname: string; fullName: string }
@@ -71,7 +71,6 @@ export async function GET() {
       goals: number; assists: number; reds: number; appearances: number
       seasons: Set<string>; clubs: Set<string>
       yearClubs: { yearId: string; clubs: string[] }[]
-      posFreq: Record<string, number>
       natFreq: Record<string, number>
     }
     const map: Record<string, Agg> = {}
@@ -79,7 +78,7 @@ export async function GET() {
     for (const row of rows) {
       const name = row.name_display as string
       if (!map[name]) {
-        map[name] = { goals: 0, assists: 0, reds: 0, appearances: 0, seasons: new Set(), clubs: new Set(), yearClubs: [], posFreq: {}, natFreq: {} }
+        map[name] = { goals: 0, assists: 0, reds: 0, appearances: 0, seasons: new Set(), clubs: new Set(), yearClubs: [], natFreq: {} }
       }
       const p = map[name]
       p.goals       += (row.goals     as number) || 0
@@ -87,7 +86,6 @@ export async function GET() {
       p.reds        += (row.cards_red as number) || 0
       p.appearances += (row.games     as number) || 0
       if (row.year_id) p.seasons.add(row.year_id as string)
-      if (row.pos)         p.posFreq[row.pos]         = (p.posFreq[row.pos]         || 0) + 1
       if (row.nationality) p.natFreq[row.nationality] = (p.natFreq[row.nationality] || 0) + 1
       const rowClubs = String(row.teams_played_for || '').split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
       for (const club of rowClubs) p.clubs.add(club)
@@ -114,6 +112,11 @@ export async function GET() {
       .filter(([, p]) => p.seasons.size >= 3 && (p.goals + p.assists) >= 10)
       .map(([name, p]) => {
         // Build club list in chronological order (deduplicated, first appearance wins)
+        const sortedYears = [...p.seasons].sort()
+        const firstSeason = sortedYears[0] || ''
+        const lastSeason  = sortedYears[sortedYears.length - 1] || ''
+        const seasonRange = firstSeason === lastSeason ? firstSeason : `${firstSeason} – ${lastSeason}`
+
         const seen = new Set<string>()
         const orderedClubs: string[] = []
         for (const { clubs } of p.yearClubs.sort((a, b) => a.yearId.localeCompare(b.yearId))) {
@@ -129,8 +132,8 @@ export async function GET() {
           clubs:       p.clubs.size,
           assists:     p.assists,
           reds:        p.reds,
-          position:    mostFrequent(p.posFreq),
           nationality: mostFrequent(p.natFreq),
+          seasonRange,
           clubList:    orderedClubs.join(', '),
         }
       })

@@ -285,12 +285,13 @@ export default function LandingPage() {
               <span style={s.tag}>Leaderboard</span>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
+              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Final Conundrum</div>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
-                {['S','H','E','A','R','E','R','X','T','L'].map((l, i) => (
-                  <div key={i} style={{ width: 18, height: 22, background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'white' }}>{l}</div>
+                {['R','A','D','M','P','L','A'].map((l, i) => (
+                  <div key={i} style={{ width: 18, height: 22, background: '#0a0f1e', border: '1px solid #dc2626', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'white' }}>{l}</div>
                 ))}
               </div>
-              <div style={{ background: '#0a0f1e', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 4, padding: '4px 8px', fontSize: 11, fontWeight: 700, color: '#dc2626', textAlign: 'center' as const }}>SHEARER ✓ 7 pts</div>
+              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#4a5568', textAlign: 'center' as const }}>Unscramble the PL surname →</div>
             </div>
             <div style={s.cta}><span style={s.ctaText}>Play Countdown →</span></div>
           </div>

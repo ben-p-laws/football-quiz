@@ -6,14 +6,14 @@ import NavBar from './NavBar'
 const ROUND_TYPES = ['letters', 'letters', 'numbers', 'letters', 'letters', 'numbers', 'conundrum'] as const
 type RoundType = typeof ROUND_TYPES[number]
 
-const LETTERS_TIME  = 30
+const LETTERS_TIME  = 60
 const CONUNDRUM_TIME = 30
 const LS_USERNAME   = 'topbins_countdown_username'
 
 type NumberPlayer = {
   name: string; seasons: number; appearances: number; goals: number
   clubs: number; assists: number; reds: number
-  position: string; nationality: string; clubList: string
+  nationality: string; seasonRange: string; clubList: string
 }
 type SurnameEntry = { surname: string; fullName: string }
 type ConundrumCandidate = { name: string; surname: string }
@@ -409,8 +409,8 @@ export default function FootyCountdown() {
         <div style={{ ...s.card, marginBottom: 16 }}>
           <div style={{ ...s.label, marginBottom: 12 }}>How to Play</div>
           {[
-            { icon: '🔤', title: 'Letters (×4)', desc: '10 random letters · 30 seconds · Find the longest PL player surname you can make · score = surname length' },
-            { icon: '🔢', title: 'Numbers (×2)', desc: 'Guess the mystery player from their 6 stats · 10 pts · Reveal position (7), nationality (5) or clubs (3) for clues' },
+            { icon: '🔤', title: 'Letters (×4)', desc: '16 random letters · 60 seconds · Find the longest PL player surname you can make · score = surname length' },
+            { icon: '🔢', title: 'Numbers (×2)', desc: 'Guess the mystery player from their 6 stats · 10 pts · Reveal nationality (7), seasons (5) or clubs (3) for clues' },
             { icon: '🔀', title: 'Conundrum (×1)', desc: 'Unscramble a jumbled PL player surname · 30 seconds · 10 pts' },
           ].map(({ icon, title, desc }) => (
             <div key={title} style={{ display: 'flex', gap: 12, marginBottom: 14 }}>
@@ -604,8 +604,8 @@ export default function FootyCountdown() {
                 }}
               >
                 {cluesShown >= 1
-                  ? `🏃 ${currentPlayer.position}`
-                  : <><span>Position</span><br /><span style={{ fontWeight: 400, fontSize: 10 }}>10 → 7 pts</span></>
+                  ? `🌍 ${currentPlayer.nationality}`
+                  : <><span>Nationality</span><br /><span style={{ fontWeight: 400, fontSize: 10 }}>10 → 7 pts</span></>
                 }
               </button>
               <button
@@ -621,8 +621,8 @@ export default function FootyCountdown() {
                 }}
               >
                 {cluesShown >= 2
-                  ? `🌍 ${currentPlayer.nationality}`
-                  : <><span style={{ color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>Nationality</span><br /><span style={{ fontWeight: 400, fontSize: 10, color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>7 → 5 pts</span></>
+                  ? <span style={{ fontSize: 10, lineHeight: 1.3 }}>📅 {currentPlayer.seasonRange}</span>
+                  : <><span style={{ color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>Seasons</span><br /><span style={{ fontWeight: 400, fontSize: 10, color: cluesShown >= 1 ? '#8899bb' : '#2a3d5e' }}>7 → 5 pts</span></>
                 }
               </button>
               <button
