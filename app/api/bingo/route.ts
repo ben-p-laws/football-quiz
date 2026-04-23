@@ -19,6 +19,9 @@ type PlayerStats = {
   goals: number
   assists: number
   goals_assists: number
+  pens_made: number
+  pens_missed: number
+  cards_yellow: number
   cards_red: number
   gk_clean_sheets: number
   clubs: Set<string>
@@ -39,6 +42,9 @@ const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boole
   { id: 'apps_200',          name: '200+ PL Appearances',                check: p => p.games >= 200 },
   { id: 'clubs_4',           name: 'Played for 4+ PL Clubs',             check: p => p.clubs.size >= 4 },
   { id: 'clubs_3',           name: 'Played for 3+ PL Clubs',             check: p => p.clubs.size >= 3 },
+  { id: 'pens_scored_10',    name: 'Scored 10+ Penalties',               check: p => p.pens_made >= 10 },
+  { id: 'pens_missed_3',    name: 'Missed 3+ Penalties',                check: p => p.pens_missed >= 3 },
+  { id: 'yellows_50',        name: '50+ Career Yellow Cards',            check: p => p.cards_yellow >= 50 },
   { id: 'never_sent_off',    name: 'Never Sent Off (100+ apps)',          check: p => p.cards_red === 0 && p.games >= 100 },
   { id: 'reds_3',            name: '3+ Career Red Cards',                check: p => p.cards_red >= 3 },
   { id: 'clean_sheets_50',   name: '50+ PL Clean Sheets (GK only)',      check: p => p.gk_clean_sheets >= 50 },
@@ -63,7 +69,7 @@ async function fetchAll(columns: string) {
 
 export async function GET() {
   const rows = await fetchAll(
-    'name_display,games,goals,assists,goals_assists,cards_red,gk_clean_sheets,teams_played_for'
+    'name_display,games,goals,assists,goals_assists,pens_made,pens_missed,cards_yellow,cards_red,gk_clean_sheets,teams_played_for'
   )
 
   // Aggregate per player
@@ -74,7 +80,7 @@ export async function GET() {
       statsMap.set(name, {
         name,
         games: 0, goals: 0, assists: 0, goals_assists: 0,
-        cards_red: 0, gk_clean_sheets: 0,
+        pens_made: 0, pens_missed: 0, cards_yellow: 0, cards_red: 0, gk_clean_sheets: 0,
         clubs: new Set(),
         maxGoalsInSeason: 0,
         maxAssistsInSeason: 0,
@@ -86,6 +92,9 @@ export async function GET() {
     p.goals           += row.goals ?? 0
     p.assists         += row.assists ?? 0
     p.goals_assists   += row.goals_assists ?? 0
+    p.pens_made       += row.pens_made ?? 0
+    p.pens_missed     += row.pens_missed ?? 0
+    p.cards_yellow    += row.cards_yellow ?? 0
     p.cards_red       += row.cards_red ?? 0
     p.gk_clean_sheets += row.gk_clean_sheets ?? 0
 
