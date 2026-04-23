@@ -6,23 +6,26 @@ import NavBar from './NavBar'
 type Achievement = { position: number; id: string; name: string }
 type Player      = { reveal_order: number; id: string; name: string }
 type Puzzle      = { achievements: Achievement[]; players: Player[]; playerAchievements: Record<string, string[]> }
+type Mode        = 'easy' | 'normal' | 'hard'
 
 const STORAGE_KEY_USERNAME = 'footballiq_username'
 const GRID_SIZE = 9
-const MAX_SKIPS = 3
+const SKIP_COUNTS: Record<Mode, number> = { easy: 3, normal: 1, hard: 0 }
+const MODE_LABELS: Record<Mode, string> = { easy: 'Easy', normal: 'Normal', hard: 'Hard' }
 
 function generateClientPuzzle(
   allAchievements: Achievement[],
   allPlayers: Player[],
-  playerAchievements: Record<string, string[]>
+  playerAchievements: Record<string, string[]>,
+  maxSkips: number
 ) {
   const achievements = [...allAchievements].sort(() => Math.random() - 0.5).slice(0, GRID_SIZE)
   const achIds = new Set(achievements.map(a => a.id))
 
   const qualifying = allPlayers.filter(p => (playerAchievements[p.id] || []).some(a => achIds.has(a)))
-  if (qualifying.length < GRID_SIZE + MAX_SKIPS) return null
+  if (qualifying.length < GRID_SIZE + maxSkips) return null
 
-  const players = [...qualifying].sort(() => Math.random() - 0.5).slice(0, GRID_SIZE + MAX_SKIPS)
+  const players = [...qualifying].sort(() => Math.random() - 0.5).slice(0, GRID_SIZE + maxSkips)
     .map((p, i) => ({ ...p, reveal_order: i }))
 
   return { achievements: achievements.map((a, i) => ({ ...a, position: i })), players }
@@ -40,7 +43,8 @@ export default function BingoPageClient() {
   const [userName, setUserName]       = useState('')
   const [usernameSet, setUsernameSet] = useState(false)
   const [leaderboard, setLeaderboard] = useState<any[]>([])
-  const [skipsLeft, setSkipsLeft]     = useState(MAX_SKIPS)
+  const [mode, setMode]               = useState<Mode>('normal')
+  const [skipsLeft, setSkipsLeft]     = useState(SKIP_COUNTS['normal'])
   const [submitted, setSubmitted]     = useState(false)
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([])
   const [allPlayers, setAllPlayers]   = useState<Player[]>([])
@@ -61,7 +65,7 @@ export default function BingoPageClient() {
       setAllPlayers(pls)
       setAllMatrix(playerAchievements)
 
-      const generated = generateClientPuzzle(achs, pls, playerAchievements)
+      const generated = generateClientPuzzle(achs, pls, playerAchievements, SKIP_COUNTS['normal'])
       if (generated) {
         setPuzzle({ achievements: generated.achievements, players: generated.players, playerAchievements })
       }
@@ -69,7 +73,7 @@ export default function BingoPageClient() {
     loadAndGenerate()
     const saved = localStorage.getItem(STORAGE_KEY_USERNAME)
     if (saved) { setUserName(saved); setUsernameSet(true) }
-    fetch('/api/bingo-leaderboard').then(r => r.json()).then(d => setLeaderboard(d.leaderboard || []))
+    fetch('/api/bingo-leaderboard?mode=normal').then(r => r.json()).then(d => setLeaderboard(d.leaderboard || []))
   }, [])
 
   function saveUsername() {
@@ -78,13 +82,34 @@ export default function BingoPageClient() {
     setUsernameSet(true)
   }
 
-  async function submitScore(name: string, finalScore: number) {
+  async function changeMode(newMode: Mode) {
+    if (currentPlayerIdx > 0 || spinning || displayName) return // lock mode once game started
+    setMode(newMode)
+    setSkipsLeft(SKIP_COUNTS[newMode])
+    const res = await fetch(`/api/bingo-leaderboard?mode=${newMode}`)
+    const data = await res.json()
+    setLeaderboard(data.leaderboard || [])
+    // regenerate puzzle with new skip count
+    if (allAchievements.length > 0) {
+      const newPuzzle = generateClientPuzzle(
+        allAchievements.map((a, i) => ({ ...a, position: i })),
+        allPlayers,
+        allMatrix,
+        SKIP_COUNTS[newMode]
+      )
+      if (newPuzzle && puzzle) {
+        setPuzzle({ ...puzzle, achievements: newPuzzle.achievements, players: newPuzzle.players })
+      }
+    }
+  }
+
+  async function submitScore(name: string, gameMode: Mode) {
     if (submitted) return
     setSubmitted(true)
     try {
       const res = await fetch('/api/bingo-leaderboard', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: name, score: finalScore })
+        body: JSON.stringify({ username: name, mode: gameMode })
       })
       const data = await res.json()
       setLeaderboard(data.leaderboard || [])
@@ -94,13 +119,14 @@ export default function BingoPageClient() {
   function handleSkip() {
     if (!puzzle || spinning || skipsLeft <= 0 || gameOver) return
     const nextIdx = currentPlayerIdx + 1
-    const isOver  = nextIdx >= puzzle.players.length
+    const isExhausted = nextIdx >= puzzle.players.length
+
     setSkipsLeft(s => s - 1)
     setCurrentPlayerIdx(nextIdx)
     setDisplayName('')
-    if (isOver) {
+
+    if (isExhausted) {
       setGameOver(true)
-      if (userName) submitScore(userName, score)
     } else {
       setTimeout(() => {
         setSpinning(true)
@@ -109,7 +135,7 @@ export default function BingoPageClient() {
         spinInterval.current = setInterval(() => {
           setDisplayName(allNames[Math.floor(Math.random() * allNames.length)])
           count++
-          if (count >= 20) {
+          if (count >= 10) {
             clearInterval(spinInterval.current)
             setDisplayName(puzzle!.players[nextIdx].name)
             setSpinning(false)
@@ -125,11 +151,10 @@ export default function BingoPageClient() {
     setSelectedSquare(null)
     const allNames = puzzle.players.map(p => p.name)
     let count = 0
-    const total = 20
     spinInterval.current = setInterval(() => {
       setDisplayName(allNames[Math.floor(Math.random() * allNames.length)])
       count++
-      if (count >= total) {
+      if (count >= 10) {
         clearInterval(spinInterval.current)
         setDisplayName(currentPlayer!.name)
         setSpinning(false)
@@ -143,8 +168,9 @@ export default function BingoPageClient() {
 
     const qualifies = (puzzle.playerAchievements[currentPlayer.id] || []).includes(puzzle.achievements[position].id)
     const newAssignments = { ...assignments, [position]: { playerId: currentPlayer.id, playerName: currentPlayer.name, correct: qualifies } }
-    const nextIdx = currentPlayerIdx + 1
-    const isOver  = nextIdx >= puzzle.players.length
+    const nextIdx  = currentPlayerIdx + 1
+    const allFilled = Object.keys(newAssignments).length === GRID_SIZE
+    const isExhausted = nextIdx >= puzzle.players.length
     const newScore = Object.values(newAssignments).filter(a => a?.correct).length
 
     setAssignments(newAssignments)
@@ -153,34 +179,35 @@ export default function BingoPageClient() {
     setDisplayName('')
     setScore(newScore)
 
-    if (isOver) {
+    if (allFilled || isExhausted) {
       setGameOver(true)
-      if (userName) submitScore(userName, newScore)
+      if (userName && newScore === GRID_SIZE) submitScore(userName, mode)
     } else {
       setTimeout(() => {
         setSpinning(true)
         const allNames = puzzle!.players.map(p => p.name)
         let count = 0
-        const total = 20
         spinInterval.current = setInterval(() => {
           setDisplayName(allNames[Math.floor(Math.random() * allNames.length)])
           count++
-          if (count >= total) {
+          if (count >= 10) {
             clearInterval(spinInterval.current)
             setDisplayName(puzzle!.players[nextIdx].name)
             setSpinning(false)
           }
         }, 80)
-      }, 300)
+      }, 100)
     }
   }
 
   function regenerate() {
     if (allAchievements.length === 0) return
+    const maxSkips = SKIP_COUNTS[mode]
     const newPuzzle = generateClientPuzzle(
       allAchievements.map((a, i) => ({ ...a, position: i })),
       allPlayers,
-      allMatrix
+      allMatrix,
+      maxSkips
     )
     if (!newPuzzle || !puzzle) return
     setPuzzle({ ...puzzle, achievements: newPuzzle.achievements, players: newPuzzle.players })
@@ -191,7 +218,7 @@ export default function BingoPageClient() {
     setSpinning(false)
     setDisplayName('')
     setSelectedSquare(null)
-    setSkipsLeft(MAX_SKIPS)
+    setSkipsLeft(maxSkips)
     setSubmitted(false)
   }
 
@@ -213,7 +240,7 @@ export default function BingoPageClient() {
       <NavBar />
       <div style={{ maxWidth: 400, margin: '80px auto', padding: '0 20px' }}>
         <div style={{ marginBottom: 32, textAlign: 'center' }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>FootballIQ</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 8 }}>TopBins</div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: 'white', margin: '0 0 8px' }}>Footballer Bingo</h1>
           <p style={{ fontSize: 13, color: '#8899bb', margin: 0 }}>Enter your name to track your scores on the leaderboard.</p>
         </div>
@@ -224,7 +251,7 @@ export default function BingoPageClient() {
             placeholder="Enter your name" value={userName}
             onChange={e => setUserName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && saveUsername()} autoFocus />
-          <p style={{ fontSize: 11, color: '#4a5568', margin: '8px 0 0' }}>Saved across all FootballIQ games</p>
+          <p style={{ fontSize: 11, color: '#4a5568', margin: '8px 0 0' }}>Saved across all TopBins games</p>
         </div>
         <button onClick={saveUsername} style={{ background: '#dc2626', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer', width: '100%' }}>
           Continue
@@ -234,47 +261,12 @@ export default function BingoPageClient() {
   )
 
   const playersLeft = puzzle.players.length - currentPlayerIdx
+  const gameStarted = currentPlayerIdx > 0 || spinning || !!displayName
 
   return (
     <div style={s.page}>
       <NavBar />
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '20px 16px' }}>
-
-        {/* Leaderboard in lobby (before game starts) */}
-        {currentPlayerIdx === 0 && !gameOver && leaderboard.length > 0 && (() => {
-          const top10 = leaderboard.slice(0, 10)
-          const userIdx = leaderboard.findIndex(r => r.username === userName)
-          const userInTop10 = userIdx >= 0 && userIdx < 10
-          return (
-            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '12px' }}>🏆 Leaderboard (best score)</div>
-              {top10.map((row, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e2d4a' }}>
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', color: i === 0 ? '#f59e0b' : '#4a5568', width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
-                    <span style={{ fontSize: '13px', color: row.username === userName ? '#dc2626' : 'white', fontWeight: row.username === userName ? 700 : 400 }}>{row.username}</span>
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: row.username === userName ? '#dc2626' : '#8899bb' }}>{row.score}/9</span>
-                </div>
-              ))}
-              {!userInTop10 && userIdx >= 0 && (() => {
-                const row = leaderboard[userIdx]
-                return (
-                  <>
-                    <div style={{ padding: '4px 0', color: '#2a3d5e', fontSize: '11px' }}>···</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(220,38,38,0.06)', borderRadius: '6px' }}>
-                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', color: '#dc2626', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
-                        <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: 700 }}>{row.username}</span>
-                      </div>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>{row.score}/9</span>
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-          )
-        })()}
 
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
@@ -300,39 +292,99 @@ export default function BingoPageClient() {
           </div>
         </div>
 
+        {/* Mode selector — only before game starts */}
+        {!gameStarted && !gameOver && (
+          <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 16px', marginBottom: 16 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Mode</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {(['easy', 'normal', 'hard'] as Mode[]).map(m => (
+                <button key={m} onClick={() => changeMode(m)} style={{
+                  flex: 1, padding: '9px 0', borderRadius: 8, border: 'none', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                  background: mode === m ? '#dc2626' : '#1e2d4a',
+                  color: mode === m ? 'white' : '#8899bb',
+                }}>
+                  {MODE_LABELS[m]}
+                  <div style={{ fontSize: 10, fontWeight: 400, marginTop: 2, opacity: 0.8 }}>
+                    {SKIP_COUNTS[m] === 0 ? 'No skips' : `${SKIP_COUNTS[m]} skip${SKIP_COUNTS[m] > 1 ? 's' : ''}`}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard in lobby */}
+        {!gameStarted && !gameOver && leaderboard.length > 0 && (() => {
+          const top10 = leaderboard.slice(0, 10)
+          const userIdx = leaderboard.findIndex((r: any) => r.username === userName)
+          const userInTop10 = userIdx >= 0 && userIdx < 10
+          return (
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '12px' }}>🏆 {MODE_LABELS[mode]} — Perfect 9/9s</div>
+              {top10.map((row: any, i: number) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e2d4a' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <span style={{ fontSize: '12px', color: i === 0 ? '#f59e0b' : '#4a5568', width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
+                    <span style={{ fontSize: '13px', color: row.username === userName ? '#dc2626' : 'white', fontWeight: row.username === userName ? 700 : 400 }}>{row.username}</span>
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: row.username === userName ? '#dc2626' : '#8899bb' }}>{row.perfect_9s} ⭐</span>
+                </div>
+              ))}
+              {!userInTop10 && userIdx >= 0 && (() => {
+                const row = leaderboard[userIdx]
+                return (
+                  <>
+                    <div style={{ padding: '4px 0', color: '#2a3d5e', fontSize: '11px' }}>···</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 4px', background: 'rgba(220,38,38,0.06)', borderRadius: '6px' }}>
+                      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                        <span style={{ fontSize: '12px', color: '#dc2626', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
+                        <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: 700 }}>{row.username}</span>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>{row.perfect_9s} ⭐</span>
+                    </div>
+                  </>
+                )
+              })()}
+            </div>
+          )
+        })()}
+
         {/* Current player card */}
         {!gameOver && (
-        <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '20px', marginBottom: '16px', textAlign: 'center' }}>
-            {currentPlayerIdx === 0 && !spinning && !displayName ? (
-            <>
+          <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
+            {!gameStarted ? (
+              <div style={{ textAlign: 'center' }}>
                 <p style={{ color: '#8899bb', fontSize: '13px', marginBottom: '12px' }}>Tap reveal to get your first player!</p>
                 <button onClick={spinAndReveal} style={{ background: '#dc2626', border: 'none', borderRadius: '8px', padding: '12px 32px', fontSize: '15px', fontWeight: 700, color: 'white', cursor: 'pointer' }}>
-                Reveal player →
+                  Reveal player →
                 </button>
-            </>
+              </div>
             ) : (
-              <div style={{ minHeight: '64px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                {spinning || displayName ? (
-                  <>
-                    <div style={{ fontSize: '11px', color: '#8899bb', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                      {spinning ? 'Your player is...' : 'Assign to a square'}
-                    </div>
-                    <div style={{ fontSize: '28px', fontWeight: 800, color: spinning ? '#dc2626' : 'white' }}>{displayName || '...'}</div>
-                    {!spinning && displayName && skipsLeft > 0 && (
-                      <button onClick={handleSkip} style={{ marginTop: 12, background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 8, padding: '6px 16px', fontSize: 12, fontWeight: 600, color: '#8899bb', cursor: 'pointer' }}>
-                        Skip ({skipsLeft} left)
-                      </button>
-                    )}
-                    {!spinning && displayName && skipsLeft === 0 && (
-                      <div style={{ marginTop: 10, fontSize: 11, color: '#4a5568' }}>No skips left</div>
-                    )}
-                  </>
-                ) : (
-                  <div style={{ fontSize: '28px', fontWeight: 800, color: '#1e2d4a' }}>···</div>
-                )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
+                {/* Skip on left — fixed width so card height stays constant */}
+                <div style={{ width: 72, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {!spinning && displayName && skipsLeft > 0 ? (
+                    <button onClick={handleSkip} style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 600, color: '#8899bb', cursor: 'pointer', textAlign: 'center', width: '100%' }}>
+                      Skip<br /><span style={{ fontSize: 10 }}>({skipsLeft} left)</span>
+                    </button>
+                  ) : !spinning && displayName && skipsLeft === 0 ? (
+                    <span style={{ fontSize: 10, color: '#2a3d5e', textAlign: 'center' }}>No skips</span>
+                  ) : null}
+                </div>
+                {/* Player name centre */}
+                <div style={{ flex: 1, textAlign: 'center' }}>
+                  <div style={{ fontSize: '11px', color: '#8899bb', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {spinning ? 'Your player is...' : 'Assign to a square'}
+                  </div>
+                  <div style={{ fontSize: '28px', fontWeight: 800, color: spinning ? '#dc2626' : 'white' }}>
+                    {displayName || '···'}
+                  </div>
+                </div>
+                {/* Spacer to balance */}
+                <div style={{ width: 72, flexShrink: 0 }} />
               </div>
             )}
-        </div>
+          </div>
         )}
 
         {/* Bingo grid */}
@@ -372,30 +424,40 @@ export default function BingoPageClient() {
           })}
         </div>
 
-        {/* Next player hint */}
+        {/* Tap hint */}
         {!gameOver && displayName && !spinning && currentPlayerIdx < puzzle.players.length && (
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-            <p style={{ fontSize: '12px', color: '#4a5568', marginBottom: '8px' }}>
+            <p style={{ fontSize: '12px', color: '#4a5568', margin: 0 }}>
               Tap a square above to assign {displayName}
             </p>
           </div>
         )}
 
-        {/* Leaderboard after game */}
+        {/* Game over leaderboard */}
+        {gameOver && (
+          <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: 16, textAlign: 'center' }}>
+            <div style={{ fontSize: score === GRID_SIZE ? 32 : 24, marginBottom: 6 }}>{score === GRID_SIZE ? '🎉' : '⭐'}</div>
+            <div style={{ fontSize: 36, fontWeight: 800, color: '#dc2626', lineHeight: 1 }}>{score}/9</div>
+            <div style={{ fontSize: 13, color: '#8899bb', marginTop: 6 }}>
+              {score === GRID_SIZE ? 'Perfect! Added to the leaderboard.' : `${MODE_LABELS[mode]} mode · no leaderboard entry unless 9/9`}
+            </div>
+          </div>
+        )}
+
         {gameOver && leaderboard.length > 0 && (() => {
           const top10 = leaderboard.slice(0, 10)
-          const userIdx = leaderboard.findIndex(r => r.username === userName)
+          const userIdx = leaderboard.findIndex((r: any) => r.username === userName)
           const userInTop10 = userIdx >= 0 && userIdx < 10
           return (
-            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginTop: '16px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '12px' }}>🏆 Leaderboard (best score)</div>
-              {top10.map((row, i) => (
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '12px' }}>🏆 {MODE_LABELS[mode]} — Perfect 9/9s</div>
+              {top10.map((row: any, i: number) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1e2d4a' }}>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <span style={{ fontSize: '12px', color: i === 0 ? '#f59e0b' : '#4a5568', width: 22, fontWeight: i === 0 ? 700 : 400 }}>#{i + 1}</span>
                     <span style={{ fontSize: '13px', color: row.username === userName ? '#dc2626' : 'white', fontWeight: row.username === userName ? 700 : 400 }}>{row.username}</span>
                   </div>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: row.username === userName ? '#dc2626' : '#8899bb' }}>{row.score}/9</span>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: row.username === userName ? '#dc2626' : '#8899bb' }}>{row.perfect_9s} ⭐</span>
                 </div>
               ))}
               {!userInTop10 && userIdx >= 0 && (() => {
@@ -408,7 +470,7 @@ export default function BingoPageClient() {
                         <span style={{ fontSize: '12px', color: '#dc2626', width: 22, fontWeight: 700 }}>#{userIdx + 1}</span>
                         <span style={{ fontSize: '13px', color: '#dc2626', fontWeight: 700 }}>{row.username}</span>
                       </div>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>{row.score}/9</span>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#dc2626' }}>{row.perfect_9s} ⭐</span>
                     </div>
                   </>
                 )
@@ -416,6 +478,12 @@ export default function BingoPageClient() {
             </div>
           )
         })()}
+
+        {gameOver && (
+          <button onClick={regenerate} style={{ background: '#dc2626', border: 'none', borderRadius: 10, padding: '14px', fontSize: 15, fontWeight: 700, color: 'white', cursor: 'pointer', width: '100%' }}>
+            Play Again →
+          </button>
+        )}
 
       </div>
     </div>

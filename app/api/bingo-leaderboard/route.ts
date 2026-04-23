@@ -10,32 +10,31 @@ function getClient() {
   )
 }
 
-async function buildLeaderboard() {
+async function buildLeaderboard(mode: string = 'normal') {
   const { data } = await getClient()
     .from('bingo_leaderboard')
-    .select('username, score, created_at')
-    .order('score', { ascending: false })
-    .limit(200)
+    .select('username')
+    .eq('mode', mode)
 
-  const best: Record<string, { score: number; created_at: string }> = {}
+  const counts: Record<string, number> = {}
   for (const row of data || []) {
-    if (!best[row.username] || row.score > best[row.username].score) {
-      best[row.username] = { score: row.score, created_at: row.created_at }
-    }
+    counts[row.username] = (counts[row.username] || 0) + 1
   }
-  return Object.entries(best)
-    .map(([username, d]) => ({ username, score: d.score, created_at: d.created_at }))
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 20)
+  return Object.entries(counts)
+    .map(([username, perfect_9s]) => ({ username, perfect_9s }))
+    .sort((a, b) => b.perfect_9s - a.perfect_9s)
+    .slice(0, 50)
 }
 
-export async function GET() {
-  return NextResponse.json({ leaderboard: await buildLeaderboard() })
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const mode = searchParams.get('mode') || 'normal'
+  return NextResponse.json({ leaderboard: await buildLeaderboard(mode) })
 }
 
 export async function POST(req: Request) {
-  const { username, score } = await req.json()
-  if (!username || score === undefined) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
-  await getClient().from('bingo_leaderboard').insert({ username, score })
-  return NextResponse.json({ leaderboard: await buildLeaderboard() })
+  const { username, mode = 'normal' } = await req.json()
+  if (!username) return NextResponse.json({ error: 'Missing username' }, { status: 400 })
+  await getClient().from('bingo_leaderboard').insert({ username, mode })
+  return NextResponse.json({ leaderboard: await buildLeaderboard(mode) })
 }
