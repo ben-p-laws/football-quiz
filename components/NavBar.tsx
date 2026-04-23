@@ -14,6 +14,7 @@ export default function NavBar() {
     router.prefetch('/tenables')
     router.prefetch('/stat-clash')
     router.prefetch('/minimise')
+    router.prefetch('/countdown')
   }, [router])
 
   const links = [
@@ -22,6 +23,7 @@ export default function NavBar() {
     { label: 'Tenable',    href: '/tenables' },
     { label: 'Stat Clash', href: '/stat-clash' },
     { label: 'Minimise',   href: '/minimise' },
+    { label: 'Countdown',  href: '/countdown' },
   ]
 
   function navigate(href: string) {

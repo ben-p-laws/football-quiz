@@ -274,8 +274,29 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* ---- COMING SOON x2 ---- */}
-          {[1, 2].map(n => (
+          {/* ---- COUNTDOWN ---- */}
+          <div style={s.card}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+            onClick={() => router.push('/countdown')}>
+            <div style={{ padding: '10px 12px 8px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Footy Countdown</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Letters, numbers & conundrum · 7 rounds</div>
+              <span style={s.tag}>Leaderboard</span>
+            </div>
+            <div style={{ padding: '0 10px 10px', flex: 1 }}>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+                {['S','H','E','A','R','E','R','X','T','L'].map((l, i) => (
+                  <div key={i} style={{ width: 18, height: 22, background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'white' }}>{l}</div>
+                ))}
+              </div>
+              <div style={{ background: '#0a0f1e', border: '1px solid rgba(220,38,38,0.3)', borderRadius: 4, padding: '4px 8px', fontSize: 11, fontWeight: 700, color: '#dc2626', textAlign: 'center' as const }}>SHEARER ✓ 7 pts</div>
+            </div>
+            <div style={s.cta}><span style={s.ctaText}>Play Countdown →</span></div>
+          </div>
+
+          {/* ---- COMING SOON x1 ---- */}
+          {[1].map(n => (
             <div key={n} style={{ ...s.card, cursor: 'default', opacity: 0.6 }}>
               <div style={{ padding: '10px 12px 8px' }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#8899bb', marginBottom: 2 }}>Coming Soon</div>
