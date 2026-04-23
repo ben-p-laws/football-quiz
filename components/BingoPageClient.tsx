@@ -8,8 +8,8 @@ type Player      = { reveal_order: number; id: string; name: string }
 type Puzzle      = { achievements: Achievement[]; players: Player[]; playerAchievements: Record<string, string[]> }
 
 const STORAGE_KEY_USERNAME = 'footballiq_username'
-// Number of achievements shown per puzzle (out of all available)
 const GRID_SIZE = 9
+const MAX_SKIPS = 3
 
 function generateClientPuzzle(
   allAchievements: Achievement[],
@@ -20,9 +20,9 @@ function generateClientPuzzle(
   const achIds = new Set(achievements.map(a => a.id))
 
   const qualifying = allPlayers.filter(p => (playerAchievements[p.id] || []).some(a => achIds.has(a)))
-  if (qualifying.length < GRID_SIZE) return null
+  if (qualifying.length < GRID_SIZE + MAX_SKIPS) return null
 
-  const players = [...qualifying].sort(() => Math.random() - 0.5).slice(0, GRID_SIZE)
+  const players = [...qualifying].sort(() => Math.random() - 0.5).slice(0, GRID_SIZE + MAX_SKIPS)
     .map((p, i) => ({ ...p, reveal_order: i }))
 
   return { achievements: achievements.map((a, i) => ({ ...a, position: i })), players }
@@ -40,7 +40,7 @@ export default function BingoPageClient() {
   const [userName, setUserName]       = useState('')
   const [usernameSet, setUsernameSet] = useState(false)
   const [leaderboard, setLeaderboard] = useState<any[]>([])
-  const [skipsLeft, setSkipsLeft]     = useState(3)
+  const [skipsLeft, setSkipsLeft]     = useState(MAX_SKIPS)
   const [submitted, setSubmitted]     = useState(false)
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([])
   const [allPlayers, setAllPlayers]   = useState<Player[]>([])
@@ -191,7 +191,7 @@ export default function BingoPageClient() {
     setSpinning(false)
     setDisplayName('')
     setSelectedSquare(null)
-    setSkipsLeft(3)
+    setSkipsLeft(MAX_SKIPS)
     setSubmitted(false)
   }
 
