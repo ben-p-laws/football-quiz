@@ -243,35 +243,30 @@ export default function LandingPage() {
           })()}
 
           {/* ---- TEAMMATES ---- */}
-          <div style={{ ...s.card, cursor: 'default', opacity: 0.7 }}>
+          <div style={s.card}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+            onClick={() => router.push('/teammates')}>
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Teammates</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their teammates</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their PL teammates</div>
+              <span style={s.tag}>Daily · Random</span>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
-              <div style={{ display: 'flex', gap: 5, height: 90 }}>
-                <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, width: 56, flexShrink: 0, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <span style={{ fontSize: 22, opacity: 0.65 }}>👤</span>
-                  <span style={{ fontSize: 8, color: '#8899bb', textAlign: 'center' as const, lineHeight: 1.2 }}>Who am I?</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 4, flex: 1 }}>
-                  {[
-                    { name: 'Gerrard',    team: 'LIV', bg: 'rgba(200,16,46,0.2)',   border: 'rgba(200,16,46,0.45)',   color: '#f87171' },
-                    { name: 'De Bruyne',  team: 'MC',  bg: 'rgba(97,218,251,0.12)', border: 'rgba(97,218,251,0.38)',  color: '#7dd3fc' },
-                    { name: 'Lampard',    team: 'CHE', bg: 'rgba(3,70,148,0.22)',   border: 'rgba(3,70,148,0.5)',     color: '#93c5fd' },
-                    { name: '?',          team: '',    bg: '#0a0f1e',               border: '#4a5568',                color: '#8899bb' },
-                  ].map((c, i) => (
-                    <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 5, display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 2, minWidth: 0, overflow: 'hidden' }}>
-                      <span style={{ fontSize: 10, fontWeight: 800, color: c.color, lineHeight: 1.1, textAlign: 'center' as const }}>{c.name}</span>
-                      {c.team && <span style={{ fontSize: 8, color: c.color, opacity: 0.65 }}>{c.team}</span>}
-                    </div>
-                  ))}
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, height: 90 }}>
+                {[
+                  { name: 'Gerrard',   bg: 'rgba(200,16,46,0.18)',  border: 'rgba(200,16,46,0.4)',  color: '#f87171' },
+                  { name: 'De Bruyne', bg: 'rgba(108,171,221,0.18)', border: 'rgba(108,171,221,0.4)', color: '#7dd3fc' },
+                  { name: 'Lampard',   bg: 'rgba(3,70,148,0.22)',   border: 'rgba(3,70,148,0.5)',   color: '#93c5fd' },
+                  { name: '?',         bg: '#0a0f1e',               border: '#4a5568',              color: '#8899bb' },
+                ].map((c, i) => (
+                  <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: c.color, textAlign: 'center' as const, lineHeight: 1.2, padding: '0 4px' }}>{c.name}</span>
+                  </div>
+                ))}
               </div>
             </div>
-            <div style={{ background: '#1e2d4a', padding: '8px', textAlign: 'center' as const, borderTop: '1px solid #1e2d4a' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#8899bb' }}>Coming Soon</span>
-            </div>
+            <div style={s.cta}><span style={s.ctaText}>Play Teammates →</span></div>
           </div>
 
           {/* ---- COUNTDOWN ---- */}
