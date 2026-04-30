@@ -25,7 +25,7 @@ async function fetchAll() {
   while (true) {
     const { data } = await supabase
       .from('player_seasons')
-      .select('name_display,teams_played_for,year_id')
+      .select('name_display,teams_played_for,year_id,pos')
       .range(offset, offset + 999)
     if (!data || data.length === 0) break
     rows.push(...data)
@@ -98,9 +98,19 @@ export async function GET(req: Request) {
     const targetName = eligible[Math.floor(rng() * eligible.length)]
     const targetGroups = [...playerClubs[targetName]].sort()
 
+    // Get target's position (most frequent pos across their rows)
+    const posFreq: Record<string, number> = {}
+    for (const row of rows) {
+      if (row.name_display !== targetName) continue
+      const p = row.pos as string
+      if (p) posFreq[p] = (posFreq[p] || 0) + 1
+    }
+    const targetPos = Object.entries(posFreq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
+
     // Find all players who shared a (year_id, club) session with the target
     const connCount: Record<string, number> = {}
     const connClubs: Record<string, Set<string>> = {}
+    const connYears: Record<string, Set<string>> = {}
 
     for (const row of rows) {
       if (row.name_display !== targetName) continue
@@ -117,13 +127,20 @@ export async function GET(req: Request) {
           connCount[peerName] = (connCount[peerName] || 0) + 1
           if (!connClubs[peerName]) connClubs[peerName] = new Set()
           connClubs[peerName].add(club)
+          if (!connYears[peerName]) connYears[peerName] = new Set()
+          connYears[peerName].add(yearId)
         }
       }
     }
 
-    type Conn = { name: string; count: number; sharedGroups: string[] }
+    type Conn = { name: string; count: number; sharedGroups: string[]; sharedYears: string[] }
     const connections: Conn[] = Object.entries(connCount)
-      .map(([name, count]) => ({ name, count, sharedGroups: [...connClubs[name]] }))
+      .map(([name, count]) => ({
+        name,
+        count,
+        sharedGroups: [...connClubs[name]],
+        sharedYears:  [...connYears[name]].sort(),
+      }))
       .sort((a, b) => b.count - a.count)
 
     if (connections.length < 4) {
@@ -162,7 +179,8 @@ export async function GET(req: Request) {
     return NextResponse.json({
       targetEntity: targetName,
       targetGroups,
-      clues: clues.map(c => ({ name: c.name, sharedGroups: c.sharedGroups })),
+      targetPos,
+      clues: clues.map(c => ({ name: c.name, sharedGroups: c.sharedGroups, sharedYears: c.sharedYears })),
     })
   } catch (e) {
     console.error(e)

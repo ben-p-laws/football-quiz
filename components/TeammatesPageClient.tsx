@@ -84,6 +84,8 @@ const GROUP_STYLE: Record<string, { bg: string; fg: string; label: string }> = {
   'Bradford':                { bg: '#800000', fg: '#FFDE00', label: 'Bradford' },
 }
 
+const MAX_GUESSES = 5
+
 const SHIRT_PATH = [
   'M 12,32', 'L 2,44', 'L 20,56', 'C 22,55 24,51 24,48',
   'L 24,90', 'L 76,90', 'L 76,48', 'C 76,51 78,55 80,56',
@@ -94,7 +96,7 @@ const SHIRT_PATH = [
 function Shirt({ club }: { club?: string }) {
   const s = club ? GROUP_STYLE[club] : null
   return (
-    <svg viewBox="0 0 100 100" width="56" height="56" style={{ display: 'block' }}>
+    <svg viewBox="0 0 100 100" width="52" height="52" style={{ display: 'block' }}>
       <path
         d={SHIRT_PATH}
         fill={s ? s.bg : '#111827'}
@@ -115,43 +117,50 @@ function GroupPill({ club }: { club: string }) {
     <span style={{
       background: s?.bg ?? '#1e2d4a',
       color: s?.fg ?? '#8899bb',
-      fontSize: 10,
-      fontWeight: 700,
-      borderRadius: 20,
-      padding: '3px 8px',
-      display: 'inline-block',
-      whiteSpace: 'nowrap',
+      fontSize: 10, fontWeight: 700, borderRadius: 20,
+      padding: '3px 8px', display: 'inline-block', whiteSpace: 'nowrap',
     }}>
       {s?.label ?? club}
     </span>
   )
 }
 
-type Clue = { name: string; sharedGroups: string[] }
+type Clue = { name: string; sharedGroups: string[]; sharedYears: string[] }
 
-function ClueCard({ clue, revealed }: { clue: Clue; revealed: boolean }) {
+function ClueCard({ clue, revealLevel }: { clue: Clue; revealLevel: number }) {
   return (
     <div style={{
-      background: '#111827',
-      border: '1px solid #1e2d4a',
-      borderRadius: 10,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: 6,
+      background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
       padding: '14px 10px 12px',
     }}>
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
-        {revealed
+      {/* Shirts — revealed at level 1+ */}
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
+        {revealLevel >= 1
           ? clue.sharedGroups.map(g => <Shirt key={g} club={g} />)
           : <Shirt />
         }
       </div>
-      {revealed && (
+
+      {/* Club pills — level 1+ */}
+      {revealLevel >= 1 && (
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
           {clue.sharedGroups.map(g => <GroupPill key={g} club={g} />)}
         </div>
       )}
+
+      {/* Shared seasons — level 2+ */}
+      {revealLevel >= 2 && clue.sharedYears.length > 0 && (
+        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
+          {clue.sharedYears.map(y => (
+            <span key={y} style={{
+              fontSize: 9, color: '#8899bb', background: '#0a0f1e',
+              border: '1px solid #2a3d5e', borderRadius: 4, padding: '2px 5px',
+            }}>{y}</span>
+          ))}
+        </div>
+      )}
+
       <div style={{ fontSize: 13, fontWeight: 700, color: 'white', textAlign: 'center', lineHeight: 1.3 }}>
         {clue.name}
       </div>
@@ -162,15 +171,18 @@ function ClueCard({ clue, revealed }: { clue: Clue; revealed: boolean }) {
 type Puzzle = {
   targetEntity: string
   targetGroups: string[]
+  targetPos: string
   clues: Clue[]
 }
 
-const pageOuter: React.CSSProperties = {
-  minHeight: '100vh',
-  background: '#0a0f1e',
-  fontFamily: "'DM Sans', -apple-system, sans-serif",
+function getInitials(name: string) {
+  return name.split(' ').map(w => w[0]).join('.') + '.'
 }
 
+const pageOuter: React.CSSProperties = {
+  minHeight: '100vh', background: '#0a0f1e',
+  fontFamily: "'DM Sans', -apple-system, sans-serif",
+}
 const pageInner: React.CSSProperties = { padding: '24px 16px 40px', maxWidth: 520, margin: '0 auto' }
 
 export default function TeammatesPageClient() {
@@ -180,12 +192,18 @@ export default function TeammatesPageClient() {
   const [guess, setGuess]               = useState('')
   const [suggestions, setSuggestions]   = useState<string[]>([])
   const [wrongGuesses, setWrongGuesses] = useState<string[]>([])
-  const [groupsRevealed, setGroupsRevealed] = useState(false)
   const [won, setWon]                   = useState(false)
   const [gaveUp, setGaveUp]             = useState(false)
   const [showSugg, setShowSugg]         = useState(false)
   const inputRef                        = useRef<HTMLInputElement>(null)
   const debounceRef                     = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // revealLevel == number of wrong guesses so far (capped at MAX_GUESSES)
+  const revealLevel = wrongGuesses.length
+  const outOfGuesses = !won && !gaveUp && wrongGuesses.length >= MAX_GUESSES
+  const gameOver = won || gaveUp || outOfGuesses
+
+  const score = won ? MAX_GUESSES - wrongGuesses.length : 0
 
   async function loadPuzzle(mode: string) {
     setLoading(true)
@@ -194,7 +212,6 @@ export default function TeammatesPageClient() {
     setGuess('')
     setSuggestions([])
     setWrongGuesses([])
-    setGroupsRevealed(false)
     setWon(false)
     setGaveUp(false)
     setShowSugg(false)
@@ -230,11 +247,10 @@ export default function TeammatesPageClient() {
   }
 
   function submitGuess(name: string) {
-    if (!puzzle || !name.trim()) return
+    if (!puzzle || !name.trim() || gameOver) return
     if (name.trim().toLowerCase() === puzzle.targetEntity.toLowerCase()) {
       setWon(true)
     } else {
-      setGroupsRevealed(true)
       setWrongGuesses(prev => [...prev, name.trim()])
     }
     setGuess('')
@@ -262,10 +278,7 @@ export default function TeammatesPageClient() {
     return (
       <div style={{ ...pageOuter, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
         <p style={{ color: '#8899bb', fontSize: 14, margin: 0 }}>Failed to load puzzle.</p>
-        <button
-          onClick={() => loadPuzzle('daily')}
-          style={{ background: '#1e2d4a', border: 'none', color: 'white', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}
-        >
+        <button onClick={() => loadPuzzle('daily')} style={{ background: '#1e2d4a', border: 'none', color: 'white', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
           Try again
         </button>
       </div>
@@ -282,7 +295,7 @@ export default function TeammatesPageClient() {
       <div style={pageInner}>
 
         {/* Header */}
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
             TopBins · Teammates
           </div>
@@ -290,35 +303,60 @@ export default function TeammatesPageClient() {
             Who's the mystery player?
           </h1>
           <p style={{ fontSize: 12, color: '#8899bb', margin: 0 }}>
-            Four of their PL teammates are shown. Guess the player who played with all of them.
+            Four PL teammates are shown. New clues unlock with each wrong guess.
           </p>
         </div>
+
+        {/* Guess counter / score indicator */}
+        {!gameOver && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {Array.from({ length: MAX_GUESSES }).map((_, i) => (
+                <div key={i} style={{
+                  width: 10, height: 10, borderRadius: '50%',
+                  background: i < wrongGuesses.length ? '#ef4444' : i === wrongGuesses.length ? '#f97316' : '#1e2d4a',
+                  border: i === wrongGuesses.length ? '1px solid #f97316' : 'none',
+                  transition: 'background 0.2s',
+                }} />
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: '#4a5568' }}>
+              Guess {wrongGuesses.length + 1} of {MAX_GUESSES}
+            </div>
+          </div>
+        )}
 
         {/* 2×2 clue grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
           {puzzle.clues.map((clue, i) => (
-            <ClueCard key={i} clue={clue} revealed={groupsRevealed} />
+            <ClueCard key={i} clue={clue} revealLevel={revealLevel} />
           ))}
         </div>
 
-        {/* Hint banner after first wrong guess */}
-        {groupsRevealed && !won && !gaveUp && (
-          <div style={{
-            background: 'rgba(249,115,22,0.1)',
-            border: '1px solid rgba(249,115,22,0.3)',
-            borderRadius: 8,
-            padding: '8px 12px',
-            marginBottom: 14,
-            fontSize: 11,
-            color: '#fb923c',
-            textAlign: 'center',
-          }}>
-            Shirts shown are the clubs where the mystery player played alongside each teammate
+        {/* Progressive hint banners */}
+        {revealLevel >= 1 && (
+          <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 8, padding: '7px 12px', marginBottom: 8, fontSize: 11, color: '#fb923c', textAlign: 'center' }}>
+            Clue 1 — Shirts show clubs where they played with the mystery player
+          </div>
+        )}
+        {revealLevel >= 2 && (
+          <div style={{ background: 'rgba(249,115,22,0.08)', border: '1px solid rgba(249,115,22,0.2)', borderRadius: 8, padding: '7px 12px', marginBottom: 8, fontSize: 11, color: '#fb923c', textAlign: 'center' }}>
+            Clue 2 — Season labels show when they were teammates
+          </div>
+        )}
+        {revealLevel >= 3 && puzzle.targetPos && (
+          <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 8, padding: '7px 14px', marginBottom: 8, fontSize: 12, color: '#fbbf24', textAlign: 'center' }}>
+            Clue 3 — Position: <strong>{puzzle.targetPos}</strong>
+          </div>
+        )}
+        {revealLevel >= 4 && (
+          <div style={{ background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)', borderRadius: 8, padding: '7px 14px', marginBottom: 8, fontSize: 12, color: '#fbbf24', textAlign: 'center' }}>
+            Clue 4 — Initials: <strong>{getInitials(puzzle.targetEntity)}</strong>
           </div>
         )}
 
-        {/* Input area */}
-        {!won && !gaveUp && (
+        {/* Input area — hidden once all guesses used or game over */}
+        {!gameOver && (
           <div style={{ marginBottom: 16 }}>
             <div style={{ position: 'relative', marginBottom: 10 }}>
               <input
@@ -331,46 +369,23 @@ export default function TeammatesPageClient() {
                 placeholder="Type a player name…"
                 autoComplete="off"
                 style={{
-                  width: '100%',
-                  background: '#111827',
-                  border: '1px solid #1e2d4a',
-                  borderRadius: 8,
-                  padding: '11px 14px',
-                  color: 'white',
-                  fontSize: 14,
-                  outline: 'none',
-                  boxSizing: 'border-box',
+                  width: '100%', background: '#111827', border: '1px solid #1e2d4a',
+                  borderRadius: 8, padding: '11px 14px', color: 'white', fontSize: 14,
+                  outline: 'none', boxSizing: 'border-box',
                 }}
               />
               {showSugg && suggestions.length > 0 && (
                 <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#111827',
-                  border: '1px solid #1e2d4a',
-                  borderRadius: 8,
-                  marginTop: 4,
-                  zIndex: 50,
-                  overflow: 'hidden',
+                  position: 'absolute', top: '100%', left: 0, right: 0,
+                  background: '#111827', border: '1px solid #1e2d4a', borderRadius: 8,
+                  marginTop: 4, zIndex: 50, overflow: 'hidden',
                 }}>
                   {suggestions.map(s => (
-                    <div
-                      key={s}
-                      onMouseDown={() => submitGuess(s)}
-                      style={{
-                        padding: '10px 14px',
-                        fontSize: 13,
-                        color: 'white',
-                        cursor: 'pointer',
-                        borderBottom: '1px solid #1e2d4a',
-                      }}
+                    <div key={s} onMouseDown={() => submitGuess(s)}
+                      style={{ padding: '10px 14px', fontSize: 13, color: 'white', cursor: 'pointer', borderBottom: '1px solid #1e2d4a' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#1e2d4a')}
                       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      {s}
-                    </div>
+                    >{s}</div>
                   ))}
                 </div>
               )}
@@ -380,16 +395,9 @@ export default function TeammatesPageClient() {
                 onClick={() => submitGuess(guess)}
                 disabled={!guess.trim()}
                 style={{
-                  flex: 1,
-                  background: '#dc2626',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '11px',
-                  color: 'white',
-                  fontSize: 13,
-                  fontWeight: 800,
-                  cursor: guess.trim() ? 'pointer' : 'default',
-                  opacity: guess.trim() ? 1 : 0.5,
+                  flex: 1, background: '#dc2626', border: 'none', borderRadius: 8,
+                  padding: '11px', color: 'white', fontSize: 13, fontWeight: 800,
+                  cursor: guess.trim() ? 'pointer' : 'default', opacity: guess.trim() ? 1 : 0.5,
                 }}
               >
                 Submit Guess
@@ -397,14 +405,8 @@ export default function TeammatesPageClient() {
               <button
                 onClick={() => setGaveUp(true)}
                 style={{
-                  background: '#1e2d4a',
-                  border: 'none',
-                  borderRadius: 8,
-                  padding: '11px 16px',
-                  color: '#8899bb',
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: 'pointer',
+                  background: '#1e2d4a', border: 'none', borderRadius: 8,
+                  padding: '11px 16px', color: '#8899bb', fontSize: 13, fontWeight: 700, cursor: 'pointer',
                 }}
               >
                 Give Up
@@ -413,41 +415,47 @@ export default function TeammatesPageClient() {
           </div>
         )}
 
-        {/* Wrong guesses */}
+        {/* Wrong guesses list */}
         {wrongGuesses.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 14 }}>
             {wrongGuesses.map((g, i) => (
               <div key={i} style={{
-                background: 'rgba(239,68,68,0.1)',
-                border: '1px solid rgba(239,68,68,0.3)',
-                borderRadius: 8,
-                padding: '8px 12px',
-                marginBottom: 6,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                fontSize: 13,
-                color: '#f87171',
+                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: 8, padding: '8px 12px', marginBottom: 6,
+                display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#f87171',
               }}>
-                <span style={{ fontWeight: 700 }}>✗</span>
-                {g}
+                <span style={{ fontWeight: 700 }}>✗</span>{g}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Out of guesses — answer revealed */}
+        {outOfGuesses && (
+          <div style={{
+            background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+            borderRadius: 10, padding: '16px', marginBottom: 16, textAlign: 'center',
+          }}>
+            <div style={{ fontSize: 12, color: '#f87171', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              0 points — the answer was
+            </div>
+            <div style={{ fontSize: 22, fontWeight: 800, color: 'white', marginBottom: 10 }}>
+              {puzzle.targetEntity}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center' }}>
+              {puzzle.targetGroups.map(g => <GroupPill key={g} club={g} />)}
+            </div>
           </div>
         )}
 
         {/* Gave up panel */}
         {gaveUp && (
           <div style={{
-            background: 'rgba(249,115,22,0.1)',
-            border: '1px solid rgba(249,115,22,0.3)',
-            borderRadius: 10,
-            padding: '16px',
-            marginBottom: 16,
-            textAlign: 'center',
+            background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)',
+            borderRadius: 10, padding: '16px', marginBottom: 16, textAlign: 'center',
           }}>
             <div style={{ fontSize: 12, color: '#fb923c', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              The answer was
+              0 points — the answer was
             </div>
             <div style={{ fontSize: 22, fontWeight: 800, color: 'white', marginBottom: 10 }}>
               {puzzle.targetEntity}
@@ -461,26 +469,20 @@ export default function TeammatesPageClient() {
         {/* Won panel */}
         {won && (
           <div style={{
-            background: 'rgba(34,197,94,0.1)',
-            border: '1px solid rgba(34,197,94,0.3)',
-            borderRadius: 10,
-            padding: '16px',
-            marginBottom: 16,
-            textAlign: 'center',
+            background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+            borderRadius: 10, padding: '16px', marginBottom: 16, textAlign: 'center',
           }}>
             <div style={{ fontSize: 24, marginBottom: 8 }}>🎉</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e', marginBottom: 6 }}>
+            <div style={{ fontSize: 28, fontWeight: 800, color: '#22c55e', marginBottom: 2 }}>
+              {score}/{MAX_GUESSES}
+            </div>
+            <div style={{ fontSize: 11, color: '#8899bb', marginBottom: 8 }}>points</div>
+            <div style={{ fontSize: 20, fontWeight: 800, color: 'white', marginBottom: 8 }}>
               {puzzle.targetEntity}
             </div>
-            <div style={{ fontSize: 11, color: '#8899bb', marginBottom: 10 }}>Played for:</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center', marginBottom: wrongGuesses.length > 0 ? 10 : 0 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, justifyContent: 'center' }}>
               {puzzle.targetGroups.map(g => <GroupPill key={g} club={g} />)}
             </div>
-            {wrongGuesses.length > 0 && (
-              <div style={{ fontSize: 11, color: '#8899bb' }}>
-                {wrongGuesses.length} wrong guess{wrongGuesses.length !== 1 ? 'es' : ''}
-              </div>
-            )}
           </div>
         )}
 
@@ -488,15 +490,8 @@ export default function TeammatesPageClient() {
         <button
           onClick={() => loadPuzzle('random')}
           style={{
-            width: '100%',
-            background: '#111827',
-            border: '1px solid #1e2d4a',
-            borderRadius: 8,
-            padding: '11px',
-            color: '#8899bb',
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: 'pointer',
+            width: '100%', background: '#111827', border: '1px solid #1e2d4a',
+            borderRadius: 8, padding: '11px', color: '#8899bb', fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#dc2626'; (e.currentTarget as HTMLButtonElement).style.color = 'white' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = '#1e2d4a'; (e.currentTarget as HTMLButtonElement).style.color = '#8899bb' }}
