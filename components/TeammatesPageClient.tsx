@@ -167,16 +167,16 @@ const pageOuter: React.CSSProperties = {
 const pageInner: React.CSSProperties = { padding: '24px 16px 48px', maxWidth: 520, margin: '0 auto' }
 
 export default function TeammatesPageClient() {
-  // Game state
+  // Game state — all 5 puzzles loaded upfront
+  const [puzzles, setPuzzles]       = useState<Puzzle[]>([])
   const [round, setRound]           = useState(1)
   const [totalScore, setTotalScore] = useState(0)
   const [gameComplete, setGameComplete] = useState(false)
   const [finalScore, setFinalScore] = useState(0)
+  const [loading, setLoading]       = useState(true)
+  const [error, setError]           = useState(false)
 
-  // Per-round puzzle state
-  const [puzzle, setPuzzle]             = useState<Puzzle | null>(null)
-  const [loading, setLoading]           = useState(true)
-  const [error, setError]               = useState(false)
+  // Per-round guessing state
   const [guess, setGuess]               = useState('')
   const [suggestions, setSuggestions]   = useState<string[]>([])
   const [showSugg, setShowSugg]         = useState(false)
@@ -193,32 +193,42 @@ export default function TeammatesPageClient() {
   const inputRef    = useRef<HTMLInputElement>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const puzzle       = puzzles[round - 1] ?? null
   const revealLevel  = wrongGuesses.length
   const outOfGuesses = !won && wrongGuesses.length >= MAX_GUESSES
   const roundDone    = won || gaveUp || outOfGuesses
   const roundScore   = won ? MAX_GUESSES - wrongGuesses.length : 0
 
-  async function loadPuzzle() {
+  async function loadGame() {
     setLoading(true)
     setError(false)
-    setPuzzle(null)
+    setPuzzles([])
+    setRound(1)
+    setTotalScore(0)
+    setFinalScore(0)
+    setGameComplete(false)
+    setSubmitted(false)
+    resetRound()
+    try {
+      const res = await fetch('/api/teammates')
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      if (data.error || !data.puzzles) throw new Error()
+      setPuzzles(data.puzzles)
+    } catch {
+      setError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function resetRound() {
     setGuess('')
     setSuggestions([])
     setWrongGuesses([])
     setWon(false)
     setGaveUp(false)
     setShowSugg(false)
-    try {
-      const res = await fetch('/api/teammates')
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      if (data.error) throw new Error(data.error)
-      setPuzzle(data)
-    } catch {
-      setError(true)
-    } finally {
-      setLoading(false)
-    }
   }
 
   async function getLb() {
@@ -232,7 +242,7 @@ export default function TeammatesPageClient() {
   useEffect(() => {
     const saved = localStorage.getItem(LS_USERNAME)
     if (saved) setUsername(saved)
-    loadPuzzle()
+    loadGame()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   function goToNextRound() {
@@ -247,17 +257,12 @@ export default function TeammatesPageClient() {
     } else {
       setTotalScore(newTotal)
       setRound(r => r + 1)
-      loadPuzzle()
+      resetRound()  // instant — no fetch needed
     }
   }
 
   function startNewGame() {
-    setRound(1)
-    setTotalScore(0)
-    setFinalScore(0)
-    setGameComplete(false)
-    setSubmitted(false)
-    loadPuzzle()
+    loadGame()
   }
 
   function onGuessChange(val: string) {
@@ -304,11 +309,11 @@ export default function TeammatesPageClient() {
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────
-  if (!gameComplete && loading) {
+  if (loading) {
     return (
       <div style={{ ...pageOuter, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
         <style>{`@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}`}</style>
-        <p style={{ color: '#8899bb', fontSize: 14, margin: 0 }}>Loading round {round}…</p>
+        <p style={{ color: '#8899bb', fontSize: 14, margin: 0 }}>Loading game…</p>
         <div style={{ position: 'relative', width: 200, height: 4, background: '#1e2d4a', borderRadius: 2, overflow: 'hidden' }}>
           <div style={{ position: 'absolute', top: 0, left: 0, width: '50%', height: '100%', background: '#f97316', borderRadius: 2, animation: 'slide 1.2s ease-in-out infinite' }} />
         </div>
@@ -317,11 +322,11 @@ export default function TeammatesPageClient() {
   }
 
   // ── Error ────────────────────────────────────────────────────────────────
-  if (!gameComplete && (error || !puzzle)) {
+  if (error || puzzles.length === 0) {
     return (
       <div style={{ ...pageOuter, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-        <p style={{ color: '#8899bb', fontSize: 14, margin: 0 }}>Failed to load round {round}.</p>
-        <button onClick={loadPuzzle} style={{ background: '#1e2d4a', border: 'none', color: 'white', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
+        <p style={{ color: '#8899bb', fontSize: 14, margin: 0 }}>Failed to load game.</p>
+        <button onClick={loadGame} style={{ background: '#1e2d4a', border: 'none', color: 'white', padding: '8px 18px', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>
           Try again
         </button>
       </div>
