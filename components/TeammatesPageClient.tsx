@@ -138,11 +138,11 @@ function ClueCard({ clue, revealLevel }: { clue: Clue; revealLevel: number }) {
       )}
       {revealLevel >= 2 && clue.sharedYears.length > 0 && (
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap', justifyContent: 'center' }}>
-          {clue.sharedYears.map(y => (
-            <span key={y} style={{
+          {formatSpells(clue.sharedYears).map(spell => (
+            <span key={spell} style={{
               fontSize: 9, color: '#8899bb', background: '#0a0f1e',
               border: '1px solid #2a3d5e', borderRadius: 4, padding: '2px 5px',
-            }}>{y}</span>
+            }}>{spell}</span>
           ))}
         </div>
       )}
@@ -158,6 +158,39 @@ type LbEntry = { username: string; score: number }
 
 function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('.') + '.'
+}
+
+// Groups ["2007-2008","2008-2009","2010-2011"] → ["2007-2009","2010-2011"]
+function formatSpells(years: string[]): string[] {
+  if (years.length === 0) return []
+
+  const parsed: { start: number; end: number }[] = []
+  for (const y of years) {
+    // "2007-2008" or "2007/2008"
+    const m4 = y.match(/^(\d{4})[-\/](\d{4})$/)
+    if (m4) { parsed.push({ start: parseInt(m4[1]), end: parseInt(m4[2]) }); continue }
+    // "2007/08"
+    const m2 = y.match(/^(\d{4})\/(\d{2})$/)
+    if (m2) { const s = parseInt(m2[1]); parsed.push({ start: s, end: s + 1 }); continue }
+  }
+
+  if (parsed.length === 0) return years
+
+  parsed.sort((a, b) => a.start - b.start)
+
+  const spells: string[] = []
+  let { start, end } = parsed[0]
+
+  for (let i = 1; i < parsed.length; i++) {
+    if (parsed[i].start === end) {
+      end = parsed[i].end   // consecutive — extend spell
+    } else {
+      spells.push(`${start}-${end}`)
+      ;({ start, end } = parsed[i])
+    }
+  }
+  spells.push(`${start}-${end}`)
+  return spells
 }
 
 const pageOuter: React.CSSProperties = {
