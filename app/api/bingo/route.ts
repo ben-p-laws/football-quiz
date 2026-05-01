@@ -10,7 +10,7 @@ function getClient() {
   )
 }
 
-const PLAYER_LIMIT = 100
+const PLAYER_LIMIT = 150
 
 type PlayerStats = {
   name: string
@@ -86,7 +86,6 @@ const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boole
   // Titles
   { id: 'title_1',           name: 'Won a PL Title',                     check: p => p.titlesWon >= 1 },
   { id: 'title_3',           name: 'Won 3+ PL Titles',                   check: p => p.titlesWon >= 3 },
-  { id: 'title_5',           name: 'Won 5+ PL Titles',                   check: p => p.titlesWon >= 5 },
   { id: 'never_title',       name: 'Never Won the PL',                   check: p => p.titlesWon === 0 },
   // Relegation
   { id: 'relegated_1',       name: 'Been Relegated',                     check: p => p.relegations >= 1 },
@@ -179,8 +178,8 @@ export async function GET() {
   const topPlayers = [...statsMap.values()]
     .filter(p => p.goals > 0 || p.assists > 0)
     .sort((a, b) => {
-      const scoreA = a.games + (a.goals * 4) + (a.assists * 3)
-      const scoreB = b.games + (b.goals * 4) + (b.assists * 3)
+      const scoreA = a.games + (a.goals * 2) + (a.assists * 2)
+      const scoreB = b.games + (b.goals * 2) + (b.assists * 2)
       return scoreB - scoreA
     })
     .slice(0, PLAYER_LIMIT)

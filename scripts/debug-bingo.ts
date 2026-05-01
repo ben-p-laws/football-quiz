@@ -14,7 +14,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const PLAYER_LIMIT = 100
+const PLAYER_LIMIT = 150
 
 type PlayerStats = {
   name: string
@@ -78,7 +78,6 @@ const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boole
   { id: 'reds_1',            name: 'Received a Red Card',                check: p => p.cards_red >= 1 },
   { id: 'title_1',           name: 'Won a PL Title',                     check: p => p.titlesWon >= 1 },
   { id: 'title_3',           name: 'Won 3+ PL Titles',                   check: p => p.titlesWon >= 3 },
-  { id: 'title_5',           name: 'Won 5+ PL Titles',                   check: p => p.titlesWon >= 5 },
   { id: 'never_title',       name: 'Never Won the PL',                   check: p => p.titlesWon === 0 },
   { id: 'relegated_1',       name: 'Been Relegated',                     check: p => p.relegations >= 1 },
   { id: 'relegated_2',       name: 'Relegated 2+ Times',                 check: p => p.relegations >= 2 },
@@ -197,8 +196,8 @@ async function run() {
   const topPlayers = [...statsMap.values()]
     .filter(p => p.goals > 0 || p.assists > 0)
     .sort((a, b) => {
-      const sA = a.games + (a.goals * 4) + (a.assists * 3)
-      const sB = b.games + (b.goals * 4) + (b.assists * 3)
+      const sA = a.games + (a.goals * 2) + (a.assists * 2)
+      const sB = b.games + (b.goals * 2) + (b.assists * 2)
       return sB - sA
     })
     .slice(0, PLAYER_LIMIT)
@@ -208,7 +207,7 @@ async function run() {
   console.log(`PLAYER POOL  (top ${PLAYER_LIMIT} outfield players)`)
   console.log(`${'─'.repeat(60)}`)
   console.log(`Filter: goals > 0 OR assists > 0  (removes goalkeepers)`)
-  console.log(`Sort:   score = appearances + goals×4 + assists×3  (favours attackers/creators)`)
+  console.log(`Sort:   score = appearances + goals×2 + assists×2  (balanced — doesn't heavily penalise defenders/midfielders)`)
   console.log(`Limit:  top ${PLAYER_LIMIT} by score`)
   console.log(`Total players in pool: ${topPlayers.length}`)
   console.log('\nPlayers (sorted by pool score):')
