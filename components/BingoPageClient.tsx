@@ -232,51 +232,57 @@ export default function BingoPageClient() {
     }
   }
 
-  const DIFF_GRID_LABEL: Record<Difficulty, string> = { beginner: '3×3', intermediate: '3×4', expert: '4×4' }
+  // Level numbers: rows = difficulty (beginner→expert), cols = skips (3→1→0)
+  // Level 1 = beginner+3skips (easiest), Level 9 = expert+0skips (hardest)
+  const LEVEL_NUM: Record<string, number> = {}
+  DIFFICULTIES.forEach((d, di) => SKIP_OPTIONS.forEach((s, si) => { LEVEL_NUM[levelKey(d, s)] = di * 3 + si + 1 }))
 
   function levelMatrix(compact: boolean) {
     const labelW = compact ? 76 : 90
     return (
       <div>
         <div style={{ display: 'grid', gridTemplateColumns: `${labelW}px repeat(3, 1fr)`, gap: 5, marginBottom: 6 }}>
-          <div style={{ fontSize: 9, color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', alignSelf: 'end', paddingBottom: 2 }}>
-            ↓ difficulty<br />→ skips
-          </div>
+          <div />
           {SKIP_OPTIONS.map(s => (
             <div key={s} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#cbd5e1' }}>{s === 0 ? '0' : s}</div>
+              <div style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#cbd5e1' }}>{s}</div>
               <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em' }}>skip{s !== 1 ? 's' : ''}</div>
             </div>
           ))}
         </div>
-        {DIFFICULTIES.map(diff => (
+        {DIFFICULTIES.map((diff, di) => (
           <div key={diff} style={{ display: 'grid', gridTemplateColumns: `${labelW}px repeat(3, 1fr)`, gap: 5, marginBottom: 5 }}>
             <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#cbd5e1' }}>{DIFF_LABELS_FULL[diff]}</div>
-              <div style={{ fontSize: 9, color: '#4a5568' }}>{DIFF_GRID_LABEL[diff]} grid</div>
             </div>
-            {SKIP_OPTIONS.map(sk => {
+            {SKIP_OPTIONS.map((sk, si) => {
               const key = levelKey(diff, sk)
               const stats = allStats[key]
               const isActive = difficulty === diff && skips === sk
+              const levelNum = di * 3 + si + 1
+              const isEasiest = levelNum === 1
+              const isHardest = levelNum === 9
               return (
                 <button key={sk} onClick={() => switchLevel(diff, sk)} style={{
                   background: isActive ? '#dc2626' : '#111827',
                   border: `1px solid ${isActive ? '#dc2626' : '#1e2d4a'}`,
-                  borderRadius: 8, padding: compact ? '7px 4px' : '9px 4px',
-                  cursor: 'pointer', textAlign: 'center', outline: 'none',
+                  borderRadius: 8, padding: compact ? '6px 4px' : '8px 4px',
+                  cursor: 'pointer', textAlign: 'center', outline: 'none', position: 'relative',
                 }}>
+                  {(isEasiest || isHardest) && (
+                    <div style={{ fontSize: 8, fontWeight: 700, color: isActive ? 'rgba(255,255,255,0.7)' : '#4a5568', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>
+                      {isEasiest ? 'Easiest' : 'Hardest'}
+                    </div>
+                  )}
+                  <div style={{ fontSize: compact ? 12 : 13, fontWeight: 800, color: isActive ? 'white' : '#cbd5e1' }}>
+                    Lv {levelNum}
+                  </div>
                   {stats ? (
-                    <>
-                      <div style={{ fontSize: compact ? 12 : 13, fontWeight: 800, color: isActive ? 'white' : '#cbd5e1' }}>
-                        {stats.bestScore}/{GRID_SIZES[diff]}
-                      </div>
-                      <div style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.7)' : '#4a5568', marginTop: 2 }}>
-                        {stats.perfects > 0 ? `⭐ ×${stats.perfects}` : 'played'}
-                      </div>
-                    </>
+                    <div style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.7)' : '#4a5568', marginTop: 2 }}>
+                      {stats.perfects > 0 ? `⭐ ×${stats.perfects}` : `${stats.bestScore}/${GRID_SIZES[diff]}`}
+                    </div>
                   ) : (
-                    <div style={{ fontSize: compact ? 11 : 12, color: isActive ? 'white' : '#4a5568' }}>Play</div>
+                    <div style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.5)' : '#2a3d5e', marginTop: 2 }}>—</div>
                   )}
                 </button>
               )
