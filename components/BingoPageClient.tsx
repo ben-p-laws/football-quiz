@@ -44,7 +44,10 @@ function generateClientPuzzle(
   gridSize: number,
   maxSkips: number
 ) {
-  const achievements = [...allAchievements].sort(() => Math.random() - 0.5).slice(0, Math.min(gridSize, allAchievements.length))
+  const useAll = gridSize >= allAchievements.length
+  const achievements = useAll
+    ? [...allAchievements]
+    : [...allAchievements].sort(() => Math.random() - 0.5).slice(0, gridSize)
   const achIds = new Set(achievements.map(a => a.id))
 
   const qualifying = allPlayers.filter(p => (playerAchievements[p.id] || []).some(a => achIds.has(a)))
