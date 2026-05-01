@@ -16,7 +16,6 @@ const GRID_SIZES: Record<Difficulty, number> = { beginner: 9, intermediate: 12, 
 const GRID_COLS:  Record<Difficulty, number> = { beginner: 3, intermediate: 3, expert: 4 }
 const SKIP_OPTIONS = [3, 1, 0]
 const DIFFICULTIES: Difficulty[] = ['beginner', 'intermediate', 'expert']
-const DIFF_LABELS: Record<Difficulty, string> = { beginner: 'Beginner', intermediate: 'Inter', expert: 'Expert' }
 const DIFF_LABELS_FULL: Record<Difficulty, string> = { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }
 
 function levelKey(d: Difficulty, s: number) { return `${d}-${s}` }
@@ -230,22 +229,28 @@ export default function BingoPageClient() {
     }
   }
 
+  const DIFF_GRID_LABEL: Record<Difficulty, string> = { beginner: '3×3', intermediate: '3×4', expert: '4×4' }
+
   function levelMatrix(compact: boolean) {
-    const labelW = compact ? 72 : 84
+    const labelW = compact ? 76 : 90
     return (
       <div>
-        <div style={{ display: 'grid', gridTemplateColumns: `${labelW}px repeat(3, 1fr)`, gap: 5, marginBottom: 5 }}>
-          <div />
+        <div style={{ display: 'grid', gridTemplateColumns: `${labelW}px repeat(3, 1fr)`, gap: 5, marginBottom: 6 }}>
+          <div style={{ fontSize: 9, color: '#4a5568', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', alignSelf: 'end', paddingBottom: 2 }}>
+            ↓ difficulty<br />→ skips
+          </div>
           {SKIP_OPTIONS.map(s => (
-            <div key={s} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              {skipLabel(s)}
+            <div key={s} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#cbd5e1' }}>{s === 0 ? '0' : s}</div>
+              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em' }}>skip{s !== 1 ? 's' : ''}</div>
             </div>
           ))}
         </div>
         {DIFFICULTIES.map(diff => (
           <div key={diff} style={{ display: 'grid', gridTemplateColumns: `${labelW}px repeat(3, 1fr)`, gap: 5, marginBottom: 5 }}>
-            <div style={{ display: 'flex', alignItems: 'center', fontSize: compact ? 10 : 11, fontWeight: 700, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {DIFF_LABELS[diff]}
+            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <div style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#cbd5e1' }}>{DIFF_LABELS_FULL[diff]}</div>
+              <div style={{ fontSize: 9, color: '#4a5568' }}>{DIFF_GRID_LABEL[diff]} grid</div>
             </div>
             {SKIP_OPTIONS.map(sk => {
               const key = levelKey(diff, sk)
@@ -253,24 +258,22 @@ export default function BingoPageClient() {
               const isActive = difficulty === diff && skips === sk
               return (
                 <button key={sk} onClick={() => switchLevel(diff, sk)} style={{
-                  background: isActive ? '#dc2626' : '#0a0f1e',
+                  background: isActive ? '#dc2626' : '#111827',
                   border: `1px solid ${isActive ? '#dc2626' : '#1e2d4a'}`,
-                  borderRadius: 8, padding: compact ? '6px 4px' : '8px 4px',
+                  borderRadius: 8, padding: compact ? '7px 4px' : '9px 4px',
                   cursor: 'pointer', textAlign: 'center', outline: 'none',
                 }}>
                   {stats ? (
                     <>
-                      <div style={{ fontSize: compact ? 11 : 12, fontWeight: 800, color: isActive ? 'white' : (stats.perfects > 0 ? '#fbbf24' : '#cbd5e1') }}>
-                        {stats.perfects > 0 ? `${stats.perfects} ⭐` : `${stats.bestScore}/${GRID_SIZES[diff]}`}
+                      <div style={{ fontSize: compact ? 12 : 13, fontWeight: 800, color: isActive ? 'white' : '#cbd5e1' }}>
+                        {stats.bestScore}/{GRID_SIZES[diff]}
                       </div>
-                      {stats.perfects > 0 && (
-                        <div style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.6)' : '#4a5568', marginTop: 1 }}>
-                          best {stats.bestScore}/{GRID_SIZES[diff]}
-                        </div>
-                      )}
+                      <div style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.7)' : '#4a5568', marginTop: 2 }}>
+                        {stats.perfects > 0 ? `⭐ ×${stats.perfects}` : 'played'}
+                      </div>
                     </>
                   ) : (
-                    <div style={{ fontSize: compact ? 11 : 12, color: '#2a3d5e' }}>—</div>
+                    <div style={{ fontSize: compact ? 11 : 12, color: isActive ? 'white' : '#4a5568' }}>Play</div>
                   )}
                 </button>
               )
@@ -444,7 +447,8 @@ export default function BingoPageClient() {
         {/* Lobby: level matrix (choose level) */}
         {!gameStarted && !gameOver && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Choose Level</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Select Difficulty</div>
+          <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 10 }}>Pick a grid size and how many skips you want</div>
             {levelMatrix(false)}
           </div>
         )}
