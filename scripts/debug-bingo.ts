@@ -121,12 +121,32 @@ async function run() {
   }
 
   // Show sample year_id and team values from player_seasons for format comparison
-  const sampleYearIds = [...new Set(rows.map((r: any) => r.year_id).filter(Boolean))].slice(0, 5)
-  const sampleTeamsInRows = [...new Set(
-    rows.flatMap((r: any) => String(r.teams_played_for ?? '').split(',').map((t: string) => t.trim()).filter(Boolean))
-  )].slice(0, 8)
-  console.log(`\nSample year_ids  in player_seasons: ${sampleYearIds.join(', ')}`)
-  console.log(`Sample teams     in player_seasons: ${sampleTeamsInRows.join(', ')}`)
+  const allYearIds = [...new Set(rows.map((r: any) => r.year_id).filter(Boolean))].sort()
+  const allTeamsInRows = [...new Set(
+    rows.flatMap((r: any) => String(r.teams_played_for ?? '').split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams'))
+  )].sort()
+  console.log(`\nAll year_ids in player_seasons (${allYearIds.length}):`)
+  console.log('  ' + allYearIds.join(', '))
+  console.log(`\nAll teams in player_seasons (${allTeamsInRows.length}):`)
+  console.log('  ' + allTeamsInRows.join('\n  '))
+
+  // Check which (year_id, team) pairs from player_seasons have NO match in pl_season_tables
+  const unmatchedKeys = new Set<string>()
+  for (const row of rows) {
+    if (!row.year_id) continue
+    const teams = String(row.teams_played_for ?? '').split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
+    for (const team of teams) {
+      const key = `${row.year_id}|||${team}`
+      if (!plTables.has(key)) unmatchedKeys.add(key)
+    }
+  }
+  if (unmatchedKeys.size > 0) {
+    const samples = [...unmatchedKeys].slice(0, 20).map(k => k.replace('|||', ' / '))
+    console.log(`\n⚠️  ${unmatchedKeys.size} (season, team) combos in player_seasons have NO match in pl_season_tables`)
+    console.log('  First 20 unmatched:\n  ' + samples.join('\n  '))
+  } else {
+    console.log('\n✓ All (season, team) pairs match pl_season_tables')
+  }
 
   const statsMap = new Map<string, PlayerStats>()
   for (const row of rows) {
