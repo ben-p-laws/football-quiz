@@ -10,7 +10,6 @@ function getClient() {
   )
 }
 
-const PLAYER_LIMIT = 150
 
 type PlayerStats = {
   name: string
@@ -175,14 +174,25 @@ export async function GET() {
     }
   }
 
-  const topPlayers = [...statsMap.values()]
-    .filter(p => p.goals > 0 || p.assists > 0)
-    .sort((a, b) => {
-      const scoreA = a.games + (a.goals * 2) + (a.assists * 2)
-      const scoreB = b.games + (b.goals * 2) + (b.assists * 2)
-      return scoreB - scoreA
-    })
-    .slice(0, PLAYER_LIMIT)
+  const outfield = [...statsMap.values()].filter(p => p.goals > 0 || p.assists > 0)
+
+  const top = (arr: PlayerStats[], key: keyof PlayerStats, n: number) =>
+    [...arr].sort((a, b) => (b[key] as number) - (a[key] as number)).slice(0, n)
+
+  const buckets = [
+    top(outfield, 'games',         50),  // top 50 appearances
+    top(outfield, 'goals',         50),  // top 50 goalscorers
+    top(outfield, 'assists',       50),  // top 50 assisters
+    outfield.filter(p => p.cards_red > 3),   // all with 4+ red cards
+    top(outfield, 'cards_yellow',  30),  // top 30 yellow cards
+    outfield.filter(p => p.titlesWon >= 3),  // all with 3+ titles
+  ]
+
+  const poolMap = new Map<string, PlayerStats>()
+  for (const bucket of buckets) {
+    for (const p of bucket) poolMap.set(p.name, p)
+  }
+  const topPlayers = [...poolMap.values()]
 
   const playerAchievements: Record<string, string[]> = {}
   for (const player of topPlayers) {

@@ -14,7 +14,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-const PLAYER_LIMIT = 150
+// Pool bucket sizes
+const BUCKET_APPS    = 50
+const BUCKET_GOALS   = 50
+const BUCKET_ASSISTS = 50
+const BUCKET_YELLOWS = 30
 
 type PlayerStats = {
   name: string
@@ -193,23 +197,35 @@ async function run() {
     }
   }
 
-  const topPlayers = [...statsMap.values()]
-    .filter(p => p.goals > 0 || p.assists > 0)
-    .sort((a, b) => {
-      const sA = a.games + (a.goals * 2) + (a.assists * 2)
-      const sB = b.games + (b.goals * 2) + (b.assists * 2)
-      return sB - sA
-    })
-    .slice(0, PLAYER_LIMIT)
+  const outfield = [...statsMap.values()].filter(p => p.goals > 0 || p.assists > 0)
+
+  const top = (arr: PlayerStats[], key: keyof PlayerStats, n: number) =>
+    [...arr].sort((a, b) => (b[key] as number) - (a[key] as number)).slice(0, n)
+
+  const bucketDefs = [
+    { label: `Top ${BUCKET_APPS} appearances`,  players: top(outfield, 'games',        BUCKET_APPS) },
+    { label: `Top ${BUCKET_GOALS} goalscorers`, players: top(outfield, 'goals',        BUCKET_GOALS) },
+    { label: `Top ${BUCKET_ASSISTS} assisters`, players: top(outfield, 'assists',      BUCKET_ASSISTS) },
+    { label: '4+ red cards',                    players: outfield.filter(p => p.cards_red > 3) },
+    { label: `Top ${BUCKET_YELLOWS} yellows`,   players: top(outfield, 'cards_yellow', BUCKET_YELLOWS) },
+    { label: '3+ titles',                       players: outfield.filter(p => p.titlesWon >= 3) },
+  ]
+
+  const poolMap = new Map<string, PlayerStats>()
+  for (const { players } of bucketDefs) {
+    for (const p of players) poolMap.set(p.name, p)
+  }
+  const topPlayers = [...poolMap.values()]
 
   // ── Player pool ────────────────────────────────────────────────────────────
   console.log(`\n${'─'.repeat(60)}`)
-  console.log(`PLAYER POOL  (top ${PLAYER_LIMIT} outfield players)`)
+  console.log(`PLAYER POOL  (multi-bucket selection)`)
   console.log(`${'─'.repeat(60)}`)
-  console.log(`Filter: goals > 0 OR assists > 0  (removes goalkeepers)`)
-  console.log(`Sort:   score = appearances + goals×2 + assists×2  (balanced — doesn't heavily penalise defenders/midfielders)`)
-  console.log(`Limit:  top ${PLAYER_LIMIT} by score`)
-  console.log(`Total players in pool: ${topPlayers.length}`)
+  console.log(`Filter: goals > 0 OR assists > 0 (removes GKs)`)
+  for (const { label, players } of bucketDefs) {
+    console.log(`  ${label.padEnd(28)} → ${players.length} players`)
+  }
+  console.log(`\nTotal unique players in pool: ${topPlayers.length}`)
   console.log('\nPlayers (sorted by pool score):')
   topPlayers.forEach((p, i) => {
     const score = p.games + (p.goals * 4) + (p.assists * 3)
