@@ -104,14 +104,22 @@ async function run() {
   console.log(`\nAll teams in player_seasons (${allTeamsInRows.length}):`)
   console.log('  ' + allTeamsInRows.join('\n  '))
 
+  const TEAM_NORM: Record<string, string> = {
+    'Manchester Utd':      'Manchester United',
+    'QPR':                 'Queens Park Rangers',
+    'Sheffield Weds':      'Sheffield Wednesday',
+    'Brighton':            'Brighton & Hove Albion',
+  }
+  const normTeam = (t: string) => TEAM_NORM[t] ?? t
+
   // Check which (year_id, team) pairs from player_seasons have NO match in pl_season_tables
   const unmatchedKeys = new Set<string>()
   for (const row of rows) {
     if (!row.year_id) continue
     const teams = String(row.teams_played_for ?? '').split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
     for (const team of teams) {
-      const key = `${row.year_id}|||${team}`
-      if (!plTables.has(key)) unmatchedKeys.add(key)
+      const key = `${row.year_id}|||${normTeam(team)}`
+      if (!plTables.has(key)) unmatchedKeys.add(`${row.year_id}|||${team}`)
     }
   }
   if (unmatchedKeys.size > 0) {
@@ -156,7 +164,7 @@ async function run() {
     if (row.year_id && teams.length > 0) {
       let wonTitle = false, top4 = false, relegated = false
       for (const club of teams) {
-        const entry = plTables.get(`${row.year_id}|||${club}`)
+        const entry = plTables.get(`${row.year_id}|||${normTeam(club)}`)
         if (!entry) continue
         if (entry.position === 1) wonTitle = true
         if (entry.position <= 4) top4 = true

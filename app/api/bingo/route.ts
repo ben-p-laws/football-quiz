@@ -66,6 +66,15 @@ async function fetchAll(columns: string) {
   return all
 }
 
+// player_seasons uses abbreviated names; pl_season_tables uses full names
+const TEAM_NORM: Record<string, string> = {
+  'Manchester Utd':      'Manchester United',
+  'QPR':                 'Queens Park Rangers',
+  'Sheffield Weds':      'Sheffield Wednesday',
+  'Brighton':            'Brighton & Hove Albion',
+}
+function normTeam(t: string): string { return TEAM_NORM[t] ?? t }
+
 async function fetchPlTables(): Promise<Map<string, { position: number; relegated: boolean }>> {
   const { data } = await getClient()
     .from('pl_season_tables')
@@ -122,7 +131,7 @@ export async function GET() {
     if (row.year_id && teams.length > 0) {
       let wonTitle = false, top4 = false, relegated = false
       for (const club of teams) {
-        const entry = plTables.get(`${row.year_id}|||${club}`)
+        const entry = plTables.get(`${row.year_id}|||${normTeam(club)}`)
         if (!entry) continue
         if (entry.position === 1) wonTitle = true
         if (entry.position <= 4) top4 = true
