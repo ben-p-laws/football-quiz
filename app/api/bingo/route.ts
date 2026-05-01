@@ -28,6 +28,7 @@ type PlayerStats = {
   titlesWon: number
   top4Finishes: number
   relegations: number
+  isGK: boolean
 }
 
 const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boolean }[] = [
@@ -78,7 +79,7 @@ async function fetchPlTables(): Promise<Map<string, { position: number; relegate
 
 export async function GET() {
   const [rows, plTables] = await Promise.all([
-    fetchAll('name_display,games,goals,assists,goals_assists,pens_made,pens_missed,cards_yellow,cards_red,teams_played_for,year_id'),
+    fetchAll('name_display,games,goals,assists,goals_assists,pens_made,pens_missed,cards_yellow,cards_red,teams_played_for,year_id,pos'),
     fetchPlTables(),
   ])
 
@@ -92,7 +93,7 @@ export async function GET() {
         pens_made: 0, pens_missed: 0, cards_yellow: 0, cards_red: 0,
         clubs: new Set(),
         maxGoalsInSeason: 0, maxAssistsInSeason: 0, maxGoalsAssistsInSeason: 0,
-        titlesWon: 0, top4Finishes: 0, relegations: 0,
+        titlesWon: 0, top4Finishes: 0, relegations: 0, isGK: false,
       })
     }
     const p = statsMap.get(name)!
@@ -104,6 +105,7 @@ export async function GET() {
     p.pens_missed     += row.pens_missed ?? 0
     p.cards_yellow    += row.cards_yellow ?? 0
     p.cards_red       += row.cards_red ?? 0
+    if (row.pos === 'GK') p.isGK = true
 
     const teams = String(row.teams_played_for ?? '')
       .split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
@@ -132,7 +134,7 @@ export async function GET() {
     }
   }
 
-  const outfield = [...statsMap.values()].filter(p => p.goals > 0 || p.assists > 0)
+  const outfield = [...statsMap.values()].filter(p => !p.isGK)
 
   const top = (arr: PlayerStats[], key: keyof PlayerStats, n: number) =>
     [...arr].sort((a, b) => (b[key] as number) - (a[key] as number)).slice(0, n)

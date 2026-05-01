@@ -411,7 +411,7 @@ export default function BingoPageClient() {
         {/* Current player card — only shown in-game */}
         {!gameOver && gameStarted && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 64 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, height: 64 }}>
                 {/* Skip on left — fixed width so card height stays constant */}
                 <div style={{ width: 72, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {!spinning && displayName && skipsLeft > 0 ? (
@@ -427,7 +427,7 @@ export default function BingoPageClient() {
                   <div style={{ fontSize: '11px', color: '#8899bb', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                     {spinning ? 'Your player is...' : 'Assign to a square'}
                   </div>
-                  <div style={{ fontSize: '28px', fontWeight: 800, color: spinning ? '#dc2626' : 'white' }}>
+                  <div style={{ fontSize: '22px', fontWeight: 800, color: spinning ? '#dc2626' : 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {displayName || '···'}
                   </div>
                 </div>
