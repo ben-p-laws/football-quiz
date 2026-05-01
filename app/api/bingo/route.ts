@@ -88,10 +88,6 @@ const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boole
   { id: 'title_3',           name: 'Won 3+ PL Titles',                   check: p => p.titlesWon >= 3 },
   { id: 'title_5',           name: 'Won 5+ PL Titles',                   check: p => p.titlesWon >= 5 },
   { id: 'never_title',       name: 'Never Won the PL',                   check: p => p.titlesWon === 0 },
-  // Top 4
-  { id: 'top4_3',            name: '3+ Top-4 Finishes',                  check: p => p.top4Finishes >= 3 },
-  { id: 'top4_5',            name: '5+ Top-4 Finishes',                  check: p => p.top4Finishes >= 5 },
-  { id: 'top4_8',            name: '8+ Top-4 Finishes',                  check: p => p.top4Finishes >= 8 },
   // Relegation
   { id: 'relegated_1',       name: 'Been Relegated',                     check: p => p.relegations >= 1 },
   { id: 'relegated_2',       name: 'Relegated 2+ Times',                 check: p => p.relegations >= 2 },
