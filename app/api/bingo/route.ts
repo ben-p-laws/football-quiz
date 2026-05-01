@@ -10,7 +10,6 @@ function getClient() {
   )
 }
 
-// How many top players (by career appearances) to include in the pool
 const PLAYER_LIMIT = 100
 
 type PlayerStats = {
@@ -27,6 +26,9 @@ type PlayerStats = {
   maxGoalsInSeason: number
   maxAssistsInSeason: number
   maxGoalsAssistsInSeason: number
+  titlesWon: number
+  top4Finishes: number
+  relegations: number
 }
 
 const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boolean }[] = [
@@ -81,6 +83,17 @@ const ACHIEVEMENTS: { id: string; name: string; check: (p: PlayerStats) => boole
   { id: 'never_sent_off',    name: 'Never Sent Off (100+ apps)',          check: p => p.cards_red === 0 && p.games >= 100 },
   { id: 'reds_3',            name: '3+ Career Red Cards',                check: p => p.cards_red >= 3 },
   { id: 'reds_1',            name: 'Received a Red Card',                check: p => p.cards_red >= 1 },
+  // Titles
+  { id: 'title_1',           name: 'Won a PL Title',                     check: p => p.titlesWon >= 1 },
+  { id: 'title_3',           name: 'Won 3+ PL Titles',                   check: p => p.titlesWon >= 3 },
+  { id: 'title_5',           name: 'Won 5+ PL Titles',                   check: p => p.titlesWon >= 5 },
+  // Top 4
+  { id: 'top4_3',            name: '3+ Top-4 Finishes',                  check: p => p.top4Finishes >= 3 },
+  { id: 'top4_5',            name: '5+ Top-4 Finishes',                  check: p => p.top4Finishes >= 5 },
+  { id: 'top4_8',            name: '8+ Top-4 Finishes',                  check: p => p.top4Finishes >= 8 },
+  // Relegation
+  { id: 'relegated_1',       name: 'Been Relegated',                     check: p => p.relegations >= 1 },
+  { id: 'relegated_2',       name: 'Relegated 2+ Times',                 check: p => p.relegations >= 2 },
 ]
 
 async function fetchAll(columns: string) {
@@ -99,12 +112,23 @@ async function fetchAll(columns: string) {
   return all
 }
 
-export async function GET() {
-  const rows = await fetchAll(
-    'name_display,games,goals,assists,goals_assists,pens_made,pens_missed,cards_yellow,cards_red,teams_played_for'
-  )
+async function fetchPlTables(): Promise<Map<string, { position: number; relegated: boolean }>> {
+  const { data } = await getClient()
+    .from('pl_season_tables')
+    .select('season,team,position,relegated')
+  const map = new Map<string, { position: number; relegated: boolean }>()
+  for (const row of data ?? []) {
+    map.set(`${row.season}|||${row.team}`, { position: row.position, relegated: row.relegated })
+  }
+  return map
+}
 
-  // Aggregate per player
+export async function GET() {
+  const [rows, plTables] = await Promise.all([
+    fetchAll('name_display,games,goals,assists,goals_assists,pens_made,pens_missed,cards_yellow,cards_red,teams_played_for,year_id'),
+    fetchPlTables(),
+  ])
+
   const statsMap = new Map<string, PlayerStats>()
   for (const row of rows) {
     const name: string = row.name_display
@@ -114,9 +138,8 @@ export async function GET() {
         games: 0, goals: 0, assists: 0, goals_assists: 0,
         pens_made: 0, pens_missed: 0, cards_yellow: 0, cards_red: 0,
         clubs: new Set(),
-        maxGoalsInSeason: 0,
-        maxAssistsInSeason: 0,
-        maxGoalsAssistsInSeason: 0,
+        maxGoalsInSeason: 0, maxAssistsInSeason: 0, maxGoalsAssistsInSeason: 0,
+        titlesWon: 0, top4Finishes: 0, relegations: 0,
       })
     }
     const p = statsMap.get(name)!
@@ -129,16 +152,31 @@ export async function GET() {
     p.cards_yellow    += row.cards_yellow ?? 0
     p.cards_red       += row.cards_red ?? 0
 
-    if (row.teams_played_for) {
-      for (const club of String(row.teams_played_for).split(',')) {
-        const trimmed = club.trim()
-        if (trimmed) p.clubs.add(trimmed)
-      }
+    const teams = String(row.teams_played_for ?? '')
+      .split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
+
+    for (const club of teams) {
+      p.clubs.add(club)
     }
 
     p.maxGoalsInSeason        = Math.max(p.maxGoalsInSeason, row.goals ?? 0)
     p.maxAssistsInSeason      = Math.max(p.maxAssistsInSeason, row.assists ?? 0)
     p.maxGoalsAssistsInSeason = Math.max(p.maxGoalsAssistsInSeason, row.goals_assists ?? 0)
+
+    // League finish stats — credit the player for each team they played for that season
+    if (row.year_id && teams.length > 0) {
+      let wonTitle = false, top4 = false, relegated = false
+      for (const club of teams) {
+        const entry = plTables.get(`${row.year_id}|||${club}`)
+        if (!entry) continue
+        if (entry.position === 1) wonTitle = true
+        if (entry.position <= 4) top4 = true
+        if (entry.relegated) relegated = true
+      }
+      if (wonTitle) p.titlesWon++
+      if (top4) p.top4Finishes++
+      if (relegated) p.relegations++
+    }
   }
 
   const topPlayers = [...statsMap.values()]
@@ -150,13 +188,10 @@ export async function GET() {
     })
     .slice(0, PLAYER_LIMIT)
 
-  // Build playerAchievements map
   const playerAchievements: Record<string, string[]> = {}
   for (const player of topPlayers) {
     const qualifying = ACHIEVEMENTS.filter(a => a.check(player)).map(a => a.id)
-    if (qualifying.length > 0) {
-      playerAchievements[player.name] = qualifying
-    }
+    if (qualifying.length > 0) playerAchievements[player.name] = qualifying
   }
 
   const achievements = ACHIEVEMENTS.map(a => ({ id: a.id, name: a.name }))
