@@ -55,7 +55,7 @@ type Season = {
 
 const SEASONS: Season[] = [
   {
-    season: '1992-93', teamCount: 22,
+    season: '1992-1993', teamCount: 22,
     table: [
       ['Manchester United', 1], ['Aston Villa', 2], ['Norwich City', 3], ['Blackburn Rovers', 4],
       ['Queens Park Rangers', 5], ['Liverpool', 6], ['Sheffield Wednesday', 7], ['Tottenham Hotspur', 8],
@@ -66,7 +66,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '1993-94', teamCount: 22,
+    season: '1993-1994', teamCount: 22,
     table: [
       ['Manchester United', 1], ['Blackburn Rovers', 2], ['Newcastle United', 3], ['Arsenal', 4],
       ['Leeds United', 5], ['Wimbledon', 6], ['Sheffield Wednesday', 7], ['Liverpool', 8],
@@ -78,7 +78,7 @@ const SEASONS: Season[] = [
   },
   {
     // 4 relegated to reduce from 22 to 20 teams
-    season: '1994-95', teamCount: 22, relegationSpots: 4,
+    season: '1994-1995', teamCount: 22, relegationSpots: 4,
     table: [
       ['Blackburn Rovers', 1], ['Manchester United', 2], ['Nottingham Forest', 3], ['Liverpool', 4],
       ['Leeds United', 5], ['Newcastle United', 6], ['Tottenham Hotspur', 7], ['Queens Park Rangers', 8],
@@ -89,7 +89,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '1995-96', teamCount: 20,
+    season: '1995-1996', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Newcastle United', 2], ['Liverpool', 3], ['Aston Villa', 4],
       ['Arsenal', 5], ['Everton', 6], ['Blackburn Rovers', 7], ['Tottenham Hotspur', 8],
@@ -99,7 +99,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '1996-97', teamCount: 20,
+    season: '1996-1997', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Newcastle United', 2], ['Arsenal', 3], ['Liverpool', 4],
       ['Aston Villa', 5], ['Chelsea', 6], ['Sheffield Wednesday', 7], ['Wimbledon', 8],
@@ -109,7 +109,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '1997-98', teamCount: 20,
+    season: '1997-1998', teamCount: 20,
     table: [
       ['Arsenal', 1], ['Manchester United', 2], ['Liverpool', 3], ['Chelsea', 4],
       ['Leeds United', 5], ['Blackburn Rovers', 6], ['Aston Villa', 7], ['West Ham United', 8],
@@ -119,7 +119,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '1998-99', teamCount: 20,
+    season: '1998-1999', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Arsenal', 2], ['Chelsea', 3], ['Leeds United', 4],
       ['West Ham United', 5], ['Aston Villa', 6], ['Liverpool', 7], ['Derby County', 8],
@@ -129,7 +129,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '1999-00', teamCount: 20,
+    season: '1999-2000', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Arsenal', 2], ['Leeds United', 3], ['Liverpool', 4],
       ['Chelsea', 5], ['Aston Villa', 6], ['Sunderland', 7], ['Leicester City', 8],
@@ -139,7 +139,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2000-01', teamCount: 20,
+    season: '2000-2001', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Arsenal', 2], ['Liverpool', 3], ['Leeds United', 4],
       ['Ipswich Town', 5], ['Chelsea', 6], ['Sunderland', 7], ['Aston Villa', 8],
@@ -149,7 +149,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2001-02', teamCount: 20,
+    season: '2001-2002', teamCount: 20,
     table: [
       ['Arsenal', 1], ['Liverpool', 2], ['Manchester United', 3], ['Newcastle United', 4],
       ['Leeds United', 5], ['Chelsea', 6], ['West Ham United', 7], ['Aston Villa', 8],
@@ -159,7 +159,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2002-03', teamCount: 20,
+    season: '2002-2003', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Arsenal', 2], ['Newcastle United', 3], ['Chelsea', 4],
       ['Liverpool', 5], ['Blackburn Rovers', 6], ['Everton', 7], ['Southampton', 8],
@@ -169,7 +169,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2003-04', teamCount: 20,
+    season: '2003-2004', teamCount: 20,
     table: [
       ['Arsenal', 1], ['Chelsea', 2], ['Manchester United', 3], ['Liverpool', 4],
       ['Newcastle United', 5], ['Aston Villa', 6], ['Charlton Athletic', 7], ['Bolton Wanderers', 8],
@@ -179,7 +179,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2004-05', teamCount: 20,
+    season: '2004-2005', teamCount: 20,
     table: [
       ['Chelsea', 1], ['Arsenal', 2], ['Manchester United', 3], ['Everton', 4],
       ['Liverpool', 5], ['Bolton Wanderers', 6], ['Middlesbrough', 7], ['Manchester City', 8],
@@ -189,7 +189,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2005-06', teamCount: 20,
+    season: '2005-2006', teamCount: 20,
     table: [
       ['Chelsea', 1], ['Manchester United', 2], ['Liverpool', 3], ['Arsenal', 4],
       ['Tottenham Hotspur', 5], ['Blackburn Rovers', 6], ['Newcastle United', 7], ['Bolton Wanderers', 8],
@@ -199,7 +199,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2006-07', teamCount: 20,
+    season: '2006-2007', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Chelsea', 2], ['Liverpool', 3], ['Arsenal', 4],
       ['Tottenham Hotspur', 5], ['Everton', 6], ['Bolton Wanderers', 7], ['Reading', 8],
@@ -209,7 +209,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2007-08', teamCount: 20,
+    season: '2007-2008', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Chelsea', 2], ['Arsenal', 3], ['Liverpool', 4],
       ['Everton', 5], ['Aston Villa', 6], ['Blackburn Rovers', 7], ['Portsmouth', 8],
@@ -219,7 +219,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2008-09', teamCount: 20,
+    season: '2008-2009', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Liverpool', 2], ['Chelsea', 3], ['Arsenal', 4],
       ['Everton', 5], ['Aston Villa', 6], ['Fulham', 7], ['Tottenham Hotspur', 8],
@@ -229,7 +229,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2009-10', teamCount: 20,
+    season: '2009-2010', teamCount: 20,
     table: [
       ['Chelsea', 1], ['Manchester United', 2], ['Arsenal', 3], ['Tottenham Hotspur', 4],
       ['Manchester City', 5], ['Aston Villa', 6], ['Liverpool', 7], ['Everton', 8],
@@ -239,7 +239,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2010-11', teamCount: 20,
+    season: '2010-2011', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Chelsea', 2], ['Manchester City', 3], ['Arsenal', 4],
       ['Tottenham Hotspur', 5], ['Liverpool', 6], ['Everton', 7], ['Fulham', 8],
@@ -249,7 +249,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2011-12', teamCount: 20,
+    season: '2011-2012', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Manchester United', 2], ['Arsenal', 3], ['Tottenham Hotspur', 4],
       ['Newcastle United', 5], ['Chelsea', 6], ['Everton', 7], ['Liverpool', 8],
@@ -259,7 +259,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2012-13', teamCount: 20,
+    season: '2012-2013', teamCount: 20,
     table: [
       ['Manchester United', 1], ['Manchester City', 2], ['Chelsea', 3], ['Arsenal', 4],
       ['Tottenham Hotspur', 5], ['Everton', 6], ['Liverpool', 7], ['West Bromwich Albion', 8],
@@ -269,7 +269,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2013-14', teamCount: 20,
+    season: '2013-2014', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Liverpool', 2], ['Chelsea', 3], ['Arsenal', 4],
       ['Everton', 5], ['Tottenham Hotspur', 6], ['Manchester United', 7], ['Southampton', 8],
@@ -279,7 +279,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2014-15', teamCount: 20,
+    season: '2014-2015', teamCount: 20,
     table: [
       ['Chelsea', 1], ['Manchester City', 2], ['Arsenal', 3], ['Manchester United', 4],
       ['Tottenham Hotspur', 5], ['Liverpool', 6], ['Southampton', 7], ['Swansea City', 8],
@@ -289,7 +289,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2015-16', teamCount: 20,
+    season: '2015-2016', teamCount: 20,
     table: [
       ['Leicester City', 1], ['Arsenal', 2], ['Tottenham Hotspur', 3], ['Manchester City', 4],
       ['Manchester United', 5], ['Southampton', 6], ['West Ham United', 7], ['Liverpool', 8],
@@ -299,7 +299,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2016-17', teamCount: 20,
+    season: '2016-2017', teamCount: 20,
     table: [
       ['Chelsea', 1], ['Tottenham Hotspur', 2], ['Manchester City', 3], ['Liverpool', 4],
       ['Arsenal', 5], ['Manchester United', 6], ['Everton', 7], ['Southampton', 8],
@@ -309,7 +309,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2017-18', teamCount: 20,
+    season: '2017-2018', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Manchester United', 2], ['Tottenham Hotspur', 3], ['Liverpool', 4],
       ['Chelsea', 5], ['Arsenal', 6], ['Burnley', 7], ['Everton', 8],
@@ -319,7 +319,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2018-19', teamCount: 20,
+    season: '2018-2019', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Liverpool', 2], ['Chelsea', 3], ['Tottenham Hotspur', 4],
       ['Arsenal', 5], ['Manchester United', 6], ['Wolverhampton Wanderers', 7], ['Everton', 8],
@@ -329,7 +329,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2019-20', teamCount: 20,
+    season: '2019-2020', teamCount: 20,
     table: [
       ['Liverpool', 1], ['Manchester City', 2], ['Manchester United', 3], ['Chelsea', 4],
       ['Leicester City', 5], ['Tottenham Hotspur', 6], ['Wolverhampton Wanderers', 7], ['Arsenal', 8],
@@ -339,7 +339,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2020-21', teamCount: 20,
+    season: '2020-2021', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Manchester United', 2], ['Liverpool', 3], ['Chelsea', 4],
       ['Leicester City', 5], ['West Ham United', 6], ['Tottenham Hotspur', 7], ['Arsenal', 8],
@@ -349,7 +349,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2021-22', teamCount: 20,
+    season: '2021-2022', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Liverpool', 2], ['Chelsea', 3], ['Tottenham Hotspur', 4],
       ['Arsenal', 5], ['Manchester United', 6], ['West Ham United', 7], ['Leicester City', 8],
@@ -359,7 +359,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2022-23', teamCount: 20,
+    season: '2022-2023', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Arsenal', 2], ['Manchester United', 3], ['Newcastle United', 4],
       ['Liverpool', 5], ['Brighton & Hove Albion', 6], ['Aston Villa', 7], ['Tottenham Hotspur', 8],
@@ -369,7 +369,7 @@ const SEASONS: Season[] = [
     ],
   },
   {
-    season: '2023-24', teamCount: 20,
+    season: '2023-2024', teamCount: 20,
     table: [
       ['Manchester City', 1], ['Arsenal', 2], ['Liverpool', 3], ['Aston Villa', 4],
       ['Tottenham Hotspur', 5], ['Chelsea', 6], ['Newcastle United', 7], ['Manchester United', 8],
