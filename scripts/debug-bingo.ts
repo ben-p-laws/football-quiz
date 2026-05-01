@@ -111,8 +111,22 @@ async function run() {
   }
   console.log(`pl_season_tables rows loaded: ${plTableRows.data?.length ?? 0}`)
   if ((plTableRows.data?.length ?? 0) === 0) {
-    console.log('  ⚠️  Table is empty — run scripts/populate-pl-tables.ts first for title/relegated stats\n')
+    console.log('  ⚠️  Table is empty — run scripts/populate-pl-tables.ts first\n')
+  } else {
+    // Show sample seasons and teams from pl_season_tables so we can verify format
+    const sampleSeasons = [...new Set((plTableRows.data ?? []).map((r: any) => r.season))].slice(0, 5)
+    const sampleTeams = [...new Set((plTableRows.data ?? []).map((r: any) => r.team))].slice(0, 8)
+    console.log(`  Sample seasons in pl_season_tables: ${sampleSeasons.join(', ')}`)
+    console.log(`  Sample teams  in pl_season_tables: ${sampleTeams.join(', ')}`)
   }
+
+  // Show sample year_id and team values from player_seasons for format comparison
+  const sampleYearIds = [...new Set(rows.map((r: any) => r.year_id).filter(Boolean))].slice(0, 5)
+  const sampleTeamsInRows = [...new Set(
+    rows.flatMap((r: any) => String(r.teams_played_for ?? '').split(',').map((t: string) => t.trim()).filter(Boolean))
+  )].slice(0, 8)
+  console.log(`\nSample year_ids  in player_seasons: ${sampleYearIds.join(', ')}`)
+  console.log(`Sample teams     in player_seasons: ${sampleTeamsInRows.join(', ')}`)
 
   const statsMap = new Map<string, PlayerStats>()
   for (const row of rows) {
@@ -173,6 +187,9 @@ async function run() {
   console.log(`\n${'─'.repeat(60)}`)
   console.log(`PLAYER POOL  (top ${PLAYER_LIMIT} outfield players)`)
   console.log(`${'─'.repeat(60)}`)
+  console.log(`Filter: goals > 0 OR assists > 0  (removes goalkeepers)`)
+  console.log(`Sort:   score = appearances + goals×4 + assists×3  (favours attackers/creators)`)
+  console.log(`Limit:  top ${PLAYER_LIMIT} by score`)
   console.log(`Total players in pool: ${topPlayers.length}`)
   console.log('\nPlayers (sorted by pool score):')
   topPlayers.forEach((p, i) => {
