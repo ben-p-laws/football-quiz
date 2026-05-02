@@ -403,10 +403,10 @@ export default function BingoPageClient() {
             Assign each player to an achievement square — can you go perfect?
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Level pill — clickable in-game to toggle level picker */}
+            {/* Level pill — always clickable to toggle level picker */}
             <button
-              onClick={() => { if (gameStarted && !gameOver) setShowLevelPicker(v => !v) }}
-              style={{ background: showLevelPicker ? '#dc2626' : '#1e2d4a', border: `1px solid ${showLevelPicker ? '#dc2626' : '#2a3d5e'}`, borderRadius: '10px', padding: '8px 16px', textAlign: 'center', cursor: gameStarted && !gameOver ? 'pointer' : 'default', outline: 'none' }}>
+              onClick={() => { if (!gameOver) setShowLevelPicker(v => !v) }}
+              style={{ background: showLevelPicker ? '#dc2626' : '#1e2d4a', border: `1px solid ${showLevelPicker ? '#dc2626' : '#2a3d5e'}`, borderRadius: '10px', padding: '8px 16px', textAlign: 'center', cursor: !gameOver ? 'pointer' : 'default', outline: 'none' }}>
               <div style={{ fontSize: '15px', fontWeight: 800, color: '#cbd5e1' }}>{DIFF_LABELS_FULL[difficulty]}</div>
               <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{skipLabel(skips)}</div>
             </button>
@@ -425,16 +425,8 @@ export default function BingoPageClient() {
           </div>
         </div>
 
-        {/* In-game level switcher panel */}
-        {showLevelPicker && gameStarted && !gameOver && (
-          <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Switch Level</div>
-            {levelDropdown()}
-          </div>
-        )}
-
-        {/* Lobby: level selector */}
-        {!gameStarted && !gameOver && (
+        {/* Level switcher panel — shown whenever pill is toggled, except post game-over */}
+        {showLevelPicker && !gameOver && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Select difficulty</div>
             {levelDropdown()}
