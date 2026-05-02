@@ -278,7 +278,7 @@ export default function BingoPageClient() {
   // Level 1 (easiest) = beginner+3skips … Level 9 (hardest) = expert+0skips
   type LevelConfig = { num: number; diff: Difficulty; skips: number }
   const ALL_LEVELS: LevelConfig[] = DIFFICULTIES.flatMap((d, di) =>
-    SKIP_OPTIONS.map((s, si) => ({ num: di * 3 + si + 1, diff: d, skips: s }))
+    SKIP_OPTIONS.map((s, si) => ({ num: di * SKIP_OPTIONS.length + si + 1, diff: d, skips: s }))
   )
   const currentLevelNum = ALL_LEVELS.find(l => l.diff === difficulty && l.skips === skips)?.num ?? 1
 
