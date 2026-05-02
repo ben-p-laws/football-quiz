@@ -114,8 +114,8 @@ export default function BingoPageClient() {
   const [usernameSet, setUsernameSet] = useState(false)
   const [leaderboard, setLeaderboard] = useState<any[]>([])
   const [difficulty, setDifficulty]   = useState<Difficulty>('beginner')
-  const [skips, setSkips]             = useState(3)
-  const [skipsLeft, setSkipsLeft]     = useState(3)
+  const [skips, setSkips]             = useState(1)
+  const [skipsLeft, setSkipsLeft]     = useState(1)
   const [submitted, setSubmitted]     = useState(false)
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([])
   const [allPlayers, setAllPlayers]   = useState<Player[]>([])
@@ -137,7 +137,7 @@ export default function BingoPageClient() {
       setAllAchievements(achs)
       setAllPlayers(pls)
       setAllMatrix(playerAchievements)
-      const generated = generateClientPuzzle(achs, pls, playerAchievements, GRID_SIZES['beginner'], 3)
+      const generated = generateClientPuzzle(achs, pls, playerAchievements, GRID_SIZES['beginner'], 1)
       if (generated) setPuzzle({ achievements: generated.achievements, players: generated.players, playerAchievements })
     }
     loadAndGenerate()
@@ -290,8 +290,8 @@ export default function BingoPageClient() {
   }
 
   function levelOptionLabel(l: LevelConfig) {
-    const tag = l.num === 1 ? ' (Easiest)' : l.num === 9 ? ' (Hardest)' : ''
-    return `Level ${l.num} — ${DIFF_LABELS_FULL[l.diff]}, ${skipLabel(l.skips)}${tag}${levelRecord(l)}`
+    const tag = l.num === 1 ? ' — Easiest' : l.num === ALL_LEVELS.length ? ' — Hardest' : ''
+    return `Level ${l.num}${tag}${levelRecord(l)}`
   }
 
   function levelDropdown() {
