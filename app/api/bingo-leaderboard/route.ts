@@ -12,9 +12,8 @@ function getClient() {
 
 // Hardest → easiest — used for Olympic-style tiebreaking
 const LEVEL_PRIORITY = [
-  'expert-0', 'expert-1', 'expert-3',
-  'intermediate-0', 'intermediate-1', 'intermediate-3',
-  'beginner-0', 'beginner-1', 'beginner-3',
+  'expert-0', 'expert-1',
+  'beginner-0', 'beginner-1',
 ]
 
 async function buildLeaderboard() {

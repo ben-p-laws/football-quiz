@@ -45,7 +45,7 @@ function LoadingAnimation() {
   )
 }
 
-type Difficulty = 'beginner' | 'intermediate' | 'expert'
+type Difficulty = 'beginner' | 'expert'
 type Achievement = { position: number; id: string; name: string }
 type Player      = { reveal_order: number; id: string; name: string }
 type Puzzle      = { achievements: Achievement[]; players: Player[]; playerAchievements: Record<string, string[]> }
@@ -54,11 +54,11 @@ type LevelStats  = { bestScore: number; perfects: number }
 const STORAGE_KEY_USERNAME = 'footballiq_username'
 const STORAGE_KEY_STATS    = 'bingo_level_stats'
 
-const GRID_SIZES: Record<Difficulty, number> = { beginner: 9, intermediate: 12, expert: 16 }
-const GRID_COLS:  Record<Difficulty, number> = { beginner: 3, intermediate: 3, expert: 4 }
-const SKIP_OPTIONS = [3, 1, 0]
-const DIFFICULTIES: Difficulty[] = ['beginner', 'intermediate', 'expert']
-const DIFF_LABELS_FULL: Record<Difficulty, string> = { beginner: 'Beginner', intermediate: 'Intermediate', expert: 'Expert' }
+const GRID_SIZES: Record<Difficulty, number> = { beginner: 9, expert: 16 }
+const GRID_COLS:  Record<Difficulty, number> = { beginner: 3, expert: 4 }
+const SKIP_OPTIONS = [1, 0]
+const DIFFICULTIES: Difficulty[] = ['beginner', 'expert']
+const DIFF_LABELS_FULL: Record<Difficulty, string> = { beginner: 'Beginner', expert: 'Expert' }
 
 function levelKey(d: Difficulty, s: number) { return `${d}-${s}` }
 function skipLabel(s: number) { return s === 0 ? 'No skips' : s === 1 ? '1 skip' : `${s} skips` }
@@ -326,14 +326,12 @@ export default function BingoPageClient() {
 
     const row$ = (row: any, rank: number, highlight: boolean) => {
       const eT = diffTotal(row, 'expert')
-      const iT = diffTotal(row, 'intermediate')
       const bT = diffTotal(row, 'beginner')
       return (
-        <div key={rank} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 34px 38px', gap: 4, padding: '5px 0', borderBottom: '1px solid #1e2d4a', alignItems: 'center', background: highlight ? 'rgba(220,38,38,0.06)' : 'transparent', borderRadius: highlight ? 6 : 0, paddingLeft: highlight ? 6 : 0, paddingRight: highlight ? 6 : 0 }}>
+        <div key={rank} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 38px', gap: 4, padding: '5px 0', borderBottom: '1px solid #1e2d4a', alignItems: 'center', background: highlight ? 'rgba(220,38,38,0.06)' : 'transparent', borderRadius: highlight ? 6 : 0, paddingLeft: highlight ? 6 : 0, paddingRight: highlight ? 6 : 0 }}>
           <span style={{ fontSize: 11, color: rank === 1 ? '#f59e0b' : highlight ? '#dc2626' : '#4a5568', fontWeight: (rank === 1 || highlight) ? 700 : 400 }}>#{rank}</span>
           <span style={{ fontSize: 13, color: highlight ? '#dc2626' : 'white', fontWeight: highlight ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.username}</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: eT > 0 ? '#fbbf24' : '#2a3d5e', textAlign: 'center' }}>{eT || '—'}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: iT > 0 ? '#60a5fa' : '#2a3d5e', textAlign: 'center' }}>{iT || '—'}</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: bT > 0 ? '#4ade80' : '#2a3d5e', textAlign: 'center' }}>{bT || '—'}</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: highlight ? '#dc2626' : '#8899bb', textAlign: 'center' }}>{row.total} ⭐</span>
         </div>
@@ -343,9 +341,9 @@ export default function BingoPageClient() {
     return (
       <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: 16 }}>
         <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '10px' }}>🏆 Leaderboard — Perfect Games</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 34px 38px', gap: 4, marginBottom: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 38px', gap: 4, marginBottom: 6 }}>
           <div /><div />
-          {(['E', 'I', 'B', '∑'] as const).map(h => (
+          {(['E', 'B', '∑'] as const).map(h => (
             <div key={h} style={{ fontSize: 10, fontWeight: 700, color: '#4a5568', textAlign: 'center' }}>{h}</div>
           ))}
         </div>
