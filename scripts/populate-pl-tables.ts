@@ -378,6 +378,16 @@ const SEASONS: Season[] = [
       ['Nottingham Forest', 17], ['Luton Town', 18], ['Burnley', 19], ['Sheffield United', 20],
     ],
   },
+  {
+    season: '2024-2025', teamCount: 20,
+    table: [
+      ['Liverpool', 1], ['Arsenal', 2], ['Manchester City', 3], ['Chelsea', 4],
+      ['Newcastle United', 5], ['Aston Villa', 6], ['Nottingham Forest', 7], ['Brighton & Hove Albion', 8],
+      ['Bournemouth', 9], ['Brentford', 10], ['Fulham', 11], ['Crystal Palace', 12],
+      ['Everton', 13], ['West Ham United', 14], ['Manchester United', 15], ['Wolverhampton Wanderers', 16],
+      ['Tottenham Hotspur', 17], ['Leicester City', 18], ['Ipswich Town', 19], ['Southampton', 20],
+    ],
+  },
 ]
 
 async function run() {
