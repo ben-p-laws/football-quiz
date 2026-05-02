@@ -3,6 +3,48 @@
 import { useState, useEffect, useRef } from 'react'
 import NavBar from './NavBar'
 
+function LoadingAnimation() {
+  const [lit, setLit] = useState<number[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+
+    async function cycle() {
+      while (!cancelled) {
+        const order = [...Array(9).keys()].sort(() => Math.random() - 0.5)
+        setLit([])
+        await delay(300)
+        for (const sq of order) {
+          if (cancelled) return
+          setLit(prev => [...prev, sq])
+          await delay(180)
+        }
+        await delay(700)
+      }
+    }
+
+    cycle()
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, width: 120 }}>
+        {Array.from({ length: 9 }, (_, i) => (
+          <div key={i} style={{
+            height: 36, borderRadius: 6,
+            background: lit.includes(i) ? '#22c55e' : '#111827',
+            border: `1px solid ${lit.includes(i) ? '#22c55e' : '#1e2d4a'}`,
+            transition: 'background 0.2s ease, border-color 0.2s ease',
+          }} />
+        ))}
+      </div>
+      <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading...</p>
+    </div>
+  )
+}
+
 type Difficulty = 'beginner' | 'intermediate' | 'expert'
 type Achievement = { position: number; id: string; name: string }
 type Player      = { reveal_order: number; id: string; name: string }
@@ -79,7 +121,7 @@ export default function BingoPageClient() {
   const [allPlayers, setAllPlayers]   = useState<Player[]>([])
   const [allMatrix, setAllMatrix]     = useState<Record<string, string[]>>({})
   const [allStats, setAllStats]       = useState<Record<string, LevelStats>>({})
-  const [showLevelPicker, setShowLevelPicker] = useState(false)
+  const [showLevelPicker, setShowLevelPicker] = useState(true)
   const spinInterval = useRef<any>(null)
 
   const currentPlayer = puzzle?.players[currentPlayerIdx]
@@ -179,6 +221,7 @@ export default function BingoPageClient() {
 
   function spinAndReveal() {
     if (!puzzle || spinning) return
+    setShowLevelPicker(false)
     setSpinning(true)
     setSelectedSquare(null)
     const allNames = puzzle.players.map(p => p.name)
@@ -356,7 +399,7 @@ export default function BingoPageClient() {
     <div style={pageStyle}>
       <NavBar />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
-        <p style={{ color: '#8899bb' }}>Loading...</p>
+        <LoadingAnimation />
       </div>
     </div>
   )
