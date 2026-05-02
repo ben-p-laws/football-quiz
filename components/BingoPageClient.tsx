@@ -45,7 +45,7 @@ function LoadingAnimation() {
   )
 }
 
-type Difficulty = 'beginner' | 'expert'
+type Level = 'easy' | 'intermediate' | 'hard'
 type Achievement = { position: number; id: string; name: string }
 type Player      = { reveal_order: number; id: string; name: string }
 type Puzzle      = { achievements: Achievement[]; players: Player[]; playerAchievements: Record<string, string[]> }
@@ -54,14 +54,12 @@ type LevelStats  = { bestScore: number; perfects: number }
 const STORAGE_KEY_USERNAME = 'footballiq_username'
 const STORAGE_KEY_STATS    = 'bingo_level_stats'
 
-const GRID_SIZES: Record<Difficulty, number> = { beginner: 9, expert: 16 }
-const GRID_COLS:  Record<Difficulty, number> = { beginner: 3, expert: 4 }
-const SKIP_OPTIONS = [1, 0]
-const DIFFICULTIES: Difficulty[] = ['beginner', 'expert']
-const DIFF_LABELS_FULL: Record<Difficulty, string> = { beginner: 'Beginner', expert: 'Expert' }
-
-function levelKey(d: Difficulty, s: number) { return `${d}-${s}` }
-function skipLabel(s: number) { return s === 0 ? 'No skips' : s === 1 ? '1 skip' : `${s} skips` }
+const LEVEL_CFG: Record<Level, { gridSize: number; gridCols: number; skips: number; label: string }> = {
+  easy:         { gridSize: 9,  gridCols: 3, skips: 3, label: 'Easy' },
+  intermediate: { gridSize: 12, gridCols: 4, skips: 1, label: 'Intermediate' },
+  hard:         { gridSize: 16, gridCols: 4, skips: 0, label: 'Hard' },
+}
+const LEVELS: Level[] = ['easy', 'intermediate', 'hard']
 
 function loadAllStats(): Record<string, LevelStats> {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY_STATS) || '{}') }
@@ -113,9 +111,8 @@ export default function BingoPageClient() {
   const [userName, setUserName]       = useState('')
   const [usernameSet, setUsernameSet] = useState(false)
   const [leaderboard, setLeaderboard] = useState<any[]>([])
-  const [difficulty, setDifficulty]   = useState<Difficulty>('beginner')
-  const [skips, setSkips]             = useState(1)
-  const [skipsLeft, setSkipsLeft]     = useState(1)
+  const [level, setLevel]             = useState<Level>('easy')
+  const [skipsLeft, setSkipsLeft]     = useState(LEVEL_CFG['easy'].skips)
   const [submitted, setSubmitted]     = useState(false)
   const [allAchievements, setAllAchievements] = useState<Achievement[]>([])
   const [allPlayers, setAllPlayers]   = useState<Player[]>([])
@@ -125,8 +122,7 @@ export default function BingoPageClient() {
   const spinInterval = useRef<any>(null)
 
   const currentPlayer = puzzle?.players[currentPlayerIdx]
-  const gridSize = GRID_SIZES[difficulty]
-  const gridCols = GRID_COLS[difficulty]
+  const { gridSize, gridCols, skips } = LEVEL_CFG[level]
 
   useEffect(() => {
     async function loadAndGenerate() {
@@ -137,7 +133,8 @@ export default function BingoPageClient() {
       setAllAchievements(achs)
       setAllPlayers(pls)
       setAllMatrix(playerAchievements)
-      const generated = generateClientPuzzle(achs, pls, playerAchievements, GRID_SIZES['beginner'], 1)
+      const cfg = LEVEL_CFG['easy']
+      const generated = generateClientPuzzle(achs, pls, playerAchievements, cfg.gridSize, cfg.skips)
       if (generated) setPuzzle({ achievements: generated.achievements, players: generated.players, playerAchievements })
     }
     loadAndGenerate()
@@ -153,14 +150,13 @@ export default function BingoPageClient() {
     setUsernameSet(true)
   }
 
-  function switchLevel(newDiff: Difficulty, newSkips: number) {
+  function switchLevel(newLevel: Level) {
     if (allAchievements.length === 0) return
-    const newGridSize = GRID_SIZES[newDiff]
-    const newPuzzle = generateClientPuzzle(allAchievements, allPlayers, allMatrix, newGridSize, newSkips)
+    const cfg = LEVEL_CFG[newLevel]
+    const newPuzzle = generateClientPuzzle(allAchievements, allPlayers, allMatrix, cfg.gridSize, cfg.skips)
     if (!newPuzzle) return
-    setDifficulty(newDiff)
-    setSkips(newSkips)
-    setSkipsLeft(newSkips)
+    setLevel(newLevel)
+    setSkipsLeft(cfg.skips)
     setPuzzle({ achievements: newPuzzle.achievements, players: newPuzzle.players, playerAchievements: allMatrix })
     setAssignments({})
     setCurrentPlayerIdx(0)
@@ -173,17 +169,17 @@ export default function BingoPageClient() {
     setShowLevelPicker(false)
   }
 
-  async function submitScore(name: string, diff: Difficulty, skipsCount: number, finalScore: number) {
+  async function submitScore(name: string, lv: Level, finalScore: number) {
     if (submitted) return
     setSubmitted(true)
-    const key = levelKey(diff, skipsCount)
-    const newStats = saveStat(key, finalScore, GRID_SIZES[diff])
+    const cfg = LEVEL_CFG[lv]
+    const newStats = saveStat(lv, finalScore, cfg.gridSize)
     setAllStats(newStats)
-    if (finalScore === GRID_SIZES[diff]) {
+    if (finalScore === cfg.gridSize) {
       try {
         const res = await fetch('/api/bingo-leaderboard', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: name, level: key }),
+          body: JSON.stringify({ username: name, level: lv }),
         })
         const data = await res.json()
         setLeaderboard(data.leaderboard || [])
@@ -200,7 +196,7 @@ export default function BingoPageClient() {
     setDisplayName('')
     if (isExhausted) {
       setGameOver(true)
-      if (userName) submitScore(userName, difficulty, skips, score)
+      if (userName) submitScore(userName, level, score)
     } else {
       setTimeout(() => {
         setSpinning(true)
@@ -256,7 +252,7 @@ export default function BingoPageClient() {
 
     if (allFilled || isExhausted) {
       setGameOver(true)
-      if (userName) submitScore(userName, difficulty, skips, newScore)
+      if (userName) submitScore(userName, level, newScore)
     } else {
       setTimeout(() => {
         setSpinning(true)
@@ -275,33 +271,18 @@ export default function BingoPageClient() {
     }
   }
 
-  // Level 1 (easiest) = beginner+3skips … Level 9 (hardest) = expert+0skips
-  type LevelConfig = { num: number; diff: Difficulty; skips: number }
-  const ALL_LEVELS: LevelConfig[] = DIFFICULTIES.flatMap((d, di) =>
-    SKIP_OPTIONS.map((s, si) => ({ num: di * SKIP_OPTIONS.length + si + 1, diff: d, skips: s }))
-  )
-  const currentLevelNum = ALL_LEVELS.find(l => l.diff === difficulty && l.skips === skips)?.num ?? 1
-
-  function levelRecord(l: LevelConfig) {
-    const stats = allStats[levelKey(l.diff, l.skips)]
+  function levelRecord(lv: Level) {
+    const stats = allStats[lv]
     if (!stats) return ''
     if (stats.perfects > 0) return `  ·  ⭐ ×${stats.perfects}`
-    return `  ·  best ${stats.bestScore}/${GRID_SIZES[l.diff]}`
-  }
-
-  function levelOptionLabel(l: LevelConfig) {
-    const tag = l.num === 1 ? ' — Easiest' : l.num === ALL_LEVELS.length ? ' — Hardest' : ''
-    return `Level ${l.num}${tag}${levelRecord(l)}`
+    return `  ·  best ${stats.bestScore}/${LEVEL_CFG[lv].gridSize}`
   }
 
   function levelDropdown() {
     return (
       <select
-        value={currentLevelNum}
-        onChange={e => {
-          const l = ALL_LEVELS.find(x => x.num === Number(e.target.value))
-          if (l) switchLevel(l.diff, l.skips)
-        }}
+        value={level}
+        onChange={e => switchLevel(e.target.value as Level)}
         style={{
           width: '100%', background: '#0a0f1e', border: '1px solid #1e2d4a',
           borderRadius: 8, padding: '10px 14px', fontSize: 14, fontWeight: 600,
@@ -309,9 +290,9 @@ export default function BingoPageClient() {
           WebkitAppearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a5568' strokeWidth='2' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
         }}>
-        {ALL_LEVELS.map(l => (
-          <option key={l.num} value={l.num}>{levelOptionLabel(l)}</option>
-        ))}
+        <option value="easy">{`Easy — Easiest${levelRecord('easy')}`}</option>
+        <option value="intermediate">{`Intermediate${levelRecord('intermediate')}`}</option>
+        <option value="hard">{`Hard — Hardest${levelRecord('hard')}`}</option>
       </select>
     )
   }
@@ -321,18 +302,18 @@ export default function BingoPageClient() {
     const top10 = leaderboard.slice(0, 10)
     const userIdx = leaderboard.findIndex((r: any) => r.username === userName)
     const userInTop10 = userIdx >= 0 && userIdx < 10
-    const diffTotal = (row: any, diff: Difficulty) =>
-      SKIP_OPTIONS.reduce((sum, sk) => sum + (row.levels[levelKey(diff, sk)] || 0), 0)
 
     const row$ = (row: any, rank: number, highlight: boolean) => {
-      const eT = diffTotal(row, 'expert')
-      const bT = diffTotal(row, 'beginner')
+      const hT = row.levels['hard']         || 0
+      const iT = row.levels['intermediate'] || 0
+      const eT = row.levels['easy']         || 0
       return (
-        <div key={rank} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 38px', gap: 4, padding: '5px 0', borderBottom: '1px solid #1e2d4a', alignItems: 'center', background: highlight ? 'rgba(220,38,38,0.06)' : 'transparent', borderRadius: highlight ? 6 : 0, paddingLeft: highlight ? 6 : 0, paddingRight: highlight ? 6 : 0 }}>
+        <div key={rank} style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 34px 38px', gap: 4, padding: '5px 0', borderBottom: '1px solid #1e2d4a', alignItems: 'center', background: highlight ? 'rgba(220,38,38,0.06)' : 'transparent', borderRadius: highlight ? 6 : 0, paddingLeft: highlight ? 6 : 0, paddingRight: highlight ? 6 : 0 }}>
           <span style={{ fontSize: 11, color: rank === 1 ? '#f59e0b' : highlight ? '#dc2626' : '#4a5568', fontWeight: (rank === 1 || highlight) ? 700 : 400 }}>#{rank}</span>
           <span style={{ fontSize: 13, color: highlight ? '#dc2626' : 'white', fontWeight: highlight ? 700 : 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.username}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: eT > 0 ? '#fbbf24' : '#2a3d5e', textAlign: 'center' }}>{eT || '—'}</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: bT > 0 ? '#4ade80' : '#2a3d5e', textAlign: 'center' }}>{bT || '—'}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: hT > 0 ? '#fbbf24' : '#2a3d5e', textAlign: 'center' }}>{hT || '—'}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: iT > 0 ? '#60a5fa' : '#2a3d5e', textAlign: 'center' }}>{iT || '—'}</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: eT > 0 ? '#4ade80' : '#2a3d5e', textAlign: 'center' }}>{eT || '—'}</span>
           <span style={{ fontSize: 12, fontWeight: 700, color: highlight ? '#dc2626' : '#8899bb', textAlign: 'center' }}>{row.total} ⭐</span>
         </div>
       )
@@ -341,9 +322,9 @@ export default function BingoPageClient() {
     return (
       <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px 20px', marginBottom: 16 }}>
         <div style={{ fontSize: '13px', fontWeight: 700, color: 'white', marginBottom: '10px' }}>🏆 Leaderboard — Perfect Games</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 38px', gap: 4, marginBottom: 6 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '26px 1fr 34px 34px 34px 38px', gap: 4, marginBottom: 6 }}>
           <div /><div />
-          {(['E', 'B', '∑'] as const).map(h => (
+          {(['H', 'I', 'E', '∑'] as const).map(h => (
             <div key={h} style={{ fontSize: 10, fontWeight: 700, color: '#4a5568', textAlign: 'center' }}>{h}</div>
           ))}
         </div>
@@ -444,12 +425,12 @@ export default function BingoPageClient() {
             Assign each player to an achievement square — can you go perfect?
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {/* Level pill — always clickable to toggle level picker */}
+            {/* Level pill — toggles level picker (only before game starts) */}
             <button
-              onClick={() => { if (!gameOver) setShowLevelPicker(v => !v) }}
-              style={{ background: showLevelPicker ? '#dc2626' : '#1e2d4a', border: `1px solid ${showLevelPicker ? '#dc2626' : '#2a3d5e'}`, borderRadius: '10px', padding: '8px 16px', textAlign: 'center', cursor: !gameOver ? 'pointer' : 'default', outline: 'none' }}>
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#cbd5e1' }}>{DIFF_LABELS_FULL[difficulty]}</div>
-              <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{skipLabel(skips)}</div>
+              onClick={() => { if (!gameOver && !gameStarted) setShowLevelPicker(v => !v) }}
+              style={{ background: showLevelPicker && !gameStarted ? '#dc2626' : '#1e2d4a', border: `1px solid ${showLevelPicker && !gameStarted ? '#dc2626' : '#2a3d5e'}`, borderRadius: '10px', padding: '8px 16px', textAlign: 'center', cursor: (!gameOver && !gameStarted) ? 'pointer' : 'default', outline: 'none' }}>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#cbd5e1' }}>{LEVEL_CFG[level].label}</div>
+              <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{skips > 0 ? `${skips} skip${skips !== 1 ? 's' : ''}` : 'no skips'}</div>
             </button>
             <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: '10px', padding: '8px 16px', textAlign: 'center' }}>
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{score}/{gridSize}</div>
@@ -459,15 +440,15 @@ export default function BingoPageClient() {
               <div style={{ fontSize: '20px', fontWeight: 800, color: '#dc2626' }}>{gameOver ? 0 : playersLeft}</div>
               <div style={{ fontSize: '10px', color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Players left</div>
             </div>
-            <button onClick={() => switchLevel(difficulty, skips)}
+            <button onClick={() => switchLevel(level)}
               style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: '10px', padding: '8px 14px', fontSize: '13px', fontWeight: 700, color: '#cbd5e1', cursor: 'pointer' }}>
               Restart
             </button>
           </div>
         </div>
 
-        {/* Level switcher panel — shown whenever pill is toggled, except post game-over */}
-        {showLevelPicker && !gameOver && (
+        {/* Level switcher panel — shown on first load only */}
+        {showLevelPicker && !gameStarted && !gameOver && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Select difficulty</div>
             {levelDropdown()}
@@ -534,7 +515,7 @@ export default function BingoPageClient() {
               <span style={{ fontSize: 15, fontWeight: 800, color: '#dc2626' }}>{score}/{gridSize}</span>
               {score === gridSize && <span style={{ fontSize: 13 }}>🎉</span>}
             </div>
-            <button onClick={() => switchLevel(difficulty, skips)} style={{ background: '#dc2626', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
+            <button onClick={() => switchLevel(level)} style={{ background: '#dc2626', border: 'none', borderRadius: '10px', padding: '10px 16px', fontSize: 13, fontWeight: 700, color: 'white', cursor: 'pointer' }}>
               Play Again →
             </button>
           </div>
