@@ -124,13 +124,13 @@ export default function LandingPage() {
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridAutoRows: '1fr', gap: 4, flex: 1 }}>
               <BCell label="100+ PL Goals"     player="M. Salah"        state="green" />
-              <BCell label="PL Title Winner"                            state="none" />
+              <BCell label="3+ PL Titles"                               state="none" />
               <BCell label="Never won PL"      player="T. Henry"        state="red" />
-              <BCell label="5+ PL Clubs"       player="N. Anelka"       state="green" />
-              <BCell label="10+ PL Seasons"    player="Ronaldo"         state="red" />
-              <BCell label="300+ PL Apps"                               state="none" />
-              <BCell label="20+ Goals Season"                           state="none" />
-              <BCell label="PL Top Scorer"                              state="none" />
+              <BCell label="4+ PL Clubs"                                state="none" />
+              <BCell label="Missed 3+ Pens"    player="C. Ronaldo"      state="green" />
+              <BCell label="400+ PL Apps"                               state="none" />
+              <BCell label="20+ Goals Season"  player="H. Kane"         state="green" />
+              <BCell label="50+ Yellow Cards"                           state="none" />
               <BCell label="50+ PL Assists"    player="F. Lampard"      state="green" />
             </div>
           </div>
