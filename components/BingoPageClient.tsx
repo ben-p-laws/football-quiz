@@ -18,12 +18,30 @@ const LOADING_HINTS = [
   "Gareth Barry made 653 PL appearances — second only to Giggs",
   "Robbie Fowler scored 163 PL goals, 36 of them penalties",
   "Patrick Vieira received 9 red cards in the PL",
-  "Peter Schmeichel never scored a PL goal, but he did net in the FA Cup",
   "Emile Heskey scored 110 PL goals across 5 clubs",
   "Nicolas Anelka played for 6 different PL clubs",
   "Paul Scholes won 11 PL titles with Manchester United",
   "Dion Dublin scored 111 PL goals for 5 different clubs",
   "Les Ferdinand scored 149 PL goals across 7 clubs",
+  "Sergio Agüero scored 184 PL goals — the most by an overseas player",
+  "Andrew Cole scored 34 goals in the 1993–94 season (42 games)",
+  "Luis Suárez scored 31 PL goals in just 33 games in 2013–14",
+  "Gary Speed made 535 PL appearances for 4 different clubs",
+  "Jamie Carragher made 508 PL appearances, every single one for Liverpool",
+  "Roy Keane received 11 red cards in the PL",
+  "Lee Bowyer received 100 yellow cards — the PL record",
+  "Alan Shearer scored 56 PL penalties",
+  "Craig Bellamy played for 6 PL clubs across his career",
+  "John Terry won 5 PL titles, all with Chelsea",
+  "Eric Cantona won 4 PL titles in his first 5 seasons in England",
+  "Wayne Rooney has 103 PL assists — second only to Ryan Giggs",
+  "Michael Owen scored 118 PL goals, 71 of them for Liverpool",
+  "Robbie Keane scored 126 PL goals across 8 clubs",
+  "Marcus Bent played for 8 different PL clubs",
+  "Matthew Le Tissier scored 47 of his 48 career penalties",
+  "Sol Campbell made 448 PL appearances for Tottenham, Arsenal & Portsmouth",
+  "Duncan Ferguson received 8 red cards in the PL",
+  "Dennis Bergkamp scored 87 PL goals and provided 94 assists for Arsenal",
 ]
 
 function LoadingAnimation() {
@@ -66,7 +84,7 @@ function LoadingAnimation() {
       </div>
       <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Bingo</p>
       <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10, padding: '10px 14px' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Did you know?</div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Hint</div>
         <p style={{ fontSize: 12, color: '#8899bb', margin: 0, lineHeight: 1.5 }}>{hint}</p>
       </div>
     </div>
