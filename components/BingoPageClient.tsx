@@ -3,8 +3,32 @@
 import { useState, useEffect, useRef } from 'react'
 import NavBar from './NavBar'
 
+const LOADING_HINTS = [
+  "Alan Shearer scored 260 PL goals — the all-time record",
+  "Wayne Rooney made 491 PL appearances for Man Utd & Everton",
+  "Thierry Henry's best PL season was 30 goals in 2003–04",
+  "Kevin Phillips scored 30 PL goals in the 1999–00 season",
+  "Ryan Giggs made 632 PL appearances — the most ever",
+  "Cesc Fàbregas has 111 PL assists — a record",
+  "Frank Lampard scored 177 PL goals from midfield",
+  "Andrew Cole scored 187 PL goals across 8 clubs",
+  "Harry Kane's best PL season was 29 goals in 2016–17",
+  "Mohamed Salah scored 32 PL goals in his debut season (2017–18)",
+  "Roy Keane won 7 PL titles with Manchester United",
+  "Gareth Barry made 653 PL appearances — second only to Giggs",
+  "Robbie Fowler scored 163 PL goals, 36 of them penalties",
+  "Patrick Vieira received 9 red cards in the PL",
+  "Peter Schmeichel never scored a PL goal, but he did net in the FA Cup",
+  "Emile Heskey scored 110 PL goals across 5 clubs",
+  "Nicolas Anelka played for 6 different PL clubs",
+  "Paul Scholes won 11 PL titles with Manchester United",
+  "Dion Dublin scored 111 PL goals for 5 different clubs",
+  "Les Ferdinand scored 149 PL goals across 7 clubs",
+]
+
 function LoadingAnimation() {
   const [lit, setLit] = useState<number[]>([])
+  const [hint] = useState(() => LOADING_HINTS[Math.floor(Math.random() * LOADING_HINTS.length)])
 
   useEffect(() => {
     let cancelled = false
@@ -29,7 +53,7 @@ function LoadingAnimation() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, maxWidth: 280, textAlign: 'center' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, width: 120 }}>
         {Array.from({ length: 9 }, (_, i) => (
           <div key={i} style={{
@@ -40,7 +64,11 @@ function LoadingAnimation() {
           }} />
         ))}
       </div>
-      <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading...</p>
+      <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Bingo</p>
+      <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 10, padding: '10px 14px' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 5 }}>Did you know?</div>
+        <p style={{ fontSize: 12, color: '#8899bb', margin: 0, lineHeight: 1.5 }}>{hint}</p>
+      </div>
     </div>
   )
 }
@@ -290,9 +318,9 @@ export default function BingoPageClient() {
           WebkitAppearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a5568' strokeWidth='2' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
         }}>
-        <option value="easy">{`Easy — Easiest${levelRecord('easy')}`}</option>
+        <option value="easy">{`Easy${levelRecord('easy')}`}</option>
         <option value="intermediate">{`Intermediate${levelRecord('intermediate')}`}</option>
-        <option value="hard">{`Hard — Hardest${levelRecord('hard')}`}</option>
+        <option value="hard">{`Hard${levelRecord('hard')}`}</option>
       </select>
     )
   }
