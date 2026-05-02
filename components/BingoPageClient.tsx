@@ -232,64 +232,44 @@ export default function BingoPageClient() {
     }
   }
 
-  // Level numbers: rows = difficulty (beginner→expert), cols = skips (3→1→0)
-  // Level 1 = beginner+3skips (easiest), Level 9 = expert+0skips (hardest)
-  const LEVEL_NUM: Record<string, number> = {}
-  DIFFICULTIES.forEach((d, di) => SKIP_OPTIONS.forEach((s, si) => { LEVEL_NUM[levelKey(d, s)] = di * 3 + si + 1 }))
+  // Level 1 (easiest) = beginner+3skips … Level 9 (hardest) = expert+0skips
+  type LevelConfig = { num: number; diff: Difficulty; skips: number }
+  const ALL_LEVELS: LevelConfig[] = DIFFICULTIES.flatMap((d, di) =>
+    SKIP_OPTIONS.map((s, si) => ({ num: di * 3 + si + 1, diff: d, skips: s }))
+  )
+  const currentLevelNum = ALL_LEVELS.find(l => l.diff === difficulty && l.skips === skips)?.num ?? 1
 
-  function levelMatrix(compact: boolean) {
-    const labelW = compact ? 76 : 90
+  function levelRecord(l: LevelConfig) {
+    const stats = allStats[levelKey(l.diff, l.skips)]
+    if (!stats) return ''
+    if (stats.perfects > 0) return `  ·  ⭐ ×${stats.perfects}`
+    return `  ·  best ${stats.bestScore}/${GRID_SIZES[l.diff]}`
+  }
+
+  function levelOptionLabel(l: LevelConfig) {
+    const tag = l.num === 1 ? ' (Easiest)' : l.num === 9 ? ' (Hardest)' : ''
+    return `Level ${l.num} — ${DIFF_LABELS_FULL[l.diff]}, ${skipLabel(l.skips)}${tag}${levelRecord(l)}`
+  }
+
+  function levelDropdown() {
     return (
-      <div>
-        <div style={{ display: 'grid', gridTemplateColumns: `${labelW}px repeat(3, 1fr)`, gap: 5, marginBottom: 6 }}>
-          <div />
-          {SKIP_OPTIONS.map(s => (
-            <div key={s} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#cbd5e1' }}>{s}</div>
-              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.05em' }}>skip{s !== 1 ? 's' : ''}</div>
-            </div>
-          ))}
-        </div>
-        {DIFFICULTIES.map((diff, di) => (
-          <div key={diff} style={{ display: 'grid', gridTemplateColumns: `${labelW}px repeat(3, 1fr)`, gap: 5, marginBottom: 5 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontSize: compact ? 11 : 12, fontWeight: 700, color: '#cbd5e1' }}>{DIFF_LABELS_FULL[diff]}</div>
-            </div>
-            {SKIP_OPTIONS.map((sk, si) => {
-              const key = levelKey(diff, sk)
-              const stats = allStats[key]
-              const isActive = difficulty === diff && skips === sk
-              const levelNum = di * 3 + si + 1
-              const isEasiest = levelNum === 1
-              const isHardest = levelNum === 9
-              return (
-                <button key={sk} onClick={() => switchLevel(diff, sk)} style={{
-                  background: isActive ? '#dc2626' : '#111827',
-                  border: `1px solid ${isActive ? '#dc2626' : '#1e2d4a'}`,
-                  borderRadius: 8, padding: compact ? '6px 4px' : '8px 4px',
-                  cursor: 'pointer', textAlign: 'center', outline: 'none', position: 'relative',
-                }}>
-                  {(isEasiest || isHardest) && (
-                    <div style={{ fontSize: 8, fontWeight: 700, color: isActive ? 'rgba(255,255,255,0.7)' : '#4a5568', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 2 }}>
-                      {isEasiest ? 'Easiest' : 'Hardest'}
-                    </div>
-                  )}
-                  <div style={{ fontSize: compact ? 12 : 13, fontWeight: 800, color: isActive ? 'white' : '#cbd5e1' }}>
-                    Lv {levelNum}
-                  </div>
-                  {stats ? (
-                    <div style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.7)' : '#4a5568', marginTop: 2 }}>
-                      {stats.perfects > 0 ? `⭐ ×${stats.perfects}` : `${stats.bestScore}/${GRID_SIZES[diff]}`}
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: 9, color: isActive ? 'rgba(255,255,255,0.5)' : '#2a3d5e', marginTop: 2 }}>—</div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+      <select
+        value={currentLevelNum}
+        onChange={e => {
+          const l = ALL_LEVELS.find(x => x.num === Number(e.target.value))
+          if (l) switchLevel(l.diff, l.skips)
+        }}
+        style={{
+          width: '100%', background: '#0a0f1e', border: '1px solid #1e2d4a',
+          borderRadius: 8, padding: '10px 14px', fontSize: 14, fontWeight: 600,
+          color: 'white', cursor: 'pointer', outline: 'none', appearance: 'none',
+          WebkitAppearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a5568' strokeWidth='2' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
+        }}>
+        {ALL_LEVELS.map(l => (
+          <option key={l.num} value={l.num}>{levelOptionLabel(l)}</option>
         ))}
-      </div>
+      </select>
     )
   }
 
@@ -449,16 +429,15 @@ export default function BingoPageClient() {
         {showLevelPicker && gameStarted && !gameOver && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Switch Level</div>
-            {levelMatrix(true)}
+            {levelDropdown()}
           </div>
         )}
 
-        {/* Lobby: level matrix (choose level) */}
+        {/* Lobby: level selector */}
         {!gameStarted && !gameOver && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Select Difficulty</div>
-          <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 10 }}>Pick a grid size and how many skips you want</div>
-            {levelMatrix(false)}
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Select difficulty</div>
+            {levelDropdown()}
           </div>
         )}
 
