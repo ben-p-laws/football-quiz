@@ -38,8 +38,8 @@ async function fetchAll<T>(supabase: any, table: string, columns: string, filter
   while (true) {
     let q = supabase.from(table).select(columns)
     if (filter) q = filter(q)
-    const { data } = await q.range(offset, offset + 999)
-    if (!data || data.length === 0) break
+    const { data, error } = await q.range(offset, offset + 999)
+    if (error || !data || data.length === 0) break
     rows.push(...data)
     if (data.length < 1000) break
     offset += 1000
@@ -53,39 +53,18 @@ async function getData(): Promise<FullData> {
 
   const supabase = getClient()
 
-  const [playerRows, tableRows] = await Promise.all([
-    fetchAll<{ name_display: string; teams_played_for: string; games: number; goals: number; season: string }>(
-      supabase, 'player_seasons', 'name_display,teams_played_for,games,goals,season'
-    ),
-    fetchAll<{ team: string; position: number; season: string }>(
-      supabase, 'pl_season_tables', 'team,position,season'
-    ),
-  ])
+  // Core team data — only columns we know exist
+  const playerRows = await fetchAll<{ name_display: string; teams_played_for: string; games: number }>(
+    supabase, 'player_seasons', 'name_display,teams_played_for,games'
+  )
 
-  // Build sets of winning and relegated team-season keys
-  const winningKeys  = new Set<string>()
-  const relegKeys    = new Set<string>()
-  for (const r of tableRows) {
-    const key = `${r.team}:${r.season}`
-    if (r.position === 1)   winningKeys.add(key)
-    if (r.position >= 18)   relegKeys.add(key)
-  }
-
-  const teamSeasons          = new Map<string, Map<string, number>>()
-  const playerTotalApps      = new Map<string, number>()
-  const wonPlCounts          = new Map<string, number>()
-  const relegatedCounts      = new Map<string, number>()
-  const careerGoals          = new Map<string, number>()
-  const topScorerPerSeason   = new Map<string, { name: string; goals: number }>()
+  const teamSeasons     = new Map<string, Map<string, number>>()
+  const playerTotalApps = new Map<string, number>()
 
   for (const row of playerRows) {
-    const name   = row.name_display
-    const games  = Number(row.games)  || 0
-    const goals  = Number(row.goals)  || 0
-    const season = row.season ?? ''
-
+    const name  = row.name_display
+    const games = Number(row.games) || 0
     playerTotalApps.set(name, (playerTotalApps.get(name) ?? 0) + games)
-    careerGoals.set(name,     (careerGoals.get(name)     ?? 0) + goals)
 
     const teams = String(row.teams_played_for || '')
       .split(',')
@@ -96,27 +75,67 @@ async function getData(): Promise<FullData> {
       if (!teamSeasons.has(team)) teamSeasons.set(team, new Map())
       const cur = teamSeasons.get(team)!
       cur.set(name, (cur.get(name) ?? 0) + 1)
-
-      if (season) {
-        const key = `${team}:${season}`
-        if (winningKeys.has(key))  wonPlCounts.set(name,      (wonPlCounts.get(name)      ?? 0) + 1)
-        if (relegKeys.has(key))    relegatedCounts.set(name,  (relegatedCounts.get(name)  ?? 0) + 1)
-      }
-    }
-
-    // Track top scorer per season for golden boot
-    if (season && goals > 0) {
-      const cur = topScorerPerSeason.get(season)
-      if (!cur || goals > cur.goals) topScorerPerSeason.set(season, { name, goals })
     }
   }
 
-  const goldenBootWinners = new Set<string>()
-  for (const [, { name }] of topScorerPerSeason) goldenBootWinners.add(name)
-
+  // Stat data — optional, wrapped so failures don't break team queries
+  const wonPlCounts          = new Map<string, number>()
+  const relegatedCounts      = new Map<string, number>()
+  const goldenBootWinners    = new Set<string>()
   const career100GoalPlayers = new Map<string, number>()
-  for (const [name, g] of careerGoals) {
-    if (g >= 100) career100GoalPlayers.set(name, g)
+
+  try {
+    const [statRows, tableRows] = await Promise.all([
+      fetchAll<{ name_display: string; teams_played_for: string; goals: number; season: string }>(
+        supabase, 'player_seasons', 'name_display,teams_played_for,goals,season'
+      ),
+      fetchAll<{ team: string; position: number; season: string }>(
+        supabase, 'pl_season_tables', 'team,position,season'
+      ),
+    ])
+
+    const winningKeys = new Set<string>()
+    const relegKeys   = new Set<string>()
+    for (const r of tableRows) {
+      if (r.position === 1)  winningKeys.add(`${r.team}:${r.season}`)
+      if (r.position >= 18)  relegKeys.add(`${r.team}:${r.season}`)
+    }
+
+    const careerGoals            = new Map<string, number>()
+    const topScorerPerSeason     = new Map<string, { name: string; goals: number }>()
+
+    for (const row of statRows) {
+      const name   = row.name_display
+      const goals  = Number(row.goals) || 0
+      const season = row.season ?? ''
+
+      careerGoals.set(name, (careerGoals.get(name) ?? 0) + goals)
+
+      const teams = String(row.teams_played_for || '')
+        .split(',')
+        .map(t => normPSTeam(t.trim()))
+        .filter(t => t && t !== '2 Teams')
+
+      for (const team of teams) {
+        if (season) {
+          const key = `${team}:${season}`
+          if (winningKeys.has(key)) wonPlCounts.set(name,     (wonPlCounts.get(name)     ?? 0) + 1)
+          if (relegKeys.has(key))   relegatedCounts.set(name, (relegatedCounts.get(name) ?? 0) + 1)
+        }
+      }
+
+      if (season && goals > 0) {
+        const cur = topScorerPerSeason.get(season)
+        if (!cur || goals > cur.goals) topScorerPerSeason.set(season, { name, goals })
+      }
+    }
+
+    for (const [, { name }] of topScorerPerSeason) goldenBootWinners.add(name)
+    for (const [name, g] of careerGoals) {
+      if (g >= 100) career100GoalPlayers.set(name, g)
+    }
+  } catch {
+    // stat enrichment failed; team-only mode still works
   }
 
   cachedData = { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, career100GoalPlayers }
@@ -189,7 +208,7 @@ function resolveSlotMap(type: string, ref: string, data: FullData): Map<string, 
     case 'scored_100_goals':
       return data.career100GoalPlayers
     case 'golden_glove':
-      return new Map() // not derivable from player_seasons
+      return new Map()
     default:
       return new Map()
   }
