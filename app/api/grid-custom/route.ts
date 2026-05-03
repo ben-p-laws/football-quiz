@@ -78,11 +78,31 @@ async function getData(): Promise<FullData> {
     }
   }
 
-  // Stat data — optional, wrapped so failures don't break team queries
+  // PL-winning franchises with total title counts — used to derive won_pl / won_3plus_pl
+  // from teamSeasons directly, no season-level data needed
+  const PL_FRANCHISE_WINS: Record<string, number> = {
+    'Manchester United': 13,
+    'Manchester City':    9,
+    'Chelsea':            5,
+    'Arsenal':            3,
+    'Blackburn Rovers':   1,
+    'Leicester City':     1,
+    'Liverpool':          1,
+  }
+
   const wonPlCounts          = new Map<string, number>()
   const relegatedCounts      = new Map<string, number>()
   const goldenBootWinners    = new Set<string>()
   const career100GoalPlayers = new Map<string, number>()
+
+  // Build won_pl counts: how many distinct PL-winning franchises each player played for
+  for (const [team, players] of teamSeasons) {
+    if (PL_FRANCHISE_WINS[team]) {
+      for (const [name] of players) {
+        wonPlCounts.set(name, (wonPlCounts.get(name) ?? 0) + 1)
+      }
+    }
+  }
 
   // Career goals — independent fetch, only needs name_display + goals
   try {
