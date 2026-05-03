@@ -219,18 +219,90 @@ function LeaderboardPanel({ leaderboard, currentDisplayName }: { leaderboard: Lb
   )
 }
 
-const STAT_MAX: Record<string, number> = {
-  'Goals':        260,
-  'Assists':      162,
-  'Appearances':  672,
-  'Clean Sheets': 195,
-  'Yellow Cards': 88,
+const STAT_CFG: { label: string; unit: string; max: number; examples: { name: string; value: number }[] }[] = [
+  {
+    label: 'Goals', unit: 'goals', max: 260,
+    examples: [
+      { name: 'Alan Shearer',      value: 260 },
+      { name: 'Wayne Rooney',      value: 208 },
+      { name: 'Andrew Cole',       value: 187 },
+      { name: 'Sergio Agüero',     value: 184 },
+      { name: 'Frank Lampard',     value: 177 },
+      { name: 'Thierry Henry',     value: 175 },
+      { name: 'Robbie Fowler',     value: 163 },
+      { name: 'Les Ferdinand',     value: 149 },
+      { name: 'Teddy Sheringham',  value: 146 },
+      { name: 'Robbie Keane',      value: 126 },
+      { name: 'Michael Owen',      value: 118 },
+      { name: 'Dion Dublin',       value: 111 },
+    ],
+  },
+  {
+    label: 'Assists', unit: 'assists', max: 162,
+    examples: [
+      { name: 'Ryan Giggs',       value: 162 },
+      { name: 'Cesc Fàbregas',    value: 111 },
+      { name: 'Wayne Rooney',     value: 103 },
+      { name: 'Frank Lampard',    value: 102 },
+      { name: 'James Milner',     value: 98  },
+      { name: 'Dennis Bergkamp',  value: 94  },
+      { name: 'Steven Gerrard',   value: 92  },
+      { name: 'David Beckham',    value: 80  },
+      { name: 'Robert Pires',     value: 74  },
+      { name: 'Paul Scholes',     value: 65  },
+    ],
+  },
+  {
+    label: 'Appearances', unit: 'apps', max: 672,
+    examples: [
+      { name: 'Gareth Barry',    value: 653 },
+      { name: 'Ryan Giggs',      value: 632 },
+      { name: 'Gary Speed',      value: 535 },
+      { name: 'Emile Heskey',    value: 516 },
+      { name: 'Jamie Carragher', value: 508 },
+      { name: 'John Terry',      value: 492 },
+      { name: 'Wayne Rooney',    value: 491 },
+      { name: 'Rio Ferdinand',   value: 421 },
+      { name: 'Phil Neville',    value: 400 },
+    ],
+  },
+  {
+    label: 'Clean Sheets', unit: 'clean sheets', max: 195,
+    examples: [
+      { name: 'Petr Cech',       value: 195 },
+      { name: 'David James',     value: 169 },
+      { name: 'Mark Schwarzer',  value: 151 },
+      { name: 'Shay Given',      value: 134 },
+      { name: 'Brad Friedel',    value: 128 },
+      { name: 'Tim Howard',      value: 105 },
+      { name: 'Nigel Martyn',    value: 99  },
+      { name: 'Paul Robinson',   value: 83  },
+    ],
+  },
+  {
+    label: 'Yellow Cards', unit: 'yellows', max: 88,
+    examples: [
+      { name: 'Gareth Barry',   value: 88 },
+      { name: 'Kevin Davies',   value: 87 },
+      { name: 'Lee Bowyer',     value: 79 },
+      { name: 'Robbie Savage',  value: 75 },
+      { name: 'Joey Barton',    value: 74 },
+      { name: 'Kevin Nolan',    value: 70 },
+      { name: 'Scott Parker',   value: 68 },
+    ],
+  },
+]
+
+function closestPlayer(cfg: typeof STAT_CFG[0], value: number) {
+  return cfg.examples.reduce((best, ex) =>
+    Math.abs(ex.value - value) < Math.abs(best.value - value) ? ex : best
+  )
 }
-const STAT_LABELS = Object.keys(STAT_MAX)
 
 function LoadingAnimation() {
-  const [label, setLabel] = useState(STAT_LABELS[0])
-  const [count, setCount] = useState(0)
+  const [label, setLabel]         = useState(STAT_CFG[0].label)
+  const [count, setCount]         = useState(0)
+  const [bestPlayer, setBestPlayer] = useState<{ name: string; value: number; unit: string } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -238,18 +310,19 @@ function LoadingAnimation() {
     async function cycle() {
       let idx = 0
       while (!cancelled) {
-        const lbl = STAT_LABELS[idx % STAT_LABELS.length]
-        const max = STAT_MAX[lbl]
-        setLabel(lbl)
+        const cfg = STAT_CFG[idx % STAT_CFG.length]
+        setLabel(cfg.label)
         setCount(0)
-        const final = 1 + Math.floor(Math.random() * max)
+        setBestPlayer(null)
+        const final = 1 + Math.floor(Math.random() * cfg.max)
         for (let step = 0; step < 20; step++) {
           if (cancelled) return
-          setCount(Math.floor(Math.random() * max))
+          setCount(Math.floor(Math.random() * cfg.max))
           await delay(55)
         }
         setCount(final)
-        await delay(750)
+        setBestPlayer({ ...closestPlayer(cfg, final), unit: cfg.unit })
+        await delay(1200)
         idx++
       }
     }
@@ -258,12 +331,22 @@ function LoadingAnimation() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center', minWidth: 160 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center', minWidth: 200 }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
         {label}
       </div>
       <div style={{ fontSize: 64, fontWeight: 800, color: '#dc2626', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
         {count}
+      </div>
+      <div style={{ minHeight: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+        {bestPlayer ? (
+          <>
+            <div style={{ fontSize: 10, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Best match</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>
+              {bestPlayer.name} — {bestPlayer.value} {bestPlayer.unit}
+            </div>
+          </>
+        ) : null}
       </div>
       <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Stat Clash</p>
     </div>
