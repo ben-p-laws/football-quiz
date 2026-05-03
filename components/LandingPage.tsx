@@ -287,7 +287,7 @@ export default function LandingPage() {
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
               <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Final Conundrum</div>
               <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
-                {['R','A','D','M','P','L','A'].map((l, i) => (
+                {['L','G','R','I','N','E','S','T'].map((l, i) => (
                   <div key={i} style={{ width: 18, height: 22, background: '#0a0f1e', border: '1px solid #dc2626', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'white' }}>{l}</div>
                 ))}
               </div>
