@@ -186,6 +186,86 @@ const hdrSelectStyle: React.CSSProperties = {
   outline: 'none', textTransform: 'uppercase', letterSpacing: '0.04em',
 }
 
+// ── CustomSlotHeader ─────────────────────────────────────────────────────────
+function CustomSlotHeader({ slot, placeholder, onSelect, minHeight }: {
+  slot: CustomSlot
+  placeholder: string
+  onSelect: (cat: string, team: string) => void
+  minHeight: number
+}) {
+  const [open, setOpen]           = useState(false)
+  const [teamsOpen, setTeamsOpen] = useState(false)
+  const resolved = slot.category && (slot.category !== 'team' || slot.team)
+    ? resolveSlot(slot.category, slot.team || null)
+    : null
+
+  const item: React.CSSProperties = {
+    padding: '9px 12px', fontSize: 12, color: 'white', cursor: 'pointer',
+    borderBottom: '1px solid #1e2d4a', display: 'flex',
+    justifyContent: 'space-between', alignItems: 'center',
+  }
+
+  return (
+    <div style={{ position: 'relative' }}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => { setOpen(false); setTeamsOpen(false) }}>
+
+      <div style={{ ...s.hdr, position: 'relative', minHeight, padding: '4px 6px', cursor: 'pointer' }}>
+        <span style={{ color: resolved ? '#f97316' : '#4a5568' }}>
+          {resolved?.name ?? placeholder}
+        </span>
+        {!resolved && <span style={{ fontSize: 8, color: '#4a5568', marginLeft: 2 }}>▾</span>}
+      </div>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, zIndex: 200,
+          background: '#111827', border: '1px solid #2a3d5e', borderRadius: 8,
+          minWidth: 160, boxShadow: '0 8px 24px rgba(0,0,0,0.7)', overflow: 'visible',
+        }}>
+          {/* Teams with submenu */}
+          <div style={{ position: 'relative' }}
+            onMouseEnter={() => setTeamsOpen(true)}
+            onMouseLeave={() => setTeamsOpen(false)}>
+            <div style={{ ...item, background: teamsOpen ? '#1e2d4a' : 'transparent' }}>
+              <span>Teams</span>
+              <span style={{ color: '#8899bb', fontSize: 10 }}>›</span>
+            </div>
+            {teamsOpen && (
+              <div style={{
+                position: 'absolute', top: 0, left: '100%',
+                background: '#111827', border: '1px solid #2a3d5e', borderRadius: 8,
+                maxHeight: 260, overflowY: 'auto', minWidth: 210, zIndex: 201,
+                boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+              }}>
+                {TEAM_OPTIONS.map(t => (
+                  <div key={t}
+                    onMouseDown={() => { onSelect('team', t); setOpen(false); setTeamsOpen(false) }}
+                    style={{ ...item }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1e2d4a'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+                    {t}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {STAT_OPTIONS.map(o => (
+            <div key={o.value}
+              onMouseDown={() => { onSelect(o.value, ''); setOpen(false) }}
+              style={{ ...item }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#1e2d4a'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}>
+              {o.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ───────────────────────────────────────────────────────────
 export default function PLGridGame() {
   const todayStr = getTodayStr()
@@ -613,10 +693,10 @@ export default function PLGridGame() {
   const bothDone     = rarityDone && popDone
 
   const gridRows: Slot[] = gridMode === 'custom'
-    ? customRows.map(s => resolveSlot(s.category || 'team', s.team || '?'))
+    ? customRows.map((s, i) => s.category && (s.category !== 'team' || s.team) ? resolveSlot(s.category, s.team || null) : { type: '', id: `r${i}`, name: `Row ${i + 1}`, tooltip: '' })
     : (puzzle?.rows ?? [])
   const gridCols: Slot[] = gridMode === 'custom'
-    ? customCols.map(s => resolveSlot(s.category || 'team', s.team || '?'))
+    ? customCols.map((s, i) => s.category && (s.category !== 'team' || s.team) ? resolveSlot(s.category, s.team || null) : { type: '', id: `c${i}`, name: `Col ${i + 1}`, tooltip: '' })
     : (puzzle?.cols ?? [])
   const effectiveAnswerCounts: Record<string, number> = gridMode === 'custom'
     ? Object.fromEntries(Object.entries(customCells).map(([k, v]) => [k, (v as Answer[]).length]))
@@ -694,7 +774,7 @@ export default function PLGridGame() {
           </div>
           <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 12 }}>
             {gridMode === 'custom' && !customReady
-              ? 'Select rows and columns to build your own grid'
+              ? 'Hover the grid headers to choose rows and columns'
               : 'Find a PL player for each row × column combination'}
           </div>
 
@@ -715,48 +795,6 @@ export default function PLGridGame() {
           )}
         </div>
 
-        {/* ── Custom mode: slot selector ── */}
-        {gridMode === 'custom' && !customReady && (
-          <div style={{ ...s.card, marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#f97316', marginBottom: 12 }}>Choose 3 rows and 3 columns</div>
-            {(['Rows', 'Columns'] as const).map(label => {
-              const slots    = label === 'Rows' ? customRows : customCols
-              const setSlots = label === 'Rows' ? setCustomRows : setCustomCols
-              return (
-                <div key={label} style={{ marginBottom: 12 }}>
-                  <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{label}</div>
-                  {([0, 1, 2] as const).map(i => (
-                    <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
-                      <select value={slots[i].category}
-                        onChange={e => { const n = [...slots] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { category: e.target.value, team: '' }; setSlots(n) }}
-                        style={{ ...s.input, flex: '0 0 140px', fontSize: 12 }}>
-                        <option value="">{label.slice(0, -1)} {i + 1}…</option>
-                        <option value="team">Teams</option>
-                        {STAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                      </select>
-                      {slots[i].category === 'team' && (
-                        <select value={slots[i].team}
-                          onChange={e => { const n = [...slots] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { ...n[i], team: e.target.value }; setSlots(n) }}
-                          style={{ ...s.input, flex: 1, fontSize: 12 }}>
-                          <option value="">Select team…</option>
-                          {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )
-            })}
-            <div style={{ textAlign: 'center' }}>
-              <button
-                onClick={generateCustomGrid}
-                disabled={!customAllSelected || customLoading}
-                style={{ ...s.pill(customAllSelected && !customLoading, '#22c55e'), opacity: (!customAllSelected || customLoading) ? 0.5 : 1 }}>
-                {customLoading ? 'Generating…' : 'Generate Grid'}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* ── Mode tabs + Give Up — only when grid is active ── */}
         {(gridMode === 'daily' || customReady) && !answersSeen && (
@@ -834,7 +872,7 @@ export default function PLGridGame() {
         )}
 
         {/* ── 3×3 Grid ── */}
-        {(gridMode === 'daily' || customReady) && (
+        {(gridMode === 'daily' || gridMode === 'custom') && (
           <div ref={gridRef} style={{ position: 'relative', marginBottom: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '117px 1fr 1fr 1fr', gap: 3 }}>
 
@@ -842,34 +880,52 @@ export default function PLGridGame() {
               <div />
 
               {/* Column headers */}
-              {gridCols.map((col, ci) => (
-                <div key={ci}
-                  style={{ ...s.hdr, position: 'relative', minHeight: 48, padding: '4px 6px' }}
-                  onMouseEnter={showTip}
-                  onMouseLeave={hideTip}>
-                  <span>{col.name}</span>
-                  <span className="tip" style={{ ...tooltipStyle, left: '50%', transform: 'translateX(-50%)', top: '100%' }}>
-                    {col.tooltip}
-                  </span>
-                </div>
+              {[0, 1, 2].map(ci => (
+                gridMode === 'custom' ? (
+                  <CustomSlotHeader key={ci}
+                    slot={customCols[ci]}
+                    placeholder={`Col ${ci + 1}`}
+                    onSelect={(cat, team) => { const n = [...customCols] as [CustomSlot,CustomSlot,CustomSlot]; n[ci] = { category: cat, team }; setCustomCols(n) }}
+                    minHeight={48}
+                  />
+                ) : (
+                  <div key={ci}
+                    style={{ ...s.hdr, position: 'relative', minHeight: 48, padding: '4px 6px' }}
+                    onMouseEnter={showTip}
+                    onMouseLeave={hideTip}>
+                    <span>{gridCols[ci].name}</span>
+                    <span className="tip" style={{ ...tooltipStyle, left: '50%', transform: 'translateX(-50%)', top: '100%' }}>
+                      {gridCols[ci].tooltip}
+                    </span>
+                  </div>
+                )
               ))}
 
               {/* Rows */}
-              {gridRows.map((row, ri) => (
+              {[0, 1, 2].map(ri => (
                 <>
                   {/* Row header */}
-                  <div key={`rh${ri}`}
-                    style={{ ...s.hdr, position: 'relative', minHeight: 64, padding: '4px 6px' }}
-                    onMouseEnter={showTip}
-                    onMouseLeave={hideTip}>
-                    <span>{row.name}</span>
-                    <span className="tip" style={{ ...tooltipStyle, left: '100%', top: '50%', transform: 'translateY(-50%)', marginTop: 0, marginLeft: 4 }}>
-                      {row.tooltip}
-                    </span>
-                  </div>
+                  {gridMode === 'custom' ? (
+                    <CustomSlotHeader key={`rh${ri}`}
+                      slot={customRows[ri]}
+                      placeholder={`Row ${ri + 1}`}
+                      onSelect={(cat, team) => { const n = [...customRows] as [CustomSlot,CustomSlot,CustomSlot]; n[ri] = { category: cat, team }; setCustomRows(n) }}
+                      minHeight={64}
+                    />
+                  ) : (
+                    <div key={`rh${ri}`}
+                      style={{ ...s.hdr, position: 'relative', minHeight: 64, padding: '4px 6px' }}
+                      onMouseEnter={showTip}
+                      onMouseLeave={hideTip}>
+                      <span>{gridRows[ri].name}</span>
+                      <span className="tip" style={{ ...tooltipStyle, left: '100%', top: '50%', transform: 'translateY(-50%)', marginTop: 0, marginLeft: 4 }}>
+                        {gridRows[ri].tooltip}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Cells */}
-                  {gridCols.map((_, ci) => {
+                  {[0, 1, 2].map(ci => {
                     const key    = `${ri}_${ci}`
                     const guess  = guesses[key]
                     const count  = effectiveAnswerCounts[key] ?? 0
@@ -883,9 +939,13 @@ export default function PLGridGame() {
                       else             { bg = '#2a1010'; brd = '#7f1d1d' }
                     }
 
+                    const notReady = gridMode === 'custom' && !customReady
+                    if (notReady) { bg = '#080d18'; brd = '#0f1828' }
+
                     return (
                       <button key={`cell${ri}_${ci}`}
                         onClick={(e) => {
+                          if (notReady) return
                           if (answersSeen) { openOverlay(key, e); return }
                           if (currentDone || guess) return
                           setActiveCell(active ? null : { r: ri, c: ci })
@@ -893,7 +953,7 @@ export default function PLGridGame() {
                         }}
                         style={{
                           background: bg, border: `2px solid ${brd}`, borderRadius: 8,
-                          minHeight: 64, cursor: answersSeen ? 'pointer' : (currentDone || guess ? 'default' : 'pointer'),
+                          minHeight: 64, cursor: notReady ? 'default' : answersSeen ? 'pointer' : (currentDone || guess ? 'default' : 'pointer'),
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                           padding: '6px 4px', gap: 2, transition: 'border-color 0.15s', position: 'relative',
                         }}>
@@ -1006,6 +1066,18 @@ export default function PLGridGame() {
                 </div>
               )
             })()}
+          </div>
+        )}
+
+        {/* ── Generate button for custom mode ── */}
+        {gridMode === 'custom' && customAllSelected && !customReady && (
+          <div style={{ textAlign: 'center', marginBottom: 12 }}>
+            <button
+              onClick={generateCustomGrid}
+              disabled={customLoading}
+              style={{ ...s.pill(true, '#22c55e'), opacity: customLoading ? 0.5 : 1 }}>
+              {customLoading ? 'Generating…' : '▶ Generate Grid'}
+            </button>
           </div>
         )}
 
