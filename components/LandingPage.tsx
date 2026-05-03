@@ -182,11 +182,14 @@ export default function LandingPage() {
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>Name the top 10 PL assist makers</div>
             </div>
-            <div style={{ padding: '0 10px 10px', flex: 1 }}>
+            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between' }}>
               {[
-                { n: 1, name: 'R. Giggs',    val: '162', pct: 100, found: true },
-                { n: 2, name: 'Fàbregas', val: '111', pct: 68,  found: true },
-                { n: 3, name: '?',            val: '103', pct: 0,   found: false },
+                { n: 1, name: 'R. Giggs',  val: '162', pct: 100, found: true  },
+                { n: 2, name: 'Fàbregas',  val: '111', pct: 68,  found: true  },
+                { n: 3, name: '?',         val: '103', pct: 0,   found: false },
+                { n: 4, name: '?',         val: '98',  pct: 0,   found: false },
+                { n: 5, name: '?',         val: '94',  pct: 0,   found: false },
+                { n: 6, name: '?',         val: '92',  pct: 0,   found: false },
               ].map(r => (
                 <div key={r.n} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <span style={{ fontSize: 9, color: '#2a3d5e', width: 10 }}>{r.n}</span>
@@ -216,9 +219,8 @@ export default function LandingPage() {
                 <div style={{ padding: '10px 12px 8px' }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Grid</div>
                   <div style={{ fontSize: 10, color: '#8899bb' }}>Find a PL player for each row × column</div>
-                  <span style={s.tag}>Daily · Rarity · Popularity</span>
                 </div>
-                <div style={{ padding: '0 10px 10px', flex: 1 }}>
+                <div style={{ padding: '0 10px 0', flex: 1 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr', gap: 2 }}>
                     <div />
                     {cols.map(c => <div key={c} style={{ fontSize: 7, fontWeight: 700, color: '#f97316', textAlign: 'center' as const, paddingBottom: 2 }}>{c}</div>)}
@@ -239,6 +241,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                 </div>
+                <div style={s.cta}><span style={s.ctaText}>Play Grid →</span></div>
               </div>
             )
           })()}
@@ -251,7 +254,6 @@ export default function LandingPage() {
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Teammates</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their PL teammates</div>
-              <span style={s.tag}>Daily · Random</span>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, height: 90 }}>
@@ -278,7 +280,6 @@ export default function LandingPage() {
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Footy Countdown</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>Letters, numbers & conundrum · 7 rounds</div>
-              <span style={s.tag}>Leaderboard</span>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1 }}>
               <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Final Conundrum</div>

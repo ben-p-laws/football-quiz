@@ -293,15 +293,9 @@ const STAT_CFG: { label: string; unit: string; max: number; examples: { name: st
   },
 ]
 
-function closestPlayer(cfg: typeof STAT_CFG[0], value: number) {
-  return cfg.examples.reduce((best, ex) =>
-    Math.abs(ex.value - value) < Math.abs(best.value - value) ? ex : best
-  )
-}
-
 function LoadingAnimation() {
-  const [label, setLabel]         = useState(STAT_CFG[0].label)
-  const [count, setCount]         = useState(0)
+  const [label, setLabel]           = useState(STAT_CFG[0].label)
+  const [count, setCount]           = useState(0)
   const [bestPlayer, setBestPlayer] = useState<{ name: string; value: number; unit: string } | null>(null)
 
   useEffect(() => {
@@ -311,17 +305,18 @@ function LoadingAnimation() {
       let idx = 0
       while (!cancelled) {
         const cfg = STAT_CFG[idx % STAT_CFG.length]
+        // Pick a random example so the final number always has an exact player match
+        const example = cfg.examples[Math.floor(Math.random() * cfg.examples.length)]
         setLabel(cfg.label)
         setCount(0)
         setBestPlayer(null)
-        const final = 1 + Math.floor(Math.random() * cfg.max)
         for (let step = 0; step < 20; step++) {
           if (cancelled) return
           setCount(Math.floor(Math.random() * cfg.max))
           await delay(55)
         }
-        setCount(final)
-        setBestPlayer({ ...closestPlayer(cfg, final), unit: cfg.unit })
+        setCount(example.value)
+        setBestPlayer({ name: example.name, value: example.value, unit: cfg.unit })
         await delay(1200)
         idx++
       }
