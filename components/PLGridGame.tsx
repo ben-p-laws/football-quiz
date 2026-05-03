@@ -694,7 +694,7 @@ export default function PLGridGame() {
           </div>
           <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 12 }}>
             {gridMode === 'custom' && !customReady
-              ? 'Select 6 teams to build your own grid'
+              ? 'Select rows and columns to build your own grid'
               : 'Find a PL player for each row × column combination'}
           </div>
 
@@ -719,52 +719,34 @@ export default function PLGridGame() {
         {gridMode === 'custom' && !customReady && (
           <div style={{ ...s.card, marginBottom: 12 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#f97316', marginBottom: 12 }}>Choose 3 rows and 3 columns</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Rows</div>
-                {([0, 1, 2] as const).map(i => (
-                  <div key={i} style={{ marginBottom: 8 }}>
-                    <select value={customRows[i].category}
-                      onChange={e => { const n = [...customRows] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { category: e.target.value, team: '' }; setCustomRows(n) }}
-                      style={{ ...s.input, marginBottom: customRows[i].category === 'team' ? 4 : 0, fontSize: 12 }}>
-                      <option value="">Row {i + 1}…</option>
-                      <option value="team">Teams</option>
-                      {STAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                    {customRows[i].category === 'team' && (
-                      <select value={customRows[i].team}
-                        onChange={e => { const n = [...customRows] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { ...n[i], team: e.target.value }; setCustomRows(n) }}
-                        style={{ ...s.input, fontSize: 12 }}>
-                        <option value="">Select team…</option>
-                        {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+            {(['Rows', 'Columns'] as const).map(label => {
+              const slots    = label === 'Rows' ? customRows : customCols
+              const setSlots = label === 'Rows' ? setCustomRows : setCustomCols
+              return (
+                <div key={label} style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>{label}</div>
+                  {([0, 1, 2] as const).map(i => (
+                    <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
+                      <select value={slots[i].category}
+                        onChange={e => { const n = [...slots] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { category: e.target.value, team: '' }; setSlots(n) }}
+                        style={{ ...s.input, flex: '0 0 140px', fontSize: 12 }}>
+                        <option value="">{label.slice(0, -1)} {i + 1}…</option>
+                        <option value="team">Teams</option>
+                        {STAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                       </select>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Columns</div>
-                {([0, 1, 2] as const).map(i => (
-                  <div key={i} style={{ marginBottom: 8 }}>
-                    <select value={customCols[i].category}
-                      onChange={e => { const n = [...customCols] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { category: e.target.value, team: '' }; setCustomCols(n) }}
-                      style={{ ...s.input, marginBottom: customCols[i].category === 'team' ? 4 : 0, fontSize: 12 }}>
-                      <option value="">Col {i + 1}…</option>
-                      <option value="team">Teams</option>
-                      {STAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                    {customCols[i].category === 'team' && (
-                      <select value={customCols[i].team}
-                        onChange={e => { const n = [...customCols] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { ...n[i], team: e.target.value }; setCustomCols(n) }}
-                        style={{ ...s.input, fontSize: 12 }}>
-                        <option value="">Select team…</option>
-                        {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                      </select>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
+                      {slots[i].category === 'team' && (
+                        <select value={slots[i].team}
+                          onChange={e => { const n = [...slots] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { ...n[i], team: e.target.value }; setSlots(n) }}
+                          style={{ ...s.input, flex: 1, fontSize: 12 }}>
+                          <option value="">Select team…</option>
+                          {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
             <div style={{ textAlign: 'center' }}>
               <button
                 onClick={generateCustomGrid}
