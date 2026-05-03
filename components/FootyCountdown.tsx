@@ -89,6 +89,51 @@ const s = {
   input: { background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 15, color: 'white', outline: 'none', width: '100%', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties,
 }
 
+const COUNTDOWN_LETTERS = ['F', 'O', 'O', 'T', 'B', 'A', 'L', 'L']
+
+function LoadingAnimation() {
+  const [shown, setShown] = useState<number[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+    async function cycle() {
+      while (!cancelled) {
+        setShown([])
+        await delay(300)
+        for (let i = 0; i < COUNTDOWN_LETTERS.length; i++) {
+          if (cancelled) return
+          setShown(prev => [...prev, i])
+          await delay(180)
+        }
+        await delay(800)
+      }
+    }
+    cycle()
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'flex', gap: 5 }}>
+        {COUNTDOWN_LETTERS.map((letter, i) => (
+          <div key={i} style={{
+            width: 34, height: 42, borderRadius: 6,
+            background: shown.includes(i) ? '#dc2626' : '#111827',
+            border: `1px solid ${shown.includes(i) ? '#dc2626' : '#1e2d4a'}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 17, fontWeight: 800, color: shown.includes(i) ? 'white' : 'transparent',
+            transition: 'all 0.15s ease',
+          }}>
+            {letter}
+          </div>
+        ))}
+      </div>
+      <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Countdown</p>
+    </div>
+  )
+}
+
 export default function FootyCountdown() {
   const [loading, setLoading]                     = useState(true)
   const [surnameEntries, setSurnameEntries]       = useState<SurnameEntry[]>([])
@@ -367,7 +412,7 @@ export default function FootyCountdown() {
     <div style={s.page}>
       <NavBar />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
-        <p style={{ color: '#8899bb' }}>Loading...</p>
+        <LoadingAnimation />
       </div>
     </div>
   )

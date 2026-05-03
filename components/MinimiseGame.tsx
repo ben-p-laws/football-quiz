@@ -107,6 +107,48 @@ const s = {
   } as React.CSSProperties,
 }
 
+const LOADING_CATS  = ['Most Goals', 'Most Assists', 'Appearances', 'Yellow Cards']
+const LOADING_NAMES = ['Salah', 'De Bruyne', 'Scholes', 'Vieira']
+
+function LoadingAnimation() {
+  const [filled, setFilled] = useState<number[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+    async function cycle() {
+      while (!cancelled) {
+        setFilled([])
+        await delay(400)
+        for (let i = 0; i < 4; i++) {
+          if (cancelled) return
+          setFilled(prev => [...prev, i])
+          await delay(300)
+        }
+        await delay(1000)
+      }
+    }
+    cycle()
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: 240 }}>
+        {LOADING_CATS.map((cat, i) => (
+          <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, background: '#111827', border: `1px solid ${filled.includes(i) ? '#dc2626' : '#1e2d4a'}`, transition: 'border-color 0.25s ease' }}>
+            <div style={{ fontSize: 10, color: '#8899bb', flex: 1 }}>{cat}</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: filled.includes(i) ? 'white' : '#1e2d4a', transition: 'color 0.25s ease', minWidth: 64, textAlign: 'right' }}>
+              {filled.includes(i) ? LOADING_NAMES[i] : '—'}
+            </div>
+          </div>
+        ))}
+      </div>
+      <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Minimise</p>
+    </div>
+  )
+}
+
 export default function MinimiseGame() {
   const [loading, setLoading] = useState(true)
   const [pidRanks, setPidRanks] = useState<Record<string, Record<string, number>>>({})
@@ -229,18 +271,8 @@ export default function MinimiseGame() {
   if (loading) return (
     <div style={s.page}>
       <NavBar />
-      <style>{`
-        @keyframes progress { from { width: 0% } to { width: 100% } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-      `}</style>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "80vh", gap: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", letterSpacing: "0.12em", textTransform: "uppercase", animation: "pulse 1.5s ease infinite" }}>
-          Loading Minimise
-        </div>
-        <div style={{ width: 200, height: 4, background: "#1e2d4a", borderRadius: 2, overflow: "hidden" }}>
-          <div style={{ height: "100%", background: "#dc2626", borderRadius: 2, animation: "progress 8s ease-out forwards" }} />
-        </div>
-        <div style={{ fontSize: 12, color: "#4a5568" }}>Crunching Premier League stats...</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "80vh" }}>
+        <LoadingAnimation />
       </div>
     </div>
   )

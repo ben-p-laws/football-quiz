@@ -199,6 +199,45 @@ const pageOuter: React.CSSProperties = {
 }
 const pageInner: React.CSSProperties = { padding: '24px 16px 48px', maxWidth: 520, margin: '0 auto' }
 
+const DEMO_SHIRTS = ['Arsenal', 'Chelsea', 'Liverpool', 'Manchester City']
+
+function LoadingAnimation() {
+  const [lit, setLit] = useState<number[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+    async function cycle() {
+      while (!cancelled) {
+        const order = [0, 1, 2, 3].sort(() => Math.random() - 0.5)
+        setLit([])
+        await delay(300)
+        for (const idx of order) {
+          if (cancelled) return
+          setLit(prev => [...prev, idx])
+          await delay(240)
+        }
+        await delay(800)
+      }
+    }
+    cycle()
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {DEMO_SHIRTS.map((club, i) => (
+          <div key={i} style={{ padding: 10, borderRadius: 10, background: '#111827', border: `1px solid ${lit.includes(i) ? GROUP_STYLE[club]?.bg ?? '#dc2626' : '#1e2d4a'}`, transition: 'border-color 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Shirt club={lit.includes(i) ? club : undefined} />
+          </div>
+        ))}
+      </div>
+      <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Teammates</p>
+    </div>
+  )
+}
+
 export default function TeammatesPageClient() {
   // Game state — all 5 puzzles loaded upfront
   const [puzzles, setPuzzles]       = useState<Puzzle[]>([])
@@ -344,11 +383,10 @@ export default function TeammatesPageClient() {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div style={{ ...pageOuter, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
-        <style>{`@keyframes slide{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}`}</style>
-        <p style={{ color: '#8899bb', fontSize: 14, margin: 0 }}>Loading game…</p>
-        <div style={{ position: 'relative', width: 200, height: 4, background: '#1e2d4a', borderRadius: 2, overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, left: 0, width: '50%', height: '100%', background: '#f97316', borderRadius: 2, animation: 'slide 1.2s ease-in-out infinite' }} />
+      <div style={pageOuter}>
+        <NavBar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+          <LoadingAnimation />
         </div>
       </div>
     )

@@ -219,6 +219,44 @@ function LeaderboardPanel({ leaderboard, currentDisplayName }: { leaderboard: Lb
   )
 }
 
+function LoadingAnimation() {
+  const [vals, setVals] = useState([0, 0])
+
+  useEffect(() => {
+    let cancelled = false
+    const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+    async function cycle() {
+      while (!cancelled) {
+        setVals([0, 0])
+        await delay(300)
+        const v1 = 40 + Math.floor(Math.random() * 50)
+        const v2 = 40 + Math.floor(Math.random() * 50)
+        setVals([v1, v2])
+        await delay(1400)
+      }
+    }
+    cycle()
+    return () => { cancelled = true }
+  }, [])
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 100 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 48, height: vals[0], background: '#dc2626', borderRadius: '4px 4px 0 0', transition: 'height 0.9s cubic-bezier(0.4,0,0.2,1)' }} />
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', letterSpacing: '0.05em' }}>P1</div>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 800, color: '#4a5568', paddingBottom: 26 }}>VS</div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{ width: 48, height: vals[1], background: '#1d4ed8', borderRadius: '4px 4px 0 0', transition: 'height 0.9s cubic-bezier(0.4,0,0.2,1)' }} />
+          <div style={{ fontSize: 10, fontWeight: 700, color: '#1d4ed8', letterSpacing: '0.05em' }}>P2</div>
+        </div>
+      </div>
+      <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Stat Clash</p>
+    </div>
+  )
+}
+
 export default function PLStatClash() {
   const [loading, setLoading]       = useState(true)
   const [fetching, setFetching]     = useState(false)
@@ -380,10 +418,8 @@ export default function PLStatClash() {
   if (loading) return (
     <div style={s.page}>
       <NavBar />
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: 16 }}>
-        <div style={{ width: 40, height: 40, border: '3px solid #1e2d4a', borderTop: '3px solid #dc2626', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-        <div style={{ color: '#8899bb', fontSize: 14 }}>Loading stats...</div>
-        <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '80vh' }}>
+        <LoadingAnimation />
       </div>
     </div>
   )
