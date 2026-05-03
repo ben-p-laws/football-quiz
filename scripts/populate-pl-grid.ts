@@ -173,6 +173,7 @@ type PlayerSeason = {
   teams_played_for: string
   goals: number
   gk_clean_sheets: number
+  games: number
 }
 
 type PLSeasonTable = {
@@ -187,7 +188,7 @@ async function buildPlayerData() {
   console.log('Fetching player_seasons...')
   const seasons = await fetchAll<PlayerSeason>(
     'player_seasons',
-    'name_display,year_id,pos,teams_played_for,goals,gk_clean_sheets'
+    'name_display,year_id,pos,teams_played_for,goals,gk_clean_sheets,games'
   )
   console.log(`  ${seasons.length} rows`)
 
@@ -225,6 +226,7 @@ async function buildPlayerData() {
   const teamSeasons       = new Map<string, Map<string, number>>() // player → team → seasons count
   const playerPLWins      = new Map<string, number>()  // player → PL wins count
   const playerRelegations = new Map<string, number>()  // player → relegation count
+  const playerTotalApps   = new Map<string, number>()  // player → total PL games played
 
   for (const row of seasons) {
     const name   = row.name_display
@@ -242,6 +244,9 @@ async function buildPlayerData() {
       cleanSheets: prev.cleanSheets + ((row.gk_clean_sheets as number) || 0),
       isGk:        prev.isGk || (row.pos === 'GK'),
     })
+
+    // Total career PL appearances
+    playerTotalApps.set(name, (playerTotalApps.get(name) ?? 0) + (Number(row.games) || 0))
 
     // Team seasons (team names already normalised via normPSTeam above)
     if (!teamSeasons.has(name)) teamSeasons.set(name, new Map())
@@ -300,7 +305,7 @@ async function buildPlayerData() {
     for (const name of winners) playerGoldenGlove.set(name, (playerGoldenGlove.get(name) ?? 0) + 1)
   }
 
-  return { teamSeasons, playerPLWins, playerRelegations, playerGoldenBoot, playerGoldenGlove }
+  return { teamSeasons, playerPLWins, playerRelegations, playerGoldenBoot, playerGoldenGlove, playerTotalApps }
 }
 
 // ── Get all players satisfying a criterion ───────────────────────────────────
@@ -310,6 +315,7 @@ type PlayerData = {
   playerRelegations: Map<string, number>
   playerGoldenBoot:  Map<string, number>
   playerGoldenGlove: Map<string, number>
+  playerTotalApps:   Map<string, number>
 }
 
 function getEligiblePlayers(
@@ -362,13 +368,13 @@ type CellAnswer = {
 function computeCell(
   rowPlayers: Map<string, number>,
   colPlayers: Map<string, number>,
+  playerTotalApps: Map<string, number>,
 ): CellAnswer[] {
   // Intersection
   const valid: Array<{ name: string; combined: number }> = []
-  for (const [name, rowWeight] of rowPlayers) {
-    const colWeight = colPlayers.get(name)
-    if (colWeight !== undefined) {
-      valid.push({ name, combined: rowWeight + colWeight })
+  for (const [name] of rowPlayers) {
+    if (colPlayers.has(name)) {
+      valid.push({ name, combined: playerTotalApps.get(name) ?? 0 })
     }
   }
 
@@ -435,7 +441,7 @@ async function main() {
       for (let ci = 0; ci < 3; ci++) {
         const rowEligible = getEligiblePlayers(rows[ri].type, rows[ri].ref, data)
         const colEligible = getEligiblePlayers(cols[ci].type, cols[ci].ref, data)
-        const answers     = computeCell(rowEligible, colEligible)
+        const answers     = computeCell(rowEligible, colEligible, data.playerTotalApps)
 
         console.log(`  [${ri},${ci}] ${rows[ri].type}(${rows[ri].ref ?? '*'}) × ${cols[ci].type}(${cols[ci].ref ?? '*'}) → ${answers.length} answers`)
 
