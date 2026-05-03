@@ -227,6 +227,7 @@ async function buildPlayerData() {
   const playerPLWins      = new Map<string, number>()  // player → PL wins count
   const playerRelegations = new Map<string, number>()  // player → relegation count
   const playerTotalApps   = new Map<string, number>()  // player → total PL games played
+  const playerCareerGoals = new Map<string, number>()  // player → total PL goals
 
   for (const row of seasons) {
     const name   = row.name_display
@@ -245,8 +246,9 @@ async function buildPlayerData() {
       isGk:        prev.isGk || (row.pos === 'GK'),
     })
 
-    // Total career PL appearances
+    // Total career PL appearances and goals
     playerTotalApps.set(name, (playerTotalApps.get(name) ?? 0) + (Number(row.games) || 0))
+    playerCareerGoals.set(name, (playerCareerGoals.get(name) ?? 0) + (Number(row.goals) || 0))
 
     // Team seasons (team names already normalised via normPSTeam above)
     if (!teamSeasons.has(name)) teamSeasons.set(name, new Map())
@@ -305,7 +307,7 @@ async function buildPlayerData() {
     for (const name of winners) playerGoldenGlove.set(name, (playerGoldenGlove.get(name) ?? 0) + 1)
   }
 
-  return { teamSeasons, playerPLWins, playerRelegations, playerGoldenBoot, playerGoldenGlove, playerTotalApps }
+  return { teamSeasons, playerPLWins, playerRelegations, playerGoldenBoot, playerGoldenGlove, playerTotalApps, playerCareerGoals }
 }
 
 // ── Get all players satisfying a criterion ───────────────────────────────────
@@ -316,6 +318,7 @@ type PlayerData = {
   playerGoldenBoot:  Map<string, number>
   playerGoldenGlove: Map<string, number>
   playerTotalApps:   Map<string, number>
+  playerCareerGoals: Map<string, number>
 }
 
 function getEligiblePlayers(
@@ -349,6 +352,10 @@ function getEligiblePlayers(
   } else if (type === 'golden_glove') {
     for (const [name, gloves] of data.playerGoldenGlove) {
       if (gloves >= 1) result.set(name, gloves)
+    }
+  } else if (type === 'scored_100_goals') {
+    for (const [name, goals] of data.playerCareerGoals) {
+      if (goals >= 100) result.set(name, goals)
     }
   }
 

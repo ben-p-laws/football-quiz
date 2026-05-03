@@ -84,11 +84,12 @@ function resolveSlot(type: string, ref: string | null): Slot {
     return { type, id: ref!, name: shortName(ref!), tooltip: `Played for ${ref}` }
   }
   const slots: Record<string, Slot> = {
-    won_pl:       { type, id: type, name: 'PL Winner',    tooltip: 'Won the Premier League at least once' },
-    won_3plus_pl: { type, id: type, name: '3+ PL Wins',   tooltip: 'Won the Premier League 3 or more times' },
-    relegated:    { type, id: type, name: 'Relegated',    tooltip: 'Been relegated from the Premier League at least once' },
-    golden_boot:  { type, id: type, name: 'Golden Boot',  tooltip: 'Won the PL Golden Boot (top scorer in a season)' },
-    golden_glove: { type, id: type, name: 'Golden Glove', tooltip: 'Won the PL Golden Glove (GK with most clean sheets in a season)' },
+    won_pl:            { type, id: type, name: 'PL Winner',    tooltip: 'Won the Premier League at least once' },
+    won_3plus_pl:      { type, id: type, name: '3+ PL Wins',   tooltip: 'Won the Premier League 3 or more times' },
+    relegated:         { type, id: type, name: 'Relegated',    tooltip: 'Been relegated from the Premier League at least once' },
+    golden_boot:       { type, id: type, name: 'Golden Boot',  tooltip: 'Won the PL Golden Boot (top scorer in a season)' },
+    golden_glove:      { type, id: type, name: 'Golden Glove', tooltip: 'Won the PL Golden Glove (GK with most clean sheets in a season)' },
+    scored_100_goals:  { type, id: type, name: '100+ PL Goals', tooltip: 'Scored 100 or more Premier League goals' },
   }
   return slots[type] ?? { type, id: type, name: type, tooltip: type }
 }
