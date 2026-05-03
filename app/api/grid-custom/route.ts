@@ -12,14 +12,18 @@ const PLAYER_SEASON_TEAM_NORM: Record<string, string> = {
 }
 const normPSTeam = (t: string) => PLAYER_SEASON_TEAM_NORM[t] ?? t
 
-type TeamData = {
-  teamSeasons:    Map<string, Map<string, number>>
-  playerTotalApps: Map<string, number>
+type FullData = {
+  teamSeasons:          Map<string, Map<string, number>>
+  playerTotalApps:      Map<string, number>
+  wonPlCounts:          Map<string, number>
+  relegated:            Map<string, number>
+  goldenBootWinners:    Set<string>
+  career100GoalPlayers: Map<string, number>
 }
-// Module-level cache
-let cachedData: TeamData | null = null
+
+let cachedData: FullData | null = null
 let cacheTime = 0
-const CACHE_TTL = 3_600_000 // 1 hour
+const CACHE_TTL = 3_600_000
 
 function getClient() {
   return createClient(
@@ -28,42 +32,94 @@ function getClient() {
   )
 }
 
-async function getTeamData(): Promise<TeamData> {
+async function fetchAll<T>(supabase: any, table: string, columns: string, filter?: (q: any) => any): Promise<T[]> {
+  const rows: T[] = []
+  let offset = 0
+  while (true) {
+    let q = supabase.from(table).select(columns)
+    if (filter) q = filter(q)
+    const { data } = await q.range(offset, offset + 999)
+    if (!data || data.length === 0) break
+    rows.push(...data)
+    if (data.length < 1000) break
+    offset += 1000
+  }
+  return rows
+}
+
+async function getData(): Promise<FullData> {
   const now = Date.now()
   if (cachedData && now - cacheTime < CACHE_TTL) return cachedData
 
   const supabase = getClient()
-  let all: Array<{ name_display: string; teams_played_for: string; games: number }> = []
-  let offset = 0
-  while (true) {
-    const { data } = await supabase
-      .from('player_seasons')
-      .select('name_display,teams_played_for,games')
-      .range(offset, offset + 999)
-    if (!data || data.length === 0) break
-    all = all.concat(data)
-    if (data.length < 1000) break
-    offset += 1000
+
+  const [playerRows, tableRows] = await Promise.all([
+    fetchAll<{ name_display: string; teams_played_for: string; games: number; goals: number; season: string }>(
+      supabase, 'player_seasons', 'name_display,teams_played_for,games,goals,season'
+    ),
+    fetchAll<{ team: string; position: number; season: string }>(
+      supabase, 'pl_season_tables', 'team,position,season'
+    ),
+  ])
+
+  // Build sets of winning and relegated team-season keys
+  const winningKeys  = new Set<string>()
+  const relegKeys    = new Set<string>()
+  for (const r of tableRows) {
+    const key = `${r.team}:${r.season}`
+    if (r.position === 1)   winningKeys.add(key)
+    if (r.position >= 18)   relegKeys.add(key)
   }
 
-  const teamSeasons    = new Map<string, Map<string, number>>()
-  const playerTotalApps = new Map<string, number>()
+  const teamSeasons          = new Map<string, Map<string, number>>()
+  const playerTotalApps      = new Map<string, number>()
+  const wonPlCounts          = new Map<string, number>()
+  const relegatedCounts      = new Map<string, number>()
+  const careerGoals          = new Map<string, number>()
+  const topScorerPerSeason   = new Map<string, { name: string; goals: number }>()
 
-  for (const row of all) {
-    const name = row.name_display
-    playerTotalApps.set(name, (playerTotalApps.get(name) ?? 0) + (Number(row.games) || 0))
+  for (const row of playerRows) {
+    const name   = row.name_display
+    const games  = Number(row.games)  || 0
+    const goals  = Number(row.goals)  || 0
+    const season = row.season ?? ''
+
+    playerTotalApps.set(name, (playerTotalApps.get(name) ?? 0) + games)
+    careerGoals.set(name,     (careerGoals.get(name)     ?? 0) + goals)
+
     const teams = String(row.teams_played_for || '')
       .split(',')
       .map(t => normPSTeam(t.trim()))
       .filter(t => t && t !== '2 Teams')
+
     for (const team of teams) {
       if (!teamSeasons.has(team)) teamSeasons.set(team, new Map())
       const cur = teamSeasons.get(team)!
       cur.set(name, (cur.get(name) ?? 0) + 1)
+
+      if (season) {
+        const key = `${team}:${season}`
+        if (winningKeys.has(key))  wonPlCounts.set(name,      (wonPlCounts.get(name)      ?? 0) + 1)
+        if (relegKeys.has(key))    relegatedCounts.set(name,  (relegatedCounts.get(name)  ?? 0) + 1)
+      }
+    }
+
+    // Track top scorer per season for golden boot
+    if (season && goals > 0) {
+      const cur = topScorerPerSeason.get(season)
+      if (!cur || goals > cur.goals) topScorerPerSeason.set(season, { name, goals })
     }
   }
 
-  cachedData = { teamSeasons, playerTotalApps }
+  const goldenBootWinners = new Set<string>()
+  for (const [, { name }] of topScorerPerSeason) goldenBootWinners.add(name)
+
+  const career100GoalPlayers = new Map<string, number>()
+  for (const [name, g] of careerGoals) {
+    if (g >= 100) career100GoalPlayers.set(name, g)
+  }
+
+  cachedData = { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, career100GoalPlayers }
   cacheTime = now
   return cachedData
 }
@@ -112,23 +168,52 @@ function computeCell(
   })
 }
 
-export async function GET(req: NextRequest) {
-  const sp   = req.nextUrl.searchParams
-  const rows = [sp.get('row0') ?? '', sp.get('row1') ?? '', sp.get('row2') ?? '']
-  const cols = [sp.get('col0') ?? '', sp.get('col1') ?? '', sp.get('col2') ?? '']
+function parseSlot(val: string): { type: string; ref: string } {
+  const idx = val.indexOf(':')
+  if (idx === -1) return { type: val, ref: '' }
+  return { type: val.slice(0, idx), ref: val.slice(idx + 1) }
+}
 
-  if (rows.some(t => !t) || cols.some(t => !t)) {
-    return NextResponse.json({ error: 'Missing team params' }, { status: 400 })
+function resolveSlotMap(type: string, ref: string, data: FullData): Map<string, number> {
+  switch (type) {
+    case 'team':
+      return data.teamSeasons.get(ref) ?? new Map()
+    case 'won_pl':
+      return data.wonPlCounts
+    case 'won_3plus_pl':
+      return new Map([...data.wonPlCounts].filter(([, n]) => n >= 3))
+    case 'relegated':
+      return data.relegated
+    case 'golden_boot':
+      return new Map([...data.goldenBootWinners].map(name => [name, 1]))
+    case 'scored_100_goals':
+      return data.career100GoalPlayers
+    case 'golden_glove':
+      return new Map() // not derivable from player_seasons
+    default:
+      return new Map()
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const sp      = req.nextUrl.searchParams
+  const rawRows = [sp.get('row0') ?? '', sp.get('row1') ?? '', sp.get('row2') ?? '']
+  const rawCols = [sp.get('col0') ?? '', sp.get('col1') ?? '', sp.get('col2') ?? '']
+
+  if (rawRows.some(t => !t) || rawCols.some(t => !t)) {
+    return NextResponse.json({ error: 'Missing slot params' }, { status: 400 })
   }
 
-  const { teamSeasons, playerTotalApps } = await getTeamData()
+  const rows = rawRows.map(parseSlot)
+  const cols = rawCols.map(parseSlot)
+  const data = await getData()
 
   const cells: Record<string, CellAnswer[]> = {}
   for (let ri = 0; ri < 3; ri++) {
     for (let ci = 0; ci < 3; ci++) {
-      const rowPlayers = teamSeasons.get(rows[ri]) ?? new Map()
-      const colPlayers = teamSeasons.get(cols[ci]) ?? new Map()
-      cells[`${ri}_${ci}`] = computeCell(rowPlayers, colPlayers, playerTotalApps)
+      const rowMap = resolveSlotMap(rows[ri].type, rows[ri].ref, data)
+      const colMap = resolveSlotMap(cols[ci].type, cols[ci].ref, data)
+      cells[`${ri}_${ci}`] = computeCell(rowMap, colMap, data.playerTotalApps)
     }
   }
 

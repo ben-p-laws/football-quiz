@@ -37,6 +37,17 @@ const TEAM_OPTIONS = [
   'Wolverhampton Wanderers',
 ]
 
+const STAT_OPTIONS = [
+  { value: 'won_pl',           label: 'PL Winner' },
+  { value: 'won_3plus_pl',     label: '3+ PL Wins' },
+  { value: 'relegated',        label: 'Relegated' },
+  { value: 'golden_boot',      label: 'Golden Boot' },
+  { value: 'golden_glove',     label: 'Golden Glove' },
+  { value: 'scored_100_goals', label: '100+ PL Goals' },
+]
+
+type CustomSlot = { category: string; team: string }
+
 // Abbreviate long team names so they fit in the grid header
 const SHORT_NAMES: Record<string, string> = {
   'Manchester United':        'Man Utd',
@@ -212,8 +223,8 @@ export default function PLGridGame() {
   const [gridMode, setGridMode]               = useState<'daily' | 'custom'>('daily')
 
   // Custom grid state
-  const [customRows, setCustomRows]           = useState<[string, string, string]>(['', '', ''])
-  const [customCols, setCustomCols]           = useState<[string, string, string]>(['', '', ''])
+  const [customRows, setCustomRows]           = useState<[CustomSlot, CustomSlot, CustomSlot]>([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
+  const [customCols, setCustomCols]           = useState<[CustomSlot, CustomSlot, CustomSlot]>([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
   const [customCells, setCustomCells]         = useState<Record<string, Answer[]>>({})
   const [customLoading, setCustomLoading]     = useState(false)
   const [customReady, setCustomReady]         = useState(false)
@@ -553,8 +564,8 @@ export default function PLGridGame() {
     setActiveCell(null)
     setOverlayCell(null)
     setShowSkipConfirm(false)
-    setCustomRows(['', '', ''])
-    setCustomCols(['', '', ''])
+    setCustomRows([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
+    setCustomCols([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
     setCustomCells({})
     setCustomReady(false)
   }
@@ -570,9 +581,10 @@ export default function PLGridGame() {
     if (customRows.some(t => !t) || customCols.some(t => !t)) return
     setCustomLoading(true)
     try {
+      const enc = (s: CustomSlot) => s.category === 'team' ? `team:${s.team}` : s.category
       const params = new URLSearchParams({
-        row0: customRows[0], row1: customRows[1], row2: customRows[2],
-        col0: customCols[0], col1: customCols[1], col2: customCols[2],
+        row0: enc(customRows[0]), row1: enc(customRows[1]), row2: enc(customRows[2]),
+        col0: enc(customCols[0]), col1: enc(customCols[1]), col2: enc(customCols[2]),
       })
       const res  = await fetch(`/api/grid-custom?${params}`)
       const data = await res.json()
@@ -601,16 +613,17 @@ export default function PLGridGame() {
   const bothDone     = rarityDone && popDone
 
   const gridRows: Slot[] = gridMode === 'custom'
-    ? customRows.map(t => resolveSlot('team', t || '?'))
+    ? customRows.map(s => resolveSlot(s.category || 'team', s.team || '?'))
     : (puzzle?.rows ?? [])
   const gridCols: Slot[] = gridMode === 'custom'
-    ? customCols.map(t => resolveSlot('team', t || '?'))
+    ? customCols.map(s => resolveSlot(s.category || 'team', s.team || '?'))
     : (puzzle?.cols ?? [])
   const effectiveAnswerCounts: Record<string, number> = gridMode === 'custom'
     ? Object.fromEntries(Object.entries(customCells).map(([k, v]) => [k, (v as Answer[]).length]))
     : (puzzle?.answerCounts ?? {})
 
-  const customAllSelected = customRows.every(t => t) && customCols.every(t => t)
+  const customAllSelected = customRows.every(s => s.category && (s.category !== 'team' || s.team)) &&
+                            customCols.every(s => s.category && (s.category !== 'team' || s.team))
 
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) return (
@@ -702,31 +715,53 @@ export default function PLGridGame() {
           )}
         </div>
 
-        {/* ── Custom mode: team selector ── */}
+        {/* ── Custom mode: slot selector ── */}
         {gridMode === 'custom' && !customReady && (
           <div style={{ ...s.card, marginBottom: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#f97316', marginBottom: 12 }}>Choose 3 row teams and 3 column teams</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#f97316', marginBottom: 12 }}>Choose 3 rows and 3 columns</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>
-                <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Row Teams</div>
+                <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Rows</div>
                 {([0, 1, 2] as const).map(i => (
-                  <select key={i} value={customRows[i]}
-                    onChange={e => { const n = [...customRows] as [string,string,string]; n[i] = e.target.value; setCustomRows(n) }}
-                    style={{ ...s.input, marginBottom: 6, fontSize: 12 }}>
-                    <option value="">Row {i + 1}…</option>
-                    {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <div key={i} style={{ marginBottom: 8 }}>
+                    <select value={customRows[i].category}
+                      onChange={e => { const n = [...customRows] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { category: e.target.value, team: '' }; setCustomRows(n) }}
+                      style={{ ...s.input, marginBottom: customRows[i].category === 'team' ? 4 : 0, fontSize: 12 }}>
+                      <option value="">Row {i + 1}…</option>
+                      <option value="team">Teams</option>
+                      {STAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    {customRows[i].category === 'team' && (
+                      <select value={customRows[i].team}
+                        onChange={e => { const n = [...customRows] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { ...n[i], team: e.target.value }; setCustomRows(n) }}
+                        style={{ ...s.input, fontSize: 12 }}>
+                        <option value="">Select team…</option>
+                        {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    )}
+                  </div>
                 ))}
               </div>
               <div>
-                <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Column Teams</div>
+                <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Columns</div>
                 {([0, 1, 2] as const).map(i => (
-                  <select key={i} value={customCols[i]}
-                    onChange={e => { const n = [...customCols] as [string,string,string]; n[i] = e.target.value; setCustomCols(n) }}
-                    style={{ ...s.input, marginBottom: 6, fontSize: 12 }}>
-                    <option value="">Col {i + 1}…</option>
-                    {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <div key={i} style={{ marginBottom: 8 }}>
+                    <select value={customCols[i].category}
+                      onChange={e => { const n = [...customCols] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { category: e.target.value, team: '' }; setCustomCols(n) }}
+                      style={{ ...s.input, marginBottom: customCols[i].category === 'team' ? 4 : 0, fontSize: 12 }}>
+                      <option value="">Col {i + 1}…</option>
+                      <option value="team">Teams</option>
+                      {STAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
+                    {customCols[i].category === 'team' && (
+                      <select value={customCols[i].team}
+                        onChange={e => { const n = [...customCols] as [CustomSlot,CustomSlot,CustomSlot]; n[i] = { ...n[i], team: e.target.value }; setCustomCols(n) }}
+                        style={{ ...s.input, fontSize: 12 }}>
+                        <option value="">Select team…</option>
+                        {TEAM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
