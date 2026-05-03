@@ -167,7 +167,7 @@ export async function GET(req: Request) {
 
       const leaderboard = await fetchLeaderboard(numRounds)
       return NextResponse.json(
-        { categories, clubData: {}, allPlayers: Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name })), clubs: [], leaderboard },
+        { categories, clubData: {}, allPlayers: Array.from(nameToId.entries()).map(([name, pid]) => ({ pid, name })), clubs: [], leaderboard },
         { headers: { 'Cache-Control': 'no-store' } }
       )
     }
