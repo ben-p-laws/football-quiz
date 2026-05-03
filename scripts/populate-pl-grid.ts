@@ -87,6 +87,7 @@ const PLAYER_SEASON_TEAM_NORM: Record<string, string> = {
   'QPR':             'Queens Park Rangers',
   'Sheffield Weds':  'Sheffield Wednesday',
   'Brighton':        'Brighton & Hove Albion',
+  'West Brom':       'West Bromwich Albion',
 }
 const normPSTeam = (t: string) => PLAYER_SEASON_TEAM_NORM[t] ?? t
 
