@@ -80,6 +80,16 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
+// Normalize abbreviated names in player_seasons.teams_played_for → full canonical names
+// (which match both pl_season_tables and the puzzle ref fields)
+const PLAYER_SEASON_TEAM_NORM: Record<string, string> = {
+  'Manchester Utd':  'Manchester United',
+  'QPR':             'Queens Park Rangers',
+  'Sheffield Weds':  'Sheffield Wednesday',
+  'Brighton':        'Brighton & Hove Albion',
+}
+const normPSTeam = (t: string) => PLAYER_SEASON_TEAM_NORM[t] ?? t
+
 // Map team names from pl_season_tables → how they appear in player_seasons.teams_played_for
 // Adjust if your data uses different spellings.
 const SEASON_TABLE_TO_PLAYER_SEASON: Record<string, string> = {
@@ -220,7 +230,7 @@ async function buildPlayerData() {
     const year   = row.year_id
     const teams  = String(row.teams_played_for || '')
       .split(',')
-      .map(t => t.trim())
+      .map(t => normPSTeam(t.trim()))
       .filter(t => t && t !== '2 Teams')
 
     // Accumulate yearly totals for Golden Boot/Glove
@@ -232,20 +242,19 @@ async function buildPlayerData() {
       isGk:        prev.isGk || (row.pos === 'GK'),
     })
 
-    // Team seasons
+    // Team seasons (team names already normalised via normPSTeam above)
     if (!teamSeasons.has(name)) teamSeasons.set(name, new Map())
     for (const team of teams) {
       const cur = teamSeasons.get(name)!
       cur.set(team, (cur.get(team) ?? 0) + 1)
     }
 
-    // PL wins / relegations via pl_season_tables join
-    for (const playerTeam of teams) {
-      const tableTeam = playerSeasonNameToTableName.get(playerTeam) ?? playerTeam
-      if (plWinners.get(year) === tableTeam) {
+    // PL wins / relegations — normalised names now match pl_season_tables directly
+    for (const team of teams) {
+      if (plWinners.get(year) === team) {
         playerPLWins.set(name, (playerPLWins.get(name) ?? 0) + 1)
       }
-      if (plRelegated.get(year)?.has(tableTeam)) {
+      if (plRelegated.get(year)?.has(team)) {
         playerRelegations.set(name, (playerRelegations.get(name) ?? 0) + 1)
       }
     }
