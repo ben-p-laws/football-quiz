@@ -102,7 +102,7 @@ export default function LandingPage() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', gap: 3, flex: 1 }}>
               <MCat icon="⚽" label="Most Goals" />
-              <MCat icon="🅰️" label="Most Assists" player="Fàbregas" rank="#2" color="green" />
+              <MCat icon="🅰️" label="Most Assists" player="Fàbregas" rank="#3" color="green" />
               <MCat icon="📊" label="Appearances" player="Milner" rank="#1" color="green" />
               <MCat icon="⚡" label="Pens Scored" />
               <MCat icon="👴" label="Oldest Player" />
@@ -185,8 +185,8 @@ export default function LandingPage() {
             <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
               {[
                 { n: 1, name: 'R. Giggs', val: '162', pct: 100, found: true  },
-                { n: 2, name: 'Fàbregas', val: '111', pct: 68,  found: true  },
-                { n: 3, name: '?',        val: '103', pct: 0,   found: false },
+                { n: 2, name: 'De Bruyne', val: '118', pct: 73,  found: true  },
+                { n: 3, name: '?',        val: '111', pct: 0,   found: false },
               ].map(r => (
                 <div key={r.n} style={{ display: 'flex', alignItems: 'stretch', gap: 4, flex: 1 }}>
                   <span style={{ fontSize: 9, color: '#2a3d5e', width: 10, display: 'flex', alignItems: 'center' }}>{r.n}</span>
