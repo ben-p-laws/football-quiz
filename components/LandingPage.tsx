@@ -209,22 +209,26 @@ export default function LandingPage() {
               { color: '#22c55e' }, null, { color: '#fbbf24' },
             ]
             return (
-              <div style={{ ...s.card, cursor: 'default', opacity: 0.7 }}>
+              <div style={s.card}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+                onClick={() => router.push('/grid')}>
                 <div style={{ padding: '10px 12px 8px' }}>
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Grid</div>
-                  <div style={{ fontSize: 10, color: '#8899bb' }}>Find players for each club combo</div>
+                  <div style={{ fontSize: 10, color: '#8899bb' }}>Find a PL player for each row × column</div>
+                  <span style={s.tag}>Daily · Rarity · Popularity</span>
                 </div>
                 <div style={{ padding: '0 10px 10px', flex: 1 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr', gap: 2 }}>
                     <div />
-                    {cols.map(c => <div key={c} style={{ fontSize: 7, fontWeight: 700, color: '#4a5568', textAlign: 'center' as const, paddingBottom: 2 }}>{c}</div>)}
+                    {cols.map(c => <div key={c} style={{ fontSize: 7, fontWeight: 700, color: '#f97316', textAlign: 'center' as const, paddingBottom: 2 }}>{c}</div>)}
                     {rows.map((row, ri) => (
                       <>
-                        <div key={`r${ri}`} style={{ fontSize: 7, fontWeight: 700, color: '#4a5568', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 3 }}>{row}</div>
+                        <div key={`r${ri}`} style={{ fontSize: 7, fontWeight: 700, color: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 3 }}>{row}</div>
                         {cells.slice(ri * 3, ri * 3 + 3).map((cell, ci) => (
                           <div key={ci} style={{
                             background: cell ? `${cell.color}22` : '#0a0f1e',
-                            border: `1px solid ${cell ? `${cell.color}55` : '#4a5568'}`,
+                            border: `1px solid ${cell ? `${cell.color}55` : '#1e2d4a'}`,
                             borderRadius: 4, minHeight: 26,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
                           }}>
@@ -234,9 +238,6 @@ export default function LandingPage() {
                       </>
                     ))}
                   </div>
-                </div>
-                <div style={{ background: '#1e2d4a', padding: '8px', textAlign: 'center' as const, borderTop: '1px solid #1e2d4a' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: '#8899bb' }}>Coming Soon</span>
                 </div>
               </div>
             )

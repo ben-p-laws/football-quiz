@@ -16,6 +16,7 @@ export default function NavBar() {
     router.prefetch('/minimise')
     router.prefetch('/countdown')
     router.prefetch('/teammates')
+    router.prefetch('/grid')
   }, [router])
 
   const links = [
@@ -26,6 +27,7 @@ export default function NavBar() {
     { label: 'Minimise',   href: '/minimise' },
     { label: 'Countdown',  href: '/countdown' },
     { label: 'Teammates',  href: '/teammates' },
+    { label: 'Grid',       href: '/grid' },
   ]
 
   function navigate(href: string) {
