@@ -182,18 +182,21 @@ export default function LandingPage() {
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>Name the top 10 PL assist makers</div>
             </div>
-            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, justifyContent: 'space-between' }}>
+            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
               {[
-                { n: 1, name: 'R. Giggs',  val: '162', pct: 100, found: true  },
-                { n: 2, name: 'Fàbregas',  val: '111', pct: 68,  found: true  },
-                { n: 3, name: '?',         val: '103', pct: 0,   found: false },
-                { n: 4, name: '?',         val: '98',  pct: 0,   found: false },
-                { n: 5, name: '?',         val: '94',  pct: 0,   found: false },
-                { n: 6, name: '?',         val: '92',  pct: 0,   found: false },
+                { n: 1, name: 'R. Giggs', val: '162', pct: 100, found: true  },
+                { n: 2, name: 'Fàbregas', val: '111', pct: 68,  found: true  },
+                { n: 3, name: '?',        val: '103', pct: 0,   found: false },
               ].map(r => (
-                <div key={r.n} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <span style={{ fontSize: 9, color: '#2a3d5e', width: 10 }}>{r.n}</span>
-                  <div style={{ flex: 1 }}><TBar pct={r.pct} name={r.name} val={r.val} found={r.found} /></div>
+                <div key={r.n} style={{ display: 'flex', alignItems: 'stretch', gap: 4, flex: 1 }}>
+                  <span style={{ fontSize: 9, color: '#2a3d5e', width: 10, display: 'flex', alignItems: 'center' }}>{r.n}</span>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const }}>
+                    <div style={{ flex: 1, background: '#0a0f1e', borderRadius: 6, border: `1px solid ${r.found ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, display: 'flex', alignItems: 'center', padding: '0 10px', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', marginBottom: 3 }}>
+                      {r.found && <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${r.pct}%`, background: 'rgba(34,197,94,0.15)', borderRight: '1px solid rgba(34,197,94,0.5)' }} />}
+                      <span style={{ fontSize: 11, fontWeight: r.found ? 700 : 400, color: r.found ? '#22c55e' : '#8899bb', position: 'relative' }}>{r.found ? r.name : '?'}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: r.found ? '#22c55e' : '#4a5568', position: 'relative' }}>{r.val}</span>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
