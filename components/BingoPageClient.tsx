@@ -317,29 +317,40 @@ export default function BingoPageClient() {
     }
   }
 
-  function levelRecord(lv: Level) {
-    const stats = allStats[lv]
-    if (!stats) return ''
-    if (stats.perfects > 0) return `  ·  ⭐ ×${stats.perfects}`
-    return `  ·  best ${stats.bestScore}/${LEVEL_CFG[lv].gridSize}`
-  }
-
-  function levelDropdown() {
+  function levelCards() {
+    const LEVEL_META: Record<Level, { emoji: string; grid: string; color: string }> = {
+      easy:         { emoji: '🟢', grid: '3×3', color: '#22c55e' },
+      intermediate: { emoji: '🟡', grid: '3×4', color: '#f59e0b' },
+      hard:         { emoji: '🔴', grid: '4×4', color: '#ef4444' },
+    }
     return (
-      <select
-        value={level}
-        onChange={e => switchLevel(e.target.value as Level)}
-        style={{
-          width: '100%', background: '#0a0f1e', border: '1px solid #1e2d4a',
-          borderRadius: 8, padding: '10px 14px', fontSize: 14, fontWeight: 600,
-          color: 'white', cursor: 'pointer', outline: 'none', appearance: 'none',
-          WebkitAppearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%234a5568' strokeWidth='2' fill='none' strokeLinecap='round'/%3E%3C/svg%3E")`,
-          backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center',
-        }}>
-        <option value="easy">{`Easy${levelRecord('easy')}`}</option>
-        <option value="intermediate">{`Intermediate${levelRecord('intermediate')}`}</option>
-        <option value="hard">{`Hard${levelRecord('hard')}`}</option>
-      </select>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        {LEVELS.map(lv => {
+          const cfg  = LEVEL_CFG[lv]
+          const meta = LEVEL_META[lv]
+          const stats = allStats[lv]
+          const active = lv === level
+          return (
+            <button key={lv} onClick={() => switchLevel(lv)}
+              style={{
+                background: active ? 'rgba(220,38,38,0.12)' : '#0a0f1e',
+                border: `2px solid ${active ? '#dc2626' : '#1e2d4a'}`,
+                borderRadius: 10, padding: '12px 8px', cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                transition: 'border-color 0.15s',
+              }}>
+              <div style={{ fontSize: 18 }}>{meta.emoji}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: active ? 'white' : '#cbd5e1' }}>{cfg.label}</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>{meta.grid} · {cfg.skips > 0 ? `${cfg.skips} skip${cfg.skips !== 1 ? 's' : ''}` : 'no skips'}</div>
+              {stats && (
+                <div style={{ fontSize: 10, color: stats.perfects > 0 ? meta.color : '#4a5568', marginTop: 2 }}>
+                  {stats.perfects > 0 ? `⭐ ×${stats.perfects}` : `best ${stats.bestScore}/${cfg.gridSize}`}
+                </div>
+              )}
+            </button>
+          )
+        })}
+      </div>
     )
   }
 
@@ -497,7 +508,7 @@ export default function BingoPageClient() {
         {showLevelPicker && !gameStarted && !gameOver && (
           <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 16px', marginBottom: 16 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>Select difficulty</div>
-            {levelDropdown()}
+            {levelCards()}
           </div>
         )}
 
