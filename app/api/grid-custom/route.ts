@@ -84,8 +84,24 @@ async function getData(): Promise<FullData> {
   const goldenBootWinners    = new Set<string>()
   const career100GoalPlayers = new Map<string, number>()
 
+  // Career goals — independent fetch, only needs name_display + goals
   try {
-    const [statRows, tableRows] = await Promise.all([
+    const goalRows = await fetchAll<{ name_display: string; goals: number }>(
+      supabase, 'player_seasons', 'name_display,goals'
+    )
+    const careerGoals = new Map<string, number>()
+    for (const row of goalRows) {
+      const g = Number(row.goals) || 0
+      if (g > 0) careerGoals.set(row.name_display, (careerGoals.get(row.name_display) ?? 0) + g)
+    }
+    for (const [name, g] of careerGoals) {
+      if (g >= 100) career100GoalPlayers.set(name, g)
+    }
+  } catch { /* goals column unavailable */ }
+
+  // Season-based stats — needs teams_played_for + season + pl_season_tables
+  try {
+    const [seasonRows, tableRows] = await Promise.all([
       fetchAll<{ name_display: string; teams_played_for: string; goals: number; season: string }>(
         supabase, 'player_seasons', 'name_display,teams_played_for,goals,season'
       ),
@@ -101,15 +117,12 @@ async function getData(): Promise<FullData> {
       if (r.position >= 18)  relegKeys.add(`${r.team}:${r.season}`)
     }
 
-    const careerGoals            = new Map<string, number>()
-    const topScorerPerSeason     = new Map<string, { name: string; goals: number }>()
+    const topScorerPerSeason = new Map<string, { name: string; goals: number }>()
 
-    for (const row of statRows) {
+    for (const row of seasonRows) {
       const name   = row.name_display
       const goals  = Number(row.goals) || 0
       const season = row.season ?? ''
-
-      careerGoals.set(name, (careerGoals.get(name) ?? 0) + goals)
 
       const teams = String(row.teams_played_for || '')
         .split(',')
@@ -131,12 +144,7 @@ async function getData(): Promise<FullData> {
     }
 
     for (const [, { name }] of topScorerPerSeason) goldenBootWinners.add(name)
-    for (const [name, g] of careerGoals) {
-      if (g >= 100) career100GoalPlayers.set(name, g)
-    }
-  } catch {
-    // stat enrichment failed; team-only mode still works
-  }
+  } catch { /* season stats unavailable */ }
 
   cachedData = { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, career100GoalPlayers }
   cacheTime = now
