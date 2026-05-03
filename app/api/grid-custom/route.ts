@@ -18,6 +18,7 @@ type FullData = {
   wonPlCounts:          Map<string, number>
   relegated:            Map<string, number>
   goldenBootWinners:    Set<string>
+  goldenGloveWinners:   Set<string>
   career100GoalPlayers: Map<string, number>
 }
 
@@ -93,6 +94,7 @@ async function getData(): Promise<FullData> {
   const wonPlCounts          = new Map<string, number>()
   const relegatedCounts      = new Map<string, number>()
   const goldenBootWinners    = new Set<string>()
+  const goldenGloveWinners   = new Set<string>()
   const career100GoalPlayers = new Map<string, number>()
 
   // Build won_pl counts: how many distinct PL-winning franchises each player played for
@@ -119,54 +121,80 @@ async function getData(): Promise<FullData> {
     }
   } catch { /* goals column unavailable */ }
 
-  // Season-based stats — needs teams_played_for + season + pl_season_tables
+  // Golden Boot — top scorer(s) per season (joint winners handled)
+  try {
+    const bootRows = await fetchAll<{ name_display: string; goals: number; season: string }>(
+      supabase, 'player_seasons', 'name_display,goals,season'
+    )
+    if (bootRows.length > 0 && bootRows[0].season != null) {
+      const maxGoalsPerSeason = new Map<string, number>()
+      for (const row of bootRows) {
+        const g = Number(row.goals) || 0
+        if (row.season && g > 0) {
+          maxGoalsPerSeason.set(row.season, Math.max(maxGoalsPerSeason.get(row.season) ?? 0, g))
+        }
+      }
+      for (const row of bootRows) {
+        const g = Number(row.goals) || 0
+        if (row.season && g > 0 && g === maxGoalsPerSeason.get(row.season)) {
+          goldenBootWinners.add(row.name_display)
+        }
+      }
+    }
+  } catch { /* golden boot unavailable */ }
+
+  // Golden Glove — GK with most clean sheets per season (joint winners handled)
+  try {
+    const gloveRows = await fetchAll<{ name_display: string; clean_sheets: number; season: string }>(
+      supabase, 'player_seasons', 'name_display,clean_sheets,season'
+    )
+    if (gloveRows.length > 0 && gloveRows[0].season != null && gloveRows[0].clean_sheets != null) {
+      const maxCSPerSeason = new Map<string, number>()
+      for (const row of gloveRows) {
+        const cs = Number(row.clean_sheets) || 0
+        if (row.season && cs > 0) {
+          maxCSPerSeason.set(row.season, Math.max(maxCSPerSeason.get(row.season) ?? 0, cs))
+        }
+      }
+      for (const row of gloveRows) {
+        const cs = Number(row.clean_sheets) || 0
+        if (row.season && cs > 0 && cs === maxCSPerSeason.get(row.season)) {
+          goldenGloveWinners.add(row.name_display)
+        }
+      }
+    }
+  } catch { /* golden glove unavailable */ }
+
+  // Relegated — needs teams_played_for + season cross-referenced with pl_season_tables
   try {
     const [seasonRows, tableRows] = await Promise.all([
-      fetchAll<{ name_display: string; teams_played_for: string; goals: number; season: string }>(
-        supabase, 'player_seasons', 'name_display,teams_played_for,goals,season'
+      fetchAll<{ name_display: string; teams_played_for: string; season: string }>(
+        supabase, 'player_seasons', 'name_display,teams_played_for,season'
       ),
       fetchAll<{ team: string; position: number; season: string }>(
         supabase, 'pl_season_tables', 'team,position,season'
       ),
     ])
-
-    const winningKeys = new Set<string>()
-    const relegKeys   = new Set<string>()
-    for (const r of tableRows) {
-      if (r.position === 1)  winningKeys.add(`${r.team}:${r.season}`)
-      if (r.position >= 18)  relegKeys.add(`${r.team}:${r.season}`)
-    }
-
-    const topScorerPerSeason = new Map<string, { name: string; goals: number }>()
-
-    for (const row of seasonRows) {
-      const name   = row.name_display
-      const goals  = Number(row.goals) || 0
-      const season = row.season ?? ''
-
-      const teams = String(row.teams_played_for || '')
-        .split(',')
-        .map(t => normPSTeam(t.trim()))
-        .filter(t => t && t !== '2 Teams')
-
-      for (const team of teams) {
-        if (season) {
-          const key = `${team}:${season}`
-          if (winningKeys.has(key)) wonPlCounts.set(name,     (wonPlCounts.get(name)     ?? 0) + 1)
-          if (relegKeys.has(key))   relegatedCounts.set(name, (relegatedCounts.get(name) ?? 0) + 1)
+    if (seasonRows.length > 0 && seasonRows[0].season != null && tableRows.length > 0) {
+      const relegKeys = new Set<string>()
+      for (const r of tableRows) {
+        if (r.position >= 18) relegKeys.add(`${r.team}:${r.season}`)
+      }
+      for (const row of seasonRows) {
+        const season = row.season ?? ''
+        if (!season) continue
+        const teams = String(row.teams_played_for || '')
+          .split(',').map(t => normPSTeam(t.trim())).filter(t => t && t !== '2 Teams')
+        for (const team of teams) {
+          if (relegKeys.has(`${team}:${season}`)) {
+            relegatedCounts.set(row.name_display, (relegatedCounts.get(row.name_display) ?? 0) + 1)
+          }
         }
       }
-
-      if (season && goals > 0) {
-        const cur = topScorerPerSeason.get(season)
-        if (!cur || goals > cur.goals) topScorerPerSeason.set(season, { name, goals })
-      }
     }
+  } catch { /* relegated unavailable */ }
 
-    for (const [, { name }] of topScorerPerSeason) goldenBootWinners.add(name)
-  } catch { /* season stats unavailable */ }
-
-  cachedData = { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, career100GoalPlayers }
+  cachedData = { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, goldenGloveWinners, career100GoalPlayers }
   cacheTime = now
   return cachedData
 }
@@ -236,7 +264,7 @@ function resolveSlotMap(type: string, ref: string, data: FullData): Map<string, 
     case 'scored_100_goals':
       return data.career100GoalPlayers
     case 'golden_glove':
-      return new Map()
+      return new Map([...data.goldenGloveWinners].map(name => [name, 1]))
     default:
       return new Map()
   }
