@@ -335,16 +335,18 @@ export default function BingoPageClient() {
               style={{
                 background: active ? 'rgba(220,38,38,0.12)' : '#0a0f1e',
                 border: `2px solid ${active ? '#dc2626' : '#1e2d4a'}`,
-                borderRadius: 10, padding: '12px 8px', cursor: 'pointer',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                transition: 'border-color 0.15s',
+                borderRadius: 10, padding: '7px 8px', cursor: 'pointer',
+                display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6,
+                transition: 'border-color 0.15s', width: '100%',
               }}>
-              <div style={{ fontSize: 18 }}>{meta.emoji}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: active ? 'white' : '#cbd5e1' }}>{cfg.label}</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>{meta.grid} · {cfg.skips > 0 ? `${cfg.skips} skip${cfg.skips !== 1 ? 's' : ''}` : 'no skips'}</div>
+              <span style={{ fontSize: 14, lineHeight: 1 }}>{meta.emoji}</span>
+              <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: active ? 'white' : '#cbd5e1', lineHeight: 1.2 }}>{cfg.label}</div>
+                <div style={{ fontSize: 9, color: '#8899bb', lineHeight: 1.2 }}>{meta.grid} · {cfg.skips > 0 ? `${cfg.skips} skip${cfg.skips !== 1 ? 's' : ''}` : 'no skips'}</div>
+              </div>
               {stats && (
-                <div style={{ fontSize: 10, color: stats.perfects > 0 ? meta.color : '#4a5568', marginTop: 2 }}>
-                  {stats.perfects > 0 ? `⭐ ×${stats.perfects}` : `best ${stats.bestScore}/${cfg.gridSize}`}
+                <div style={{ fontSize: 9, color: stats.perfects > 0 ? meta.color : '#4a5568', textAlign: 'right', flexShrink: 0 }}>
+                  {stats.perfects > 0 ? `⭐×${stats.perfects}` : `${stats.bestScore}/${cfg.gridSize}`}
                 </div>
               )}
             </button>
