@@ -91,50 +91,60 @@ const s = {
 
 const ROW1 = ['F', 'O', 'O', 'T', 'Y']
 const ROW2 = ['C', 'O', 'U', 'N', 'T', 'D', 'O', 'W', 'N']
-const TOTAL_LETTERS = ROW1.length + ROW2.length
 
 function LoadingAnimation() {
-  const [shown, setShown] = useState<number[]>([])
+  const [d1, setD1] = useState<string[]>(() => [...ROW1].sort(() => Math.random() - 0.5))
+  const [d2, setD2] = useState<string[]>(() => [...ROW2].sort(() => Math.random() - 0.5))
+  const [solved, setSolved] = useState<number[]>([])
 
   useEffect(() => {
     let cancelled = false
     const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     async function cycle() {
       while (!cancelled) {
-        setShown([])
-        await delay(300)
-        for (let i = 0; i < TOTAL_LETTERS; i++) {
+        setD1([...ROW1].sort(() => Math.random() - 0.5))
+        setD2([...ROW2].sort(() => Math.random() - 0.5))
+        setSolved([])
+        await delay(600)
+        for (let i = 0; i < ROW1.length; i++) {
           if (cancelled) return
-          setShown(prev => [...prev, i])
-          await delay(150)
+          setD1(prev => { const n = [...prev]; n[i] = ROW1[i]; return n })
+          setSolved(prev => [...prev, i])
+          await delay(200)
         }
-        await delay(800)
+        for (let i = 0; i < ROW2.length; i++) {
+          if (cancelled) return
+          setD2(prev => { const n = [...prev]; n[i] = ROW2[i]; return n })
+          setSolved(prev => [...prev, ROW1.length + i])
+          await delay(160)
+        }
+        await delay(900)
       }
     }
     cycle()
     return () => { cancelled = true }
   }, [])
 
-  const tile = (letter: string, idx: number) => (
-    <div key={idx} style={{
-      width: 28, height: 36, borderRadius: 6,
-      background: shown.includes(idx) ? '#dc2626' : '#111827',
-      border: `1px solid ${shown.includes(idx) ? '#dc2626' : '#1e2d4a'}`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      fontSize: 15, fontWeight: 800, color: shown.includes(idx) ? 'white' : 'transparent',
-      transition: 'all 0.15s ease',
-    }}>{letter}</div>
-  )
+  const tile = (letter: string, idx: number) => {
+    const ok = solved.includes(idx)
+    return (
+      <div key={idx} style={{
+        width: 28, height: 36, borderRadius: 6,
+        background: ok ? '#dc2626' : '#111827',
+        border: `1px solid ${ok ? '#dc2626' : '#4a5568'}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 15, fontWeight: 800,
+        color: ok ? 'white' : '#4a5568',
+        transition: 'all 0.18s ease',
+      }}>{letter}</div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {ROW1.map((l, i) => tile(l, i))}
-        </div>
-        <div style={{ display: 'flex', gap: 4 }}>
-          {ROW2.map((l, i) => tile(l, ROW1.length + i))}
-        </div>
+        <div style={{ display: 'flex', gap: 4 }}>{d1.map((l, i) => tile(l, i))}</div>
+        <div style={{ display: 'flex', gap: 4 }}>{d2.map((l, i) => tile(l, ROW1.length + i))}</div>
       </div>
       <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Countdown</p>
     </div>

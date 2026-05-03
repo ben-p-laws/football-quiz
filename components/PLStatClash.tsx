@@ -219,14 +219,14 @@ function LeaderboardPanel({ leaderboard, currentDisplayName }: { leaderboard: Lb
   )
 }
 
-const STAT_LABELS = ['Goals', 'Assists', 'Appearances', 'Clean Sheets', 'Yellow Cards']
-const STAT_RANGES: Record<string, [number, number]> = {
-  'Goals':        [5,   350],
-  'Assists':      [3,   200],
-  'Appearances':  [20,  800],
-  'Clean Sheets': [10,  250],
-  'Yellow Cards': [5,   120],
+const STAT_MAX: Record<string, number> = {
+  'Goals':        260,
+  'Assists':      162,
+  'Appearances':  672,
+  'Clean Sheets': 195,
+  'Yellow Cards': 88,
 }
+const STAT_LABELS = Object.keys(STAT_MAX)
 
 function LoadingAnimation() {
   const [label, setLabel] = useState(STAT_LABELS[0])
@@ -239,18 +239,16 @@ function LoadingAnimation() {
       let idx = 0
       while (!cancelled) {
         const lbl = STAT_LABELS[idx % STAT_LABELS.length]
-        const [lo, hi] = STAT_RANGES[lbl]
-        const target = lo + Math.floor(Math.random() * (hi - lo + 1))
+        const max = STAT_MAX[lbl]
         setLabel(lbl)
         setCount(0)
-        const steps = 24
-        for (let step = 0; step <= steps; step++) {
+        for (let step = 0; step < 20; step++) {
           if (cancelled) return
-          setCount(Math.round((target / steps) * step))
-          await delay(45)
+          setCount(Math.floor(Math.random() * max))
+          await delay(55)
         }
-        setCount(target)
-        await delay(700)
+        setCount(max)
+        await delay(750)
         idx++
       }
     }
