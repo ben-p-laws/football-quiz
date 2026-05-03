@@ -199,9 +199,11 @@ const pageOuter: React.CSSProperties = {
 }
 const pageInner: React.CSSProperties = { padding: '24px 16px 48px', maxWidth: 520, margin: '0 auto' }
 
-const DEMO_SHIRTS = ['Arsenal', 'Chelsea', 'Liverpool', 'Manchester City']
-
 function LoadingAnimation() {
+  const allClubs = Object.keys(GROUP_STYLE)
+  const [clubs, setClubs] = useState<string[]>(() =>
+    [...allClubs].sort(() => Math.random() - 0.5).slice(0, 4)
+  )
   const [lit, setLit] = useState<number[]>([])
 
   useEffect(() => {
@@ -209,7 +211,9 @@ function LoadingAnimation() {
     const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     async function cycle() {
       while (!cancelled) {
-        const order = [0, 1, 2, 3].sort(() => Math.random() - 0.5)
+        const picked = [...allClubs].sort(() => Math.random() - 0.5).slice(0, 4)
+        const order  = [0, 1, 2, 3].sort(() => Math.random() - 0.5)
+        setClubs(picked)
         setLit([])
         await delay(300)
         for (const idx of order) {
@@ -227,7 +231,7 @@ function LoadingAnimation() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        {DEMO_SHIRTS.map((club, i) => (
+        {clubs.map((club, i) => (
           <div key={i} style={{ padding: 10, borderRadius: 10, background: '#111827', border: `1px solid ${lit.includes(i) ? GROUP_STYLE[club]?.bg ?? '#dc2626' : '#1e2d4a'}`, transition: 'border-color 0.2s ease', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Shirt club={lit.includes(i) ? club : undefined} />
           </div>

@@ -89,7 +89,9 @@ const s = {
   input: { background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 15, color: 'white', outline: 'none', width: '100%', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties,
 }
 
-const COUNTDOWN_LETTERS = ['F', 'O', 'O', 'T', 'B', 'A', 'L', 'L']
+const ROW1 = ['F', 'O', 'O', 'T', 'Y']
+const ROW2 = ['C', 'O', 'U', 'N', 'T', 'D', 'O', 'W', 'N']
+const TOTAL_LETTERS = ROW1.length + ROW2.length
 
 function LoadingAnimation() {
   const [shown, setShown] = useState<number[]>([])
@@ -101,10 +103,10 @@ function LoadingAnimation() {
       while (!cancelled) {
         setShown([])
         await delay(300)
-        for (let i = 0; i < COUNTDOWN_LETTERS.length; i++) {
+        for (let i = 0; i < TOTAL_LETTERS; i++) {
           if (cancelled) return
           setShown(prev => [...prev, i])
-          await delay(180)
+          await delay(150)
         }
         await delay(800)
       }
@@ -113,21 +115,26 @@ function LoadingAnimation() {
     return () => { cancelled = true }
   }, [])
 
+  const tile = (letter: string, idx: number) => (
+    <div key={idx} style={{
+      width: 28, height: 36, borderRadius: 6,
+      background: shown.includes(idx) ? '#dc2626' : '#111827',
+      border: `1px solid ${shown.includes(idx) ? '#dc2626' : '#1e2d4a'}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontSize: 15, fontWeight: 800, color: shown.includes(idx) ? 'white' : 'transparent',
+      transition: 'all 0.15s ease',
+    }}>{letter}</div>
+  )
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
-      <div style={{ display: 'flex', gap: 5 }}>
-        {COUNTDOWN_LETTERS.map((letter, i) => (
-          <div key={i} style={{
-            width: 34, height: 42, borderRadius: 6,
-            background: shown.includes(i) ? '#dc2626' : '#111827',
-            border: `1px solid ${shown.includes(i) ? '#dc2626' : '#1e2d4a'}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 17, fontWeight: 800, color: shown.includes(i) ? 'white' : 'transparent',
-            transition: 'all 0.15s ease',
-          }}>
-            {letter}
-          </div>
-        ))}
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {ROW1.map((l, i) => tile(l, i))}
+        </div>
+        <div style={{ display: 'flex', gap: 4 }}>
+          {ROW2.map((l, i) => tile(l, ROW1.length + i))}
+        </div>
       </div>
       <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Countdown</p>
     </div>

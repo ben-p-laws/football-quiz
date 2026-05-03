@@ -219,38 +219,51 @@ function LeaderboardPanel({ leaderboard, currentDisplayName }: { leaderboard: Lb
   )
 }
 
+const STAT_DEMOS = [
+  { label: 'Goals',        target: 260 },
+  { label: 'Assists',      target: 162 },
+  { label: 'Appearances',  target: 672 },
+  { label: 'Clean Sheets', target: 195 },
+  { label: 'Yellow Cards', target: 88  },
+]
+
 function LoadingAnimation() {
-  const [vals, setVals] = useState([0, 0])
+  const [statIdx, setStatIdx] = useState(0)
+  const [count, setCount]     = useState(0)
 
   useEffect(() => {
     let cancelled = false
     const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     async function cycle() {
+      let idx = 0
       while (!cancelled) {
-        setVals([0, 0])
-        await delay(300)
-        const v1 = 40 + Math.floor(Math.random() * 50)
-        const v2 = 40 + Math.floor(Math.random() * 50)
-        setVals([v1, v2])
-        await delay(1400)
+        const stat = STAT_DEMOS[idx % STAT_DEMOS.length]
+        setStatIdx(idx % STAT_DEMOS.length)
+        setCount(0)
+        const steps = 24
+        for (let step = 0; step <= steps; step++) {
+          if (cancelled) return
+          setCount(Math.round((stat.target / steps) * step))
+          await delay(45)
+        }
+        setCount(stat.target)
+        await delay(700)
+        idx++
       }
     }
     cycle()
     return () => { cancelled = true }
   }, [])
 
+  const stat = STAT_DEMOS[statIdx]
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 100 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 48, height: vals[0], background: '#dc2626', borderRadius: '4px 4px 0 0', transition: 'height 0.9s cubic-bezier(0.4,0,0.2,1)' }} />
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', letterSpacing: '0.05em' }}>P1</div>
-        </div>
-        <div style={{ fontSize: 13, fontWeight: 800, color: '#4a5568', paddingBottom: 26 }}>VS</div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-          <div style={{ width: 48, height: vals[1], background: '#1d4ed8', borderRadius: '4px 4px 0 0', transition: 'height 0.9s cubic-bezier(0.4,0,0.2,1)' }} />
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#1d4ed8', letterSpacing: '0.05em' }}>P2</div>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center', minWidth: 160 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+        {stat.label}
+      </div>
+      <div style={{ fontSize: 64, fontWeight: 800, color: '#dc2626', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+        {count}
       </div>
       <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Stat Clash</p>
     </div>

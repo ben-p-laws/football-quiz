@@ -107,17 +107,27 @@ const s = {
   } as React.CSSProperties,
 }
 
-const LOADING_CATS  = ['Most Goals', 'Most Assists', 'Appearances', 'Yellow Cards']
-const LOADING_NAMES = ['Salah', 'De Bruyne', 'Scholes', 'Vieira']
+const LOADING_CATS = ['Most Goals', 'Most Assists', 'Appearances', 'Yellow Cards']
+const PLAYER_POOL  = [
+  'Salah', 'De Bruyne', 'Lampard', 'Gerrard', 'Henry', 'Fabregas',
+  'Kompany', 'Van Dijk', 'Aguero', 'Bergkamp', 'Ferdinand', 'Vidic',
+  'Firmino', 'Mane', 'Sterling', 'Silva', 'Cahill', 'Suarez', 'Torres',
+  'Carragher', 'Adams', 'Keown', 'Pires', 'Ljungberg', 'Rooney', 'Terry',
+  'Drogba', 'Cole', 'Heskey', 'Fowler', 'Scholes', 'Neville', 'Giggs',
+  'Cantona', 'Shearer', 'Fowler', 'Sheringham', 'Wright', 'Redknapp',
+]
 
 function LoadingAnimation() {
-  const [filled, setFilled] = useState<number[]>([])
+  const [filled, setFilled]   = useState<number[]>([])
+  const [names, setNames]     = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
     const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
     async function cycle() {
       while (!cancelled) {
+        const pick = [...PLAYER_POOL].sort(() => Math.random() - 0.5).slice(0, 4)
+        setNames(pick)
         setFilled([])
         await delay(400)
         for (let i = 0; i < 4; i++) {
@@ -139,7 +149,7 @@ function LoadingAnimation() {
           <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 8, background: '#111827', border: `1px solid ${filled.includes(i) ? '#dc2626' : '#1e2d4a'}`, transition: 'border-color 0.25s ease' }}>
             <div style={{ fontSize: 10, color: '#8899bb', flex: 1 }}>{cat}</div>
             <div style={{ fontSize: 11, fontWeight: 700, color: filled.includes(i) ? 'white' : '#1e2d4a', transition: 'color 0.25s ease', minWidth: 64, textAlign: 'right' }}>
-              {filled.includes(i) ? LOADING_NAMES[i] : '—'}
+              {filled.includes(i) ? names[i] : '—'}
             </div>
           </div>
         ))}
