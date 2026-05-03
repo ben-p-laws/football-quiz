@@ -242,12 +242,13 @@ function LoadingAnimation() {
         const max = STAT_MAX[lbl]
         setLabel(lbl)
         setCount(0)
+        const final = 1 + Math.floor(Math.random() * max)
         for (let step = 0; step < 20; step++) {
           if (cancelled) return
           setCount(Math.floor(Math.random() * max))
           await delay(55)
         }
-        setCount(max)
+        setCount(final)
         await delay(750)
         idx++
       }
