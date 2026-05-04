@@ -84,24 +84,26 @@ function fmtNat(raw: string): string {
   return raw
 }
 
-function makeAnswer(p: PlayerAgg, value: number): Answer {
+function makeAnswer(p: PlayerAgg, value: number, fmtVal?: (v: number) => string): Answer {
   return {
     player:      lastWord(p.name),
     display:     p.name,
-    value:       value.toLocaleString(),
+    value:       fmtVal ? fmtVal(value) : value.toLocaleString(),
     rawValue:    value,
     nationality: fmtNat(mostCommon(p.natFreq)),
     team:        mostCommon(p.teamFreq),
   }
 }
 
-function top10(entries: Array<{ p: PlayerAgg; v: number }>, minV = 1): Answer[] {
+function top10(entries: Array<{ p: PlayerAgg; v: number }>, minV = 1, fmtVal?: (v: number) => string): Answer[] {
   return entries
     .filter(x => x.v >= minV)
     .sort((a, b) => b.v - a.v)
     .slice(0, 10)
-    .map(x => makeAnswer(x.p, x.v))
+    .map(x => makeAnswer(x.p, x.v, fmtVal))
 }
+
+const fmtP90 = (v: number) => v.toFixed(2)
 
 let cache: { data: any; time: number } | null = null
 const CACHE_TTL = 3_600_000
@@ -158,7 +160,7 @@ async function buildData() {
   quizzes.push({ key: 'all_assists',      label: 'All-Time Assists',      description: 'Top 10 PL assist providers of all time',              unit: 'assists',      answers: top10(all.map(p => ({ p, v: p.assists     }))) })
   quizzes.push({ key: 'all_clean_sheets', label: 'All-Time Clean Sheets', description: 'Top 10 PL goalkeepers by career clean sheets',        unit: 'clean sheets', answers: top10(all.map(p => ({ p, v: p.cleanSheets }))) })
   quizzes.push({ key: 'all_yellow_cards', label: 'All-Time Yellow Cards', description: 'Top 10 most-booked PL players of all time',           unit: 'yellow cards', answers: top10(all.map(p => ({ p, v: p.yellowCards }))) })
-  quizzes.push({ key: 'all_goals_p90',   label: 'All-Time Goals per 90', description: 'Top 10 PL goals-per-90 (min. 5 goals)',               unit: 'per 90',       answers: top10(all.filter(p => p.goals >= 5).map(p => ({ p, v: Math.round((p.goals / p.games) * 90 * 100) / 100 })), 0.1) })
+  quizzes.push({ key: 'all_goals_p90',   label: 'All-Time Goals per 90', description: 'Top 10 PL goals-per-90 (min. 5 goals)',               unit: 'per 90',       answers: top10(all.filter(p => p.goals >= 5 && p.games > 0).map(p => ({ p, v: p.goals / p.games })), 0.01, fmtP90) })
 
   // ── By nationality ────────────────────────────────────────────────────────
   const NATIONALITIES: { nat: string; label: string }[] = [
@@ -260,10 +262,10 @@ export async function GET(req: Request) {
           else if (customStat === 'assists')       v = p.assists
           else if (customStat === 'clean_sheets')  v = p.cleanSheets
           else if (customStat === 'yellow_cards')  v = p.yellowCards
-          else if (customStat === 'goals_p90')     v = p.goals >= 5 ? Math.round((p.goals / p.games) * 90 * 100) / 100 : 0
+          else if (customStat === 'goals_p90')     v = (p.goals >= 5 && p.games > 0) ? p.goals / p.games : 0
           else                                     v = p.games
           return { p, v }
-        }))
+        }), 0, customStat === 'goals_p90' ? fmtP90 : undefined)
       }
 
       const statLabel = customStat === 'goals' ? 'Goals' : customStat === 'assists' ? 'Assists'
