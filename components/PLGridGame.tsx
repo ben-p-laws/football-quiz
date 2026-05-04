@@ -303,10 +303,6 @@ export default function PLGridGame() {
   const [cellAnswers, setCellAnswers]         = useState<Record<string, Answer[]>>({})
   const [overlayCell, setOverlayCell]         = useState<string | null>(null)
   const [overlayPos, setOverlayPos]           = useState<{ top: number } | null>(null)
-  const [betterCell, setBetterCell]           = useState<string | null>(null)
-  const [betterPos, setBetterPos]             = useState<{ top: number } | null>(null)
-  const [betterList, setBetterList]           = useState<Array<{ name: string; rank: number; score: number }>>([])
-  const [betterLoading, setBetterLoading]     = useState(false)
   const [leaderboard, setLeaderboard]         = useState<{ rarity: LBEntry[]; popularity: LBEntry[]; combined: LBEntry[] }>({ rarity: [], popularity: [], combined: [] })
   const [lbTab, setLbTab]                     = useState<'rarity' | 'popularity' | 'combined'>('combined')
   const [userName, setUserName]               = useState('')
@@ -640,7 +636,6 @@ export default function PLGridGame() {
     if (gridMode !== 'custom') localStorage.setItem(SEEN_KEY(activeDate), 'true')
     setShowSkipConfirm(false)
     setActiveCell(null)
-    setBetterCell(null)
   }
 
   // ── Overlay toggle ─────────────────────────────────────────────────────────
@@ -654,41 +649,6 @@ export default function PLGridGame() {
     const gridRect = grid.getBoundingClientRect()
     setOverlayCell(key)
     setOverlayPos({ top: cellRect.bottom - gridRect.top + 4 })
-  }
-
-  // ── Better answers panel ───────────────────────────────────────────────────
-  async function openBetterAnswers(key: string, r: number, c: number, currentRank: number, e: React.MouseEvent) {
-    if (betterCell === key) { setBetterCell(null); setBetterPos(null); return }
-    const cell = e.currentTarget as HTMLElement
-    const grid = gridRef.current
-    if (!grid) return
-    const cellRect = cell.getBoundingClientRect()
-    const gridRect = grid.getBoundingClientRect()
-    setBetterCell(key)
-    setBetterPos({ top: cellRect.bottom - gridRect.top + 4 })
-    setBetterList([])
-    setBetterLoading(true)
-
-    if (gridMode === 'custom') {
-      const all = customCells[key] || []
-      const better = all
-        .filter(a => (mode === 'rarity' ? a.rank : a.popularity_rank) < currentRank)
-        .sort((a, b) => (mode === 'rarity' ? a.rank - b.rank : a.popularity_rank - b.popularity_rank))
-      setBetterList(better.map(a => ({ name: a.player_name, rank: mode === 'rarity' ? a.rank : a.popularity_rank, score: mode === 'rarity' ? a.score : a.popularity_score })))
-    } else if (puzzle) {
-      const rankCol  = mode === 'rarity' ? 'rank'  : 'popularity_rank'
-      const scoreCol = mode === 'rarity' ? 'score' : 'popularity_score'
-      const { data } = await supabase
-        .from('pl_grid_cell_answers')
-        .select('player_name, rank, popularity_rank, score, popularity_score')
-        .eq('puzzle_id', puzzle.id)
-        .eq('row_index', r)
-        .eq('col_index', c)
-        .lt(rankCol, currentRank)
-        .order(rankCol, { ascending: true })
-      setBetterList((data || []).map((d: any) => ({ name: d.player_name, rank: d[rankCol], score: d[scoreCol] })))
-    }
-    setBetterLoading(false)
   }
 
   // ── Play another (random daily puzzle) ────────────────────────────────────
@@ -1003,20 +963,18 @@ export default function PLGridGame() {
                     const notReady = gridMode === 'custom' && !customReady
                     if (notReady) { bg = '#080d18'; brd = '#0f1828' }
 
-                    const canShowBetter = guess?.valid && guess.rank > 1 && !answersSeen
                     return (
                       <button key={`cell${ri}_${ci}`}
                         onClick={(e) => {
                           if (notReady) return
                           if (answersSeen) { openOverlay(key, e); return }
-                          if (canShowBetter) { openBetterAnswers(key, ri, ci, guess!.rank, e); return }
                           if (currentDone || guess) return
                           setActiveCell(active ? null : { r: ri, c: ci })
                           setSearch(''); setResults([])
                         }}
                         style={{
                           background: bg, border: `2px solid ${brd}`, borderRadius: 8,
-                          minHeight: 64, cursor: notReady ? 'default' : (answersSeen || canShowBetter) ? 'pointer' : (currentDone || guess ? 'default' : 'pointer'),
+                          minHeight: 64, cursor: notReady ? 'default' : answersSeen ? 'pointer' : (currentDone || guess ? 'default' : 'pointer'),
                           display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                           padding: '6px 4px', gap: 2, transition: 'border-color 0.15s', position: 'relative',
                         }}>
@@ -1047,9 +1005,6 @@ export default function PLGridGame() {
                                   ? `${scoreLabel(guess.score, mode)} · ${guess.score}`
                                   : `+${INVALID_SCORE} pts`}
                               </span>
-                            )}
-                            {canShowBetter && (
-                              <span style={{ fontSize: 8, color: '#8899bb' }}>Better Answers</span>
                             )}
                             {answersSeen && (
                               <span style={{ fontSize: 9, color: '#8899bb' }}>tap ▼</span>
@@ -1134,45 +1089,6 @@ export default function PLGridGame() {
                 </div>
               )
             })()}
-          </div>
-        )}
-
-        {/* ── Better answers panel ── */}
-        {betterCell && betterPos && (
-          <div style={{
-            position: 'absolute', top: betterPos.top, left: '50%', transform: 'translateX(-50%)',
-            width: 220,
-            background: '#111827', border: '1px solid #2a3d5e', borderRadius: 8,
-            padding: '8px 10px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-              <div style={{ fontSize: 10, color: '#f97316', fontWeight: 700 }}>
-                {mode === 'rarity' ? '🎯 Rarer picks' : '⭐ More popular picks'}
-              </div>
-              <button onClick={() => { setBetterCell(null); setBetterPos(null) }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899bb', fontSize: 12, padding: 0, lineHeight: 1 }}>
-                ✕
-              </button>
-            </div>
-            {betterLoading && <div style={{ fontSize: 11, color: '#8899bb' }}>Loading...</div>}
-            {!betterLoading && betterList.length === 0 && (
-              <div style={{ fontSize: 11, color: '#8899bb' }}>Already the best!</div>
-            )}
-            {!betterLoading && betterList.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {betterList.map((a) => {
-                  const c = scoreColor(a.rank)
-                  return (
-                    <div key={a.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
-                      <span style={{ fontSize: 11, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
-                      <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 8, padding: '1px 6px', background: c.border, color: c.text, flexShrink: 0 }}>
-                        {a.score}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
         )}
 
