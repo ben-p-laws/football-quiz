@@ -105,6 +105,21 @@ function resolveSlot(type: string, ref: string | null): Slot {
   return slots[type] ?? { type, id: type, name: type, tooltip: type }
 }
 
+// ── scoreLabel ───────────────────────────────────────────────────────────────
+function scoreLabel(score: number, mode: 'rarity' | 'popularity'): string {
+  if (mode === 'rarity') {
+    if (score <= 2)  return 'Ultra Rare'
+    if (score <= 6)  return 'Rare'
+    if (score <= 12) return 'Average'
+    return 'Common'
+  } else {
+    if (score <= 2)  return 'Top Pick'
+    if (score <= 6)  return 'Popular'
+    if (score <= 12) return 'Average'
+    return 'Obscure'
+  }
+}
+
 // ── scoreColor ───────────────────────────────────────────────────────────────
 function scoreColor(rank: number) {
   const pct   = 1 - Math.min(rank - 1, 19) / 19
@@ -986,7 +1001,9 @@ export default function PLGridGame() {
                                 background: guess.valid ? colors!.border : '#7f1d1d',
                                 color:      guess.valid ? colors!.text  : '#fca5a5',
                               }}>
-                                {guess.valid ? `${guess.score} pts` : `+${INVALID_SCORE} pts`}
+                                {guess.valid
+                                  ? `${scoreLabel(guess.score, mode)} · ${guess.score}`
+                                  : `+${INVALID_SCORE} pts`}
                               </span>
                             )}
                             {answersSeen && (
