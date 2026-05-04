@@ -17,28 +17,23 @@ function pickDaily(quizzes: Quiz[]): Quiz {
   return pool[Math.floor(seed / units.length) % pool.length]
 }
 
-function pickFromBuckets(quizzes: Quiz[]): Quiz {
-  // Equal chance of any category, then uniform within that category's quizzes
-  const byUnit: Record<string, Quiz[]> = {}
-  for (const q of quizzes) {
-    if (!byUnit[q.unit]) byUnit[q.unit] = []
-    byUnit[q.unit].push(q)
-  }
-  const units = Object.keys(byUnit)
-  const unit  = units[Math.floor(Math.random() * units.length)]
-  const pool  = byUnit[unit]
-  return pool[Math.floor(Math.random() * pool.length)]
-}
-
 function pickRandom(quizzes: Quiz[]): Quiz {
-  const allTime     = quizzes.filter(q => q.type === 'alltime')
-  const clubs       = quizzes.filter(q => q.type === 'club')
-  const nats        = quizzes.filter(q => q.type === 'nationality')
+  // Step 1: pick category equally across all 6 — guarantees yellow cards/per90 get fair share
+  const UNITS = ['apps', 'goals', 'assists', 'clean sheets', 'yellow cards', 'per 90']
+  const unit  = UNITS[Math.floor(Math.random() * UNITS.length)]
+  const pool  = quizzes.filter(q => q.unit === unit)
+  if (!pool.length) return quizzes[Math.floor(Math.random() * quizzes.length)]
+
+  // Step 2: within that category apply 20/40/40 scope weighting
+  const allTime = pool.filter(q => q.type === 'alltime')
+  const clubs   = pool.filter(q => q.type === 'club')
+  const nats    = pool.filter(q => q.type === 'nationality')
 
   const r = Math.random()
-  if (r < 0.2)       return pickFromBuckets(allTime)   // 20% all-time
-  else if (r < 0.6)  return pickFromBuckets(clubs)     // 40% club
-  else               return pickFromBuckets(nats)       // 40% nationality
+  if (r < 0.2 && allTime.length) return allTime[Math.floor(Math.random() * allTime.length)]
+  if (r < 0.6 && clubs.length)   return clubs[Math.floor(Math.random() * clubs.length)]
+  if (nats.length)                return nats[Math.floor(Math.random() * nats.length)]
+  return pool[Math.floor(Math.random() * pool.length)]
 }
 
 function normalize(str: string) {
