@@ -141,7 +141,7 @@ export default function LandingPage() {
           onClick={() => router.push('/bingo')}>
           <div style={s.cardHead}>
             <div style={s.cardTitle}>Bingo</div>
-            <div style={s.cardDesc}>Fill the 3×3 PL achievements grid</div>
+            <div style={s.cardDesc}>Fill the achievement grid · easy, intermediate and hard modes</div>
           </div>
           <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridAutoRows: '1fr', gap: 4, flex: 1 }}>
