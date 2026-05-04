@@ -282,11 +282,23 @@ export default function LandingPage() {
               <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their PL teammates</div>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 10 }}>
-                <TShirt bg="#C8102E" label="Gerrard"   revealed={true} />
-                <TShirt bg="#6CABDD" label="De Bruyne" revealed={true} />
-                <TShirt bg="#034694" label="Lampard"   revealed={true} />
-                <TShirt bg="#111827" label="?"         revealed={false} />
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: '6px 14px' }}>
+                {([
+                  { bg: '#C8102E', label: 'Gerrard',    revealed: true  },
+                  { bg: '#6CABDD', label: 'De Bruyne',  revealed: true  },
+                  { bg: '#034694', label: 'Lampard',    revealed: true  },
+                  { bg: '#111827', label: '?',          revealed: false },
+                ] as const).map(({ bg, label, revealed }) => (
+                  <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <svg viewBox="0 0 100 100" width="30" height="30" style={{ display: 'block' }}>
+                      <path d={SHIRT_PATH}
+                        fill={revealed ? bg : '#111827'} fillOpacity={revealed ? 0.6 : 1}
+                        stroke={revealed ? bg : '#2a3d5e'} strokeOpacity={revealed ? 0.9 : 1}
+                        strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+                    </svg>
+                    <span style={{ fontSize: 8, fontWeight: 700, color: revealed ? '#cbd5e1' : '#4a5568', whiteSpace: 'nowrap' }}>{revealed ? label : '?'}</span>
+                  </div>
+                ))}
               </div>
             </div>
             <div style={s.ctaSm}><span style={s.ctaText}>Play Teammates →</span></div>
