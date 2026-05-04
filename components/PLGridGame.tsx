@@ -410,6 +410,17 @@ export default function PLGridGame() {
     load()
   }, [activeDate, loadTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Auto-enter custom mode when no daily puzzle available ─────────────────
+  useEffect(() => {
+    if (!loading && gridMode === 'daily' && (error || !puzzle)) {
+      setGridMode('custom')
+      setCustomRows([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
+      setCustomCols([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
+      setCustomCells({})
+      setCustomReady(false)
+    }
+  }, [loading, error, puzzle]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Load answers when revealed ─────────────────────────────────────────────
   useEffect(() => {
     if (!answersSeen) return
@@ -706,20 +717,10 @@ export default function PLGridGame() {
                             customCols.every(s => s.category && (s.category !== 'team' || s.team))
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (loading) return (
+  if (loading || (gridMode === 'daily' && (error || !puzzle))) return (
     <div style={s.page}>
       <NavBar />
       <LoadingAnimation />
-    </div>
-  )
-
-  if (gridMode === 'daily' && (error || !puzzle)) return (
-    <div style={s.page}>
-      <NavBar />
-      <div style={{ padding: '60px 16px', textAlign: 'center' }}>
-        <div style={{ fontSize: 14, color: '#8899bb', marginBottom: 8 }}>No puzzle available today.</div>
-        <div style={{ fontSize: 12, color: '#4a5568' }}>Check back soon!</div>
-      </div>
     </div>
   )
 
