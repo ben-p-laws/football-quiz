@@ -308,7 +308,6 @@ function LoadingAnimation() {
         const example = cfg.examples[Math.floor(Math.random() * cfg.examples.length)]
         setLabel(cfg.label)
         setCount(0)
-        setBestPlayer(null)
         for (let step = 0; step < 20; step++) {
           if (cancelled) return
           setCount(Math.floor(Math.random() * cfg.max))
