@@ -409,7 +409,7 @@ export default function TenableQuiz() {
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
           {/* Mode controls — Grid style */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' as const, alignItems: 'center', justifyContent: 'center' }}>
             {!statsLoading && activeTab !== 'custom' && (
               <select
                 value={selectedDate}
@@ -433,11 +433,9 @@ export default function TenableQuiz() {
 
           {/* Quiz label */}
           {(activeTab === 'daily' || activeTab === 'random') && quiz && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap' as const, gap: 8 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 800, color: 'white', marginBottom: 1 }}>{quiz.label}</div>
-                <div style={{ fontSize: 11, color: '#8899bb' }}>{quiz.description}</div>
-              </div>
+            <div style={{ textAlign: 'center' as const }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: 'white', marginBottom: 1 }}>{quiz.label}</div>
+              <div style={{ fontSize: 11, color: '#8899bb', marginBottom: activeTab === 'random' ? 8 : 0 }}>{quiz.description}</div>
               {activeTab === 'random' && (
                 <button onClick={newRandom}
                   style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 12px', fontSize: 11, color: '#8899bb', cursor: 'pointer', fontFamily: 'inherit' }}>
