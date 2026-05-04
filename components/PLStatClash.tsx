@@ -294,9 +294,8 @@ const STAT_CFG: { label: string; unit: string; max: number; examples: { name: st
 ]
 
 function LoadingAnimation() {
-  const [label, setLabel]           = useState(STAT_CFG[0].label)
-  const [count, setCount]           = useState(0)
-  const [bestPlayer, setBestPlayer] = useState<{ name: string; value: number; unit: string } | null>(null)
+  const [label, setLabel] = useState(STAT_CFG[0].label)
+  const [count, setCount] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -316,7 +315,6 @@ function LoadingAnimation() {
           await delay(55)
         }
         setCount(example.value)
-        setBestPlayer({ name: example.name, value: example.value, unit: cfg.unit })
         await delay(1200)
         idx++
       }
@@ -332,16 +330,6 @@ function LoadingAnimation() {
       </div>
       <div style={{ fontSize: 64, fontWeight: 800, color: '#dc2626', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
         {count}
-      </div>
-      <div style={{ minHeight: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-        {bestPlayer ? (
-          <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Best match</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>
-              {bestPlayer.name} — {bestPlayer.value} {bestPlayer.unit}
-            </div>
-          </>
-        ) : null}
       </div>
       <p style={{ color: '#4a5568', fontSize: 12, margin: 0 }}>Loading Stat Clash</p>
     </div>
