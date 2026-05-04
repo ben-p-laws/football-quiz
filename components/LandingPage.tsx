@@ -198,16 +198,19 @@ export default function LandingPage() {
         <div className="small-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
 
           {/* ---- TENABLE ---- */}
-          <div style={{ ...s.card, cursor: 'default', opacity: 0.7 }}>
+          <div style={s.card}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+            onClick={() => router.push('/tenables')}>
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Name the top 10 PL assist makers</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Name the top 10 PL all-time appearance makers</div>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
               {[
-                { n: 1, name: 'R. Giggs', val: '162', pct: 100, found: true  },
-                { n: 2, name: 'De Bruyne', val: '118', pct: 73,  found: true  },
-                { n: 3, name: '?',        val: '111', pct: 0,   found: false },
+                { n: 1, name: 'G. Barry',  val: '653', pct: 100, found: true  },
+                { n: 2, name: 'J. Milner', val: '627', pct: 96,  found: true  },
+                { n: 3, name: '?',         val: '609', pct: 0,   found: false },
               ].map(r => (
                 <div key={r.n} style={{ display: 'flex', alignItems: 'stretch', gap: 4, flex: 1 }}>
                   <span style={{ fontSize: 9, color: '#2a3d5e', width: 10, display: 'flex', alignItems: 'center' }}>{r.n}</span>
@@ -221,9 +224,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <div style={{ background: '#1e2d4a', padding: '8px', textAlign: 'center' as const, borderTop: '1px solid #1e2d4a' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#8899bb' }}>Coming Soon</span>
-            </div>
+            <div style={s.cta}><span style={s.ctaText}>Play Tenable →</span></div>
           </div>
 
           {/* ---- GRID ---- */}
