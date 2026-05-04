@@ -330,26 +330,7 @@ export default function PLGridGame() {
 
   const gridRef = useRef<HTMLDivElement>(null)
 
-  // ── Fetch available puzzle dates on mount ──────────────────────────────────
-  useEffect(() => {
-    supabase
-      .from('pl_grid_puzzles')
-      .select('puzzle_date')
-      .eq('is_published', true)
-      .order('puzzle_date', { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          const dates = data.map((r: any) => r.puzzle_date as string)
-          setAvailableDates(dates)
-          // If today has no puzzle, fall back to the most recent one
-          if (!dates.includes(todayStr)) {
-            setActiveDate(dates[0])
-          }
-        }
-      })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Load puzzle when activeDate or loadTrigger changes ─────────────────────
+  // ── Load puzzle + available dates via cached API route ────────────────────
   useEffect(() => {
     setLoading(true)
     setError(false)
@@ -369,25 +350,19 @@ export default function PLGridGame() {
 
     async function load() {
       try {
-        const { data: pd } = await supabase
-          .from('pl_grid_puzzles')
-          .select('*')
-          .eq('puzzle_date', activeDate)
-          .eq('is_published', true)
-          .single()
+        const res = await fetch(`/api/grid?date=${activeDate}`)
+        if (!res.ok) throw new Error('fetch failed')
+        const { availableDates: dates, puzzle: pd, answerCounts } = await res.json()
+
+        if (dates && dates.length > 0) {
+          setAvailableDates(dates)
+          if (!dates.includes(todayStr) && activeDate === todayStr) {
+            setActiveDate(dates[0])
+            return
+          }
+        }
 
         if (!pd) { setError(true); setLoading(false); return }
-
-        const { data: counts } = await supabase
-          .from('pl_grid_cell_answers')
-          .select('row_index, col_index')
-          .eq('puzzle_id', pd.id)
-
-        const answerCounts: Record<string, number> = {}
-        for (const row of counts || []) {
-          const key = `${row.row_index}_${row.col_index}`
-          answerCounts[key] = (answerCounts[key] ?? 0) + 1
-        }
 
         const puzz: Puzzle = {
           id: pd.id,
@@ -402,7 +377,7 @@ export default function PLGridGame() {
             resolveSlot(pd.col2_type, pd.col2_ref),
             resolveSlot(pd.col3_type, pd.col3_ref),
           ],
-          answerCounts,
+          answerCounts: answerCounts || {},
         }
         setPuzzle(puzz)
 
