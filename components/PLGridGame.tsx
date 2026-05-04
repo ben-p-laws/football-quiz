@@ -90,6 +90,17 @@ function getTodayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+function getLast14Days(): string[] {
+  const dates: string[] = []
+  const now = new Date()
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(now)
+    d.setDate(d.getDate() - i)
+    dates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`)
+  }
+  return dates
+}
+
 function resolveSlot(type: string, ref: string | null): Slot {
   if (type === 'team') {
     return { type, id: ref!, name: shortName(ref!), tooltip: `Played for ${ref}` }
@@ -772,14 +783,19 @@ export default function PLGridGame() {
               <>
                 <select
                   value={activeDate}
-                  onChange={e => setActiveDate(e.target.value)}
+                  onChange={e => { if (availableDates.includes(e.target.value)) setActiveDate(e.target.value) }}
                   style={{
                     background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20,
                     padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none',
                   }}>
-                  {availableDates.map(d => (
-                    <option key={d} value={d}>{d === todayStr ? `Today (${d})` : d}</option>
-                  ))}
+                  {getLast14Days().map(d => {
+                    const hasPuzzle = availableDates.includes(d)
+                    return (
+                      <option key={d} value={d} disabled={!hasPuzzle}>
+                        {d === todayStr ? `Today (${d})` : d}{!hasPuzzle ? ' — no puzzle yet' : ''}
+                      </option>
+                    )
+                  })}
                 </select>
                 {availableDates.length > 1 && (
                   <button onClick={playAnother}
