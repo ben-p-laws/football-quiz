@@ -190,12 +190,17 @@ async function buildData() {
   ]
 
   for (const { nat, label } of NATIONALITIES) {
-    const pool = all.filter(p => mostCommon(p.natFreq) === nat)
-    const apps  = top10(pool.map(p => ({ p, v: p.games })))
-    const goals = top10(pool.map(p => ({ p, v: p.goals })))
-    const slug  = nat.toLowerCase().replace(/[^a-z]/g, '_')
-    if (apps.length  >= 10) quizzes.push({ key: `${slug}_apps`,  type: 'nationality', label: `${label} — Appearances`, description: `Top 10 ${label} players by PL appearances`,  unit: 'apps',  answers: apps  })
-    if (goals.length >= 10) quizzes.push({ key: `${slug}_goals`, type: 'nationality', label: `${label} — Goals`,       description: `Top 10 ${label} PL goalscorers`,              unit: 'goals', answers: goals })
+    const pool    = all.filter(p => mostCommon(p.natFreq) === nat)
+    const slug    = nat.toLowerCase().replace(/[^a-z]/g, '_')
+    const push    = (key: string, unit: string, lbl: string, desc: string, answers: Answer[]) => {
+      if (answers.length >= 10) quizzes.push({ key, type: 'nationality', label: lbl, description: desc, unit, answers })
+    }
+    push(`${slug}_apps`,         'apps',         `${label} — Appearances`, `Top 10 ${label} players by PL appearances`,   top10(pool.map(p => ({ p, v: p.games       }))))
+    push(`${slug}_goals`,        'goals',        `${label} — Goals`,       `Top 10 ${label} PL goalscorers`,              top10(pool.map(p => ({ p, v: p.goals       }))))
+    push(`${slug}_assists`,      'assists',      `${label} — Assists`,     `Top 10 ${label} PL assist providers`,         top10(pool.map(p => ({ p, v: p.assists     }))))
+    push(`${slug}_yellow_cards`, 'yellow cards', `${label} — Yellow Cards`,`Top 10 most-booked ${label} PL players`,      top10(pool.map(p => ({ p, v: p.yellowCards }))))
+    push(`${slug}_clean_sheets`, 'clean sheets', `${label} — Clean Sheets`,`Top 10 ${label} PL goalkeepers by clean sheets`, top10(pool.map(p => ({ p, v: p.cleanSheets }))))
+    push(`${slug}_goals_p90`,   'per 90',       `${label} — Goals per 90`,`Top 10 ${label} PL players by goals per 90`, top10(pool.filter(p => p.goals >= 5 && p.games > 0).map(p => ({ p, v: p.goals / p.games })), 0.01, fmtP90))
   }
 
   // ── By club ───────────────────────────────────────────────────────────────
@@ -218,11 +223,14 @@ async function buildData() {
   ]
 
   for (const { name, short } of CLUBS) {
-    const apps  = top10(all.map(p => ({ p, v: p.clubGames[name] || 0 })))
-    const goals = top10(all.map(p => ({ p, v: p.clubGoals[name] || 0 })))
-    const slug  = name.toLowerCase().replace(/[^a-z]/g, '_')
-    if (apps.length  >= 10) quizzes.push({ key: `${slug}_apps`,  type: 'club', label: `${short} — Appearances`, description: `Top 10 players by PL appearances for ${name}`, unit: 'apps',  answers: apps  })
-    if (goals.length >= 10) quizzes.push({ key: `${slug}_goals`, type: 'club', label: `${short} — Goals`,       description: `Top 10 PL goalscorers for ${name}`,           unit: 'goals', answers: goals })
+    const slug = name.toLowerCase().replace(/[^a-z]/g, '_')
+    const push = (key: string, unit: string, lbl: string, desc: string, answers: Answer[]) => {
+      if (answers.length >= 10) quizzes.push({ key, type: 'club', label: lbl, description: desc, unit, answers })
+    }
+    push(`${slug}_apps`,       'apps',    `${short} — Appearances`, `Top 10 players by PL appearances for ${name}`,   top10(all.map(p => ({ p, v: p.clubGames[name]   || 0 }))))
+    push(`${slug}_goals`,      'goals',   `${short} — Goals`,       `Top 10 PL goalscorers for ${name}`,              top10(all.map(p => ({ p, v: p.clubGoals[name]   || 0 }))))
+    push(`${slug}_assists`,    'assists', `${short} — Assists`,     `Top 10 PL assist providers for ${name}`,         top10(all.map(p => ({ p, v: p.clubAssists[name] || 0 }))))
+    push(`${slug}_goals_p90`, 'per 90',  `${short} — Goals per 90`,`Top 10 goals per 90 for ${name} (min. 5 goals)`, top10(all.filter(p => (p.clubGoals[name] || 0) >= 5 && (p.clubGames[name] || 0) > 0).map(p => ({ p, v: p.clubGoals[name] / p.clubGames[name] })), 0.01, fmtP90))
   }
 
   const allPlayers = [...new Set(all.map(p => p.name))]
