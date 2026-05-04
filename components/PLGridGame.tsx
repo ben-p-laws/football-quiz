@@ -788,14 +788,12 @@ export default function PLGridGame() {
                     background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20,
                     padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none',
                   }}>
-                  {getLast14Days().map(d => {
-                    const hasPuzzle = availableDates.includes(d)
-                    return (
-                      <option key={d} value={d} disabled={!hasPuzzle}>
-                        {d === todayStr ? `Today (${d})` : d}{!hasPuzzle ? ' — no puzzle yet' : ''}
-                      </option>
-                    )
-                  })}
+                  {!availableDates.includes(todayStr) && (
+                    <option value={todayStr} disabled>Today ({todayStr}) — no puzzle yet</option>
+                  )}
+                  {availableDates.map(d => (
+                    <option key={d} value={d}>{d === todayStr ? `Today (${d})` : d}</option>
+                  ))}
                 </select>
                 {availableDates.length > 1 && (
                   <button onClick={playAnother}
