@@ -88,7 +88,7 @@ function LoadingAnimation() {
   const cycle = 2.2
   const stagger = cycle / BARS
   return (
-    <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+    <div style={{ padding: '40px 20px', display: 'flex', justifyContent: 'center' }}>
       <style>{`
         @keyframes ten-bar {
           0%, 100% { background: #1e2d4a; }
@@ -96,19 +96,21 @@ function LoadingAnimation() {
         }
         @keyframes ten-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
       `}</style>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {Array.from({ length: BARS }, (_, i) => (
-          <div key={i} style={{
-            height: 10,
-            width: `${(i + 1) * 18}px`,
-            borderRadius: 3,
-            background: '#1e2d4a',
-            animation: `ten-bar ${cycle}s ease ${i * stagger}s infinite`,
-          }} />
-        ))}
-      </div>
-      <div style={{ fontSize: 12, color: '#8899bb', animation: 'ten-pulse 1.5s ease infinite' }}>
-        Loading Tenable...
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-end', gap: 4 }}>
+          {Array.from({ length: BARS }, (_, i) => (
+            <div key={i} style={{
+              width: 10,
+              height: `${(i + 1) * 18}px`,
+              borderRadius: 3,
+              background: '#1e2d4a',
+              animation: `ten-bar ${cycle}s ease ${i * stagger}s infinite`,
+            }} />
+          ))}
+        </div>
+        <div style={{ fontSize: 12, color: '#8899bb', animation: 'ten-pulse 1.5s ease infinite' }}>
+          Loading Tenable...
+        </div>
       </div>
     </div>
   )
