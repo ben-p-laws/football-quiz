@@ -320,10 +320,15 @@ export default function PLGridGame() {
       .order('puzzle_date', { ascending: false })
       .then(({ data }) => {
         if (data && data.length > 0) {
-          setAvailableDates(data.map((r: any) => r.puzzle_date as string))
+          const dates = data.map((r: any) => r.puzzle_date as string)
+          setAvailableDates(dates)
+          // If today has no puzzle, fall back to the most recent one
+          if (!dates.includes(todayStr)) {
+            setActiveDate(dates[0])
+          }
         }
       })
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load puzzle when activeDate or loadTrigger changes ─────────────────────
   useEffect(() => {
@@ -410,16 +415,16 @@ export default function PLGridGame() {
     load()
   }, [activeDate, loadTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Auto-enter custom mode when no daily puzzle available ─────────────────
+  // ── Auto-enter custom mode only if there are truly no published puzzles ───
   useEffect(() => {
-    if (!loading && gridMode === 'daily' && (error || !puzzle)) {
+    if (!loading && gridMode === 'daily' && (error || !puzzle) && availableDates.length === 0) {
       setGridMode('custom')
       setCustomRows([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
       setCustomCols([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
       setCustomCells({})
       setCustomReady(false)
     }
-  }, [loading, error, puzzle]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, error, puzzle, availableDates]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load answers when revealed ─────────────────────────────────────────────
   useEffect(() => {
