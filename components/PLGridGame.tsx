@@ -10,8 +10,8 @@ const supabase = createClient(
 )
 
 // ── Types ───────────────────────────────────────────────────────────────────
-type Slot    = { type: string; id: string; name: string; tooltip: string }
-type Puzzle  = { id: string; date: string; rows: Slot[]; cols: Slot[]; answerCounts: Record<string, number> }
+type Slot    = { label: string; tooltip: string }
+type Puzzle  = { date: string; rows: Slot[]; cols: Slot[]; answerCounts: Record<string, number> }
 type Guess   = { name: string; score: number; rank: number; valid: boolean }
 type Answer  = { player_name: string; combined_appearances: number; display_rank: number; score: number; rank: number; popularity_score: number; popularity_rank: number }
 type LBEntry = { player_name: string; score: number; correct: number; rarity_score?: number | null; popularity_score?: number | null }
@@ -103,17 +103,17 @@ function getLast14Days(): string[] {
 
 function resolveSlot(type: string, ref: string | null): Slot {
   if (type === 'team') {
-    return { type, id: ref!, name: shortName(ref!), tooltip: `Played for ${ref}` }
+    return { label: shortName(ref!), tooltip: `Played for ${ref}` }
   }
   const slots: Record<string, Slot> = {
-    won_pl:            { type, id: type, name: 'PL Winner',    tooltip: 'Won the Premier League at least once' },
-    won_3plus_pl:      { type, id: type, name: '3+ PL Wins',   tooltip: 'Won the Premier League 3 or more times' },
-    relegated:         { type, id: type, name: 'Relegated',    tooltip: 'Been relegated from the Premier League at least once' },
-    golden_boot:       { type, id: type, name: 'Golden Boot',  tooltip: 'Won the PL Golden Boot (top scorer in a season)' },
-    golden_glove:      { type, id: type, name: 'Golden Glove', tooltip: 'Won the PL Golden Glove (GK with most clean sheets in a season)' },
-    scored_100_goals:  { type, id: type, name: '100+ PL Goals', tooltip: 'Scored 100 or more Premier League goals' },
+    won_pl:            { label: 'PL Winner',    tooltip: 'Won the Premier League at least once' },
+    won_3plus_pl:      { label: '3+ PL Wins',   tooltip: 'Won the Premier League 3 or more times' },
+    relegated:         { label: 'Relegated',    tooltip: 'Been relegated from the Premier League at least once' },
+    golden_boot:       { label: 'Golden Boot',  tooltip: 'Won the PL Golden Boot (top scorer in a season)' },
+    golden_glove:      { label: 'Golden Glove', tooltip: 'Won the PL Golden Glove (GK with most clean sheets in a season)' },
+    scored_100_goals:  { label: '100+ PL Goals', tooltip: 'Scored 100 or more Premier League goals' },
   }
-  return slots[type] ?? { type, id: type, name: type, tooltip: type }
+  return slots[type] ?? { label: type, tooltip: type }
 }
 
 // ── scoreLabel ───────────────────────────────────────────────────────────────
@@ -238,7 +238,7 @@ function CustomSlotHeader({ slot, placeholder, onSelect, minHeight }: {
 
       <div style={{ ...s.hdr, position: 'relative', minHeight, padding: '4px 6px', cursor: 'pointer' }}>
         <span style={{ color: resolved ? '#f97316' : '#4a5568' }}>
-          {resolved?.name ?? placeholder}
+          {resolved?.label ?? placeholder}
         </span>
         {!resolved && <span style={{ fontSize: 8, color: '#4a5568', marginLeft: 2 }}>▾</span>}
       </div>
@@ -299,7 +299,7 @@ export default function PLGridGame() {
   const [puzzle, setPuzzle]                   = useState<Puzzle | null>(null)
   const [loading, setLoading]                 = useState(true)
   const [error, setError]                     = useState(false)
-  const [noPuzzle, setNoPuzzle]               = useState(false)
+  const [allCells, setAllCells]               = useState<Record<string, Answer[]>>({})
   const [mode, setMode]                       = useState<'rarity' | 'popularity'>('rarity')
   const [rarityGuesses, setRarityGuesses]     = useState<Record<string, Guess>>({})
   const [popGuesses, setPopGuesses]           = useState<Record<string, Guess>>({})
@@ -329,7 +329,6 @@ export default function PLGridGame() {
 
   // Date / mode state
   const [activeDate, setActiveDate]           = useState(todayStr)
-  const [availableDates, setAvailableDates]   = useState<string[]>([todayStr])
   const [loadTrigger, setLoadTrigger]         = useState(0)
   const [gridMode, setGridMode]               = useState<'daily' | 'custom'>('daily')
 
@@ -346,8 +345,8 @@ export default function PLGridGame() {
   useEffect(() => {
     setLoading(true)
     setError(false)
-    setNoPuzzle(false)
     setPuzzle(null)
+    setAllCells({})
     setRarityGuesses({})
     setPopGuesses({})
     setRarityScore(0)
@@ -365,30 +364,13 @@ export default function PLGridGame() {
       try {
         const res = await fetch(`/api/grid?date=${activeDate}`)
         if (!res.ok) throw new Error('fetch failed')
-        const { availableDates: dates, puzzle: pd, answerCounts } = await res.json()
+        const { date, rows, cols, cells, answerCounts } = await res.json()
 
-        if (dates && dates.length > 0) {
-          setAvailableDates(dates)
-        }
+        if (!date) { setError(true); setLoading(false); return }
 
-        if (!pd) { setNoPuzzle(true); setLoading(false); return }
-
-        const puzz: Puzzle = {
-          id: pd.id,
-          date: pd.puzzle_date,
-          rows: [
-            resolveSlot(pd.row1_type, pd.row1_ref),
-            resolveSlot(pd.row2_type, pd.row2_ref),
-            resolveSlot(pd.row3_type, pd.row3_ref),
-          ],
-          cols: [
-            resolveSlot(pd.col1_type, pd.col1_ref),
-            resolveSlot(pd.col2_type, pd.col2_ref),
-            resolveSlot(pd.col3_type, pd.col3_ref),
-          ],
-          answerCounts: answerCounts || {},
-        }
+        const puzz: Puzzle = { date, rows, cols, answerCounts: answerCounts || {} }
         setPuzzle(puzz)
+        setAllCells(cells || {})
 
         const rSaved    = localStorage.getItem(STORAGE_KEY(activeDate, 'rarity'))
         const pSaved    = localStorage.getItem(STORAGE_KEY(activeDate, 'popularity'))
@@ -417,17 +399,6 @@ export default function PLGridGame() {
     }
     load()
   }, [activeDate, loadTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Auto-enter custom mode only if there are truly no published puzzles ───
-  useEffect(() => {
-    if (!loading && gridMode === 'daily' && (error || !puzzle) && availableDates.length === 0) {
-      setGridMode('custom')
-      setCustomRows([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
-      setCustomCols([{ category: '', team: '' }, { category: '', team: '' }, { category: '', team: '' }])
-      setCustomCells({})
-      setCustomReady(false)
-    }
-  }, [loading, error, puzzle, availableDates]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Load answers when revealed ─────────────────────────────────────────────
   useEffect(() => {
@@ -478,18 +449,10 @@ export default function PLGridGame() {
         guess = { name, score: INVALID_SCORE, rank: 0, valid: false }
       }
     } else {
-      const { data } = await supabase
-        .from('pl_grid_cell_answers')
-        .select('score, rank, popularity_score, popularity_rank, combined_appearances')
-        .eq('puzzle_id', puzzle!.id)
-        .eq('row_index', r)
-        .eq('col_index', c)
-        .eq('player_name', name)
-        .maybeSingle()
-
-      if (data) {
-        const useScore = mode === 'rarity' ? data.score : (data.popularity_score ?? data.score)
-        const useRank  = mode === 'rarity' ? data.rank  : (data.popularity_rank  ?? data.rank)
+      const match = (allCells[key] || []).find(a => a.player_name === name)
+      if (match) {
+        const useScore = mode === 'rarity' ? match.score : match.popularity_score
+        const useRank  = mode === 'rarity' ? match.rank  : match.popularity_rank
         guess = { name, score: useScore, rank: useRank, valid: true }
       } else {
         guess = { name, score: INVALID_SCORE, rank: 0, valid: false }
@@ -547,34 +510,15 @@ export default function PLGridGame() {
   }
 
   // ── Load cell answers (on reveal) ──────────────────────────────────────────
-  async function loadCellAnswers() {
+  function loadCellAnswers() {
     if (gridMode === 'custom') {
       setCellAnswers({ ...customCells })
       return
     }
-    if (!puzzle) return
-    const { data } = await supabase
-      .from('pl_grid_cell_answers')
-      .select('row_index, col_index, player_name, combined_appearances, score, rank, popularity_score, popularity_rank')
-      .eq('puzzle_id', puzzle.id)
-
     const grouped: Record<string, Answer[]> = {}
-    for (const row of data || []) {
-      const key = `${row.row_index}_${row.col_index}`
-      if (!grouped[key]) grouped[key] = []
-      grouped[key].push({
-        player_name: row.player_name,
-        combined_appearances: row.combined_appearances,
-        score: row.score,
-        rank: row.rank,
-        popularity_score: row.popularity_score ?? row.score,
-        popularity_rank: row.popularity_rank ?? row.rank,
-        display_rank: 0,
-      })
-    }
-    for (const key of Object.keys(grouped)) {
-      grouped[key].sort((a, b) => a.combined_appearances - b.combined_appearances)
-      grouped[key].forEach((a, i) => { a.display_rank = i + 1 })
+    for (const [key, answers] of Object.entries(allCells)) {
+      const sorted = [...answers].sort((a, b) => a.combined_appearances - b.combined_appearances)
+      grouped[key] = sorted.map((a, i) => ({ ...a, display_rank: i + 1 }))
     }
     setCellAnswers(grouped)
   }
@@ -604,7 +548,6 @@ export default function PLGridGame() {
     const correctR = Object.values(rarityGuesses).filter(g => g.valid).length
     const correctP = Object.values(popGuesses).filter(g => g.valid).length
     await supabase.from('pl_grid_leaderboard').insert({
-      puzzle_id:        puzzle.id,
       puzzle_date:      puzzle.date,
       player_name:      userName.trim(),
       score:            (rarityDone ? rarityScore : 0) + (popDone ? popScore : 0),
@@ -659,25 +602,19 @@ export default function PLGridGame() {
         .filter(a => (mode === 'rarity' ? a.rank : a.popularity_rank) < currentRank)
         .sort((a, b) => (mode === 'rarity' ? a.rank - b.rank : a.popularity_rank - b.popularity_rank))
       setBetterList(better.map(a => ({ name: a.player_name, rank: mode === 'rarity' ? a.rank : a.popularity_rank, score: mode === 'rarity' ? a.score : a.popularity_score })))
-    } else if (puzzle) {
-      const rankCol  = mode === 'rarity' ? 'rank'  : 'popularity_rank'
-      const scoreCol = mode === 'rarity' ? 'score' : 'popularity_score'
-      const { data } = await supabase
-        .from('pl_grid_cell_answers')
-        .select('player_name, rank, popularity_rank, score, popularity_score')
-        .eq('puzzle_id', puzzle.id)
-        .eq('row_index', r)
-        .eq('col_index', c)
-        .lt(rankCol, currentRank)
-        .order(rankCol, { ascending: true })
-      setBetterList((data || []).map((d: any) => ({ name: d.player_name, rank: d[rankCol], score: d[scoreCol] })))
+    } else {
+      const all = allCells[key] || []
+      const getRank  = (a: Answer) => mode === 'rarity' ? a.rank  : a.popularity_rank
+      const getScore = (a: Answer) => mode === 'rarity' ? a.score : a.popularity_score
+      const better = all.filter(a => getRank(a) < currentRank).sort((a, b) => getRank(a) - getRank(b))
+      setBetterList(better.map(a => ({ name: a.player_name, rank: getRank(a), score: getScore(a) })))
     }
     setBetterLoading(false)
   }
 
   // ── Play another (random daily puzzle) ────────────────────────────────────
   function playAnother() {
-    const others = availableDates.filter(d => d !== activeDate)
+    const others = getLast14Days().filter(d => d !== activeDate)
     if (others.length === 0) return
     const next = others[Math.floor(Math.random() * others.length)]
     setGridMode('daily')
@@ -748,10 +685,10 @@ export default function PLGridGame() {
   const bothDone     = rarityDone && popDone
 
   const gridRows: Slot[] = gridMode === 'custom'
-    ? customRows.map((s, i) => s.category && (s.category !== 'team' || s.team) ? resolveSlot(s.category, s.team || null) : { type: '', id: `r${i}`, name: `Row ${i + 1}`, tooltip: '' })
+    ? customRows.map((s, i) => { const r = s.category && (s.category !== 'team' || s.team) ? resolveSlot(s.category, s.team || null) : null; return r ? { label: r.label, tooltip: r.tooltip } : { label: `Row ${i + 1}`, tooltip: '' } })
     : (puzzle?.rows ?? [])
   const gridCols: Slot[] = gridMode === 'custom'
-    ? customCols.map((s, i) => s.category && (s.category !== 'team' || s.team) ? resolveSlot(s.category, s.team || null) : { type: '', id: `c${i}`, name: `Col ${i + 1}`, tooltip: '' })
+    ? customCols.map((s, i) => { const r = s.category && (s.category !== 'team' || s.team) ? resolveSlot(s.category, s.team || null) : null; return r ? { label: r.label, tooltip: r.tooltip } : { label: `Col ${i + 1}`, tooltip: '' } })
     : (puzzle?.cols ?? [])
   const effectiveAnswerCounts: Record<string, number> = gridMode === 'custom'
     ? Object.fromEntries(Object.entries(customCells).map(([k, v]) => [k, (v as Answer[]).length]))
@@ -761,41 +698,10 @@ export default function PLGridGame() {
                             customCols.every(s => s.category && (s.category !== 'team' || s.team))
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (loading || (gridMode === 'daily' && error)) return (
+  if (loading || (gridMode === 'daily' && (error || !puzzle))) return (
     <div style={s.page}>
       <NavBar />
       <LoadingAnimation />
-    </div>
-  )
-
-  if (gridMode === 'daily' && noPuzzle) return (
-    <div style={s.page}>
-      <NavBar />
-      <div style={{ maxWidth: 620, margin: '0 auto', padding: '16px 12px 60px' }}>
-        <div style={{ textAlign: 'center', marginBottom: 14 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            <select
-              value={activeDate}
-              onChange={e => { if (availableDates.includes(e.target.value)) setActiveDate(e.target.value) }}
-              style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none' }}>
-              {!availableDates.includes(todayStr) && (
-                <option value={todayStr}>Today ({todayStr})</option>
-              )}
-              {availableDates.map(d => (
-                <option key={d} value={d}>{d === todayStr ? `Today (${d})` : d}</option>
-              ))}
-            </select>
-            <button onClick={playAnother} style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer' }}>🎲 Random</button>
-            <button onClick={enterCustomMode} style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer' }}>🔧 Build your own</button>
-          </div>
-          <div style={{ fontSize: 24, fontWeight: 800, color: 'white', marginBottom: 4 }}>Top<span style={{ color: '#dc2626' }}>Bins</span> Grid</div>
-        </div>
-        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🕐</div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 8 }}>No puzzle for today yet</div>
-          <div style={{ fontSize: 13, color: '#8899bb' }}>Check back later — or play a previous date.</div>
-        </div>
-      </div>
     </div>
   )
 
@@ -817,19 +723,14 @@ export default function PLGridGame() {
                     background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20,
                     padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none',
                   }}>
-                  {!availableDates.includes(todayStr) && (
-                    <option value={todayStr}>Today ({todayStr})</option>
-                  )}
-                  {availableDates.map(d => (
+                  {getLast14Days().map(d => (
                     <option key={d} value={d}>{d === todayStr ? `Today (${d})` : d}</option>
                   ))}
                 </select>
-                {availableDates.length > 1 && (
-                  <button onClick={playAnother}
-                    style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer' }}>
-                    🎲 Random
-                  </button>
-                )}
+                <button onClick={playAnother}
+                  style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer' }}>
+                  🎲 Random
+                </button>
                 <button onClick={enterCustomMode}
                   style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer' }}>
                   🔧 Build your own
@@ -972,7 +873,7 @@ export default function PLGridGame() {
                     style={{ ...s.hdr, position: 'relative', minHeight: 48, padding: '4px 6px' }}
                     onMouseEnter={showTip}
                     onMouseLeave={hideTip}>
-                    <span>{gridCols[ci].name}</span>
+                    <span>{gridCols[ci].label}</span>
                     <span className="tip" style={{ ...tooltipStyle, left: '50%', transform: 'translateX(-50%)', top: '100%' }}>
                       {gridCols[ci].tooltip}
                     </span>
@@ -996,7 +897,7 @@ export default function PLGridGame() {
                       style={{ ...s.hdr, position: 'relative', minHeight: 64, padding: '4px 6px' }}
                       onMouseEnter={showTip}
                       onMouseLeave={hideTip}>
-                      <span>{gridRows[ri].name}</span>
+                      <span>{gridRows[ri].label}</span>
                       <span className="tip" style={{ ...tooltipStyle, left: '100%', top: '50%', transform: 'translateY(-50%)', marginTop: 0, marginLeft: 4 }}>
                         {gridRows[ri].tooltip}
                       </span>
@@ -1086,8 +987,8 @@ export default function PLGridGame() {
               const answers = cellAnswers[overlayCell]
               if (!answers) return null
               const [ri, ci] = overlayCell.split('_').map(Number)
-              const rowName  = gridRows[ri]?.name ?? ''
-              const colName  = gridCols[ci]?.name ?? ''
+              const rowName  = gridRows[ri]?.label ?? ''
+              const colName  = gridCols[ci]?.label ?? ''
               const sorted   = [...answers].sort((a, b) =>
                 mode === 'popularity'
                   ? b.combined_appearances - a.combined_appearances
@@ -1210,7 +1111,7 @@ export default function PLGridGame() {
         {activeCell && !currentDone && !answersSeen && (
           <div style={{ ...s.card, marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 8 }}>
-              {gridRows[activeCell.r]?.name} × {gridCols[activeCell.c]?.name}
+              {gridRows[activeCell.r]?.label} × {gridCols[activeCell.c]?.label}
             </div>
             <div style={{ position: 'relative' }}>
               <input
