@@ -281,10 +281,10 @@ export default function LandingPage() {
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <TShirt bg="#C8102E" label="Liverpool"  revealed={true} />
-                <TShirt bg="#6CABDD" label="Man City"   revealed={true} />
-                <TShirt bg="#034694" label="Chelsea"    revealed={true} />
-                <TShirt bg="#111827" label="?"          revealed={false} />
+                <TShirt bg="#C8102E" label="Gerrard"   revealed={true} />
+                <TShirt bg="#6CABDD" label="De Bruyne" revealed={true} />
+                <TShirt bg="#034694" label="Lampard"   revealed={true} />
+                <TShirt bg="#111827" label="?"         revealed={false} />
               </div>
             </div>
             <div style={s.cta}><span style={s.ctaText}>Play Teammates →</span></div>
