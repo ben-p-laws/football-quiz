@@ -282,7 +282,7 @@ export default function LandingPage() {
               <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their PL teammates</div>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, justifyItems: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'auto auto', gap: 10 }}>
                 <TShirt bg="#C8102E" label="Gerrard"   revealed={true} />
                 <TShirt bg="#6CABDD" label="De Bruyne" revealed={true} />
                 <TShirt bg="#034694" label="Lampard"   revealed={true} />
