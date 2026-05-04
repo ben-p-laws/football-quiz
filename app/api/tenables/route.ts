@@ -50,6 +50,7 @@ type Quiz = {
   label:       string
   description: string
   unit:        string
+  type:        'alltime' | 'club' | 'nationality'
   answers:     Answer[]
 }
 
@@ -156,12 +157,12 @@ async function buildData() {
   const quizzes: Quiz[] = []
 
   // ── All-time ─────────────────────────────────────────────────────────────
-  quizzes.push({ key: 'all_apps',         label: 'All-Time Appearances',  description: 'Top 10 PL appearance makers of all time',             unit: 'apps',         answers: top10(all.map(p => ({ p, v: p.games       }))) })
-  quizzes.push({ key: 'all_goals',        label: 'All-Time Goals',        description: 'Top 10 PL goalscorers of all time',                   unit: 'goals',        answers: top10(all.map(p => ({ p, v: p.goals       }))) })
-  quizzes.push({ key: 'all_assists',      label: 'All-Time Assists',      description: 'Top 10 PL assist providers of all time',              unit: 'assists',      answers: top10(all.map(p => ({ p, v: p.assists     }))) })
-  quizzes.push({ key: 'all_clean_sheets', label: 'All-Time Clean Sheets', description: 'Top 10 PL goalkeepers by career clean sheets',        unit: 'clean sheets', answers: top10(all.map(p => ({ p, v: p.cleanSheets }))) })
-  quizzes.push({ key: 'all_yellow_cards', label: 'All-Time Yellow Cards', description: 'Top 10 most-booked PL players of all time',           unit: 'yellow cards', answers: top10(all.map(p => ({ p, v: p.yellowCards }))) })
-  quizzes.push({ key: 'all_goals_p90',   label: 'All-Time Goals per 90', description: 'Top 10 PL goals-per-90 (min. 5 goals)',               unit: 'per 90',       answers: top10(all.filter(p => p.goals >= 5 && p.games > 0).map(p => ({ p, v: p.goals / p.games })), 0.01, fmtP90) })
+  quizzes.push({ key: 'all_apps',         type: 'alltime', label: 'All-Time Appearances',  description: 'Top 10 PL appearance makers of all time',             unit: 'apps',         answers: top10(all.map(p => ({ p, v: p.games       }))) })
+  quizzes.push({ key: 'all_goals',        type: 'alltime', label: 'All-Time Goals',        description: 'Top 10 PL goalscorers of all time',                   unit: 'goals',        answers: top10(all.map(p => ({ p, v: p.goals       }))) })
+  quizzes.push({ key: 'all_assists',      type: 'alltime', label: 'All-Time Assists',      description: 'Top 10 PL assist providers of all time',              unit: 'assists',      answers: top10(all.map(p => ({ p, v: p.assists     }))) })
+  quizzes.push({ key: 'all_clean_sheets', type: 'alltime', label: 'All-Time Clean Sheets', description: 'Top 10 PL goalkeepers by career clean sheets',        unit: 'clean sheets', answers: top10(all.map(p => ({ p, v: p.cleanSheets }))) })
+  quizzes.push({ key: 'all_yellow_cards', type: 'alltime', label: 'All-Time Yellow Cards', description: 'Top 10 most-booked PL players of all time',           unit: 'yellow cards', answers: top10(all.map(p => ({ p, v: p.yellowCards }))) })
+  quizzes.push({ key: 'all_goals_p90',   type: 'alltime', label: 'All-Time Goals per 90', description: 'Top 10 PL goals-per-90 (min. 5 goals)',               unit: 'per 90',       answers: top10(all.filter(p => p.goals >= 5 && p.games > 0).map(p => ({ p, v: p.goals / p.games })), 0.01, fmtP90) })
 
   // ── By nationality ────────────────────────────────────────────────────────
   const NATIONALITIES: { nat: string; label: string }[] = [
@@ -193,8 +194,8 @@ async function buildData() {
     const apps  = top10(pool.map(p => ({ p, v: p.games })))
     const goals = top10(pool.map(p => ({ p, v: p.goals })))
     const slug  = nat.toLowerCase().replace(/[^a-z]/g, '_')
-    if (apps.length  >= 10) quizzes.push({ key: `${slug}_apps`,  label: `${label} — Appearances`, description: `Top 10 ${label} players by PL appearances`,  unit: 'apps',  answers: apps  })
-    if (goals.length >= 10) quizzes.push({ key: `${slug}_goals`, label: `${label} — Goals`,       description: `Top 10 ${label} PL goalscorers`,              unit: 'goals', answers: goals })
+    if (apps.length  >= 10) quizzes.push({ key: `${slug}_apps`,  type: 'nationality', label: `${label} — Appearances`, description: `Top 10 ${label} players by PL appearances`,  unit: 'apps',  answers: apps  })
+    if (goals.length >= 10) quizzes.push({ key: `${slug}_goals`, type: 'nationality', label: `${label} — Goals`,       description: `Top 10 ${label} PL goalscorers`,              unit: 'goals', answers: goals })
   }
 
   // ── By club ───────────────────────────────────────────────────────────────
@@ -220,8 +221,8 @@ async function buildData() {
     const apps  = top10(all.map(p => ({ p, v: p.clubGames[name] || 0 })))
     const goals = top10(all.map(p => ({ p, v: p.clubGoals[name] || 0 })))
     const slug  = name.toLowerCase().replace(/[^a-z]/g, '_')
-    if (apps.length  >= 10) quizzes.push({ key: `${slug}_apps`,  label: `${short} — Appearances`, description: `Top 10 players by PL appearances for ${name}`, unit: 'apps',  answers: apps  })
-    if (goals.length >= 10) quizzes.push({ key: `${slug}_goals`, label: `${short} — Goals`,       description: `Top 10 PL goalscorers for ${name}`,           unit: 'goals', answers: goals })
+    if (apps.length  >= 10) quizzes.push({ key: `${slug}_apps`,  type: 'club', label: `${short} — Appearances`, description: `Top 10 players by PL appearances for ${name}`, unit: 'apps',  answers: apps  })
+    if (goals.length >= 10) quizzes.push({ key: `${slug}_goals`, type: 'club', label: `${short} — Goals`,       description: `Top 10 PL goalscorers for ${name}`,           unit: 'goals', answers: goals })
   }
 
   const allPlayers = [...new Set(all.map(p => p.name))]

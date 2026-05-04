@@ -3,30 +3,42 @@
 import { useState, useEffect, useRef } from 'react'
 import NavBar from './NavBar'
 
-function bucketByUnit(quizzes: Quiz[]): Record<string, Quiz[]> {
-  const out: Record<string, Quiz[]> = {}
-  for (const q of quizzes) {
-    if (!out[q.unit]) out[q.unit] = []
-    out[q.unit].push(q)
-  }
-  return out
-}
-
 function pickDaily(quizzes: Quiz[]): Quiz {
-  const buckets = bucketByUnit(quizzes)
-  const units   = Object.keys(buckets).sort()
-  const d       = new Date()
-  const seed    = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
-  const unit    = units[seed % units.length]
-  const pool    = buckets[unit]
+  const byUnit: Record<string, Quiz[]> = {}
+  for (const q of quizzes) {
+    if (!byUnit[q.unit]) byUnit[q.unit] = []
+    byUnit[q.unit].push(q)
+  }
+  const units = Object.keys(byUnit).sort()
+  const d     = new Date()
+  const seed  = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
+  const unit  = units[seed % units.length]
+  const pool  = byUnit[unit]
   return pool[Math.floor(seed / units.length) % pool.length]
 }
 
-function pickRandom(quizzes: Quiz[]): Quiz {
-  const allTime  = quizzes.filter(q => q.key.startsWith('all_'))
-  const specific = quizzes.filter(q => !q.key.startsWith('all_'))
-  const pool = specific.length > 0 && Math.random() > 0.2 ? specific : allTime
+function pickFromBuckets(quizzes: Quiz[]): Quiz {
+  // Equal chance of any category, then uniform within that category's quizzes
+  const byUnit: Record<string, Quiz[]> = {}
+  for (const q of quizzes) {
+    if (!byUnit[q.unit]) byUnit[q.unit] = []
+    byUnit[q.unit].push(q)
+  }
+  const units = Object.keys(byUnit)
+  const unit  = units[Math.floor(Math.random() * units.length)]
+  const pool  = byUnit[unit]
   return pool[Math.floor(Math.random() * pool.length)]
+}
+
+function pickRandom(quizzes: Quiz[]): Quiz {
+  const allTime     = quizzes.filter(q => q.type === 'alltime')
+  const clubs       = quizzes.filter(q => q.type === 'club')
+  const nats        = quizzes.filter(q => q.type === 'nationality')
+
+  const r = Math.random()
+  if (r < 0.2)       return pickFromBuckets(allTime)   // 20% all-time
+  else if (r < 0.6)  return pickFromBuckets(clubs)     // 40% club
+  else               return pickFromBuckets(nats)       // 40% nationality
 }
 
 function normalize(str: string) {
@@ -65,6 +77,7 @@ type Quiz = {
   label:       string
   description: string
   unit:        string
+  type:        'alltime' | 'club' | 'nationality'
   answers:     Answer[]
 }
 
