@@ -134,7 +134,8 @@ async function buildData() {
     p.yellowCards += yc
 
     if (row.nationality) {
-      p.natFreq[row.nationality] = (p.natFreq[row.nationality] || 0) + 1
+      const code = fmtNat(row.nationality)
+      p.natFreq[code] = (p.natFreq[code] || 0) + 1
     }
 
     const teams = String(row.teams_played_for || '')
@@ -164,27 +165,27 @@ async function buildData() {
 
   // ── By nationality ────────────────────────────────────────────────────────
   const NATIONALITIES: { nat: string; label: string }[] = [
-    { nat: 'England',              label: 'English'     },
-    { nat: 'France',               label: 'French'      },
-    { nat: 'Spain',                label: 'Spanish'     },
-    { nat: 'Republic of Ireland',  label: 'Irish'       },
-    { nat: 'Wales',                label: 'Welsh'       },
-    { nat: 'Scotland',             label: 'Scottish'    },
-    { nat: 'Netherlands',          label: 'Dutch'       },
-    { nat: 'Norway',               label: 'Norwegian'   },
-    { nat: 'Germany',              label: 'German'      },
-    { nat: 'Portugal',             label: 'Portuguese'  },
-    { nat: 'Denmark',              label: 'Danish'      },
-    { nat: 'Sweden',               label: 'Swedish'     },
-    { nat: 'Argentina',            label: 'Argentine'   },
-    { nat: 'Brazil',               label: 'Brazilian'   },
-    { nat: 'Belgium',              label: 'Belgian'     },
-    { nat: 'Italy',                label: 'Italian'     },
-    { nat: 'Ivory Coast',          label: 'Ivorian'     },
-    { nat: 'Nigeria',              label: 'Nigerian'    },
-    { nat: 'Senegal',              label: 'Senegalese'  },
-    { nat: 'Ghana',                label: 'Ghanaian'    },
-    { nat: 'Australia',            label: 'Australian'  },
+    { nat: 'ENG', label: 'English'     },
+    { nat: 'FRA', label: 'French'      },
+    { nat: 'ESP', label: 'Spanish'     },
+    { nat: 'IRL', label: 'Irish'       },
+    { nat: 'WAL', label: 'Welsh'       },
+    { nat: 'SCO', label: 'Scottish'    },
+    { nat: 'NED', label: 'Dutch'       },
+    { nat: 'NOR', label: 'Norwegian'   },
+    { nat: 'GER', label: 'German'      },
+    { nat: 'POR', label: 'Portuguese'  },
+    { nat: 'DEN', label: 'Danish'      },
+    { nat: 'SWE', label: 'Swedish'     },
+    { nat: 'ARG', label: 'Argentine'   },
+    { nat: 'BRA', label: 'Brazilian'   },
+    { nat: 'BEL', label: 'Belgian'     },
+    { nat: 'ITA', label: 'Italian'     },
+    { nat: 'CIV', label: 'Ivorian'     },
+    { nat: 'NGA', label: 'Nigerian'    },
+    { nat: 'SEN', label: 'Senegalese'  },
+    { nat: 'GHA', label: 'Ghanaian'    },
+    { nat: 'AUS', label: 'Australian'  },
   ]
 
   for (const { nat, label } of NATIONALITIES) {
