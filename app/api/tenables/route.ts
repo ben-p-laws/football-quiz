@@ -272,9 +272,12 @@ export async function GET(req: Request) {
     if (isCustom) {
       const all = Object.values(players as Record<string, PlayerAgg>)
       let pool = customNat ? all.filter(p => mostCommon(p.natFreq) === customNat) : all
+      // For all stats, filter pool to players who played for the club when one is selected
+      if (customClub) pool = pool.filter(p => (p.teamFreq[customClub] || 0) > 0)
 
-      const clubStats = ['apps', 'goals', 'assists', 'goals_p90']
-      const useClub   = customClub && clubStats.includes(customStat)
+      // Stats where we use per-club values rather than career totals
+      const perClubStats = ['apps', 'goals', 'assists', 'goals_p90']
+      const useClub = customClub && perClubStats.includes(customStat)
 
       let answers: Answer[]
       if (useClub) {
@@ -290,6 +293,7 @@ export async function GET(req: Request) {
           return { p, v }
         }), 0, customStat === 'goals_p90' ? fmtP90 : undefined)
       } else {
+        // clean_sheets, yellow_cards — use career totals but pool already filtered to club players
         answers = top10(pool.map(p => {
           let v: number
           if      (customStat === 'goals')        v = p.goals
