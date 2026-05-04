@@ -246,7 +246,7 @@ export default function LandingPage() {
                   <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Grid</div>
                   <div style={{ fontSize: 10, color: '#8899bb' }}>Find a PL player for each row × column</div>
                 </div>
-                <div style={{ padding: '0 10px 0', flex: 1 }}>
+                <div style={{ padding: '0 10px 8px', flex: 1 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr', gap: 2 }}>
                     <div />
                     {cols.map(c => <div key={c} style={{ fontSize: 7, fontWeight: 700, color: '#f97316', textAlign: 'center' as const, paddingBottom: 2 }}>{c}</div>)}
