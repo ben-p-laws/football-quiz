@@ -117,13 +117,6 @@ const s = {
     color: active ? '#dc2626' : '#8899bb', fontWeight: active ? 700 : 500,
     cursor: active ? 'default' : 'pointer', fontFamily: 'inherit',
   } as React.CSSProperties),
-  datePill: (active: boolean) => ({
-    background: active ? '#dc2626' : '#1e2d4a',
-    border: `1px solid ${active ? '#dc2626' : '#2a3d5e'}`,
-    borderRadius: 20, padding: '4px 12px', fontSize: 11, whiteSpace: 'nowrap' as const,
-    color: active ? 'white' : '#8899bb', fontWeight: active ? 700 : 500,
-    cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit',
-  } as React.CSSProperties),
 }
 
 // ── Loading animation ─────────────────────────────────────────────────────────
@@ -406,8 +399,6 @@ export default function TenableQuiz() {
         .bar-fill { transform-origin:left; animation:slideIn 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards }
         .shake { animation:shake 0.5s ease }
         .msg { animation:fadeIn 0.2s ease }
-        .date-strip { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; -ms-overflow-style:none; scrollbar-width:none; }
-        .date-strip::-webkit-scrollbar { display:none }
       `}</style>
 
       <NavBar />
@@ -429,14 +420,20 @@ export default function TenableQuiz() {
             </button>
           </div>
 
-          {/* Daily: scrollable date strip */}
+          {/* Daily: date dropdown */}
           {activeTab === 'daily' && !statsLoading && (
-            <div className="date-strip" style={{ marginBottom: 12 }}>
-              {last14.map(ds => (
-                <button key={ds} onClick={() => selectDate(ds)} style={s.datePill(selectedDate === ds)}>
-                  {formatDateLabel(ds, TODAY)}
-                </button>
-              ))}
+            <div style={{ marginBottom: 12 }}>
+              <select
+                value={selectedDate}
+                onChange={e => selectDate(e.target.value)}
+                style={{
+                  background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20,
+                  padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none',
+                }}>
+                {last14.map(ds => (
+                  <option key={ds} value={ds}>{ds === TODAY ? `Today (${ds})` : ds}</option>
+                ))}
+              </select>
             </div>
           )}
 
