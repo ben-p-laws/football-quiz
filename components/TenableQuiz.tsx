@@ -84,22 +84,31 @@ const s = {
 }
 
 function LoadingAnimation() {
+  const BARS = 10
+  const cycle = 2.2
+  const stagger = cycle / BARS
   return (
-    <div style={{ padding: '40px 20px', textAlign: 'center' as const }}>
+    <div style={{ padding: '40px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
       <style>{`
-        @keyframes ten-progress { from { width: 0% } to { width: 100% } }
+        @keyframes ten-bar {
+          0%, 100% { background: #1e2d4a; }
+          30%, 80% { background: rgba(34,197,94,0.7); }
+        }
         @keyframes ten-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
       `}</style>
-      <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '32px 24px', maxWidth: 420, margin: '0 auto' }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 8, animation: 'ten-pulse 1.5s ease infinite' }}>
-          Loading Tenable
-        </div>
-        <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 20 }}>
-          Crunching Premier League statistics...
-        </div>
-        <div style={{ background: '#1e2d4a', borderRadius: 6, height: 6, overflow: 'hidden' }}>
-          <div style={{ height: '100%', background: '#dc2626', borderRadius: 6, animation: 'ten-progress 2s ease-in-out infinite' }} />
-        </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {Array.from({ length: BARS }, (_, i) => (
+          <div key={i} style={{
+            height: 10,
+            width: `${(i + 1) * 18}px`,
+            borderRadius: 3,
+            background: '#1e2d4a',
+            animation: `ten-bar ${cycle}s ease ${i * stagger}s infinite`,
+          }} />
+        ))}
+      </div>
+      <div style={{ fontSize: 12, color: '#8899bb', animation: 'ten-pulse 1.5s ease infinite' }}>
+        Loading Tenable...
       </div>
     </div>
   )

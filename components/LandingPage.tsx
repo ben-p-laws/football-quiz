@@ -204,13 +204,13 @@ export default function LandingPage() {
             onClick={() => router.push('/tenables')}>
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Name the top 10 PL all-time appearance makers</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>build your own top 10 quiz</div>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
               {[
-                { n: 1, name: 'G. Barry',  val: '653', pct: 100, found: true  },
-                { n: 2, name: 'J. Milner', val: '627', pct: 96,  found: true  },
-                { n: 3, name: '?',         val: '609', pct: 0,   found: false },
+                { n: 1, name: 'C. Fàbregas', val: '163', pct: 100, found: true  },
+                { n: 2, name: 'R. Giggs',    val: '162', pct: 99,  found: true  },
+                { n: 3, name: '?',           val: '153', pct: 0,   found: false },
               ].map(r => (
                 <div key={r.n} style={{ display: 'flex', alignItems: 'stretch', gap: 4, flex: 1 }}>
                   <span style={{ fontSize: 9, color: '#2a3d5e', width: 10, display: 'flex', alignItems: 'center' }}>{r.n}</span>
