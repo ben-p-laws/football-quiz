@@ -18,7 +18,8 @@ export default function LandingPage() {
     cardDesc: { fontSize: 11, color: '#8899bb' } as React.CSSProperties,
     tag: { display: 'inline-block', fontSize: 10, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.12)', padding: '2px 8px', borderRadius: 20, marginTop: 6 } as React.CSSProperties,
     preview: { padding: '0 12px 10px', flex: 1 } as React.CSSProperties,
-    cta: { background: '#dc2626', padding: '11px 14px', textAlign: 'center' as const, cursor: 'pointer' } as React.CSSProperties,
+    cta:    { background: '#dc2626', padding: '11px 14px', textAlign: 'center' as const, cursor: 'pointer' } as React.CSSProperties,
+    ctaSm:  { background: '#dc2626', padding: '8px 14px',  textAlign: 'center' as const, cursor: 'pointer' } as React.CSSProperties,
     ctaText: { fontSize: 13, fontWeight: 800, color: 'white' } as React.CSSProperties,
   }
 
@@ -224,7 +225,7 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            <div style={s.cta}><span style={s.ctaText}>Play Tenable →</span></div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Tenable →</span></div>
           </div>
 
           {/* ---- GRID ---- */}
@@ -266,7 +267,7 @@ export default function LandingPage() {
                     ))}
                   </div>
                 </div>
-                <div style={s.cta}><span style={s.ctaText}>Play Grid →</span></div>
+                <div style={s.ctaSm}><span style={s.ctaText}>Play Grid →</span></div>
               </div>
             )
           })()}
@@ -288,7 +289,7 @@ export default function LandingPage() {
                 <TShirt bg="#111827" label="?"         revealed={false} />
               </div>
             </div>
-            <div style={s.cta}><span style={s.ctaText}>Play Teammates →</span></div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Teammates →</span></div>
           </div>
 
           {/* ---- COUNTDOWN ---- */}
@@ -309,7 +310,7 @@ export default function LandingPage() {
               </div>
               <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#4a5568', textAlign: 'center' as const }}>Unscramble the PL surname →</div>
             </div>
-            <div style={s.cta}><span style={s.ctaText}>Play Countdown →</span></div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Countdown →</span></div>
           </div>
 
           {/* ---- COMING SOON x1 ---- */}
