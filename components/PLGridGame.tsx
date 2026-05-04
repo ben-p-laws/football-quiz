@@ -299,6 +299,7 @@ export default function PLGridGame() {
   const [puzzle, setPuzzle]                   = useState<Puzzle | null>(null)
   const [loading, setLoading]                 = useState(true)
   const [error, setError]                     = useState(false)
+  const [noPuzzle, setNoPuzzle]               = useState(false)
   const [mode, setMode]                       = useState<'rarity' | 'popularity'>('rarity')
   const [rarityGuesses, setRarityGuesses]     = useState<Record<string, Guess>>({})
   const [popGuesses, setPopGuesses]           = useState<Record<string, Guess>>({})
@@ -345,6 +346,7 @@ export default function PLGridGame() {
   useEffect(() => {
     setLoading(true)
     setError(false)
+    setNoPuzzle(false)
     setPuzzle(null)
     setRarityGuesses({})
     setPopGuesses({})
@@ -367,13 +369,9 @@ export default function PLGridGame() {
 
         if (dates && dates.length > 0) {
           setAvailableDates(dates)
-          if (!dates.includes(todayStr) && activeDate === todayStr) {
-            setActiveDate(dates[0])
-            return
-          }
         }
 
-        if (!pd) { setError(true); setLoading(false); return }
+        if (!pd) { setNoPuzzle(true); setLoading(false); return }
 
         const puzz: Puzzle = {
           id: pd.id,
@@ -763,10 +761,41 @@ export default function PLGridGame() {
                             customCols.every(s => s.category && (s.category !== 'team' || s.team))
 
   // ── Render ─────────────────────────────────────────────────────────────────
-  if (loading || (gridMode === 'daily' && (error || !puzzle))) return (
+  if (loading || (gridMode === 'daily' && error)) return (
     <div style={s.page}>
       <NavBar />
       <LoadingAnimation />
+    </div>
+  )
+
+  if (gridMode === 'daily' && noPuzzle) return (
+    <div style={s.page}>
+      <NavBar />
+      <div style={{ maxWidth: 620, margin: '0 auto', padding: '16px 12px 60px' }}>
+        <div style={{ textAlign: 'center', marginBottom: 14 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <select
+              value={activeDate}
+              onChange={e => { if (availableDates.includes(e.target.value)) setActiveDate(e.target.value) }}
+              style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none' }}>
+              {!availableDates.includes(todayStr) && (
+                <option value={todayStr}>Today ({todayStr})</option>
+              )}
+              {availableDates.map(d => (
+                <option key={d} value={d}>{d === todayStr ? `Today (${d})` : d}</option>
+              ))}
+            </select>
+            <button onClick={playAnother} style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer' }}>🎲 Random</button>
+            <button onClick={enterCustomMode} style={{ background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer' }}>🔧 Build your own</button>
+          </div>
+          <div style={{ fontSize: 24, fontWeight: 800, color: 'white', marginBottom: 4 }}>Top<span style={{ color: '#dc2626' }}>Bins</span> Grid</div>
+        </div>
+        <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🕐</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'white', marginBottom: 8 }}>No puzzle for today yet</div>
+          <div style={{ fontSize: 13, color: '#8899bb' }}>Check back later — or play a previous date.</div>
+        </div>
+      </div>
     </div>
   )
 
@@ -783,13 +812,13 @@ export default function PLGridGame() {
               <>
                 <select
                   value={activeDate}
-                  onChange={e => { if (availableDates.includes(e.target.value)) setActiveDate(e.target.value) }}
+                  onChange={e => setActiveDate(e.target.value)}
                   style={{
                     background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20,
                     padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none',
                   }}>
                   {!availableDates.includes(todayStr) && (
-                    <option value={todayStr} disabled>Today ({todayStr}) — no puzzle yet</option>
+                    <option value={todayStr}>Today ({todayStr})</option>
                   )}
                   {availableDates.map(d => (
                     <option key={d} value={d}>{d === todayStr ? `Today (${d})` : d}</option>
