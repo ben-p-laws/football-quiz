@@ -273,17 +273,22 @@ export async function GET(req: Request) {
       const all = Object.values(players as Record<string, PlayerAgg>)
       let pool = customNat ? all.filter(p => mostCommon(p.natFreq) === customNat) : all
 
-      const clubStats = ['apps', 'goals', 'assists']
+      const clubStats = ['apps', 'goals', 'assists', 'goals_p90']
       const useClub   = customClub && clubStats.includes(customStat)
 
       let answers: Answer[]
       if (useClub) {
-        answers = top10(pool.map(p => ({
-          p,
-          v: customStat === 'goals'   ? (p.clubGoals[customClub] || 0)
-           : customStat === 'assists' ? (p.clubAssists[customClub] || 0)
-           :                            (p.clubGames[customClub] || 0),
-        })))
+        answers = top10(pool.map(p => {
+          let v: number
+          if (customStat === 'goals')       v = p.clubGoals[customClub] || 0
+          else if (customStat === 'assists') v = p.clubAssists[customClub] || 0
+          else if (customStat === 'goals_p90') {
+            const cg = p.clubGoals[customClub] || 0
+            const ca = p.clubGames[customClub] || 0
+            v = cg >= 5 && ca > 0 ? cg / ca : 0
+          } else v = p.clubGames[customClub] || 0
+          return { p, v }
+        }), 0, customStat === 'goals_p90' ? fmtP90 : undefined)
       } else {
         answers = top10(pool.map(p => {
           let v: number
