@@ -79,32 +79,11 @@ async function getData(): Promise<FullData> {
     }
   }
 
-  // PL-winning franchises with total title counts — used to derive won_pl / won_3plus_pl
-  // from teamSeasons directly, no season-level data needed
-  const PL_FRANCHISE_WINS: Record<string, number> = {
-    'Manchester United': 13,
-    'Manchester City':    9,
-    'Chelsea':            5,
-    'Arsenal':            3,
-    'Blackburn Rovers':   1,
-    'Leicester City':     1,
-    'Liverpool':          1,
-  }
-
   const wonPlCounts          = new Map<string, number>()
   const relegatedCounts      = new Map<string, number>()
   const goldenBootWinners    = new Set<string>()
   const goldenGloveWinners   = new Set<string>()
   const career100GoalPlayers = new Map<string, number>()
-
-  // Build won_pl counts: how many distinct PL-winning franchises each player played for
-  for (const [team, players] of teamSeasons) {
-    if (PL_FRANCHISE_WINS[team]) {
-      for (const [name] of players) {
-        wonPlCounts.set(name, (wonPlCounts.get(name) ?? 0) + 1)
-      }
-    }
-  }
 
   // Career goals — independent fetch, only needs name_display + goals
   try {
@@ -165,34 +144,40 @@ async function getData(): Promise<FullData> {
     }
   } catch { /* golden glove unavailable */ }
 
-  // Relegated — pl_season_tables has a relegated boolean; cross-ref with player_seasons.year_id
+  // PL title wins + relegated — both derived from pl_season_tables × player_seasons
   try {
     const [seasonRows, tableRows] = await Promise.all([
       fetchAll<{ name_display: string; teams_played_for: string; year_id: string }>(
         supabase, 'player_seasons', 'name_display,teams_played_for,year_id'
       ),
-      fetchAll<{ team: string; season: string; relegated: boolean }>(
-        supabase, 'pl_season_tables', 'team,season,relegated'
+      fetchAll<{ team: string; season: string; position: number; relegated: boolean }>(
+        supabase, 'pl_season_tables', 'team,season,position,relegated'
       ),
     ])
     if (seasonRows.length > 0 && tableRows.length > 0) {
-      const relegKeys = new Set<string>()
+      const championBySeason = new Map<string, string>() // season → winning team
+      const relegKeys        = new Set<string>()
       for (const r of tableRows) {
-        if (r.relegated) relegKeys.add(`${r.team}:${r.season}`)
+        if (r.position === 1) championBySeason.set(r.season, r.team)
+        if (r.relegated)      relegKeys.add(`${r.team}:${r.season}`)
       }
       for (const row of seasonRows) {
         const yearId = row.year_id ?? ''
         if (!yearId) continue
         const teams = String(row.teams_played_for || '')
           .split(',').map(t => normPSTeam(t.trim())).filter(t => t && t !== '2 Teams')
+        const champion = championBySeason.get(yearId)
         for (const team of teams) {
+          if (champion && team === champion) {
+            wonPlCounts.set(row.name_display, (wonPlCounts.get(row.name_display) ?? 0) + 1)
+          }
           if (relegKeys.has(`${team}:${yearId}`)) {
             relegatedCounts.set(row.name_display, (relegatedCounts.get(row.name_display) ?? 0) + 1)
           }
         }
       }
     }
-  } catch { /* relegated unavailable */ }
+  } catch { /* season table unavailable */ }
 
   cachedData = { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, goldenGloveWinners, career100GoalPlayers }
   cacheTime = now
