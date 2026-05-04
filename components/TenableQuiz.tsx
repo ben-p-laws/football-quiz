@@ -3,6 +3,33 @@
 import { useState, useEffect, useRef } from 'react'
 import NavBar from './NavBar'
 
+function bucketByUnit(quizzes: Quiz[]): Record<string, Quiz[]> {
+  const out: Record<string, Quiz[]> = {}
+  for (const q of quizzes) {
+    if (!out[q.unit]) out[q.unit] = []
+    out[q.unit].push(q)
+  }
+  return out
+}
+
+function pickDaily(quizzes: Quiz[]): Quiz {
+  const buckets = bucketByUnit(quizzes)
+  const units   = Object.keys(buckets).sort()
+  const d       = new Date()
+  const seed    = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
+  const unit    = units[seed % units.length]
+  const pool    = buckets[unit]
+  return pool[Math.floor(seed / units.length) % pool.length]
+}
+
+function pickRandom(quizzes: Quiz[]): Quiz {
+  const buckets = bucketByUnit(quizzes)
+  const units   = Object.keys(buckets)
+  const unit    = units[Math.floor(Math.random() * units.length)]
+  const pool    = buckets[unit]
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
 function normalize(str: string) {
   return str.toLowerCase().replace(/[^a-z]/g, '')
 }
@@ -159,9 +186,7 @@ export default function TenableQuiz() {
             })
             .catch(() => setCustomLoading(false))
         } else if (quizzes.length > 0) {
-          const d = new Date()
-          const dateNum = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
-          setCurrentQuiz(quizzes[dateNum % quizzes.length])
+          setCurrentQuiz(pickDaily(quizzes))
         }
       })
       .catch(() => setStatsLoading(false))
@@ -181,25 +206,21 @@ export default function TenableQuiz() {
 
   function switchToDaily() {
     if (allQuizzes.length === 0) return
-    const d = new Date()
-    const dateNum = d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
-    setCurrentQuiz(allQuizzes[dateNum % allQuizzes.length])
+    setCurrentQuiz(pickDaily(allQuizzes))
     setActiveTab('daily')
     resetGame()
   }
 
   function switchToRandom() {
     if (allQuizzes.length === 0) return
-    const idx = Math.floor(Math.random() * allQuizzes.length)
-    setCurrentQuiz(allQuizzes[idx])
+    setCurrentQuiz(pickRandom(allQuizzes))
     setActiveTab('random')
     resetGame()
   }
 
   function newRandom() {
     if (allQuizzes.length === 0) return
-    const idx = Math.floor(Math.random() * allQuizzes.length)
-    setCurrentQuiz(allQuizzes[idx])
+    setCurrentQuiz(pickRandom(allQuizzes))
     resetGame()
   }
 
