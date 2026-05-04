@@ -23,10 +23,9 @@ function pickDaily(quizzes: Quiz[]): Quiz {
 }
 
 function pickRandom(quizzes: Quiz[]): Quiz {
-  const buckets = bucketByUnit(quizzes)
-  const units   = Object.keys(buckets)
-  const unit    = units[Math.floor(Math.random() * units.length)]
-  const pool    = buckets[unit]
+  const allTime  = quizzes.filter(q => q.key.startsWith('all_'))
+  const specific = quizzes.filter(q => !q.key.startsWith('all_'))
+  const pool = specific.length > 0 && Math.random() > 0.2 ? specific : allTime
   return pool[Math.floor(Math.random() * pool.length)]
 }
 
