@@ -76,36 +76,6 @@ type Quiz = {
   answers:     Answer[]
 }
 
-const NATIONALITIES = [
-  { value: 'ENG', label: 'English'    },
-  { value: 'FRA', label: 'French'     },
-  { value: 'ESP', label: 'Spanish'    },
-  { value: 'IRL', label: 'Irish'      },
-  { value: 'WAL', label: 'Welsh'      },
-  { value: 'SCO', label: 'Scottish'   },
-  { value: 'NED', label: 'Dutch'      },
-  { value: 'NOR', label: 'Norwegian'  },
-  { value: 'GER', label: 'German'     },
-  { value: 'POR', label: 'Portuguese' },
-  { value: 'DEN', label: 'Danish'     },
-  { value: 'SWE', label: 'Swedish'    },
-  { value: 'ARG', label: 'Argentine'  },
-  { value: 'BRA', label: 'Brazilian'  },
-  { value: 'BEL', label: 'Belgian'    },
-  { value: 'ITA', label: 'Italian'    },
-  { value: 'CIV', label: 'Ivorian'    },
-  { value: 'NGA', label: 'Nigerian'   },
-  { value: 'SEN', label: 'Senegalese' },
-  { value: 'GHA', label: 'Ghanaian'   },
-  { value: 'AUS', label: 'Australian' },
-]
-
-const CLUBS = [
-  'Arsenal', 'Chelsea', 'Liverpool', 'Manchester City', 'Manchester United',
-  'Tottenham Hotspur', 'Everton', 'Aston Villa', 'Newcastle United',
-  'West Ham United', 'Leicester City', 'Blackburn Rovers', 'Leeds United',
-  'Southampton', 'Middlesbrough',
-]
 
 const s = {
   page:   { minHeight: '100vh', background: '#0a0f1e', fontFamily: "'DM Sans', -apple-system, sans-serif", paddingBottom: 60 } as React.CSSProperties,
@@ -138,6 +108,8 @@ function LoadingAnimation() {
 export default function TenableQuiz() {
   const [allQuizzes, setAllQuizzes]       = useState<Quiz[]>([])
   const [allPlayers, setAllPlayers]       = useState<string[]>([])
+  const [availableClubs, setAvailableClubs]   = useState<string[]>([])
+  const [availableNats, setAvailableNats]     = useState<string[]>([])
   const [statsLoading, setStatsLoading]   = useState(true)
   const [activeTab, setActiveTab]         = useState<'daily' | 'random' | 'custom'>('daily')
   const [currentQuiz, setCurrentQuiz]     = useState<Quiz | null>(null)
@@ -168,6 +140,8 @@ export default function TenableQuiz() {
         const players: string[] = data._allPlayers || []
         setAllQuizzes(quizzes)
         setAllPlayers(players)
+        setAvailableClubs(data._allClubs || [])
+        setAvailableNats(data._topNationalities || [])
         setStatsLoading(false)
 
         if (isCustom) {
@@ -396,14 +370,14 @@ export default function TenableQuiz() {
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#8899bb', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 4 }}>Club</label>
                   <select value={customClub} onChange={e => setCustomClub(e.target.value)} style={s.select}>
                     <option value="">All Clubs</option>
-                    {CLUBS.map(c => <option key={c} value={c}>{c}</option>)}
+                    {availableClubs.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#8899bb', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 4 }}>Nationality</label>
                   <select value={customNat} onChange={e => setCustomNat(e.target.value)} style={s.select}>
                     <option value="">All Nationalities</option>
-                    {NATIONALITIES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
+                    {availableNats.map(n => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>

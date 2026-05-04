@@ -235,7 +235,26 @@ async function buildData() {
 
   const allPlayers = [...new Set(all.map(p => p.name))]
 
-  const data = { quizzes, allPlayers, players }
+  // All clubs ever (from player teamFreq keys, alphabetical)
+  const clubSet = new Set<string>()
+  for (const p of all) {
+    for (const club of Object.keys(p.teamFreq)) clubSet.add(club)
+  }
+  const allClubs = [...clubSet].sort()
+
+  // Top 50 nationalities by total combined apps, returned alphabetically
+  const natApps = new Map<string, number>()
+  for (const p of all) {
+    const code = mostCommon(p.natFreq)
+    if (code) natApps.set(code, (natApps.get(code) || 0) + p.games)
+  }
+  const topNationalities = [...natApps.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 50)
+    .map(([code]) => code)
+    .sort()
+
+  const data = { quizzes, allPlayers, players, allClubs, topNationalities }
   cache = { data, time: Date.now() }
   return data
 }
@@ -248,7 +267,7 @@ export async function GET(req: Request) {
   const customNat  = searchParams.get('nat')   || ''
 
   try {
-    const { quizzes, allPlayers, players } = await buildData()
+    const { quizzes, allPlayers, players, allClubs, topNationalities } = await buildData()
 
     if (isCustom) {
       const all = Object.values(players as Record<string, PlayerAgg>)
@@ -292,10 +311,12 @@ export async function GET(req: Request) {
       return NextResponse.json({
         custom: { key: 'custom', label: parts.join(' — '), description: 'Custom quiz', unit, answers },
         _allPlayers: allPlayers,
+        _allClubs: allClubs,
+        _topNationalities: topNationalities,
       })
     }
 
-    return NextResponse.json({ quizzes, _allPlayers: allPlayers })
+    return NextResponse.json({ quizzes, _allPlayers: allPlayers, _allClubs: allClubs, _topNationalities: topNationalities })
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
