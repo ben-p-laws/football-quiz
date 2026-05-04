@@ -358,21 +358,22 @@ export default function TenableQuiz() {
                   <select value={customStat} onChange={e => setCustomStat(e.target.value)} style={s.select}>
                     <option value="apps">Appearances</option>
                     <option value="goals">Goals</option>
-                    <option value="assists" disabled={!!(customClub || customNat)}>
-                      {(customClub || customNat) ? 'Assists (all-time only)' : 'Assists'}
-                    </option>
+                    <option value="assists">Assists</option>
+                    <option value="goals_p90">Goals per 90</option>
+                    <option value="clean_sheets">Clean Sheets</option>
+                    <option value="yellow_cards">Yellow Cards</option>
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#8899bb', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 4 }}>Club</label>
-                  <select value={customClub} onChange={e => { setCustomClub(e.target.value); if (e.target.value && customStat === 'assists') setCustomStat('apps') }} style={s.select}>
+                  <select value={customClub} onChange={e => setCustomClub(e.target.value)} style={s.select}>
                     <option value="">All Clubs</option>
                     {CLUBS.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#8899bb', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 4 }}>Nationality</label>
-                  <select value={customNat} onChange={e => { setCustomNat(e.target.value); if (e.target.value && customStat === 'assists') setCustomStat('apps') }} style={s.select}>
+                  <select value={customNat} onChange={e => setCustomNat(e.target.value)} style={s.select}>
                     <option value="">All Nationalities</option>
                     {NATIONALITIES.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}
                   </select>

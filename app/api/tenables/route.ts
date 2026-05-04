@@ -54,14 +54,17 @@ type Quiz = {
 }
 
 type PlayerAgg = {
-  name:      string
-  games:     number
-  goals:     number
-  assists:   number
-  natFreq:   Record<string, number>
-  teamFreq:  Record<string, number>
-  clubGames: Record<string, number>
-  clubGoals: Record<string, number>
+  name:         string
+  games:        number
+  goals:        number
+  assists:      number
+  cleanSheets:  number
+  yellowCards:  number
+  natFreq:      Record<string, number>
+  teamFreq:     Record<string, number>
+  clubGames:    Record<string, number>
+  clubGoals:    Record<string, number>
+  clubAssists:  Record<string, number>
 }
 
 function lastWord(name: string): string {
@@ -73,13 +76,21 @@ function mostCommon(freq: Record<string, number>): string {
   return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
 }
 
+function fmtNat(raw: string): string {
+  const parts = raw.trim().split(/\s+/)
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (/^[A-Z]{2,4}$/.test(parts[i])) return parts[i]
+  }
+  return raw
+}
+
 function makeAnswer(p: PlayerAgg, value: number): Answer {
   return {
     player:      lastWord(p.name),
     display:     p.name,
     value:       value.toLocaleString(),
     rawValue:    value,
-    nationality: mostCommon(p.natFreq),
+    nationality: fmtNat(mostCommon(p.natFreq)),
     team:        mostCommon(p.teamFreq),
   }
 }
@@ -98,23 +109,27 @@ const CACHE_TTL = 3_600_000
 async function buildData() {
   if (cache && Date.now() - cache.time < CACHE_TTL) return cache.data
 
-  const rows = await fetchAll('name_display,games,goals,assists,nationality,teams_played_for')
+  const rows = await fetchAll('name_display,games,goals,assists,gk_clean_sheets,cards_yellow,nationality,teams_played_for')
 
   const players: Record<string, PlayerAgg> = {}
 
   for (const row of rows) {
     const name = row.name_display as string
     if (!players[name]) players[name] = {
-      name, games: 0, goals: 0, assists: 0,
-      natFreq: {}, teamFreq: {}, clubGames: {}, clubGoals: {},
+      name, games: 0, goals: 0, assists: 0, cleanSheets: 0, yellowCards: 0,
+      natFreq: {}, teamFreq: {}, clubGames: {}, clubGoals: {}, clubAssists: {},
     }
     const p = players[name]
-    const g  = Number(row.games)   || 0
-    const gl = Number(row.goals)   || 0
-    const as = Number(row.assists) || 0
-    p.games   += g
-    p.goals   += gl
-    p.assists += as
+    const g  = Number(row.games)           || 0
+    const gl = Number(row.goals)           || 0
+    const as = Number(row.assists)         || 0
+    const cs = Number(row.gk_clean_sheets) || 0
+    const yc = Number(row.cards_yellow)    || 0
+    p.games       += g
+    p.goals       += gl
+    p.assists     += as
+    p.cleanSheets += cs
+    p.yellowCards += yc
 
     if (row.nationality) {
       p.natFreq[row.nationality] = (p.natFreq[row.nationality] || 0) + 1
@@ -127,8 +142,9 @@ async function buildData() {
       p.teamFreq[team] = (p.teamFreq[team] || 0) + g
     }
     if (teams.length === 1) {
-      p.clubGames[teams[0]] = (p.clubGames[teams[0]] || 0) + g
-      p.clubGoals[teams[0]] = (p.clubGoals[teams[0]] || 0) + gl
+      p.clubGames[teams[0]]   = (p.clubGames[teams[0]] || 0) + g
+      p.clubGoals[teams[0]]   = (p.clubGoals[teams[0]] || 0) + gl
+      p.clubAssists[teams[0]] = (p.clubAssists[teams[0]] || 0) + as
     }
   }
 
@@ -137,9 +153,12 @@ async function buildData() {
   const quizzes: Quiz[] = []
 
   // ── All-time ─────────────────────────────────────────────────────────────
-  quizzes.push({ key: 'all_apps',    label: 'All-Time Appearances', description: 'Top 10 PL appearance makers of all time',   unit: 'apps',    answers: top10(all.map(p => ({ p, v: p.games   }))) })
-  quizzes.push({ key: 'all_goals',   label: 'All-Time Goals',       description: 'Top 10 PL goalscorers of all time',         unit: 'goals',   answers: top10(all.map(p => ({ p, v: p.goals   }))) })
-  quizzes.push({ key: 'all_assists', label: 'All-Time Assists',     description: 'Top 10 PL assist providers of all time',    unit: 'assists', answers: top10(all.map(p => ({ p, v: p.assists }))) })
+  quizzes.push({ key: 'all_apps',         label: 'All-Time Appearances',  description: 'Top 10 PL appearance makers of all time',             unit: 'apps',         answers: top10(all.map(p => ({ p, v: p.games       }))) })
+  quizzes.push({ key: 'all_goals',        label: 'All-Time Goals',        description: 'Top 10 PL goalscorers of all time',                   unit: 'goals',        answers: top10(all.map(p => ({ p, v: p.goals       }))) })
+  quizzes.push({ key: 'all_assists',      label: 'All-Time Assists',      description: 'Top 10 PL assist providers of all time',              unit: 'assists',      answers: top10(all.map(p => ({ p, v: p.assists     }))) })
+  quizzes.push({ key: 'all_clean_sheets', label: 'All-Time Clean Sheets', description: 'Top 10 PL goalkeepers by career clean sheets',        unit: 'clean sheets', answers: top10(all.map(p => ({ p, v: p.cleanSheets }))) })
+  quizzes.push({ key: 'all_yellow_cards', label: 'All-Time Yellow Cards', description: 'Top 10 most-booked PL players of all time',           unit: 'yellow cards', answers: top10(all.map(p => ({ p, v: p.yellowCards }))) })
+  quizzes.push({ key: 'all_goals_p90',   label: 'All-Time Goals per 90', description: 'Top 10 PL goals-per-90 (min. 5 goals)',               unit: 'per 90',       answers: top10(all.filter(p => p.goals >= 5).map(p => ({ p, v: Math.round((p.goals / p.games) * 90 * 100) / 100 })), 0.1) })
 
   // ── By nationality ────────────────────────────────────────────────────────
   const NATIONALITIES: { nat: string; label: string }[] = [
@@ -223,21 +242,36 @@ export async function GET(req: Request) {
       const all = Object.values(players as Record<string, PlayerAgg>)
       let pool = customNat ? all.filter(p => mostCommon(p.natFreq) === customNat) : all
 
+      const clubStats = ['apps', 'goals', 'assists']
+      const useClub   = customClub && clubStats.includes(customStat)
+
       let answers: Answer[]
-      if (customClub) {
+      if (useClub) {
         answers = top10(pool.map(p => ({
           p,
-          v: customStat === 'goals' ? (p.clubGoals[customClub] || 0) : (p.clubGames[customClub] || 0),
+          v: customStat === 'goals'   ? (p.clubGoals[customClub] || 0)
+           : customStat === 'assists' ? (p.clubAssists[customClub] || 0)
+           :                            (p.clubGames[customClub] || 0),
         })))
       } else {
-        answers = top10(pool.map(p => ({
-          p,
-          v: customStat === 'assists' ? p.assists : customStat === 'goals' ? p.goals : p.games,
-        })))
+        answers = top10(pool.map(p => {
+          let v: number
+          if      (customStat === 'goals')        v = p.goals
+          else if (customStat === 'assists')       v = p.assists
+          else if (customStat === 'clean_sheets')  v = p.cleanSheets
+          else if (customStat === 'yellow_cards')  v = p.yellowCards
+          else if (customStat === 'goals_p90')     v = p.goals >= 5 ? Math.round((p.goals / p.games) * 90 * 100) / 100 : 0
+          else                                     v = p.games
+          return { p, v }
+        }))
       }
 
-      const statLabel = customStat === 'goals' ? 'Goals' : customStat === 'assists' ? 'Assists' : 'Appearances'
-      const unit      = customStat === 'goals' ? 'goals' : customStat === 'assists' ? 'assists' : 'apps'
+      const statLabel = customStat === 'goals' ? 'Goals' : customStat === 'assists' ? 'Assists'
+        : customStat === 'clean_sheets' ? 'Clean Sheets' : customStat === 'yellow_cards' ? 'Yellow Cards'
+        : customStat === 'goals_p90' ? 'Goals per 90' : 'Appearances'
+      const unit = customStat === 'goals' ? 'goals' : customStat === 'assists' ? 'assists'
+        : customStat === 'clean_sheets' ? 'clean sheets' : customStat === 'yellow_cards' ? 'yellow cards'
+        : customStat === 'goals_p90' ? 'per 90' : 'apps'
       const parts     = ['Custom']
       if (customNat)  parts.push(customNat)
       if (customClub) parts.push(customClub)
