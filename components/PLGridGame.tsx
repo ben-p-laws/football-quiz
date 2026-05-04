@@ -1049,7 +1049,7 @@ export default function PLGridGame() {
                               </span>
                             )}
                             {canShowBetter && (
-                              <span style={{ fontSize: 8, color: '#8899bb' }}>tap for better ↑</span>
+                              <span style={{ fontSize: 8, color: '#8899bb' }}>Better Answers</span>
                             )}
                             {answersSeen && (
                               <span style={{ fontSize: 9, color: '#8899bb' }}>tap ▼</span>
@@ -1140,32 +1140,33 @@ export default function PLGridGame() {
         {/* ── Better answers panel ── */}
         {betterCell && betterPos && (
           <div style={{
-            position: 'absolute', top: betterPos.top, left: 0, right: 0,
-            background: '#111827', border: '1px solid #2a3d5e', borderRadius: 10,
-            padding: '12px 14px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
+            position: 'absolute', top: betterPos.top, left: '50%', transform: 'translateX(-50%)',
+            width: 220,
+            background: '#111827', border: '1px solid #2a3d5e', borderRadius: 8,
+            padding: '8px 10px', zIndex: 50, boxShadow: '0 8px 24px rgba(0,0,0,0.6)',
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <div style={{ fontSize: 11, color: '#f97316', fontWeight: 700 }}>
-                {mode === 'rarity' ? '🎯 Rarer' : '⭐ More popular'} answers for this cell
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, color: '#f97316', fontWeight: 700 }}>
+                {mode === 'rarity' ? '🎯 Rarer picks' : '⭐ More popular picks'}
               </div>
               <button onClick={() => { setBetterCell(null); setBetterPos(null) }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899bb', fontSize: 13, padding: 0, lineHeight: 1 }}>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#8899bb', fontSize: 12, padding: 0, lineHeight: 1 }}>
                 ✕
               </button>
             </div>
-            {betterLoading && <div style={{ fontSize: 12, color: '#8899bb' }}>Loading...</div>}
+            {betterLoading && <div style={{ fontSize: 11, color: '#8899bb' }}>Loading...</div>}
             {!betterLoading && betterList.length === 0 && (
-              <div style={{ fontSize: 12, color: '#8899bb' }}>Your answer was already the best!</div>
+              <div style={{ fontSize: 11, color: '#8899bb' }}>Already the best!</div>
             )}
             {!betterLoading && betterList.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {betterList.map((a) => {
                   const c = scoreColor(a.rank)
                   return (
-                    <div key={a.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: 12, color: 'white' }}>{a.name}</span>
-                      <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 10, padding: '2px 8px', background: c.border, color: c.text }}>
-                        {scoreLabel(a.score, mode)} · {a.score}
+                    <div key={a.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontSize: 11, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.name}</span>
+                      <span style={{ fontSize: 9, fontWeight: 700, borderRadius: 8, padding: '1px 6px', background: c.border, color: c.text, flexShrink: 0 }}>
+                        {a.score}
                       </span>
                     </div>
                   )
