@@ -519,7 +519,7 @@ export default function TenableQuiz() {
                 return (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span style={{ fontSize: 11, color: '#4a5568', width: 16, textAlign: 'right' as const, flexShrink: 0 }}>{i + 1}</span>
-                    <div style={{ flex: 1, height: showClues ? 54 : 44, background: '#0a0f1e', borderRadius: 8, border: `1px solid ${isGuessed ? 'rgba(34,197,94,0.4)' : isRevealed ? 'rgba(239,68,68,0.4)' : '#1e2d4a'}`, position: 'relative', overflow: 'hidden', transition: 'height 0.2s ease' }}>
+                    <div style={{ flex: 1, height: 44, background: '#0a0f1e', borderRadius: 8, border: `1px solid ${isGuessed ? 'rgba(34,197,94,0.4)' : isRevealed ? 'rgba(239,68,68,0.4)' : '#1e2d4a'}`, position: 'relative', overflow: 'hidden' }}>
                       {/* Bar fill */}
                       <div
                         className={isGuessed ? 'bar-fill' : ''}
@@ -535,12 +535,8 @@ export default function TenableQuiz() {
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 700, color: isGuessed ? '#22c55e' : isRevealed ? '#ef4444' : '#8899bb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {(isGuessed || isRevealed) ? ans.display : '?'}
+                            {showClues && <span style={{ fontSize: 10, fontWeight: 400, color: isGuessed ? 'rgba(34,197,94,0.7)' : isRevealed ? 'rgba(239,68,68,0.7)' : '#4a5568', marginLeft: 6 }}>{ans.nationality} · {ans.team}</span>}
                           </div>
-                          {showClues && (
-                            <div style={{ fontSize: 10, color: isGuessed ? 'rgba(34,197,94,0.7)' : isRevealed ? 'rgba(239,68,68,0.7)' : '#4a5568', marginTop: 1 }}>
-                              {ans.nationality} · {ans.team}
-                            </div>
-                          )}
                         </div>
                         <span style={{ fontSize: 14, fontWeight: 800, color: isGuessed ? '#22c55e' : isRevealed ? '#ef4444' : '#8899bb', flexShrink: 0 }}>
                           {ans.value}
