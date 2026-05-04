@@ -37,7 +37,7 @@ function pickRandom(quizzes: Quiz[]): Quiz {
 }
 
 function normalize(str: string) {
-  return str.toLowerCase().replace(/[^a-z]/g, '')
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z]/g, '')
 }
 
 function fuzzyMatch(input: string, target: string) {
@@ -301,7 +301,7 @@ export default function TenableQuiz() {
   const allFound   = foundCount === answers.length && answers.length > 0
 
   const sugg = showSugg && input.trim().length >= 2
-    ? allPlayers.filter(n => n.toLowerCase().includes(input.toLowerCase())).slice(0, 10)
+    ? allPlayers.filter(n => normalize(n).includes(normalize(input))).slice(0, 10)
     : []
 
   return (
