@@ -247,6 +247,7 @@ export default function TenableQuiz() {
 
   function selectDate(ds: string) {
     if (allQuizzes.length === 0) return
+    setActiveTab('daily')
     setSelectedDate(ds)
     applyDailyForDate(allQuizzes, ds)
   }
@@ -407,25 +408,12 @@ export default function TenableQuiz() {
       <div style={{ background: '#111827', borderBottom: '1px solid #1e2d4a', padding: '12px 20px 14px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
-          {/* Mode pills — Grid style */}
-          <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' as const }}>
-            <button onClick={() => { if (activeTab !== 'daily') switchToDaily() }} style={s.modePill(activeTab === 'daily')}>
-              📅 Daily
-            </button>
-            <button onClick={() => { if (activeTab !== 'random') switchToRandom() }} style={s.modePill(activeTab === 'random')}>
-              🎲 Random
-            </button>
-            <button onClick={() => { if (activeTab !== 'custom') switchToCustom() }} style={s.modePill(activeTab === 'custom')}>
-              🛠 Custom
-            </button>
-          </div>
-
-          {/* Daily: date dropdown */}
-          {activeTab === 'daily' && !statsLoading && (
-            <div style={{ marginBottom: 12 }}>
+          {/* Mode controls — Grid style */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+            {!statsLoading && activeTab !== 'custom' && (
               <select
                 value={selectedDate}
-                onChange={e => selectDate(e.target.value)}
+                onChange={e => { setActiveTab('daily'); selectDate(e.target.value) }}
                 style={{
                   background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: 20,
                   padding: '3px 10px', fontSize: 11, color: '#8899bb', cursor: 'pointer', outline: 'none',
@@ -434,8 +422,14 @@ export default function TenableQuiz() {
                   <option key={ds} value={ds}>{ds === TODAY ? `Today (${ds})` : ds}</option>
                 ))}
               </select>
-            </div>
-          )}
+            )}
+            <button onClick={() => { if (activeTab !== 'random') switchToRandom() }} style={s.modePill(activeTab === 'random')}>
+              🎲 Random
+            </button>
+            <button onClick={() => { if (activeTab !== 'custom') switchToCustom() }} style={s.modePill(activeTab === 'custom')}>
+              🛠 Build your own
+            </button>
+          </div>
 
           {/* Quiz label */}
           {(activeTab === 'daily' || activeTab === 'random') && quiz && (
