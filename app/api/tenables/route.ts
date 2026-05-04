@@ -63,9 +63,11 @@ type PlayerAgg = {
   yellowCards:  number
   natFreq:      Record<string, number>
   teamFreq:     Record<string, number>
-  clubGames:    Record<string, number>
-  clubGoals:    Record<string, number>
-  clubAssists:  Record<string, number>
+  clubGames:       Record<string, number>
+  clubGoals:       Record<string, number>
+  clubAssists:     Record<string, number>
+  clubCleanSheets: Record<string, number>
+  clubYellowCards: Record<string, number>
 }
 
 function lastWord(name: string): string {
@@ -120,7 +122,7 @@ async function buildData() {
     const name = row.name_display as string
     if (!players[name]) players[name] = {
       name, games: 0, goals: 0, assists: 0, cleanSheets: 0, yellowCards: 0,
-      natFreq: {}, teamFreq: {}, clubGames: {}, clubGoals: {}, clubAssists: {},
+      natFreq: {}, teamFreq: {}, clubGames: {}, clubGoals: {}, clubAssists: {}, clubCleanSheets: {}, clubYellowCards: {},
     }
     const p = players[name]
     const g  = Number(row.games)           || 0
@@ -146,9 +148,11 @@ async function buildData() {
       p.teamFreq[team] = (p.teamFreq[team] || 0) + g
     }
     if (teams.length === 1) {
-      p.clubGames[teams[0]]   = (p.clubGames[teams[0]] || 0) + g
-      p.clubGoals[teams[0]]   = (p.clubGoals[teams[0]] || 0) + gl
-      p.clubAssists[teams[0]] = (p.clubAssists[teams[0]] || 0) + as
+      p.clubGames[teams[0]]       = (p.clubGames[teams[0]] || 0) + g
+      p.clubGoals[teams[0]]       = (p.clubGoals[teams[0]] || 0) + gl
+      p.clubAssists[teams[0]]     = (p.clubAssists[teams[0]] || 0) + as
+      p.clubCleanSheets[teams[0]] = (p.clubCleanSheets[teams[0]] || 0) + cs
+      p.clubYellowCards[teams[0]] = (p.clubYellowCards[teams[0]] || 0) + yc
     }
   }
 
@@ -227,10 +231,12 @@ async function buildData() {
     const push = (key: string, unit: string, lbl: string, desc: string, answers: Answer[]) => {
       if (answers.length >= 10) quizzes.push({ key, type: 'club', label: lbl, description: desc, unit, answers })
     }
-    push(`${slug}_apps`,       'apps',    `${short} — Appearances`, `Top 10 players by PL appearances for ${name}`,   top10(all.map(p => ({ p, v: p.clubGames[name]   || 0 }))))
-    push(`${slug}_goals`,      'goals',   `${short} — Goals`,       `Top 10 PL goalscorers for ${name}`,              top10(all.map(p => ({ p, v: p.clubGoals[name]   || 0 }))))
-    push(`${slug}_assists`,    'assists', `${short} — Assists`,     `Top 10 PL assist providers for ${name}`,         top10(all.map(p => ({ p, v: p.clubAssists[name] || 0 }))))
-    push(`${slug}_goals_p90`, 'per 90',  `${short} — Goals per 90`,`Top 10 goals per 90 for ${name} (min. 5 goals)`, top10(all.filter(p => (p.clubGoals[name] || 0) >= 5 && (p.clubGames[name] || 0) > 0).map(p => ({ p, v: p.clubGoals[name] / p.clubGames[name] })), 0.01, fmtP90))
+    push(`${slug}_apps`,         'apps',         `${short} — Appearances`, `Top 10 players by PL appearances for ${name}`,        top10(all.map(p => ({ p, v: p.clubGames[name]       || 0 }))))
+    push(`${slug}_goals`,        'goals',        `${short} — Goals`,       `Top 10 PL goalscorers for ${name}`,                   top10(all.map(p => ({ p, v: p.clubGoals[name]       || 0 }))))
+    push(`${slug}_assists`,      'assists',      `${short} — Assists`,     `Top 10 PL assist providers for ${name}`,              top10(all.map(p => ({ p, v: p.clubAssists[name]     || 0 }))))
+    push(`${slug}_clean_sheets`, 'clean sheets', `${short} — Clean Sheets`,`Top 10 PL clean sheets for ${name}`,                  top10(all.map(p => ({ p, v: p.clubCleanSheets[name] || 0 }))))
+    push(`${slug}_yellow_cards`, 'yellow cards', `${short} — Yellow Cards`,`Top 10 most-booked PL players for ${name}`,           top10(all.map(p => ({ p, v: p.clubYellowCards[name] || 0 }))))
+    push(`${slug}_goals_p90`,   'per 90',       `${short} — Goals per 90`,`Top 10 goals per 90 for ${name} (min. 5 goals)`,      top10(all.filter(p => (p.clubGoals[name] || 0) >= 5 && (p.clubGames[name] || 0) > 0).map(p => ({ p, v: p.clubGoals[name] / p.clubGames[name] })), 0.01, fmtP90))
   }
 
   const allPlayers = [...new Set(all.map(p => p.name))]
@@ -275,16 +281,14 @@ export async function GET(req: Request) {
       // For all stats, filter pool to players who played for the club when one is selected
       if (customClub) pool = pool.filter(p => (p.teamFreq[customClub] || 0) > 0)
 
-      // Stats where we use per-club values rather than career totals
-      const perClubStats = ['apps', 'goals', 'assists', 'goals_p90']
-      const useClub = customClub && perClubStats.includes(customStat)
-
       let answers: Answer[]
-      if (useClub) {
+      if (customClub) {
         answers = top10(pool.map(p => {
           let v: number
-          if (customStat === 'goals')       v = p.clubGoals[customClub] || 0
-          else if (customStat === 'assists') v = p.clubAssists[customClub] || 0
+          if      (customStat === 'goals')        v = p.clubGoals[customClub]       || 0
+          else if (customStat === 'assists')       v = p.clubAssists[customClub]     || 0
+          else if (customStat === 'clean_sheets')  v = p.clubCleanSheets[customClub] || 0
+          else if (customStat === 'yellow_cards')  v = p.clubYellowCards[customClub] || 0
           else if (customStat === 'goals_p90') {
             const cg = p.clubGoals[customClub] || 0
             const ca = p.clubGames[customClub] || 0
@@ -293,7 +297,6 @@ export async function GET(req: Request) {
           return { p, v }
         }), 0, customStat === 'goals_p90' ? fmtP90 : undefined)
       } else {
-        // clean_sheets, yellow_cards — use career totals but pool already filtered to club players
         answers = top10(pool.map(p => {
           let v: number
           if      (customStat === 'goals')        v = p.goals
