@@ -44,6 +44,27 @@ export default function LandingPage() {
     )
   }
 
+  const SHIRT_PATH = [
+    'M 12,32', 'L 2,44', 'L 20,56', 'C 22,55 24,51 24,48',
+    'L 24,90', 'L 76,90', 'L 76,48', 'C 76,51 78,55 80,56',
+    'L 98,44', 'L 88,32', 'C 80,20 70,16 62,16',
+    'A 12,10 0 0 1 38,16', 'C 30,16 20,20 12,32', 'Z',
+  ].join(' ')
+
+  function TShirt({ bg, label, revealed }: { bg: string; label: string; revealed: boolean }) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+        <svg viewBox="0 0 100 100" width="42" height="42" style={{ display: 'block' }}>
+          <path d={SHIRT_PATH}
+            fill={revealed ? bg : '#111827'} fillOpacity={revealed ? 0.6 : 1}
+            stroke={revealed ? bg : '#2a3d5e'} strokeOpacity={revealed ? 0.9 : 1}
+            strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+        </svg>
+        <span style={{ fontSize: 9, fontWeight: 700, color: revealed ? '#cbd5e1' : '#4a5568' }}>{revealed ? label : '?'}</span>
+      </div>
+    )
+  }
+
   function MCat({ icon, label, player, rank, color }: { icon: string; label: string; player?: string; rank?: string; color?: string }) {
     const assigned = !!player
     const bg = color === 'green' ? 'rgba(34,197,94,0.12)' : color === 'yellow' ? 'rgba(251,191,36,0.1)' : '#0a0f1e'
@@ -258,18 +279,12 @@ export default function LandingPage() {
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Teammates</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their PL teammates</div>
             </div>
-            <div style={{ padding: '0 10px 10px', flex: 1 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, height: 90 }}>
-                {[
-                  { name: 'Gerrard',   bg: 'rgba(200,16,46,0.18)',  border: 'rgba(200,16,46,0.4)',  color: '#f87171' },
-                  { name: 'De Bruyne', bg: 'rgba(108,171,221,0.18)', border: 'rgba(108,171,221,0.4)', color: '#7dd3fc' },
-                  { name: 'Lampard',   bg: 'rgba(3,70,148,0.22)',   border: 'rgba(3,70,148,0.5)',   color: '#93c5fd' },
-                  { name: '?',         bg: '#0a0f1e',               border: '#4a5568',              color: '#8899bb' },
-                ].map((c, i) => (
-                  <div key={i} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 5, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: c.color, textAlign: 'center' as const, lineHeight: 1.2, padding: '0 4px' }}>{c.name}</span>
-                  </div>
-                ))}
+            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <TShirt bg="#C8102E" label="Liverpool"  revealed={true} />
+                <TShirt bg="#6CABDD" label="Man City"   revealed={true} />
+                <TShirt bg="#034694" label="Chelsea"    revealed={true} />
+                <TShirt bg="#111827" label="?"          revealed={false} />
               </div>
             </div>
             <div style={s.cta}><span style={s.ctaText}>Play Teammates →</span></div>
