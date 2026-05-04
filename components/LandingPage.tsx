@@ -60,7 +60,7 @@ export default function LandingPage() {
             stroke={revealed ? bg : '#2a3d5e'} strokeOpacity={revealed ? 0.9 : 1}
             strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
         </svg>
-        <span style={{ fontSize: 9, fontWeight: 700, color: revealed ? '#cbd5e1' : '#4a5568' }}>{revealed ? label : '?'}</span>
+        <span style={{ fontSize: 9, fontWeight: 700, color: revealed ? '#cbd5e1' : '#4a5568', whiteSpace: 'nowrap' }}>{revealed ? label : '?'}</span>
       </div>
     )
   }
