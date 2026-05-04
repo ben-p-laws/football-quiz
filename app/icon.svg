@@ -1,0 +1,23 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="32" height="32" rx="7" fill="#0a0f1e"/>
+  <rect x="0" y="0" width="28" height="4" fill="#e2e8f0"/>
+  <rect x="24" y="4" width="4" height="28" fill="#e2e8f0"/>
+  <line x1="4"  y1="4" x2="2"  y2="32" stroke="#334155" stroke-width="0.8"/>
+  <line x1="9"  y1="4" x2="7"  y2="32" stroke="#334155" stroke-width="0.8"/>
+  <line x1="14" y1="4" x2="12" y2="32" stroke="#334155" stroke-width="0.8"/>
+  <line x1="19" y1="4" x2="17" y2="32" stroke="#334155" stroke-width="0.8"/>
+  <line x1="0" y1="9"  x2="24" y2="9"  stroke="#334155" stroke-width="0.8"/>
+  <line x1="0" y1="14" x2="24" y2="14" stroke="#334155" stroke-width="0.8"/>
+  <line x1="0" y1="19" x2="24" y2="19" stroke="#334155" stroke-width="0.8"/>
+  <line x1="0" y1="24" x2="24" y2="24" stroke="#334155" stroke-width="0.8"/>
+  <circle cx="17" cy="15" r="6.2" fill="white"/>
+  <circle cx="17" cy="15" r="7.2" fill="none" stroke="#dc2626" stroke-width="1.5" opacity="0.5"/>
+  <defs>
+    <path id="tb-star" d="M0,-1.55 L0.36,-0.5 L1.47,-0.48 L0.59,0.19 L0.91,1.25 L0,0.62 L-0.91,1.25 L-0.59,0.19 L-1.47,-0.48 L-0.36,-0.5 Z" fill="#dc2626"/>
+  </defs>
+  <use href="#tb-star" transform="translate(17,11.8)"/>
+  <use href="#tb-star" transform="translate(14,14.2)"/>
+  <use href="#tb-star" transform="translate(20,14.2)"/>
+  <use href="#tb-star" transform="translate(14.8,17.4)"/>
+  <use href="#tb-star" transform="translate(19.2,17.4)"/>
+</svg>
