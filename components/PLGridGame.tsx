@@ -87,7 +87,7 @@ function shortName(team: string): string {
 
 function getTodayStr(): string {
   const d = new Date()
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function resolveSlot(type: string, ref: string | null): Slot {
