@@ -91,8 +91,8 @@ function LoadingAnimation() {
     <div style={{ padding: '40px 20px', display: 'flex', justifyContent: 'center' }}>
       <style>{`
         @keyframes ten-bar {
-          0%, 100% { background: #1e2d4a; }
-          30%, 80% { background: rgba(34,197,94,0.7); }
+          0%, 9.9% { background: rgba(34,197,94,0.7); }
+          10%, 100% { background: #1e2d4a; }
         }
         @keyframes ten-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
       `}</style>
