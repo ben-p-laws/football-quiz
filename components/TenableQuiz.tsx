@@ -405,7 +405,7 @@ export default function TenableQuiz() {
       <NavBar />
 
       {/* Header */}
-      <div style={{ background: '#111827', borderBottom: '1px solid #1e2d4a', padding: '12px 20px 14px' }}>
+      {!statsLoading && <div style={{ background: '#111827', borderBottom: '1px solid #1e2d4a', padding: '12px 20px 14px' }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
 
           {/* Mode controls — Grid style */}
@@ -445,9 +445,6 @@ export default function TenableQuiz() {
                 </button>
               )}
             </div>
-          )}
-          {(activeTab === 'daily' || activeTab === 'random') && statsLoading && (
-            <div style={{ fontSize: 12, color: '#8899bb' }}>Loading quiz...</div>
           )}
 
           {/* Custom controls */}
@@ -498,7 +495,7 @@ export default function TenableQuiz() {
             </div>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Main content */}
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '20px 16px' }}>
