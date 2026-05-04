@@ -1159,7 +1159,7 @@ export default function PLGridGame() {
               <div style={{ fontSize: 11, color: '#8899bb' }}>Already the best!</div>
             )}
             {!betterLoading && betterList.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
                 {betterList.map((a) => {
                   const c = scoreColor(a.rank)
                   return (
