@@ -106,12 +106,16 @@ const buildCache = unstable_cache(
   { revalidate: 86400 }
 )
 
-// GET ?q=partial → autocomplete player names
+// GET ?names=1 → full sorted player name list (fetched once on game load)
+// GET ?q=partial → autocomplete (legacy, client-side preferred)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const q = (searchParams.get('q') || '').toLowerCase().trim()
   try {
     const { playerNames } = await buildCache()
+    if (searchParams.get('names') === '1') {
+      return NextResponse.json({ players: playerNames })
+    }
+    const q = (searchParams.get('q') || '').toLowerCase().trim()
     if (!q || q.length < 2) return NextResponse.json({ players: [] })
     const matches = playerNames.filter(n => n.toLowerCase().includes(q)).slice(0, 10)
     return NextResponse.json({ players: matches })

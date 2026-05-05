@@ -140,7 +140,15 @@ export default function FootballGolf() {
   const [submitting, setSubmitting] = useState(false)
   const [shotResult, setShotResult] = useState<ShotResult | null>(null)
   const [inputError, setInputError] = useState('')
+  const [allPlayerNames, setAllPlayerNames] = useState<string[]>([])
   const searchTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null])
+
+  // Preload all player names once for instant client-side autocomplete
+  useEffect(() => {
+    fetch('/api/football-golf?names=1')
+      .then(r => r.json())
+      .then(d => setAllPlayerNames(d.players || []))
+  }, [])
 
   const currentHole = holes[holeIdx]
   const club = remaining > 0 ? getClub(remaining) : 'driver'
@@ -171,21 +179,16 @@ export default function FootballGolf() {
     setInputError('')
   }
 
-  async function fetchSuggestions(idx: number, q: string) {
-    if (q.length < 2) {
-      setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
-      return
-    }
-    const res = await fetch(`/api/football-golf?q=${encodeURIComponent(q)}`)
-    const data = await res.json()
-    setSuggestions(prev => { const n = [...prev]; n[idx] = data.players || []; return n })
-  }
-
   function onInputChange(idx: number, val: string) {
     setPlayerInputs(prev => { const n = [...prev]; n[idx] = val; return n })
     setConfirmedPlayers(prev => { const n = [...prev]; n[idx] = null; return n })
-    if (searchTimers.current[idx]) clearTimeout(searchTimers.current[idx]!)
-    searchTimers.current[idx] = setTimeout(() => fetchSuggestions(idx, val), 250)
+    if (val.length < 2) {
+      setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
+      return
+    }
+    const q = val.toLowerCase()
+    const matches = allPlayerNames.filter(name => name.toLowerCase().includes(q)).slice(0, 8)
+    setSuggestions(prev => { const n = [...prev]; n[idx] = matches; return n })
   }
 
   function confirmSuggestion(idx: number, name: string) {
@@ -316,11 +319,7 @@ export default function FootballGolf() {
   const vsParStr = vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar)
 
   return (
-    <div style={{
-      minHeight: '100dvh', background: '#0a0f1e',
-      fontFamily: "'DM Sans', -apple-system, sans-serif",
-      display: 'flex', flexDirection: 'column', maxWidth: 420, margin: '0 auto',
-    }}>
+    <div style={{ minHeight: '100dvh', background: '#0a0f1e', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');
         * { box-sizing: border-box; }
@@ -331,74 +330,80 @@ export default function FootballGolf() {
       <NavBar />
       <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
 
-      <CourseView hole={currentHole} ballPos={ballPos} strokes={strokes} />
+      {/* Main content: left 75% controls, right 25% course */}
+      <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 'calc(100dvh - 56px - 42px)' }}>
 
-      <div style={{ flex: 1, padding: '12px 16px 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {/* Club + distance row */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{
-            background: '#1e2d4a', borderRadius: 8, padding: '5px 12px',
-            fontSize: 12, fontWeight: 800, color: 'white',
-          }}>
-            {CLUB_LABEL[club].toUpperCase()}
+        {/* Left panel — 75% */}
+        <div style={{ flex: 3, padding: '12px 14px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+          {/* Club + distance row */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <div style={{ background: '#1e2d4a', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 800, color: 'white' }}>
+              {CLUB_LABEL[club].toUpperCase()}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
+              {remaining} yds · {clubMin}–{clubMax} range
+            </div>
           </div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
-            {remaining} yds to go · {clubMin}–{clubMax} yds range
-          </div>
+
+          {/* Question card */}
+          {question && (
+            <div style={{ background: '#1e2d4a', borderRadius: 10, padding: '9px 12px' }}>
+              <div style={{ fontSize: 9, fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
+                Category
+              </div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', lineHeight: 1.3 }}>{question.label}</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>
+                Up to 3 players — combined stat = shot distance
+              </div>
+            </div>
+          )}
+
+          {/* Shot result or inputs */}
+          {shotResult ? (
+            <ShotResultPanel result={shotResult} club={club} remaining={remaining} onContinue={advanceFromResult} />
+          ) : (
+            <>
+              {[0, 1, 2].map(idx => (
+                <PlayerInputRow
+                  key={idx}
+                  idx={idx}
+                  value={playerInputs[idx]}
+                  confirmed={!!confirmedPlayers[idx]}
+                  suggestions={suggestions[idx]}
+                  onChange={val => onInputChange(idx, val)}
+                  onConfirm={name => confirmSuggestion(idx, name)}
+                  onClear={() => {
+                    setPlayerInputs(prev => { const n = [...prev]; n[idx] = ''; return n })
+                    setConfirmedPlayers(prev => { const n = [...prev]; n[idx] = null; return n })
+                    setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
+                  }}
+                  disabled={submitting}
+                />
+              ))}
+              {inputError && (
+                <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>{inputError}</div>
+              )}
+              <button
+                onClick={submitShot}
+                disabled={submitting || confirmedPlayers.every(p => !p)}
+                style={{
+                  background: (submitting || confirmedPlayers.every(p => !p)) ? '#1a2540' : '#dc2626',
+                  color: 'white', border: 'none', borderRadius: 10, padding: '13px 0',
+                  fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                  transition: 'background 0.2s', marginTop: 2,
+                }}
+              >
+                {submitting ? 'Looking up...' : '⛳ Take Shot'}
+              </button>
+            </>
+          )}
         </div>
 
-        {/* Question card */}
-        {question && (
-          <div style={{ background: '#1e2d4a', borderRadius: 10, padding: '10px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
-              Category
-            </div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: 'white' }}>{question.label}</div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>
-              Pick up to 3 players — combined stat = your shot distance
-            </div>
-          </div>
-        )}
+        {/* Right panel — 25% course view */}
+        <div style={{ flex: 1, borderLeft: '1px solid #1e2d4a', minWidth: 0 }}>
+          <CourseView hole={currentHole} ballPos={ballPos} strokes={strokes} />
+        </div>
 
-        {/* Shot result or inputs */}
-        {shotResult ? (
-          <ShotResultPanel result={shotResult} club={club} remaining={remaining} onContinue={advanceFromResult} />
-        ) : (
-          <>
-            {[0, 1, 2].map(idx => (
-              <PlayerInputRow
-                key={idx}
-                idx={idx}
-                value={playerInputs[idx]}
-                confirmed={!!confirmedPlayers[idx]}
-                suggestions={suggestions[idx]}
-                onChange={val => onInputChange(idx, val)}
-                onConfirm={name => confirmSuggestion(idx, name)}
-                onClear={() => {
-                  setPlayerInputs(prev => { const n = [...prev]; n[idx] = ''; return n })
-                  setConfirmedPlayers(prev => { const n = [...prev]; n[idx] = null; return n })
-                  setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
-                }}
-                disabled={submitting}
-              />
-            ))}
-            {inputError && (
-              <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>{inputError}</div>
-            )}
-            <button
-              onClick={submitShot}
-              disabled={submitting || confirmedPlayers.every(p => !p)}
-              style={{
-                background: (submitting || confirmedPlayers.every(p => !p)) ? '#1a2540' : '#dc2626',
-                color: 'white', border: 'none', borderRadius: 10, padding: '13px 0',
-                fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-                transition: 'background 0.2s', marginTop: 2,
-              }}
-            >
-              {submitting ? 'Looking up...' : '⛳ Take Shot'}
-            </button>
-          </>
-        )}
       </div>
     </div>
   )
@@ -448,8 +453,8 @@ function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; s
   const ballY = 148 - progress * 134
 
   return (
-    <div style={{ background: '#0d1b2a', userSelect: 'none' }}>
-      <svg width="100%" viewBox="0 0 100 168" style={{ display: 'block', height: 168 }}>
+    <div style={{ background: '#0d1b2a', userSelect: 'none', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <svg width="100%" viewBox="0 0 100 168" style={{ display: 'block', flex: 1 }}>
         {/* Sky gradient */}
         <defs>
           <linearGradient id="fairway" x1="0" y1="0" x2="0" y2="1">
@@ -478,11 +483,11 @@ function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; s
         <circle cx={50} cy={ballY} r={3.2} fill="white" />
       </svg>
       <div style={{
-        textAlign: 'center', fontSize: 11, fontWeight: 700,
-        color: 'rgba(255,255,255,0.35)', fontFamily: "'DM Sans', sans-serif",
-        paddingBottom: 8, marginTop: -2,
+        textAlign: 'center', fontSize: 9, fontWeight: 700,
+        color: 'rgba(255,255,255,0.3)', fontFamily: "'DM Sans', sans-serif",
+        padding: '4px 4px 8px',
       }}>
-        Hole {hole.number} · Par {hole.par} · {hole.distance} yds · Shot {strokes + 1}
+        H{hole.number} · P{hole.par}<br />{hole.distance}y · S{strokes + 1}
       </div>
     </div>
   )
