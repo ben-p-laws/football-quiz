@@ -2,6 +2,31 @@
 
 import { useState, useEffect, useRef } from 'react'
 
+function splitName(name: string): [string, string] {
+  const i = name.indexOf(' ')
+  if (i === -1) return [name, '']
+  return [name.slice(0, i), name.slice(i + 1)]
+}
+
+function nameFontSize(name: string): number {
+  const [first, rest] = splitName(name)
+  const longest = Math.max(first.length, rest.length)
+  if (longest <= 9)  return 30
+  if (longest <= 13) return 24
+  return 19
+}
+
+function PlayerName({ name }: { name: string }) {
+  const [first, rest] = splitName(name)
+  const size = nameFontSize(name)
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+      <span style={{ fontSize: size, fontWeight: 900, color: 'white' }}>{first}</span>
+      {rest && <span style={{ fontSize: size, fontWeight: 900, color: 'white' }}>{rest}</span>}
+    </div>
+  )
+}
+
 const STATS = [
   { key: 'goals',            label: 'Goals',            emoji: '⚽' },
   { key: 'assists',          label: 'Assists',           emoji: '🎯' },
@@ -258,7 +283,7 @@ export default function SocialMinimiseClient() {
           </div>
 
           {/* Right: spinner or game-over */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: gameOver ? 'flex-start' : 'center', padding: '0 8px 0 4px', gap: 20, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: gameOver ? 'flex-start' : 'center', padding: '0 18px 0 4px', gap: 20, position: 'relative', overflow: 'hidden' }}>
             {gameOver ? (
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -293,10 +318,8 @@ export default function SocialMinimiseClient() {
               <>
                 {/* Cover — blurred name before game starts */}
                 {round === 0 && !isAnimating && N > 0 && (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '0 0 0 4px', filter: 'blur(6px)', zIndex: 10, pointerEvents: 'none' }}>
-                    <div style={{ fontSize: 30, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
-                      {players[coverIdx]?.name}
-                    </div>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '0 18px 0 4px', filter: 'blur(6px)', zIndex: 10, pointerEvents: 'none' }}>
+                    <PlayerName name={players[coverIdx]?.name ?? ''} />
                   </div>
                 )}
 
@@ -310,17 +333,13 @@ export default function SocialMinimiseClient() {
                   }}>
                     {spinList.map((player, i) => (
                       <div key={i} style={{ height: ITEM_H, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                        <div style={{ fontSize: 30, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
-                          {player.name}
-                        </div>
+                        <PlayerName name={player.name} />
                       </div>
                     ))}
                   </div>
                   {!isAnimating && round > 0 && currentPlayer && (
                     <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                      <div style={{ fontSize: 30, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
-                        {currentPlayer.name}
-                      </div>
+                      <PlayerName name={currentPlayer.name} />
                     </div>
                   )}
                 </div>
