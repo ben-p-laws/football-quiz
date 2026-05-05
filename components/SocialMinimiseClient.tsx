@@ -275,7 +275,7 @@ export default function SocialMinimiseClient() {
               <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                   <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Your Score</div>
-                  <div style={{ fontSize: 48, fontWeight: 900, color: 'white', lineHeight: 1, textShadow: '0 4px 24px rgba(0,0,0,0.8)' }}>{score}</div>
+                  <div style={{ fontSize: 72, fontWeight: 900, color: 'white', lineHeight: 1, textShadow: '0 4px 24px rgba(0,0,0,0.8)' }}>{score}</div>
                 </div>
                 <div style={{ width: '100%' }}>
                   <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5, textAlign: 'center' }}>Leaderboard</div>
