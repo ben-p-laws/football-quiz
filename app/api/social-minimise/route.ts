@@ -127,7 +127,7 @@ async function buildData() {
 async function fetchLeaderboard() {
   try {
     const { data } = await getClient()
-      .from('social_minimise_scores')
+      .from('minimise_scores')
       .select('username, score')
       .order('score', { ascending: true })
       .limit(200)
@@ -158,8 +158,7 @@ export async function POST(req: Request) {
   try {
     const { username, score } = await req.json()
     if (!username || score === undefined) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
-    // Requires table: create table social_minimise_scores (id serial primary key, username text, score integer, created_at timestamptz default now());
-    await getClient().from('social_minimise_scores').insert({ username, score })
+    await getClient().from('minimise_scores').insert({ username, score, player_slots: [] })
     const leaderboard = await fetchLeaderboard()
     return NextResponse.json({ ok: true, leaderboard })
   } catch (e) {

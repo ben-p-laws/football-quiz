@@ -258,29 +258,29 @@ export default function SocialMinimiseClient() {
           </div>
 
           {/* Right: spinner or game-over */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 10px 0 16px', gap: 20, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: gameOver ? 'flex-start' : 'center', padding: '0 8px 0 4px', gap: 20, position: 'relative', overflow: 'hidden' }}>
             {gameOver ? (
-              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 14, alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Your Score</div>
-                  <div style={{ fontSize: 64, fontWeight: 900, color: 'white', lineHeight: 1, textShadow: '0 4px 24px rgba(0,0,0,0.8)' }}>{score}</div>
+              <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Your Score</div>
+                  <div style={{ fontSize: 48, fontWeight: 900, color: 'white', lineHeight: 1, textShadow: '0 4px 24px rgba(0,0,0,0.8)' }}>{score}</div>
                 </div>
                 <div style={{ width: '100%' }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6, textAlign: 'center' }}>Leaderboard</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 5, textAlign: 'center' }}>Leaderboard</div>
                   {leaderboard.slice(0, 5).map((e, i) => {
                     const borderColor = i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'rgba(255,255,255,0.25)'
                     return (
                       <div key={i} style={{
                         display: 'flex', alignItems: 'center', gap: 6,
-                        padding: '5px 8px', marginBottom: 3,
+                        padding: '4px 7px', marginBottom: 3,
                         background: e.username === (username || 'Anonymous') && e.score === score
                           ? 'rgba(220,38,38,0.25)' : 'rgba(255,255,255,0.07)',
                         borderRadius: 6,
                         border: `1.5px solid ${borderColor}`,
                       }}>
                         <div style={{ fontSize: 10, fontWeight: 800, color: 'white', width: 18 }}>#{i + 1}</div>
-                        <div style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.username}</div>
-                        <div style={{ fontSize: 13, fontWeight: 900, color: 'white' }}>{e.score}</div>
+                        <div style={{ flex: 1, fontSize: 11, fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.username}</div>
+                        <div style={{ fontSize: 12, fontWeight: 900, color: 'white' }}>{e.score}</div>
                       </div>
                     )
                   })}
@@ -293,8 +293,8 @@ export default function SocialMinimiseClient() {
               <>
                 {/* Cover — blurred name before game starts */}
                 {round === 0 && !isAnimating && N > 0 && (
-                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', filter: 'blur(6px)', zIndex: 10, pointerEvents: 'none' }}>
-                    <div style={{ fontSize: 22, fontWeight: 900, color: 'white', textAlign: 'center', padding: '0 12px', lineHeight: 1.3 }}>
+                  <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', padding: '0 0 0 4px', filter: 'blur(6px)', zIndex: 10, pointerEvents: 'none' }}>
+                    <div style={{ fontSize: 30, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
                       {players[coverIdx]?.name}
                     </div>
                   </div>
@@ -309,23 +309,23 @@ export default function SocialMinimiseClient() {
                     visibility: isAnimating ? 'visible' : 'hidden',
                   }}>
                     {spinList.map((player, i) => (
-                      <div key={i} style={{ height: ITEM_H, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ fontSize: 20, fontWeight: 900, color: 'white', textAlign: 'center', padding: '0 8px', lineHeight: 1.3 }}>
+                      <div key={i} style={{ height: ITEM_H, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                        <div style={{ fontSize: 30, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
                           {player.name}
                         </div>
                       </div>
                     ))}
                   </div>
                   {!isAnimating && round > 0 && currentPlayer && (
-                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ fontSize: 20, fontWeight: 900, color: 'white', textAlign: 'center', padding: '0 8px', lineHeight: 1.3 }}>
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                      <div style={{ fontSize: 30, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>
                         {currentPlayer.name}
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', textAlign: 'center', minHeight: 16 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', minHeight: 16 }}>
                   {round > 0 && !isAnimating ? 'Pick a stat to lock it in' : ''}
                 </div>
               </>
