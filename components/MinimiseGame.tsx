@@ -439,9 +439,25 @@ export default function MinimiseGame() {
                 : <>Score so far: <strong style={{ color: "#dc2626" }}>{Object.values(assignments).reduce((s, a) => s + (a?.rank ?? 0), 0)}</strong></>
               }
             </div>
-            <div style={{ fontSize: 11, color: selectedClub ? "#dc2626" : "#4a5568", marginTop: 2 }}>
-              {selectedClub ? `⚽ ${selectedClub}` : "🌍 All Clubs"}
-            </div>
+            {clubs.length > 0 ? (
+              <select
+                value={selectedClub}
+                onChange={async e => {
+                  const club = e.target.value
+                  setSelectedClub(club)
+                  const data = await fetchData(true, club)
+                  if (data) startGame(data.weightedPool)
+                }}
+                style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '3px 8px', fontSize: 11, color: selectedClub ? '#dc2626' : '#4a5568', cursor: 'pointer', marginTop: 4, fontFamily: 'inherit' }}
+              >
+                <option value="">🌍 All Clubs</option>
+                {clubs.filter(c => c !== '2 Teams').map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            ) : (
+              <div style={{ fontSize: 11, color: selectedClub ? "#dc2626" : "#4a5568", marginTop: 2 }}>
+                {selectedClub ? `⚽ ${selectedClub}` : "🌍 All Clubs"}
+              </div>
+            )}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
             <button onClick={() => setShowRules(v => !v)} style={{ ...s.ghost, padding: "8px 10px", fontSize: 16 }} title="Rules">❓</button>
