@@ -363,10 +363,18 @@ export default function FootballGolf() {
               {ordinal(strokes + 1)} shot · {remaining} yards to pin
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
-              Club: {CLUB_LABEL[club]} · max {clubMax} yds
-              {currentHole.hazard && (
-                <span style={{ color: '#60a5fa' }}> · 💧 Water: {currentHole.hazard.start}–{currentHole.hazard.end} yds</span>
-              )}
+              {(() => {
+                const base = `Club: ${CLUB_LABEL[club]} · max ${clubMax} yds`
+                if (!currentHole.hazard) return base
+                const distToStart = currentHole.hazard.start - ballPos
+                const distToEnd = currentHole.hazard.end - ballPos
+                if (distToEnd <= 0) return base
+                const hazardText = distToStart <= 0
+                  ? ' · 💧 In water zone'
+                  : ` · 💧 Water: ${distToStart}–${distToEnd} yds ahead`
+                const hazardColor = distToStart <= 0 ? '#f87171' : '#60a5fa'
+                return <>{base}<span style={{ color: hazardColor }}>{hazardText}</span></>
+              })()}
             </div>
           </div>
 
