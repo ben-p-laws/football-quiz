@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -63,8 +64,8 @@ function mostFrequent(freq: Record<string, number>): string {
   return Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Unknown'
 }
 
-export async function GET() {
-  try {
+const getCountdownData = unstable_cache(
+  async () => {
     const rows = await fetchAll()
 
     type Agg = {
@@ -144,6 +145,15 @@ export async function GET() {
       .map(([name]) => ({ name, surname: normalize(name.split(' ').pop()!) }))
       .filter(({ surname }) => surname.length >= 6 && surname.length <= 10)
 
+    return { surnameEntries, numberPlayers, conundrumCandidates }
+  },
+  ['countdown-data'],
+  { revalidate: 86400 }
+)
+
+export async function GET() {
+  try {
+    const { surnameEntries, numberPlayers, conundrumCandidates } = await getCountdownData()
     const leaderboard = await fetchLeaderboard()
     return NextResponse.json(
       { surnameEntries, numberPlayers, conundrumCandidates, leaderboard },

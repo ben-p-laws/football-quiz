@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-
-const CACHE_TTL = 60 * 60 * 1000
-const rankCache = new Map<string, { pidRanks: any; weightedPool: any; clubs: string[]; ts: number }>()
 
 const MIN_CLUB_SEASONS = 5
 
@@ -119,24 +117,23 @@ function buildClubList(rows: any[]): string[] {
     .sort()
 }
 
+const getMinimiseData = unstable_cache(
+  async (club: string) => {
+    const rows = await fetchPlayerSeasons(club || undefined)
+    const { pidRanks, weightedPool } = buildRankings(rows)
+    const clubs = club ? [] : buildClubList(rows)
+    return { pidRanks, weightedPool, clubs }
+  },
+  ['minimise-data'],
+  { revalidate: 86400 }
+)
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const club = searchParams.get('club') || ''
-    const cacheKey = club
 
-    let pidRanks: any, weightedPool: any, clubs: string[]
-    const cached = rankCache.get(cacheKey)
-    if (cached && Date.now() - cached.ts < CACHE_TTL) {
-      ;({ pidRanks, weightedPool, clubs } = cached)
-    } else {
-      const rows = await fetchPlayerSeasons(club || undefined)
-      const rankings = buildRankings(rows)
-      pidRanks = rankings.pidRanks
-      weightedPool = rankings.weightedPool
-      clubs = club ? [] : buildClubList(rows)
-      rankCache.set(cacheKey, { pidRanks, weightedPool, clubs, ts: Date.now() })
-    }
+    const { pidRanks, weightedPool, clubs } = await getMinimiseData(club)
 
     const { data: lbData } = await getClient()
       .from('minimise_scores')

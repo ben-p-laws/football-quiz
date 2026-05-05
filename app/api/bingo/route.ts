@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -86,94 +87,103 @@ async function fetchPlTables(): Promise<Map<string, { position: number; relegate
   return map
 }
 
-export async function GET() {
-  const [rows, plTables] = await Promise.all([
-    fetchAll('name_display,games,goals,assists,goals_assists,pens_made,pens_missed,cards_yellow,cards_red,teams_played_for,year_id,pos'),
-    fetchPlTables(),
-  ])
+const getBingoData = unstable_cache(
+  async () => {
+    const [rows, plTables] = await Promise.all([
+      fetchAll('name_display,games,goals,assists,goals_assists,pens_made,pens_missed,cards_yellow,cards_red,teams_played_for,year_id,pos'),
+      fetchPlTables(),
+    ])
 
-  const statsMap = new Map<string, PlayerStats>()
-  for (const row of rows) {
-    const name: string = row.name_display
-    if (!statsMap.has(name)) {
-      statsMap.set(name, {
-        name,
-        games: 0, goals: 0, assists: 0, goals_assists: 0,
-        pens_made: 0, pens_missed: 0, cards_yellow: 0, cards_red: 0,
-        clubs: new Set(),
-        maxGoalsInSeason: 0, maxAssistsInSeason: 0, maxGoalsAssistsInSeason: 0,
-        titlesWon: 0, top4Finishes: 0, relegations: 0, isGK: false,
-      })
-    }
-    const p = statsMap.get(name)!
-    p.games           += row.games ?? 0
-    p.goals           += row.goals ?? 0
-    p.assists         += row.assists ?? 0
-    p.goals_assists   += row.goals_assists ?? 0
-    p.pens_made       += row.pens_made ?? 0
-    p.pens_missed     += row.pens_missed ?? 0
-    p.cards_yellow    += row.cards_yellow ?? 0
-    p.cards_red       += row.cards_red ?? 0
-    if (row.pos === 'GK') p.isGK = true
-
-    const teams = String(row.teams_played_for ?? '')
-      .split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
-
-    for (const club of teams) {
-      p.clubs.add(club)
-    }
-
-    p.maxGoalsInSeason        = Math.max(p.maxGoalsInSeason, row.goals ?? 0)
-    p.maxAssistsInSeason      = Math.max(p.maxAssistsInSeason, row.assists ?? 0)
-    p.maxGoalsAssistsInSeason = Math.max(p.maxGoalsAssistsInSeason, row.goals_assists ?? 0)
-
-    // League finish stats — credit the player for each team they played for that season
-    if (row.year_id && teams.length > 0) {
-      let wonTitle = false, top4 = false, relegated = false
-      for (const club of teams) {
-        const entry = plTables.get(`${row.year_id}|||${normTeam(club)}`)
-        if (!entry) continue
-        if (entry.position === 1) wonTitle = true
-        if (entry.position <= 4) top4 = true
-        if (entry.relegated) relegated = true
+    const statsMap = new Map<string, PlayerStats>()
+    for (const row of rows) {
+      const name: string = row.name_display
+      if (!statsMap.has(name)) {
+        statsMap.set(name, {
+          name,
+          games: 0, goals: 0, assists: 0, goals_assists: 0,
+          pens_made: 0, pens_missed: 0, cards_yellow: 0, cards_red: 0,
+          clubs: new Set(),
+          maxGoalsInSeason: 0, maxAssistsInSeason: 0, maxGoalsAssistsInSeason: 0,
+          titlesWon: 0, top4Finishes: 0, relegations: 0, isGK: false,
+        })
       }
-      if (wonTitle) p.titlesWon++
-      if (top4) p.top4Finishes++
-      if (relegated) p.relegations++
+      const p = statsMap.get(name)!
+      p.games           += row.games ?? 0
+      p.goals           += row.goals ?? 0
+      p.assists         += row.assists ?? 0
+      p.goals_assists   += row.goals_assists ?? 0
+      p.pens_made       += row.pens_made ?? 0
+      p.pens_missed     += row.pens_missed ?? 0
+      p.cards_yellow    += row.cards_yellow ?? 0
+      p.cards_red       += row.cards_red ?? 0
+      if (row.pos === 'GK') p.isGK = true
+
+      const teams = String(row.teams_played_for ?? '')
+        .split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
+
+      for (const club of teams) {
+        p.clubs.add(club)
+      }
+
+      p.maxGoalsInSeason        = Math.max(p.maxGoalsInSeason, row.goals ?? 0)
+      p.maxAssistsInSeason      = Math.max(p.maxAssistsInSeason, row.assists ?? 0)
+      p.maxGoalsAssistsInSeason = Math.max(p.maxGoalsAssistsInSeason, row.goals_assists ?? 0)
+
+      // League finish stats — credit the player for each team they played for that season
+      if (row.year_id && teams.length > 0) {
+        let wonTitle = false, top4 = false, relegated = false
+        for (const club of teams) {
+          const entry = plTables.get(`${row.year_id}|||${normTeam(club)}`)
+          if (!entry) continue
+          if (entry.position === 1) wonTitle = true
+          if (entry.position <= 4) top4 = true
+          if (entry.relegated) relegated = true
+        }
+        if (wonTitle) p.titlesWon++
+        if (top4) p.top4Finishes++
+        if (relegated) p.relegations++
+      }
     }
-  }
 
-  const outfield = [...statsMap.values()].filter(p => !p.isGK)
+    const outfield = [...statsMap.values()].filter(p => !p.isGK)
 
-  const top = (arr: PlayerStats[], key: keyof PlayerStats, n: number) =>
-    [...arr].sort((a, b) => (b[key] as number) - (a[key] as number)).slice(0, n)
+    const top = (arr: PlayerStats[], key: keyof PlayerStats, n: number) =>
+      [...arr].sort((a, b) => (b[key] as number) - (a[key] as number)).slice(0, n)
 
-  const buckets = [
-    top(outfield, 'games',         50),  // top 50 appearances
-    top(outfield, 'goals',         50),  // top 50 goalscorers
-    top(outfield, 'assists',       50),  // top 50 assisters
-    outfield.filter(p => p.cards_red > 3),   // all with 4+ red cards
-    top(outfield, 'cards_yellow',  30),  // top 30 yellow cards
-    outfield.filter(p => p.titlesWon >= 3),  // all with 3+ titles
-  ]
+    const buckets = [
+      top(outfield, 'games',         50),  // top 50 appearances
+      top(outfield, 'goals',         50),  // top 50 goalscorers
+      top(outfield, 'assists',       50),  // top 50 assisters
+      outfield.filter(p => p.cards_red > 3),   // all with 4+ red cards
+      top(outfield, 'cards_yellow',  30),  // top 30 yellow cards
+      outfield.filter(p => p.titlesWon >= 3),  // all with 3+ titles
+    ]
 
-  const poolMap = new Map<string, PlayerStats>()
-  for (const bucket of buckets) {
-    for (const p of bucket) poolMap.set(p.name, p)
-  }
-  const topPlayers = [...poolMap.values()]
+    const poolMap = new Map<string, PlayerStats>()
+    for (const bucket of buckets) {
+      for (const p of bucket) poolMap.set(p.name, p)
+    }
+    const topPlayers = [...poolMap.values()]
 
-  const playerAchievements: Record<string, string[]> = {}
-  for (const player of topPlayers) {
-    const qualifying = ACHIEVEMENTS.filter(a => a.check(player)).map(a => a.id)
-    if (qualifying.length > 0) playerAchievements[player.name] = qualifying
-  }
+    const playerAchievements: Record<string, string[]> = {}
+    for (const player of topPlayers) {
+      const qualifying = ACHIEVEMENTS.filter(a => a.check(player)).map(a => a.id)
+      if (qualifying.length > 0) playerAchievements[player.name] = qualifying
+    }
 
-  const achievements = ACHIEVEMENTS.map(a => ({ id: a.id, name: a.name }))
-  const players = topPlayers
-    .filter(p => playerAchievements[p.name]?.length > 0)
-    .map(p => ({ id: p.name, name: p.name }))
+    const achievements = ACHIEVEMENTS.map(a => ({ id: a.id, name: a.name }))
+    const players = topPlayers
+      .filter(p => playerAchievements[p.name]?.length > 0)
+      .map(p => ({ id: p.name, name: p.name }))
 
+    return { achievements, players, playerAchievements }
+  },
+  ['bingo-data'],
+  { revalidate: 86400 }
+)
+
+export async function GET() {
+  const { achievements, players, playerAchievements } = await getBingoData()
   return NextResponse.json({ achievements, players, playerAchievements }, {
     headers: { 'Cache-Control': 's-maxage=3600, stale-while-revalidate' }
   })

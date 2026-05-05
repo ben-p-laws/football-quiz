@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -183,6 +184,15 @@ async function fetchLeaderboard() {
     .slice(0, 20)
 }
 
+const getTeammatesData = unstable_cache(
+  async () => {
+    const rows = await fetchAll()
+    return { rows, ...prepareData(rows) }
+  },
+  ['teammates-data'],
+  { revalidate: 86400 }
+)
+
 export async function GET(req: Request) {
   const supabase = getClient()
   const { searchParams } = new URL(req.url)
@@ -209,8 +219,7 @@ export async function GET(req: Request) {
 
   // Generate all 5 puzzles in one go — fetch rows once, reuse for every puzzle
   try {
-    const rows = await fetchAll()
-    const { sessionPlayers, playerClubs, playerPos, eligible } = prepareData(rows)
+    const { sessionPlayers, playerClubs, playerPos, eligible, rows } = await getTeammatesData()
 
     const masterSeed = Date.now() & 0x7fffffff
     const rng = seededRng(masterSeed)

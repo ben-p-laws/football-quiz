@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -108,12 +109,8 @@ function top10(entries: Array<{ p: PlayerAgg; v: number }>, minV = 1, fmtVal?: (
 
 const fmtP90 = (v: number) => v.toFixed(2)
 
-let cache: { data: any; time: number } | null = null
-const CACHE_TTL = 3_600_000
-
-async function buildData() {
-  if (cache && Date.now() - cache.time < CACHE_TTL) return cache.data
-
+const buildData = unstable_cache(
+  async () => {
   const rows = await fetchAll('name_display,games,goals,assists,gk_clean_sheets,cards_yellow,nationality,teams_played_for')
 
   const players: Record<string, PlayerAgg> = {}
@@ -260,10 +257,11 @@ async function buildData() {
     .map(([code]) => code)
     .sort()
 
-  const data = { quizzes, allPlayers, players, allClubs, topNationalities }
-  cache = { data, time: Date.now() }
-  return data
-}
+  return { quizzes, allPlayers, players, allClubs, topNationalities }
+  },
+  ['tenables-data'],
+  { revalidate: 86400 }
+)
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)

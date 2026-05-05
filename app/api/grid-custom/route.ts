@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -22,10 +23,6 @@ type FullData = {
   career100GoalPlayers: Map<string, number>
 }
 
-let cachedData: FullData | null = null
-let cacheTime = 0
-const CACHE_TTL = 3_600_000
-
 function getClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,10 +45,8 @@ async function fetchAll<T>(supabase: any, table: string, columns: string, filter
   return rows
 }
 
-async function getData(): Promise<FullData> {
-  const now = Date.now()
-  if (cachedData && now - cacheTime < CACHE_TTL) return cachedData
-
+const getData = unstable_cache(
+  async (): Promise<FullData> => {
   const supabase = getClient()
 
   // Core team data — only columns we know exist
@@ -179,10 +174,11 @@ async function getData(): Promise<FullData> {
     }
   } catch { /* season table unavailable */ }
 
-  cachedData = { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, goldenGloveWinners, career100GoalPlayers }
-  cacheTime = now
-  return cachedData
-}
+  return { teamSeasons, playerTotalApps, wonPlCounts, relegated: relegatedCounts, goldenBootWinners, goldenGloveWinners, career100GoalPlayers }
+  },
+  ['grid-custom-data'],
+  { revalidate: 86400 }
+)
 
 type CellAnswer = {
   player_name: string

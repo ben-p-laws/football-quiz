@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -90,14 +91,9 @@ type PlayerData = {
   playerCareerGoals: Map<string, number>
 }
 
-let playerDataCache: { data: PlayerData; time: number } | null = null
-const PLAYER_DATA_TTL = 24 * 3_600_000
-
-async function buildPlayerData(supabase: any): Promise<PlayerData> {
-  if (playerDataCache && Date.now() - playerDataCache.time < PLAYER_DATA_TTL) {
-    return playerDataCache.data
-  }
-
+const buildPlayerData = unstable_cache(
+  async (): Promise<PlayerData> => {
+  const supabase = getClient()
   const [seasons, plTables] = await Promise.all([
     fetchAll(supabase, 'player_seasons', 'name_display,year_id,pos,teams_played_for,goals,gk_clean_sheets,games'),
     fetchAll(supabase, 'pl_season_tables', 'season,team,position,relegated'),
@@ -167,10 +163,11 @@ async function buildPlayerData(supabase: any): Promise<PlayerData> {
     if (maxSheets > 0) players.filter(p => p.isGk && p.cleanSheets === maxSheets).forEach(p => playerGoldenGlove.set(p.name, (playerGoldenGlove.get(p.name) ?? 0) + 1))
   }
 
-  const data: PlayerData = { teamSeasons, playerPLWins, playerRelegations, playerGoldenBoot, playerGoldenGlove, playerTotalApps, playerCareerGoals }
-  playerDataCache = { data, time: Date.now() }
-  return data
-}
+  return { teamSeasons, playerPLWins, playerRelegations, playerGoldenBoot, playerGoldenGlove, playerTotalApps, playerCareerGoals }
+  },
+  ['grid-data'],
+  { revalidate: 86400 }
+)
 
 function getEligiblePlayers(type: string, ref: string | null, data: PlayerData): Map<string, number> {
   const result = new Map<string, number>()
@@ -280,32 +277,20 @@ function generatePuzzle(dateStr: string, data: PlayerData): PuzzleResult {
   return { rows, cols, cells, answerCounts }
 }
 
-// ── Per-date puzzle cache ─────────────────────────────────────────────────────
-const puzzleCache = new Map<string, { data: any; time: number }>()
-const PUZZLE_TTL  = 24 * 3_600_000
-
 export async function GET(req: NextRequest) {
   const dateStr = req.nextUrl.searchParams.get('date') || getTodayStr()
 
-  const cached = puzzleCache.get(dateStr)
-  if (cached && Date.now() - cached.time < PUZZLE_TTL) {
-    return NextResponse.json(cached.data)
-  }
-
   try {
-    const supabase   = getClient()
-    const playerData = await buildPlayerData(supabase)
+    const playerData = await buildPlayerData()
     const { rows, cols, cells, answerCounts } = generatePuzzle(dateStr, playerData)
 
-    const data = {
+    return NextResponse.json({
       date: dateStr,
       rows: rows.map(r => ({ label: r.label, tooltip: r.tooltip })),
       cols: cols.map(c => ({ label: c.label, tooltip: c.tooltip })),
       cells,
       answerCounts,
-    }
-    puzzleCache.set(dateStr, { data, time: Date.now() })
-    return NextResponse.json(data)
+    })
   } catch (e) {
     console.error(e)
     return NextResponse.json({ error: 'Failed' }, { status: 500 })

@@ -1,10 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-
-const CACHE_TTL = 60 * 60 * 1000
-let dataCache: { players: any; rankings: any; ts: number } | null = null
 
 // Famous PL players — matched case-insensitively against name_display in DB
 const FAMOUS_NAMES = [
@@ -41,7 +39,8 @@ type Agg = {
   max_age: number
 }
 
-async function buildData() {
+const buildData = unstable_cache(
+  async () => {
   const columns = 'name_display,games,goals,assists,cards_yellow,cards_red,pens_made,age'
   const all: any[] = []
   let offset = 0
@@ -125,7 +124,10 @@ async function buildData() {
     .map(p => ({ name: p.name }))
 
   return { players, rankings }
-}
+  },
+  ['social-minimise-data'],
+  { revalidate: 86400 }
+)
 
 async function fetchLeaderboard() {
   try {
@@ -149,12 +151,8 @@ async function fetchLeaderboard() {
 
 export async function GET() {
   try {
-    if (!dataCache || Date.now() - dataCache.ts > CACHE_TTL) {
-      const { players, rankings } = await buildData()
-      dataCache = { players, rankings, ts: Date.now() }
-    }
+    const { players, rankings } = await buildData()
     const leaderboard = await fetchLeaderboard()
-    const { players, rankings } = dataCache
     return NextResponse.json({ players, rankings, leaderboard }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (e) {
     console.error(e)

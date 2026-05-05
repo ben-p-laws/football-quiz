@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { unstable_cache } from 'next/cache'
 import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
@@ -122,59 +123,48 @@ async function fetchLeaderboard(numRounds: number): Promise<LbEntry[]> {
     .slice(0, 20)
 }
 
-export async function GET(req: Request) {
-  try {
-    const { searchParams } = new URL(req.url)
-    const club = searchParams.get('club') || undefined
-    const numRounds = parseInt(searchParams.get('rounds') || '10')
-    const leaderboardOnly = searchParams.get('leaderboard_only') === 'true'
-
-    if (leaderboardOnly) {
-      const leaderboard = await fetchLeaderboard(numRounds)
-      return NextResponse.json({ leaderboard }, { headers: { 'Cache-Control': 'no-store' } })
-    }
-
+const getStatClashClubData = unstable_cache(
+  async (club: string) => {
     const rows = await fetchAll()
-
     const nameToId = new Map<string, number>()
     for (const row of rows) {
       const name = row.name_display as string
       if (!nameToId.has(name)) nameToId.set(name, nameToId.size + 1)
     }
+    const { rowsByClub } = groupByClub(rows)
+    const clubRows = rowsByClub[club] ?? []
+    const t = aggregate(clubRows)
+    const categories: Category[] = []
+    const defs: [string, string, string, keyof Omit<Totals,'name'>, number, number][] = [
+      ['club_goals',        `Goals for ${club}`,        'goals',        'goals',        1, 1],
+      ['club_assists',      `Assists for ${club}`,      'assists',      'assists',      1, 1],
+      ['club_appearances',  `Apps for ${club}`,         'apps',         'games',        5, 1],
+      ['club_clean_sheets', `Clean Sheets for ${club}`, 'clean sheets', 'clean_sheets', 1, 1],
+    ]
+    for (const [id, label, unit, key, minVal, weight] of defs) {
+      const pm = buildPM(t, key, nameToId, minVal, true)
+      if (pm) categories.push({ id, label, unit, weight, floor: minVal, ...pm })
+    }
+    const allPlayers = Array.from(nameToId.entries()).map(([name, pid]) => ({ pid, name }))
+    return { categories, allPlayers }
+  },
+  ['stat-clash-club-data'],
+  { revalidate: 86400 }
+)
 
+const getStatClashAllData = unstable_cache(
+  async () => {
+    const rows = await fetchAll()
+    const nameToId = new Map<string, number>()
+    for (const row of rows) {
+      const name = row.name_display as string
+      if (!nameToId.has(name)) nameToId.set(name, nameToId.size + 1)
+    }
     const allEntities = new Map<number, string>()
     function track(pm: Record<number, { name: string; value: number }>) {
       for (const [pid, d] of Object.entries(pm)) allEntities.set(Number(pid), d.name)
     }
-
-    if (club) {
-      // Club-selected mode: only stats for this club
-      const { rowsByClub } = groupByClub(rows)
-      const clubRows = rowsByClub[club] ?? []
-      const t = aggregate(clubRows)
-
-      const categories: Category[] = []
-      const defs: [string, string, string, keyof Omit<Totals,'name'>, number, number][] = [
-        ['club_goals',        `Goals for ${club}`,        'goals',        'goals',        1, 1],
-        ['club_assists',      `Assists for ${club}`,      'assists',      'assists',      1, 1],
-        ['club_appearances',  `Apps for ${club}`,         'apps',         'games',        5, 1],
-        ['club_clean_sheets', `Clean Sheets for ${club}`, 'clean sheets', 'clean_sheets', 1, 1],
-      ]
-      for (const [id, label, unit, key, minVal, weight] of defs) {
-        const pm = buildPM(t, key, nameToId, minVal, true)
-        if (pm) { categories.push({ id, label, unit, weight, floor: minVal, ...pm }); track(pm.playerMap) }
-      }
-
-      const leaderboard = await fetchLeaderboard(numRounds)
-      return NextResponse.json(
-        { categories, clubData: {}, allPlayers: Array.from(nameToId.entries()).map(([name, pid]) => ({ pid, name })), clubs: [], leaderboard },
-        { headers: { 'Cache-Control': 'no-store' } }
-      )
-    }
-
-    // All-clubs mode: career categories + per-club data
     const career = aggregate(rows)
-
     const careerDefs: [string, string, string, keyof Omit<Totals,'name'>, number, number][] = [
       ['career_goals',        'Career PL Goals',    'goals',        'goals',        5,  1  ],
       ['career_assists',      'Career PL Assists',  'assists',      'assists',      3,  1  ],
@@ -187,8 +177,6 @@ export async function GET(req: Request) {
       const pm = buildPM(career, key, nameToId, minVal)
       if (pm) { categories.push({ id, label, unit, weight, floor: minVal, ...pm }); track(pm.playerMap) }
     }
-
-    // Per-club data for random club rounds
     const { clubs, rowsByClub } = groupByClub(rows)
     const clubStatDefs: [ClubStatKey, keyof Omit<Totals,'name'>, number][] = [
       ['goals',        'goals',        1],
@@ -206,16 +194,38 @@ export async function GET(req: Request) {
       }
       if (Object.keys(entry).length > 0) clubData[c] = entry
     }
+    const allPlayers = Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name }))
+    return { categories, clubData, allPlayers, clubs }
+  },
+  ['stat-clash-all-data'],
+  { revalidate: 86400 }
+)
 
+export async function GET(req: Request) {
+  try {
+    const { searchParams } = new URL(req.url)
+    const club = searchParams.get('club') || undefined
+    const numRounds = parseInt(searchParams.get('rounds') || '10')
+    const leaderboardOnly = searchParams.get('leaderboard_only') === 'true'
+
+    if (leaderboardOnly) {
+      const leaderboard = await fetchLeaderboard(numRounds)
+      return NextResponse.json({ leaderboard }, { headers: { 'Cache-Control': 'no-store' } })
+    }
+
+    if (club) {
+      const { categories, allPlayers } = await getStatClashClubData(club)
+      const leaderboard = await fetchLeaderboard(numRounds)
+      return NextResponse.json(
+        { categories, clubData: {}, allPlayers, clubs: [], leaderboard },
+        { headers: { 'Cache-Control': 'no-store' } }
+      )
+    }
+
+    const { categories, clubData, allPlayers, clubs } = await getStatClashAllData()
     const leaderboard = await fetchLeaderboard(numRounds)
     return NextResponse.json(
-      {
-        categories,
-        clubData,
-        allPlayers: Array.from(allEntities.entries()).map(([pid, name]) => ({ pid, name })),
-        clubs,
-        leaderboard,
-      },
+      { categories, clubData, allPlayers, clubs, leaderboard },
       { headers: { 'Cache-Control': 'no-store' } }
     )
   } catch (e) {
