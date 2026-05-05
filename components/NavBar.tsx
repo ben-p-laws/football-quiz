@@ -59,15 +59,18 @@ export default function NavBar() {
           <circle cx="17" cy="15" r="6.2" fill="white"/>
           {/* Red glow */}
           <circle cx="17" cy="15" r="7.2" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5"/>
-          {/* Champions League red stars */}
+          {/* Champions League red stars — 8 in a ring */}
           <defs>
-            <path id="tb-star" d="M0,-1.55 L0.36,-0.5 L1.47,-0.48 L0.59,0.19 L0.91,1.25 L0,0.62 L-0.91,1.25 L-0.59,0.19 L-1.47,-0.48 L-0.36,-0.5 Z" fill="#dc2626"/>
+            <path id="tb-star" d="M0,-1.8 L0.42,-0.58 L1.71,-0.55 L0.69,0.22 L1.05,1.45 L0,0.72 L-1.05,1.45 L-0.69,0.22 L-1.71,-0.55 L-0.42,-0.58 Z" fill="#dc2626"/>
           </defs>
-          <use href="#tb-star" transform="translate(17,11.8)"/>
-          <use href="#tb-star" transform="translate(14,14.2)"/>
-          <use href="#tb-star" transform="translate(20,14.2)"/>
-          <use href="#tb-star" transform="translate(14.8,17.4)"/>
-          <use href="#tb-star" transform="translate(19.2,17.4)"/>
+          <use href="#tb-star" transform="translate(17,12.1)"/>
+          <use href="#tb-star" transform="translate(19.3,12.9)"/>
+          <use href="#tb-star" transform="translate(20.1,15.1)"/>
+          <use href="#tb-star" transform="translate(19.3,17.3)"/>
+          <use href="#tb-star" transform="translate(17,18.1)"/>
+          <use href="#tb-star" transform="translate(14.7,17.3)"/>
+          <use href="#tb-star" transform="translate(13.9,15.1)"/>
+          <use href="#tb-star" transform="translate(14.7,12.9)"/>
         </svg>
         <span style={{ fontSize: '20px', fontWeight: 800, color: 'white', letterSpacing: '-0.5px' }}>
           Top<span style={{ color: '#dc2626' }}>Bins</span>
