@@ -205,7 +205,7 @@ export default function LandingPage() {
             onClick={() => router.push('/tenables')}>
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>build your own top 10 quiz</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Build your own top 10 quiz</div>
             </div>
             <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
               {[
