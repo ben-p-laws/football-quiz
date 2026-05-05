@@ -41,7 +41,7 @@ const PILL_H = 32
 const SCORE_W = 36
 
 const ITEM_H = 80
-const SPIN_DURATION = 2200
+const SPIN_DURATION = 1100
 const REPEATS = 10
 
 export default function SocialMinimiseClient() {
