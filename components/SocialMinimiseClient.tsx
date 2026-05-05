@@ -354,7 +354,7 @@ export default function SocialMinimiseClient() {
 
         {/* Footer */}
         <div style={{ textAlign: 'center', paddingTop: 10, fontSize: 13, fontWeight: 800, color: '#dc2626', letterSpacing: '0.02em' }}>
-          www.topbins.co.uk
+          www.topbins.com
         </div>
 
         <div style={{ flex: 1 }} />
