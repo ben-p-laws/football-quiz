@@ -174,7 +174,7 @@ export default function SocialMinimiseClient() {
         width: '100%', maxWidth: 390,
         minHeight: '100dvh',
         backgroundImage: `linear-gradient(rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.68) 60%, rgba(0,0,0,0.82) 100%), url('/social-bg.jpg')`,
-        backgroundSize: '100% auto',
+        backgroundSize: 'cover',
         backgroundPosition: 'center bottom',
         backgroundColor: '#0a0f1e',
         display: 'flex',
