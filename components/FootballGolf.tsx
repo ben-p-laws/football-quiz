@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import NavBar from '@/components/NavBar'
 
 // ── Category definitions ────────────────────────────────────────────────────────
 
@@ -302,11 +303,11 @@ export default function FootballGolf() {
   // ── Render ────────────────────────────────────────────────────────────────────
 
   if (phase === 'setup') {
-    return <SetupScreen numHoles={numHoles} setNumHoles={setNumHoles} onStart={startGame} />
+    return <><NavBar /><SetupScreen numHoles={numHoles} setNumHoles={setNumHoles} onStart={startGame} /></>
   }
 
   if (phase === 'done') {
-    return <DoneScreen holes={holes} scores={scores as number[]} onRestart={() => setPhase('setup')} />
+    return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={() => setPhase('setup')} /></>
   }
 
   if (!currentHole) return null
@@ -327,6 +328,7 @@ export default function FootballGolf() {
         input:focus { outline: none; }
       `}</style>
 
+      <NavBar />
       <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
 
       <CourseView hole={currentHole} ballPos={ballPos} strokes={strokes} />

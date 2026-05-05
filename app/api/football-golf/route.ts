@@ -4,6 +4,15 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+const TEAM_NORM: Record<string, string> = {
+  'Manchester Utd':  'Manchester United',
+  'QPR':             'Queens Park Rangers',
+  'Sheffield Weds':  'Sheffield Wednesday',
+  'Brighton':        'Brighton & Hove Albion',
+  'West Brom':       'West Bromwich Albion',
+}
+const normTeam = (t: string) => TEAM_NORM[t] ?? t
+
 function fmtNat(raw: string): string {
   const parts = raw.trim().split(/\s+/)
   for (let i = parts.length - 1; i >= 0; i--) {
@@ -75,7 +84,7 @@ const buildCache = unstable_cache(
       }
 
       const teams = String(row.teams_played_for || '')
-        .split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
+        .split(',').map((t: string) => normTeam(t.trim())).filter((t: string) => t && t !== '2 Teams')
       if (teams.length === 1) {
         const team = teams[0]
         p.clubGoals[team]       = (p.clubGoals[team]       || 0) + (Number(row.goals)           || 0)
