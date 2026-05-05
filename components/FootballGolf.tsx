@@ -328,13 +328,15 @@ export default function FootballGolf() {
       `}</style>
 
       <NavBar />
-      <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
 
-      {/* Main content: left 75% controls, right 25% course */}
-      <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 'calc(100dvh - 56px - 42px)' }}>
+      <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}>
+        <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
 
-        {/* Left panel — 75% */}
-        <div style={{ flex: 3, padding: '12px 14px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+        {/* Main content: left 75% controls, right 25% course */}
+        <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 'calc(100dvh - 56px - 42px)' }}>
+
+          {/* Left panel — 75% */}
+          <div style={{ flex: 3, padding: '12px 14px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
           {/* Club + distance row */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ background: '#1e2d4a', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 800, color: 'white' }}>
@@ -399,11 +401,12 @@ export default function FootballGolf() {
           )}
         </div>
 
-        {/* Right panel — 25% course view */}
-        <div style={{ flex: 1, borderLeft: '1px solid #1e2d4a', minWidth: 0 }}>
-          <CourseView hole={currentHole} ballPos={ballPos} strokes={strokes} />
-        </div>
+          {/* Right panel — 25% course view */}
+          <div style={{ flex: 1, borderLeft: '1px solid #1e2d4a', minWidth: 0 }}>
+            <CourseView hole={currentHole} ballPos={ballPos} strokes={strokes} />
+          </div>
 
+        </div>
       </div>
     </div>
   )
