@@ -158,7 +158,7 @@ export default function FootballGolf() {
 
   const currentHole = holes[holeIdx]
   const club = remaining > 0 ? getClub(remaining) : 'driver'
-  const [clubMin, clubMax] = CLUB_RANGES[club]
+  const [, clubMax] = CLUB_RANGES[club]
 
   const completedScores = scores.filter(s => s !== null) as number[]
   const completedPar = holes.slice(0, completedScores.length).reduce((s, h) => s + h.par, 0)
@@ -223,15 +223,12 @@ export default function FootballGolf() {
       const total: number = data.total ?? 0
       const breakdown: { name: string; value: number }[] = data.breakdown ?? []
 
-      // OOB checks — only penalise overshooting, not hitting short
+      // OOB: only if ball goes >30 yards past the flag
       let isOOB = false
       let penaltyReason = ''
-      if (total > clubMax) {
+      if (total > remaining + 30) {
         isOOB = true
-        penaltyReason = `Too long for ${CLUB_LABEL[club]} — max ${clubMax} yds`
-      } else if (total > remaining + 30) {
-        isOOB = true
-        penaltyReason = `Overshot by ${total - remaining} yds — max 30 yds past flag`
+        penaltyReason = `Overshot by ${total - remaining} yds — OOB is >${remaining + 30} yds`
       }
 
       // Putter off-green: 20 < overshoot ≤ 30 → not full OOB, ball goes past green
@@ -348,10 +345,10 @@ export default function FootballGolf() {
               Hole {currentHole.number}: Par {currentHole.par}
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
-              {ordinal(strokes + 1)} shot · {remaining} yards to go
+              {ordinal(strokes + 1)} shot · {remaining} yards to go · OOB = &gt;{remaining + 30} yds
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
-              Club: {CLUB_LABEL[club]} · max range {clubMax} yds ({clubMax}+ = OOB)
+              Club: {CLUB_LABEL[club]}
             </div>
           </div>
 
