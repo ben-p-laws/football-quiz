@@ -173,9 +173,8 @@ export default function SocialMinimiseClient() {
       <div style={{
         width: '100%', maxWidth: 390,
         minHeight: '100dvh',
-        zoom: 0.82,
         backgroundImage: `linear-gradient(rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.68) 60%, rgba(0,0,0,0.82) 100%), url('/social-bg.jpg')`,
-        backgroundSize: 'cover',
+        backgroundSize: '100% auto',
         backgroundPosition: 'center bottom',
         backgroundColor: '#0a0f1e',
         display: 'flex',
