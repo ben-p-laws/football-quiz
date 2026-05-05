@@ -66,7 +66,8 @@ function pickCategory(remaining: number): Category {
 
 // ── Hole generation ─────────────────────────────────────────────────────────────
 
-type Hole = { number: number; par: number; distance: number }
+type Hazard = { start: number; end: number }
+type Hole = { number: number; par: number; distance: number; hazard: Hazard | null }
 
 function randBetween(min: number, max: number) {
   return min + Math.floor(Math.random() * (max - min + 1))
@@ -81,6 +82,12 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
+function generateHazard(distance: number): Hazard {
+  // Water hazard at 60–72% of hole distance, 20 yards wide, rounded to 5s
+  const start = Math.round(distance * (0.60 + Math.random() * 0.12) / 5) * 5
+  return { start, end: start + 20 }
+}
+
 function generateHoles(count: 3 | 6 | 9 | 18): Hole[] {
   const holes: Hole[] = []
   const groups = count / 3
@@ -89,7 +96,8 @@ function generateHoles(count: 3 | 6 | 9 | 18): Hole[] {
       const distance = par === 3 ? randBetween(160, 240)
         : par === 4 ? randBetween(320, 380)
         : randBetween(430, 500)
-      holes.push({ number: holes.length + 1, par, distance })
+      const hazard = par === 3 ? generateHazard(distance) : null
+      holes.push({ number: holes.length + 1, par, distance, hazard })
     }
   }
   return holes
@@ -158,7 +166,7 @@ export default function FootballGolf() {
 
   const currentHole = holes[holeIdx]
   const club = remaining > 0 ? getClub(remaining) : 'driver'
-  const [, clubMax] = CLUB_RANGES[club]
+  const [, clubMax] = CLUB_RANGES[club]  // clubMin unused; only upper bound enforced
 
   const completedScores = scores.filter(s => s !== null) as number[]
   const completedPar = holes.slice(0, completedScores.length).reduce((s, h) => s + h.par, 0)
@@ -223,21 +231,28 @@ export default function FootballGolf() {
       const total: number = data.total ?? 0
       const breakdown: { name: string; value: number }[] = data.breakdown ?? []
 
-      // OOB: only if ball goes >30 yards past the flag
+      // OOB: exceeded club max OR landed in a water hazard
+      const ballPos = currentHole.distance - remaining
       let isOOB = false
       let penaltyReason = ''
-      if (total > remaining + 30) {
+      if (total > clubMax) {
         isOOB = true
-        penaltyReason = `Overshot by ${total - remaining} yds — OOB is >${remaining + 30} yds`
+        penaltyReason = `Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
+      }
+      if (!isOOB && currentHole.hazard) {
+        const newBallPos = ballPos + total
+        const { start, end } = currentHole.hazard
+        if (newBallPos >= start && newBallPos <= end) {
+          isOOB = true
+          penaltyReason = `Water hazard! Shot landed ${start}–${end} yds from tee`
+        }
       }
 
-      // Putter off-green: 20 < overshoot ≤ 30 → not full OOB, ball goes past green
-      const isOffGreen = !isOOB && club === 'putter' && total > remaining + 20
-
-      // Holed: within 5 yds short OR within 5 yds past (but not off-green/OOB)
-      const overshoot = total - remaining  // positive = past flag
-      const isHoled = !isOOB && !isOffGreen && overshoot >= 0 && overshoot <= 5
-      const isGimme = !isOOB && !isOffGreen && !isHoled && remaining - total >= 0 && remaining - total <= 5
+      // Holed: within 5 yds of pin in either direction
+      const overshoot = total - remaining
+      const isHoled = !isOOB && overshoot >= 0 && overshoot <= 5
+      const isGimme = !isOOB && !isHoled && remaining - total >= 0 && remaining - total <= 5
+      const isOffGreen = false  // removed: ball can freely go past hole
 
       setShotResult({ total, breakdown, isOOB, isHoled, isGimme, isOffGreen, penaltyReason })
     } finally {
@@ -345,10 +360,13 @@ export default function FootballGolf() {
               Hole {currentHole.number}: Par {currentHole.par}
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
-              {ordinal(strokes + 1)} shot · {remaining} yards to go · OOB = &gt;{remaining + 30} yds
+              {ordinal(strokes + 1)} shot · {remaining} yards to pin
             </div>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
-              Club: {CLUB_LABEL[club]}
+              Club: {CLUB_LABEL[club]} · max {clubMax} yds
+              {currentHole.hazard && (
+                <span style={{ color: '#60a5fa' }}> · 💧 Water: {currentHole.hazard.start}–{currentHole.hazard.end} yds</span>
+              )}
             </div>
           </div>
 
@@ -459,11 +477,12 @@ function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; s
   const progress = hole.distance > 0 ? Math.min(1, ballPos / hole.distance) : 0
   // tee is at y=148, green is at y=14 — ball travels upward as progress increases
   const ballY = 148 - progress * 134
+  // Convert a yard-from-tee distance to SVG y coordinate
+  const yardToY = (d: number) => 148 - (d / hole.distance) * 134
 
   return (
     <div style={{ background: '#0d1b2a', userSelect: 'none', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <svg width="100%" viewBox="0 0 100 168" style={{ display: 'block', flex: 1 }}>
-        {/* Sky gradient */}
         <defs>
           <linearGradient id="fairway" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#1a4a1a" />
@@ -472,6 +491,17 @@ function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; s
         </defs>
         {/* Fairway */}
         <rect x={38} y={12} width={24} height={142} rx={3} fill="url(#fairway)" />
+        {/* Water hazard (par 3 only) */}
+        {hole.hazard && (() => {
+          const y1 = yardToY(hole.hazard.end)
+          const y2 = yardToY(hole.hazard.start)
+          return (
+            <>
+              <rect x={38} y={y1} width={24} height={y2 - y1} fill="#1d4ed8" opacity={0.85} />
+              <text x={50} y={(y1 + y2) / 2 + 1.5} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
+            </>
+          )
+        })()}
         {/* Tee box */}
         <rect x={42} y={148} width={16} height={5} rx={2} fill="#4ade80" opacity={0.9} />
         {/* Green */}
