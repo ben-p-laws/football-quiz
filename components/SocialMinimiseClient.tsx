@@ -122,19 +122,6 @@ export default function SocialMinimiseClient() {
     return () => clearTimeout(t)
   }, [pickedThisRound, gameOver])
 
-  useEffect(() => {
-    if (!gameOver || lockedCount < TOTAL_ROUNDS) return
-    const score = totalScore(lockedStats)
-    const name = username || localStorage.getItem('topbins_username') || 'Anonymous'
-    fetch('/api/social-minimise', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: name, score }),
-    })
-      .then(r => r.json())
-      .then(d => { if (d.leaderboard) setLeaderboard(d.leaderboard) })
-      .catch(() => {})
-  }, [gameOver])
 
   function doSpin() {
     if (N === 0) return
