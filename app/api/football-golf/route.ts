@@ -4,6 +4,14 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+function fmtNat(raw: string): string {
+  const parts = raw.trim().split(/\s+/)
+  for (let i = parts.length - 1; i >= 0; i--) {
+    if (/^[A-Z]{2,4}$/.test(parts[i])) return parts[i]
+  }
+  return raw
+}
+
 function getClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -62,7 +70,7 @@ const buildCache = unstable_cache(
       p.clean_sheets += Number(row.gk_clean_sheets) || 0
 
       if (row.nationality) {
-        const nat = row.nationality as string
+        const nat = fmtNat(row.nationality as string)
         natFreq[name][nat] = (natFreq[name][nat] || 0) + 1
       }
 
