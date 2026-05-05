@@ -151,17 +151,20 @@ export default function FootballGolf() {
   const [playerInputs, setPlayerInputs] = useState(['', '', ''])
   const [suggestions, setSuggestions] = useState<string[][]>([[], [], []])
   const [confirmedPlayers, setConfirmedPlayers] = useState<(string | null)[]>([null, null, null])
-  const [submitting, setSubmitting] = useState(false)
   const [shotResult, setShotResult] = useState<ShotResult | null>(null)
   const [inputError, setInputError] = useState('')
   const [allPlayerNames, setAllPlayerNames] = useState<string[]>([])
+  const [playerData, setPlayerData] = useState<Record<string, any>>({})
   const searchTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null])
 
-  // Preload all player names once for instant client-side autocomplete
+  // Preload all player names + stats once — enables instant client-side autocomplete and shot lookup
   useEffect(() => {
-    fetch('/api/football-golf?names=1')
+    fetch('/api/football-golf?data=1')
       .then(r => r.json())
-      .then(d => setAllPlayerNames(d.players || []))
+      .then(d => {
+        setAllPlayerNames(d.playerNames || [])
+        setPlayerData(d.players || {})
+      })
   }, [])
 
   const currentHole = holes[holeIdx]
@@ -211,53 +214,62 @@ export default function FootballGolf() {
     setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
   }
 
-  async function submitShot() {
-    if (!question || submitting || !currentHole) return
+  function submitShot() {
+    if (!question || !currentHole) return
     const named = confirmedPlayers.filter(Boolean) as string[]
     if (named.length === 0) { setInputError('Select at least one player'); return }
     setInputError('')
-    setSubmitting(true)
 
-    try {
-      const res = await fetch('/api/football-golf', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          players: named, category: question.key,
-          clubFilter: question.clubFilter, natFilter: question.natFilter,
-        }),
-      })
-      const data = await res.json()
-      const total: number = data.total ?? 0
-      const breakdown: { name: string; value: number }[] = data.breakdown ?? []
-
-      // OOB: exceeded club max OR landed in a water hazard
-      const ballPos = currentHole.distance - remaining
-      let isOOB = false
-      let penaltyReason = ''
-      if (total > clubMax) {
-        isOOB = true
-        penaltyReason = `Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
+    // Client-side stat lookup — no API call needed
+    const breakdown: { name: string; value: number }[] = []
+    let total = 0
+    for (const name of named) {
+      const p = playerData[name]
+      if (!p) { breakdown.push({ name, value: 0 }); continue }
+      if (question.natFilter && p.nationality !== question.natFilter) { breakdown.push({ name, value: 0 }); continue }
+      let value = 0
+      if (question.clubFilter) {
+        const cf = question.clubFilter
+        if      (question.key === 'goals')        value = p.clubGoals[cf]       || 0
+        else if (question.key === 'assists')      value = p.clubAssists[cf]     || 0
+        else if (question.key === 'appearances')  value = p.clubGames[cf]       || 0
+        else if (question.key === 'yellow_cards') value = p.clubYellowCards[cf] || 0
+        else if (question.key === 'clean_sheets') value = p.clubCleanSheets[cf] || 0
+      } else {
+        if      (question.key === 'goals')        value = p.goals
+        else if (question.key === 'assists')      value = p.assists
+        else if (question.key === 'appearances')  value = p.games
+        else if (question.key === 'yellow_cards') value = p.yellow_cards
+        else if (question.key === 'clean_sheets') value = p.clean_sheets
       }
-      if (!isOOB && currentHole.hazard) {
-        const newBallPos = ballPos + total
-        const { start, end } = currentHole.hazard
-        if (newBallPos >= start && newBallPos <= end) {
-          isOOB = true
-          penaltyReason = `Water hazard! Shot landed ${start}–${end} yds from tee`
-        }
-      }
-
-      // Holed: within 5 yds of pin in either direction
-      const overshoot = total - remaining
-      const isHoled = !isOOB && overshoot >= 0 && overshoot <= 5
-      const isGimme = !isOOB && !isHoled && remaining - total >= 0 && remaining - total <= 5
-      const isOffGreen = false  // removed: ball can freely go past hole
-
-      setShotResult({ total, breakdown, isOOB, isHoled, isGimme, isOffGreen, penaltyReason })
-    } finally {
-      setSubmitting(false)
+      breakdown.push({ name, value })
+      total += value
     }
+
+    // OOB: exceeded club max OR landed in a water hazard
+    const ballPos = currentHole.distance - remaining
+    let isOOB = false
+    let penaltyReason = ''
+    if (total > clubMax) {
+      isOOB = true
+      penaltyReason = `Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
+    }
+    if (!isOOB && currentHole.hazard) {
+      const newBallPos = ballPos + total
+      const { start, end } = currentHole.hazard
+      if (newBallPos >= start && newBallPos <= end) {
+        isOOB = true
+        penaltyReason = `Water hazard! Shot landed ${start}–${end} yds from tee`
+      }
+    }
+
+    // Holed: within 5 yds of pin in either direction
+    const overshoot = total - remaining
+    const isHoled = !isOOB && overshoot >= 0 && overshoot <= 5
+    const isGimme = !isOOB && !isHoled && remaining - total >= 0 && remaining - total <= 5
+    const isOffGreen = false
+
+    setShotResult({ total, breakdown, isOOB, isHoled, isGimme, isOffGreen, penaltyReason })
   }
 
   function advanceFromResult() {
@@ -410,7 +422,6 @@ export default function FootballGolf() {
                     setConfirmedPlayers(prev => { const n = [...prev]; n[idx] = null; return n })
                     setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
                   }}
-                  disabled={submitting}
                 />
               ))}
               {inputError && (
@@ -418,15 +429,15 @@ export default function FootballGolf() {
               )}
               <button
                 onClick={submitShot}
-                disabled={submitting || confirmedPlayers.every(p => !p)}
+                disabled={confirmedPlayers.every(p => !p)}
                 style={{
-                  background: (submitting || confirmedPlayers.every(p => !p)) ? '#1a2540' : '#dc2626',
+                  background: confirmedPlayers.every(p => !p) ? '#1a2540' : '#dc2626',
                   color: 'white', border: 'none', borderRadius: 10, padding: '13px 0',
                   fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
                   transition: 'background 0.2s', marginTop: 2,
                 }}
               >
-                {submitting ? 'Looking up...' : '⛳ Take Shot'}
+                ⛳ Take Shot
               </button>
             </>
           )}
@@ -541,10 +552,10 @@ function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; s
 
 // ── Player input row ────────────────────────────────────────────────────────────
 
-function PlayerInputRow({ idx, value, confirmed, suggestions, onChange, onConfirm, onClear, disabled }: {
+function PlayerInputRow({ idx, value, confirmed, suggestions, onChange, onConfirm, onClear }: {
   idx: number; value: string; confirmed: boolean; suggestions: string[]
   onChange: (v: string) => void; onConfirm: (n: string) => void
-  onClear: () => void; disabled: boolean
+  onClear: () => void
 }) {
   return (
     <div style={{ position: 'relative' }}>
@@ -554,7 +565,6 @@ function PlayerInputRow({ idx, value, confirmed, suggestions, onChange, onConfir
           placeholder={idx === 0 ? 'Player 1 (required)' : `Player ${idx + 1} (optional)`}
           value={value}
           onChange={e => onChange(e.target.value)}
-          disabled={disabled}
           autoComplete="off"
           style={{
             flex: 1,
