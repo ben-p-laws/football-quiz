@@ -604,9 +604,9 @@ function ShotResultPanel({ result, club, remaining, onContinue }: {
   const headlineColor = isOOB ? '#ef4444' : (isHoled || isGimme) ? '#22c55e' : isOffGreen ? '#f59e0b' : 'white'
 
   const subtext = isOOB ? `${penaltyReason} · +1 stroke penalty`
-    : isGimme ? `Gimme — ${remaining - total <= 0 ? 0 : remaining - total} yds out`
-    : isOffGreen ? `Went ${total - remaining} yds past the flag — wedge from there`
-    : isHoled ? `${total - remaining >= 0 ? total - remaining : 0} yds past flag`
+    : isGimme ? `${remaining - total} yards remaining — auto gimme`
+    : isHoled ? `${total - remaining === 0 ? 'Holed out' : `${total - remaining} yds past flag`}`
+    : isOffGreen ? `Went ${total - remaining} yds past the flag`
     : `${remaining - total} yds remaining`
 
   const btnLabel = isOOB ? 'Retake Shot →'
