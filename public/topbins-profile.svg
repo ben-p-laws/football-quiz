@@ -1,0 +1,40 @@
+<svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- Background -->
+  <rect width="400" height="400" fill="#0a0f1e"/>
+
+  <!-- Ball -->
+  <circle cx="200" cy="162" r="108" fill="white"/>
+  <!-- Red glow ring -->
+  <circle cx="200" cy="162" r="113" fill="none" stroke="#dc2626" stroke-width="4" opacity="0.4"/>
+
+  <!-- CL-style stars clipped to ball -->
+  <defs>
+    <clipPath id="ball-clip">
+      <circle cx="200" cy="162" r="107"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#ball-clip)">
+    <!-- top-centre star -->
+    <path transform="translate(192,116)"
+      d="M0,-70 L16.6,-22.9 L66.5,-21.7 L26.8,8.7 L41.1,56.7 L0,28 L-41.1,56.7 L-26.8,8.7 L-66.5,-21.7 L-16.6,-22.9 Z"
+      fill="#dc2626"/>
+    <!-- bottom-left star -->
+    <path transform="translate(130,207)"
+      d="M0,-70 L16.6,-22.9 L66.5,-21.7 L26.8,8.7 L41.1,56.7 L0,28 L-41.1,56.7 L-26.8,8.7 L-66.5,-21.7 L-16.6,-22.9 Z"
+      fill="#dc2626"/>
+    <!-- bottom-right star -->
+    <path transform="translate(270,207)"
+      d="M0,-70 L16.6,-22.9 L66.5,-21.7 L26.8,8.7 L41.1,56.7 L0,28 L-41.1,56.7 L-26.8,8.7 L-66.5,-21.7 L-16.6,-22.9 Z"
+      fill="#dc2626"/>
+  </g>
+
+  <!-- TopBins text -->
+  <text x="200" y="320"
+    font-family="Arial Black, Impact, sans-serif"
+    font-weight="900"
+    font-size="68"
+    text-anchor="middle"
+    fill="white">Top<tspan fill="#dc2626">Bins</tspan></text>
+
+</svg>
