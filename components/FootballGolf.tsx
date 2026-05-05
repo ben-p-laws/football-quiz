@@ -482,7 +482,7 @@ function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; s
 
   return (
     <div style={{ background: '#0d1b2a', userSelect: 'none', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <svg width="100%" viewBox="0 3 100 152" preserveAspectRatio="none" style={{ display: 'block', flex: 1 }}>
+      <svg width="100%" viewBox="0 3 100 152" preserveAspectRatio="xMidYMid slice" style={{ display: 'block', flex: 1 }}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#1a4a1a" />
