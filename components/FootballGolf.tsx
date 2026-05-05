@@ -46,6 +46,12 @@ const NAT_CATS: Category[] = NAT_LIST.flatMap(({ code, label }) => [
   { key: 'yellow_cards', label: `${label} PL Yellow Cards`, natFilter: code },
 ])
 
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0])
+}
+
 function pickCategory(remaining: number): Category {
   let pool: Category[]
   if (remaining > 200) {
@@ -335,12 +341,15 @@ export default function FootballGolf() {
           {/* Left panel — 75% */}
           <div style={{ flex: 3, padding: '12px 14px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
           {/* Club + distance row */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ background: '#1e2d4a', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontWeight: 800, color: 'white' }}>
-              {CLUB_LABEL[club].toUpperCase()}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 0 4px' }}>
+            <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>
+              Hole {currentHole.number}: Par {currentHole.par}
             </div>
-            <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
-              {remaining} yds · up to {clubMax} yds ({clubMax}+ = OOB)
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
+              {ordinal(strokes + 1)} shot · {remaining} yards to go
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
+              Club: {CLUB_LABEL[club]} · max range {clubMax} yds ({clubMax}+ = OOB)
             </div>
           </div>
 
