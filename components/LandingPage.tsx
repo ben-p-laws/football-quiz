@@ -312,24 +312,43 @@ export default function LandingPage() {
             <div style={s.ctaSm}><span style={s.ctaText}>Play Countdown →</span></div>
           </div>
 
-          {/* ---- COMING SOON x1 ---- */}
-          {[1].map(n => (
-            <div key={n} style={{ ...s.card, cursor: 'default', opacity: 0.6 }}>
-              <div style={{ padding: '10px 12px 8px' }}>
-                <div style={{ fontSize: 13, fontWeight: 800, color: '#8899bb', marginBottom: 2 }}>Coming Soon</div>
-                <div style={{ fontSize: 10, color: '#8899bb' }}>New game in development</div>
-              </div>
-              <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 90 }}>
-                <div style={{ textAlign: 'center' as const }}>
-                  <div style={{ fontSize: 28, marginBottom: 6, opacity: 0.65 }}>🔒</div>
-                  <div style={{ fontSize: 10, color: '#8899bb' }}>Stay tuned</div>
-                </div>
-              </div>
-              <div style={{ background: '#111827', padding: '8px', textAlign: 'center' as const, borderTop: '1px solid #1e2d4a' }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#8899bb' }}>Coming Soon</span>
+          {/* ---- FOOTBALL GOLF ---- */}
+          <div style={s.card}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+            onClick={() => router.push('/football-golf')}>
+            <div style={{ padding: '10px 12px 8px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Football Golf</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Name players to hit the green · 3, 6, 9 or 18 holes</div>
+            </div>
+            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', minHeight: 90 }}>
+              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sample hole</div>
+              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '7px 10px' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: 'white', marginBottom: 2 }}>Hole 1: Par 4 · 345 yds</div>
+                <div style={{ fontSize: 10, color: '#8899bb', marginBottom: 4 }}>Club: Iron · max 260 yds</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626' }}>All-time PL Goals</div>
+                <div style={{ fontSize: 9, color: '#4a5568', marginTop: 1 }}>Pick up to 3 players — combined stat = shot</div>
               </div>
             </div>
-          ))}
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Football Golf →</span></div>
+          </div>
+
+          {/* ---- COMING SOON ---- */}
+          <div style={{ ...s.card, cursor: 'default', opacity: 0.6 }}>
+            <div style={{ padding: '10px 12px 8px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: '#8899bb', marginBottom: 2 }}>Coming Soon</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>New game in development</div>
+            </div>
+            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 90 }}>
+              <div style={{ textAlign: 'center' as const }}>
+                <div style={{ fontSize: 28, marginBottom: 6, opacity: 0.65 }}>🔒</div>
+                <div style={{ fontSize: 10, color: '#8899bb' }}>Stay tuned</div>
+              </div>
+            </div>
+            <div style={{ background: '#111827', padding: '8px', textAlign: 'center' as const, borderTop: '1px solid #1e2d4a' }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#8899bb' }}>Coming Soon</span>
+            </div>
+          </div>
 
         </div>
       </div>
