@@ -237,9 +237,10 @@ export default function FootballGolf() {
       // Putter off-green: 20 < overshoot ≤ 30 → not full OOB, ball goes past green
       const isOffGreen = !isOOB && club === 'putter' && total > remaining + 20
 
-      // Holed: reaches or passes flag (within OOB limit) and not off-green
-      const isHoled = !isOOB && !isOffGreen && total >= remaining
-      const isGimme = !isOOB && !isOffGreen && !isHoled && (remaining - total) <= 5
+      // Holed: within 5 yds short OR within 5 yds past (but not off-green/OOB)
+      const overshoot = total - remaining  // positive = past flag
+      const isHoled = !isOOB && !isOffGreen && overshoot >= 0 && overshoot <= 5
+      const isGimme = !isOOB && !isOffGreen && !isHoled && remaining - total >= 0 && remaining - total <= 5
 
       setShotResult({ total, breakdown, isOOB, isHoled, isGimme, isOffGreen, penaltyReason })
     } finally {
@@ -276,8 +277,9 @@ export default function FootballGolf() {
       return
     }
 
-    // Normal advance
-    const newRemaining = remaining - shotResult.total
+    // Normal advance — if overshot by >5 yds, ball is past the flag (use overshoot as new distance)
+    const undershoot = remaining - shotResult.total  // positive = still short, negative = past
+    const newRemaining = undershoot >= 0 ? undershoot : -undershoot
     if (newRemaining <= 5) {
       finishHole(newStrokes)
       return
