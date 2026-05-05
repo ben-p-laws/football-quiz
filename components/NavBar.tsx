@@ -59,18 +59,18 @@ export default function NavBar() {
           <circle cx="17" cy="15" r="6.2" fill="white"/>
           {/* Red glow */}
           <circle cx="17" cy="15" r="7.2" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5"/>
-          {/* Champions League red stars — 8 in a ring */}
+          {/* Champions League-style stars — 3 large, clipped to ball */}
           <defs>
-            <path id="tb-star" d="M0,-1.8 L0.42,-0.58 L1.71,-0.55 L0.69,0.22 L1.05,1.45 L0,0.72 L-1.05,1.45 L-0.69,0.22 L-1.71,-0.55 L-0.42,-0.58 Z" fill="#dc2626"/>
+            <clipPath id="ball-clip">
+              <circle cx="17" cy="15" r="6.1"/>
+            </clipPath>
+            <path id="cl-star" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z" fill="#dc2626"/>
           </defs>
-          <use href="#tb-star" transform="translate(17,12.1)"/>
-          <use href="#tb-star" transform="translate(19.3,12.9)"/>
-          <use href="#tb-star" transform="translate(20.1,15.1)"/>
-          <use href="#tb-star" transform="translate(19.3,17.3)"/>
-          <use href="#tb-star" transform="translate(17,18.1)"/>
-          <use href="#tb-star" transform="translate(14.7,17.3)"/>
-          <use href="#tb-star" transform="translate(13.9,15.1)"/>
-          <use href="#tb-star" transform="translate(14.7,12.9)"/>
+          <g clipPath="url(#ball-clip)">
+            <use href="#cl-star" transform="translate(16.5,12.5)"/>
+            <use href="#cl-star" transform="translate(13,17.5)"/>
+            <use href="#cl-star" transform="translate(21,17.5)"/>
+          </g>
         </svg>
         <span style={{ fontSize: '20px', fontWeight: 800, color: 'white', letterSpacing: '-0.5px' }}>
           Top<span style={{ color: '#dc2626' }}>Bins</span>
