@@ -340,7 +340,7 @@ export default function FootballGolf() {
               {CLUB_LABEL[club].toUpperCase()}
             </div>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>
-              {remaining} yds · {clubMin}–{clubMax} range
+              {remaining} yds · up to {clubMax} yds ({clubMax}+ = OOB)
             </div>
           </div>
 
