@@ -217,13 +217,10 @@ export default function FootballGolf() {
       const total: number = data.total ?? 0
       const breakdown: { name: string; value: number }[] = data.breakdown ?? []
 
-      // OOB checks
+      // OOB checks — only penalise overshooting, not hitting short
       let isOOB = false
       let penaltyReason = ''
-      if (total < clubMin) {
-        isOOB = true
-        penaltyReason = `Too short for ${CLUB_LABEL[club]} — needs at least ${clubMin} yds`
-      } else if (total > clubMax) {
+      if (total > clubMax) {
         isOOB = true
         penaltyReason = `Too long for ${CLUB_LABEL[club]} — max ${clubMax} yds`
       } else if (total > remaining + 30) {
@@ -333,7 +330,7 @@ export default function FootballGolf() {
         <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
 
         {/* Main content: left 75% controls, right 25% course */}
-        <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 'calc(100dvh - 56px - 42px)' }}>
+        <div style={{ display: 'flex', alignItems: 'stretch' }}>
 
           {/* Left panel — 75% */}
           <div style={{ flex: 3, padding: '12px 14px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
