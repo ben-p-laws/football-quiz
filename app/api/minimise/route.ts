@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+const CACHE_TTL = 60 * 60 * 1000
+const rankCache = new Map<string, { pidRanks: any; weightedPool: any; clubs: string[]; ts: number }>()
+
 const MIN_CLUB_SEASONS = 5
 
 function getClient() {
@@ -119,15 +122,20 @@ function buildClubList(rows: any[]): string[] {
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
-    const club = searchParams.get('club') || undefined
+    const club = searchParams.get('club') || ''
+    const cacheKey = club
 
-    const rows = await fetchPlayerSeasons(club)
-    const { pidRanks, weightedPool } = buildRankings(rows)
-
-    // Only compute clubs list on unfiltered request (used to populate the picker)
-    let clubs: string[] = []
-    if (!club) {
-      clubs = buildClubList(rows)
+    let pidRanks: any, weightedPool: any, clubs: string[]
+    const cached = rankCache.get(cacheKey)
+    if (cached && Date.now() - cached.ts < CACHE_TTL) {
+      ;({ pidRanks, weightedPool, clubs } = cached)
+    } else {
+      const rows = await fetchPlayerSeasons(club || undefined)
+      const rankings = buildRankings(rows)
+      pidRanks = rankings.pidRanks
+      weightedPool = rankings.weightedPool
+      clubs = club ? [] : buildClubList(rows)
+      rankCache.set(cacheKey, { pidRanks, weightedPool, clubs, ts: Date.now() })
     }
 
     const { data: lbData } = await getClient()

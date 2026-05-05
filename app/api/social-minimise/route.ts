@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
 
+const CACHE_TTL = 60 * 60 * 1000
+let dataCache: { players: any; rankings: any; ts: number } | null = null
+
 // Famous PL players — matched case-insensitively against name_display in DB
 const FAMOUS_NAMES = [
   'Alan Shearer', 'Thierry Henry', 'Frank Lampard', 'Wayne Rooney',
@@ -146,7 +149,12 @@ async function fetchLeaderboard() {
 
 export async function GET() {
   try {
-    const [{ players, rankings }, leaderboard] = await Promise.all([buildData(), fetchLeaderboard()])
+    if (!dataCache || Date.now() - dataCache.ts > CACHE_TTL) {
+      const { players, rankings } = await buildData()
+      dataCache = { players, rankings, ts: Date.now() }
+    }
+    const leaderboard = await fetchLeaderboard()
+    const { players, rankings } = dataCache
     return NextResponse.json({ players, rankings, leaderboard }, { headers: { 'Cache-Control': 'no-store' } })
   } catch (e) {
     console.error(e)
