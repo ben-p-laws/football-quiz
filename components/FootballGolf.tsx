@@ -472,8 +472,10 @@ export default function FootballGolf(){
     const lieResult = bunkerLieResult
     setBunkerLieResult(null)
 
+    // Keep season-specific question if: this was a bad-lie shot, OR OOB on a bad-lie shot (ball still in bunker)
+    const keepBadLie = lieResult === 'bad' || (shotResult.isOOB && !!question?.seasonFilter)
     function nextCat(dist: number): Category {
-      if (lieResult === 'bad') return pickBadLieCategory(badLieSeason.current)
+      if (keepBadLie) return pickBadLieCategory(badLieSeason.current)
       return pickCategory(dist, newUsed)
     }
 
@@ -713,7 +715,7 @@ function BunkerPanel({bq,onAnswer}:{bq:BunkerQ;onAnswer:(idx:number)=>void}){
       <div>
         <div style={{fontSize:10,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>⛺ Sand Trap — Answer to play on</div>
         <div style={{fontSize:13,fontWeight:800,color:'white',lineHeight:1.4}}>{bq.q}</div>
-        <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:3}}>Wrong answer = +1 penalty stroke</div>
+        <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:3}}>Wrong answer = bad lie next shot</div>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7}}>
         {bq.opts.map((opt,i)=>(
