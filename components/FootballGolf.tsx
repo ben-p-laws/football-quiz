@@ -46,6 +46,10 @@ const NAT_CATS: Category[] = NAT_LIST.flatMap(({ code, label }) => [
   { key: 'yellow_cards', label: `${label} PL Yellow Cards`, natFilter: code },
 ])
 
+function normSearch(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/['''`]/g, '').toLowerCase()
+}
+
 function ordinal(n: number): string {
   const s = ['th', 'st', 'nd', 'rd']
   const v = n % 100
@@ -157,12 +161,18 @@ export default function FootballGolf() {
   const [playerData, setPlayerData] = useState<Record<string, any>>({})
   const [namesLoading, setNamesLoading] = useState(true)
   const searchTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null])
+  const normalisedNames = useRef<string[]>([])
 
   // Fast: names only (~100KB) — enables autocomplete as soon as possible
   useEffect(() => {
     fetch('/api/football-golf?names=1')
       .then(r => r.json())
-      .then(d => { setAllPlayerNames(d.playerNames || []); setNamesLoading(false) })
+      .then(d => {
+        const names: string[] = d.playerNames || []
+        setAllPlayerNames(names)
+        normalisedNames.current = names.map(normSearch)
+        setNamesLoading(false)
+      })
       .catch(() => setNamesLoading(false))
   }, [])
 
@@ -210,8 +220,8 @@ export default function FootballGolf() {
       setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
       return
     }
-    const q = val.toLowerCase()
-    const matches = allPlayerNames.filter(name => name.toLowerCase().includes(q)).slice(0, 8)
+    const q = normSearch(val)
+    const matches = allPlayerNames.filter((_, i) => normalisedNames.current[i]?.includes(q)).slice(0, 8)
     setSuggestions(prev => { const n = [...prev]; n[idx] = matches; return n })
   }
 
