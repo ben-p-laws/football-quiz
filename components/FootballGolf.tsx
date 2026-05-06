@@ -959,7 +959,7 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   const overshoot=total-remaining
 
   const headline = isOOB    ? '🚫 Out of Bounds'
-    : isBunker              ? '⛺ In the Bunker!'
+    : isBunker              ? '🏖️ In the Bunker!'
     : isHoled               ? '⛳ In the Hole!'
     : overshoot>0           ? `${total} yds — past flag`
     : `${total} yds`
