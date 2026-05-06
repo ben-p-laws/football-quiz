@@ -33,19 +33,19 @@ type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'yellow_cards'|'c
 type Category = { key: StatKey; label: string; clubFilter?: string; natFilter?: string; seasonFilter?: string }
 type ClubType='driver'|'iron'|'wedge'|'putter'
 
-// For driver: 4 stats (no yellow_cards). For all other clubs: all 5 stats.
-const DRIVER_STATS: StatKey[]     = ['goals','assists','goals_assists','appearances']
-const ALL_STATS:    StatKey[]     = ['goals','assists','goals_assists','appearances','yellow_cards']
+// >150 yds: long-range stats only. <=150 yds: all 5.
+const LONG_STATS:  StatKey[] = ['goals','goals_assists','appearances']
+const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','yellow_cards']
 
 const STAT_LABEL: Record<StatKey,string> = {
   goals:'Goals', assists:'Assists', goals_assists:'Goals + Assists',
   appearances:'Appearances', yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
 }
 
-function pickCategory(club: ClubType): Category {
+function pickCategory(remaining: number): Category {
   // 51 pool: 30 nations + 20 clubs + 1 all-time, each equally likely
   const pick = Math.floor(Math.random() * 51)
-  const stats = club === 'driver' ? DRIVER_STATS : ALL_STATS
+  const stats = remaining > 150 ? LONG_STATS : SHORT_STATS
   const key = stats[Math.floor(Math.random() * stats.length)]
 
   if (pick < 30) {
@@ -313,7 +313,7 @@ export default function FootballGolf(){
     setStrokes(0)
     setShotResult(null)
     setPastPin(false)
-    const firstCat=pickCategory('driver')
+    const firstCat=pickCategory(hs[0].distance)
     setQuestion(firstCat)
     resetInputs()
     setPhase('playing')
@@ -471,7 +471,7 @@ export default function FootballGolf(){
     const keepBadLie = lieResult === 'bad' || (shotResult.isOOB && !!question?.seasonFilter)
     function nextCat(nextRemaining: number): Category {
       if (keepBadLie) return pickBadLieCategory(badLieSeason.current)
-      return pickCategory(getClub(nextRemaining))
+      return pickCategory(nextRemaining)
     }
 
     if(shotResult.isOOB){
@@ -539,7 +539,7 @@ export default function FootballGolf(){
       setRemaining(dist)
       setPastPin(false)
       setStrokes(0)
-      setQuestion(pickCategory('driver'))
+      setQuestion(pickCategory(dist))
     }
   }
 
