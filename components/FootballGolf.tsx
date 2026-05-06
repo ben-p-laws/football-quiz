@@ -1,635 +1,835 @@
 'use client'
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import NavBar from '@/components/NavBar'
 
-// ── Category definitions ────────────────────────────────────────────────────────
+// ── Categories ───────────────────────────────────────────────────────────────
 
 const CLUBS_LIST = [
-  'Arsenal', 'Chelsea', 'Liverpool', 'Manchester United', 'Manchester City',
-  'Tottenham Hotspur', 'Everton', 'Aston Villa', 'Newcastle United', 'West Ham United',
-  'Leicester City', 'Blackburn Rovers', 'Leeds United', 'Southampton', 'Middlesbrough',
+  'Arsenal','Chelsea','Liverpool','Manchester United','Manchester City',
+  'Tottenham Hotspur','Everton','Aston Villa','Newcastle United','West Ham United',
+  'Leicester City','Blackburn Rovers','Leeds United','Southampton','Middlesbrough',
 ]
 
 const NAT_LIST = [
-  { code: 'ENG', label: 'English' }, { code: 'FRA', label: 'French' },
-  { code: 'ESP', label: 'Spanish' }, { code: 'IRL', label: 'Irish' },
-  { code: 'SCO', label: 'Scottish' }, { code: 'WAL', label: 'Welsh' },
-  { code: 'NED', label: 'Dutch' },   { code: 'GER', label: 'German' },
-  { code: 'POR', label: 'Portuguese' }, { code: 'ARG', label: 'Argentine' },
-  { code: 'BRA', label: 'Brazilian' }, { code: 'BEL', label: 'Belgian' },
-  { code: 'SEN', label: 'Senegalese' }, { code: 'NOR', label: 'Norwegian' },
+  { code:'ENG', label:'English' },{ code:'FRA', label:'French' },
+  { code:'ESP', label:'Spanish' },{ code:'IRL', label:'Irish' },
+  { code:'SCO', label:'Scottish' },{ code:'WAL', label:'Welsh' },
+  { code:'NED', label:'Dutch' },  { code:'GER', label:'German' },
+  { code:'POR', label:'Portuguese' },{ code:'ARG', label:'Argentine' },
+  { code:'BRA', label:'Brazilian' },{ code:'BEL', label:'Belgian' },
+  { code:'SEN', label:'Senegalese' },{ code:'NOR', label:'Norwegian' },
 ]
 
-type StatKey = 'goals' | 'assists' | 'appearances' | 'yellow_cards' | 'clean_sheets'
+type StatKey = 'goals'|'assists'|'appearances'|'yellow_cards'|'clean_sheets'
 type Category = { key: StatKey; label: string; clubFilter?: string; natFilter?: string }
 
 const ALL_TIME: Category[] = [
-  { key: 'goals',        label: 'All-time PL Goals' },
-  { key: 'assists',      label: 'All-time PL Assists' },
-  { key: 'appearances',  label: 'All-time PL Appearances' },
-  { key: 'clean_sheets', label: 'All-time PL Clean Sheets' },
-  { key: 'yellow_cards', label: 'All-time PL Yellow Cards' },
+  { key:'goals',        label:'All-time PL Goals' },
+  { key:'assists',      label:'All-time PL Assists' },
+  { key:'appearances',  label:'All-time PL Appearances' },
+  { key:'clean_sheets', label:'All-time PL Clean Sheets' },
+  { key:'yellow_cards', label:'All-time PL Yellow Cards' },
 ]
-
-const CLUB_CATS: Category[] = CLUBS_LIST.flatMap(club => [
-  { key: 'goals',        label: `PL Goals for ${club}`,        clubFilter: club },
-  { key: 'assists',      label: `PL Assists for ${club}`,      clubFilter: club },
-  { key: 'appearances',  label: `PL Appearances for ${club}`,  clubFilter: club },
-  { key: 'clean_sheets', label: `PL Clean Sheets for ${club}`, clubFilter: club },
-  { key: 'yellow_cards', label: `PL Yellow Cards for ${club}`, clubFilter: club },
+const CLUB_CATS: Category[] = CLUBS_LIST.flatMap(club=>[
+  { key:'goals',        label:`PL Goals for ${club}`,       clubFilter:club },
+  { key:'assists',      label:`PL Assists for ${club}`,     clubFilter:club },
+  { key:'appearances',  label:`PL Appearances for ${club}`, clubFilter:club },
+  { key:'clean_sheets', label:`PL Clean Sheets for ${club}`,clubFilter:club },
+  { key:'yellow_cards', label:`PL Yellow Cards for ${club}`,clubFilter:club },
+])
+const NAT_CATS: Category[] = NAT_LIST.flatMap(({code,label})=>[
+  { key:'goals',       label:`${label} PL Goals`,       natFilter:code },
+  { key:'assists',     label:`${label} PL Assists`,     natFilter:code },
+  { key:'appearances', label:`${label} PL Appearances`, natFilter:code },
+  { key:'yellow_cards',label:`${label} PL Yellow Cards`,natFilter:code },
 ])
 
-const NAT_CATS: Category[] = NAT_LIST.flatMap(({ code, label }) => [
-  { key: 'goals',        label: `${label} PL Goals`,        natFilter: code },
-  { key: 'assists',      label: `${label} PL Assists`,      natFilter: code },
-  { key: 'appearances',  label: `${label} PL Appearances`,  natFilter: code },
-  { key: 'yellow_cards', label: `${label} PL Yellow Cards`, natFilter: code },
-])
-
-function normSearch(s: string): string {
-  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/['''`]/g, '').toLowerCase()
-}
-
-function ordinal(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd']
-  const v = n % 100
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0])
-}
-
-function pickCategory(remaining: number): Category {
+// Pick a category, excluding already-used labels this round
+function pickCategory(remaining: number, usedLabels: string[]): Category {
   let pool: Category[]
   if (remaining > 200) {
-    pool = [...ALL_TIME, ...ALL_TIME, ...NAT_CATS.filter(c => c.key === 'goals' || c.key === 'appearances')]
+    pool = [...ALL_TIME, ...ALL_TIME, ...NAT_CATS.filter(c=>c.key==='goals'||c.key==='appearances')]
   } else if (remaining >= 80) {
     pool = [...ALL_TIME, ...CLUB_CATS, ...NAT_CATS]
   } else {
     pool = [...CLUB_CATS, ...CLUB_CATS, ...NAT_CATS]
   }
-  return pool[Math.floor(Math.random() * pool.length)]
+  const usedSet = new Set(usedLabels)
+  const filtered = pool.filter(c => !usedSet.has(c.label))
+  const src = filtered.length > 0 ? filtered : pool
+  return src[Math.floor(Math.random() * src.length)]
 }
 
-// ── Hole generation ─────────────────────────────────────────────────────────────
+// ── Bunker questions ──────────────────────────────────────────────────────────
 
-type Hazard = { start: number; end: number }
-type Hole = { number: number; par: number; distance: number; hazard: Hazard | null }
+type BunkerQ = { q: string; opts: string[]; a: number }
 
-function randBetween(min: number, max: number) {
-  return min + Math.floor(Math.random() * (max - min + 1))
-}
+const BUNKER_QUESTIONS: BunkerQ[] = [
+  { q:"Who did Nicky Butt make the most PL appearances for?",
+    opts:["Newcastle United","Manchester United","Birmingham City","Fulham"], a:1 },
+  { q:"How many PL goals did Alan Shearer score in his career?",
+    opts:["240","250","260","277"], a:2 },
+  { q:"Which player has made the most PL appearances of all time?",
+    opts:["Ryan Giggs","Frank Lampard","Gareth Barry","David James"], a:2 },
+  { q:"In which season did Chelsea win their first Premier League title?",
+    opts:["2001-02","2003-04","2004-05","2005-06"], a:2 },
+  { q:"Who was PL top scorer in Arsenal's Invincibles 2003-04 season?",
+    opts:["Ruud van Nistelrooy","Thierry Henry","Robert Pires","Patrick Vieira"], a:1 },
+  { q:"How many Premier League titles has Manchester United won?",
+    opts:["11","12","13","14"], a:2 },
+  { q:"Who scored the fastest hat-trick in PL history (2 min 56 sec)?",
+    opts:["Robbie Fowler","Jermain Defoe","Sadio Mané","Michael Owen"], a:2 },
+  { q:"Which season did Cantona serve his 8-month ban after the kung-fu kick?",
+    opts:["1993-94","1994-95","1995-96","1996-97"], a:1 },
+  { q:"How many PL goals did Cristiano Ronaldo score in 2007-08 (his Golden Boot year)?",
+    opts:["26","31","36","42"], a:1 },
+  { q:"Who was Leicester City's top scorer in their 2015-16 title-winning season?",
+    opts:["Riyad Mahrez","Leonardo Ulloa","Shinji Okazaki","Jamie Vardy"], a:3 },
+  { q:"Which player has won the most PL Golden Boots?",
+    opts:["Andrew Cole","Alan Shearer","Harry Kane","Thierry Henry"], a:3 },
+  { q:"Who scored the first ever Premier League goal?",
+    opts:["Teddy Sheringham","Alan Shearer","Brian Deane","Mark Hughes"], a:2 },
+  { q:"In which year did Arsenal complete their unbeaten Invincibles PL season?",
+    opts:["2002","2003","2004","2005"], a:2 },
+  { q:"At what age did Wayne Rooney score his first PL goal (for Everton)?",
+    opts:["15","16","17","18"], a:1 },
+  { q:"How many PL titles did Man City win between 2017-18 and 2022-23?",
+    opts:["3","4","5","6"], a:2 },
+  { q:"Which club did Peter Schmeichel win his 5 PL titles with?",
+    opts:["Aston Villa","Manchester City","Manchester United","Sporting CP"], a:2 },
+  { q:"Who holds the record for most PL assists in a single season (20 in 2019-20)?",
+    opts:["Kevin De Bruyne","Ryan Giggs","Cesc Fàbregas","David Beckham"], a:0 },
+  { q:"Which team finished runners-up to Leicester in 2015-16?",
+    opts:["Arsenal","Tottenham Hotspur","Manchester City","Chelsea"], a:0 },
+]
 
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr]
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    ;[a[i], a[j]] = [a[j], a[i]]
+// ── Hole shapes ────────────────────────────────────────────────────────────────
+
+type HoleShape = 'straight'|'dogleg-left'|'dogleg-right'|'slight-left'|'slight-right'
+
+// Map yards-from-tee → SVG (x,y). ViewBox: 0 0 100 152. Tee at bottom (y≈148), hole at top (y≈17).
+function yardToSVG(yards: number, total: number, shape: HoleShape): { x:number; y:number } {
+  const p = Math.max(0, yards / total) // progress 0→1 (can exceed 1 if past hole)
+  switch (shape) {
+    case 'dogleg-left': {
+      const bend = 0.45
+      if (p <= bend) {
+        const t = p / bend
+        return { x:50, y:148 - t*68 }             // 148→80, x stays 50
+      } else {
+        const t = (p - bend) / (1 - bend)
+        return { x:50 - t*24, y:80 - t*63 }        // 50→26, 80→17
+      }
+    }
+    case 'dogleg-right': {
+      const bend = 0.45
+      if (p <= bend) {
+        const t = p / bend
+        return { x:50, y:148 - t*68 }
+      } else {
+        const t = (p - bend) / (1 - bend)
+        return { x:50 + t*24, y:80 - t*63 }        // 50→74, 80→17
+      }
+    }
+    case 'slight-left':  return { x:50 - p*8,  y:148 - p*131 }   // 50→42
+    case 'slight-right': return { x:50 + p*8,  y:148 - p*131 }   // 50→58
+    default:             return { x:50,          y:148 - p*131 }
   }
+}
+
+function holeXY(shape: HoleShape): { x:number; y:number } {
+  return yardToSVG(1, 1, shape)
+}
+
+// ── Hole generation ────────────────────────────────────────────────────────────
+
+type Hazard = { start:number; end:number }
+type Hole   = { number:number; par:number; distance:number; hazard:Hazard|null; shape:HoleShape }
+
+function randBetween(min:number,max:number){ return min+Math.floor(Math.random()*(max-min+1)) }
+
+function shuffle<T>(arr:T[]):T[]{
+  const a=[...arr]
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]] }
   return a
 }
 
-function generateHoles(count: 3 | 6 | 9 | 18): Hole[] {
-  const holes: Hole[] = []
-  const groups = count / 3
-  for (let g = 0; g < groups; g++) {
-    for (const par of shuffle([3, 4, 5])) {
-      const distance = par === 3 ? randBetween(160, 240)
-        : par === 4 ? randBetween(320, 380)
-        : randBetween(430, 500)
+const ALL_SHAPES: HoleShape[] = ['straight','dogleg-left','dogleg-right','slight-left','slight-right']
 
-      let hazard: Hazard | null = null
-      if (par === 3) {
-        // Water 60–72% of distance, 20 yds wide
-        const start = Math.round(distance * (0.60 + Math.random() * 0.12) / 5) * 5
-        hazard = { start, end: start + 20 }
-      } else if (par === 5) {
-        // Water 180–260 yds from tee, 30 yds wide
-        const start = randBetween(36, 46) * 5  // 180–230 in steps of 5
-        hazard = { start, end: start + 30 }
-      } else if (par === 4) {
-        // Water 40–100 yds from hole, 20 yds wide
-        const fromHole = Math.round(randBetween(40, 100) / 5) * 5
-        const start = distance - fromHole
-        hazard = { start, end: start + 20 }
+function generateHoles(count:3|6|9|18):Hole[]{
+  const holes:Hole[]=[]
+  const groups=count/3
+  // Build a shuffled shape pool so no two consecutive holes share a shape
+  const shapePool = shuffle([...ALL_SHAPES,...ALL_SHAPES,...ALL_SHAPES,...ALL_SHAPES])
+
+  for(let g=0;g<groups;g++){
+    for(const par of shuffle([3,4,5])){
+      const distance=par===3?randBetween(160,240):par===4?randBetween(320,380):randBetween(430,500)
+      let hazard:Hazard|null=null
+      if(par===3){
+        const start=Math.round(distance*(0.60+Math.random()*0.12)/5)*5
+        hazard={start,end:start+20}
+      }else if(par===5){
+        const start=randBetween(36,46)*5
+        hazard={start,end:start+30}
+      }else{
+        const fromHole=Math.round(randBetween(40,100)/5)*5
+        const start=distance-fromHole
+        hazard={start,end:start+20}
       }
-
-      holes.push({ number: holes.length + 1, par, distance, hazard })
+      const shape=shapePool[holes.length%shapePool.length]
+      holes.push({number:holes.length+1,par,distance,hazard,shape})
     }
   }
   return holes
 }
 
-// ── Club types ──────────────────────────────────────────────────────────────────
+// ── Club types ─────────────────────────────────────────────────────────────────
 
-type ClubType = 'driver' | 'iron' | 'wedge' | 'putter'
+type ClubType='driver'|'iron'|'wedge'|'putter'
 
-function getClub(remaining: number): ClubType {
-  if (remaining > 260) return 'driver'
-  if (remaining >= 120) return 'iron'
-  if (remaining > 20)   return 'wedge'
+function getClub(remaining:number):ClubType{
+  if(remaining>260)  return 'driver'
+  if(remaining>=120) return 'iron'
+  if(remaining>20)   return 'wedge'
   return 'putter'
 }
 
-const CLUB_RANGES: Record<ClubType, [number, number]> = {
-  driver: [250, 300],
-  iron:   [120, 260],
-  wedge:  [20,  119],
-  putter: [0,   50],
+const CLUB_RANGES:Record<ClubType,[number,number]>={driver:[250,300],iron:[120,260],wedge:[20,119],putter:[0,50]}
+const CLUB_LABEL:Record<ClubType,string>={driver:'Driver',iron:'Iron',wedge:'Wedge',putter:'Putter'}
+
+// ── Types ──────────────────────────────────────────────────────────────────────
+
+type ShotResult={
+  total:number; breakdown:{name:string;value:number}[]
+  isOOB:boolean; isHoled:boolean; isGimme:boolean
+  isInBunker:boolean; penaltyReason:string
 }
 
-const CLUB_LABEL: Record<ClubType, string> = {
-  driver: 'Driver', iron: 'Iron', wedge: 'Wedge', putter: 'Putter',
-}
+function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/['''`]/g,'').toLowerCase()}
 
-// ── Types ───────────────────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────────
 
-type ShotResult = {
-  total: number
-  breakdown: { name: string; value: number }[]
-  isOOB: boolean
-  isHoled: boolean
-  isGimme: boolean
-  isOffGreen: boolean
-  penaltyReason: string
-}
+export default function FootballGolf(){
+  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'>('setup')
+  const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
+  const [holes,setHoles]                 = useState<Hole[]>([])
+  const [holeIdx,setHoleIdx]             = useState(0)
+  const [remaining,setRemaining]         = useState(0)
+  const [strokes,setStrokes]             = useState(0)
+  const [scores,setScores]               = useState<(number|null)[]>([])
+  const [question,setQuestion]           = useState<Category|null>(null)
+  const [usedLabels,setUsedLabels]       = useState<string[]>([])
+  const [playerInputs,setPlayerInputs]   = useState(['','',''])
+  const [suggestions,setSuggestions]     = useState<string[][]>([[],[],[]])
+  const [confirmedPlayers,setConfirmedPlayers] = useState<(string|null)[]>([null,null,null])
+  const [shotResult,setShotResult]       = useState<ShotResult|null>(null)
+  const [inputError,setInputError]       = useState('')
+  const [allPlayerNames,setAllPlayerNames] = useState<string[]>([])
+  const [playerData,setPlayerData]       = useState<Record<string,any>>({})
+  const [namesLoading,setNamesLoading]   = useState(true)
+  // Animation
+  const [isAnimating,setIsAnimating]     = useState(false)
+  const [animBallPos,setAnimBallPos]     = useState(0)   // yards from tee
+  const [arcOffset,setArcOffset]         = useState(0)   // lateral arc during flight
+  const [pendingResult,setPendingResult] = useState<ShotResult|null>(null)
+  const animFrameRef = useRef<number|null>(null)
+  // Bunker MC question
+  const [bunkerQ,setBunkerQ]             = useState<BunkerQ|null>(null)
 
-// ── Main component ──────────────────────────────────────────────────────────────
-
-export default function FootballGolf() {
-  const [phase, setPhase] = useState<'setup' | 'playing' | 'done'>('setup')
-  const [numHoles, setNumHoles] = useState<3 | 6 | 9 | 18>(9)
-  const [holes, setHoles] = useState<Hole[]>([])
-  const [holeIdx, setHoleIdx] = useState(0)
-  const [remaining, setRemaining] = useState(0)
-  const [strokes, setStrokes] = useState(0)
-  const [scores, setScores] = useState<(number | null)[]>([])
-  const [question, setQuestion] = useState<Category | null>(null)
-  const [playerInputs, setPlayerInputs] = useState(['', '', ''])
-  const [suggestions, setSuggestions] = useState<string[][]>([[], [], []])
-  const [confirmedPlayers, setConfirmedPlayers] = useState<(string | null)[]>([null, null, null])
-  const [shotResult, setShotResult] = useState<ShotResult | null>(null)
-  const [inputError, setInputError] = useState('')
-  const [allPlayerNames, setAllPlayerNames] = useState<string[]>([])
-  const [playerData, setPlayerData] = useState<Record<string, any>>({})
-  const [namesLoading, setNamesLoading] = useState(true)
-  const searchTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null])
   const normalisedNames = useRef<string[]>([])
 
-  // Fast: names only (~100KB) — enables autocomplete as soon as possible
-  useEffect(() => {
-    fetch('/api/football-golf?names=1')
-      .then(r => r.json())
-      .then(d => {
-        const names: string[] = d.playerNames || []
-        setAllPlayerNames(names)
-        normalisedNames.current = names.map(normSearch)
-        setNamesLoading(false)
-      })
-      .catch(() => setNamesLoading(false))
-  }, [])
+  useEffect(()=>{
+    fetch('/api/football-golf?names=1').then(r=>r.json()).then(d=>{
+      const names:string[]=d.playerNames||[]
+      setAllPlayerNames(names)
+      normalisedNames.current=names.map(normSearch)
+      setNamesLoading(false)
+    }).catch(()=>setNamesLoading(false))
+  },[])
 
-  // Slower: full stats (~1.9MB) — enables client-side shot calculation
-  useEffect(() => {
-    fetch('/api/football-golf?data=1')
-      .then(r => r.json())
-      .then(d => { setPlayerData(d.players || {}) })
-      .catch(() => {})
-  }, [])
+  useEffect(()=>{
+    fetch('/api/football-golf?data=1').then(r=>r.json()).then(d=>setPlayerData(d.players||{})).catch(()=>{})
+  },[])
 
-  const currentHole = holes[holeIdx]
-  const club = remaining > 0 ? getClub(remaining) : 'driver'
-  const [, clubMax] = CLUB_RANGES[club]  // clubMin unused; only upper bound enforced
+  useEffect(()=>()=>{ if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current) },[])
 
-  const completedScores = scores.filter(s => s !== null) as number[]
-  const completedPar = holes.slice(0, completedScores.length).reduce((s, h) => s + h.par, 0)
-  const totalStrokes = completedScores.reduce((s, n) => s + n, 0)
-  const vsPar = totalStrokes - completedPar
+  const currentHole  = holes[holeIdx]
+  const club         = remaining>0 ? getClub(remaining) : 'driver'
+  const [,clubMax]   = CLUB_RANGES[club]
+  const completedScores = scores.filter(s=>s!==null) as number[]
+  const completedPar    = holes.slice(0,completedScores.length).reduce((s,h)=>s+h.par,0)
+  const totalStrokes    = completedScores.reduce((s,n)=>s+n,0)
+  const vsPar           = totalStrokes-completedPar
+  const vsParStr        = vsPar===0?'E':vsPar>0?`+${vsPar}`:String(vsPar)
 
-  function startGame() {
-    const hs = generateHoles(numHoles)
+  // Current ball pos in yards from tee (for non-animating display)
+  const ballPos = currentHole ? currentHole.distance - remaining : 0
+
+  function startGame(){
+    const hs=generateHoles(numHoles)
     setHoles(hs)
     setScores(new Array(numHoles).fill(null))
     setHoleIdx(0)
     setRemaining(hs[0].distance)
     setStrokes(0)
     setShotResult(null)
-    setQuestion(pickCategory(hs[0].distance))
+    setUsedLabels([])
+    const firstCat=pickCategory(hs[0].distance,[])
+    setQuestion(firstCat)
     resetInputs()
     setPhase('playing')
   }
 
-  function resetInputs() {
-    setPlayerInputs(['', '', ''])
-    setConfirmedPlayers([null, null, null])
-    setSuggestions([[], [], []])
+  function resetInputs(){
+    setPlayerInputs(['','',''])
+    setConfirmedPlayers([null,null,null])
+    setSuggestions([[],[],[]])
     setInputError('')
   }
 
-  function onInputChange(idx: number, val: string) {
-    setPlayerInputs(prev => { const n = [...prev]; n[idx] = val; return n })
-    setConfirmedPlayers(prev => { const n = [...prev]; n[idx] = null; return n })
-    if (val.length < 2) {
-      setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
-      return
+  function onInputChange(idx:number,val:string){
+    setPlayerInputs(prev=>{ const n=[...prev];n[idx]=val;return n })
+    setConfirmedPlayers(prev=>{ const n=[...prev];n[idx]=null;return n })
+    if(val.length<2){ setSuggestions(prev=>{ const n=[...prev];n[idx]=[];return n });return }
+    const q=normSearch(val)
+    const matches=allPlayerNames.filter((_,i)=>normalisedNames.current[i]?.includes(q)).slice(0,8)
+    setSuggestions(prev=>{ const n=[...prev];n[idx]=matches;return n })
+  }
+
+  function confirmSuggestion(idx:number,name:string){
+    setPlayerInputs(prev=>{ const n=[...prev];n[idx]=name;return n })
+    setConfirmedPlayers(prev=>{ const n=[...prev];n[idx]=name;return n })
+    setSuggestions(prev=>{ const n=[...prev];n[idx]=[];return n })
+  }
+
+  function animateShot(fromPos:number, toPos:number, result:ShotResult){
+    if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
+    setIsAnimating(true)
+    setPendingResult(result)
+    setAnimBallPos(fromPos)
+    setArcOffset(0)
+    const startTime = performance.now()
+    const duration  = 700
+    const tick = (now:number)=>{
+      const t     = Math.min(1,(now-startTime)/duration)
+      const eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2
+      setAnimBallPos(fromPos+(toPos-fromPos)*eased)
+      setArcOffset(Math.sin(Math.PI*eased)*7)
+      if(t<1){
+        animFrameRef.current=requestAnimationFrame(tick)
+      }else{
+        setIsAnimating(false)
+        setArcOffset(0)
+        setShotResult(result)
+        setPendingResult(null)
+      }
     }
-    const q = normSearch(val)
-    const matches = allPlayerNames.filter((_, i) => normalisedNames.current[i]?.includes(q)).slice(0, 8)
-    setSuggestions(prev => { const n = [...prev]; n[idx] = matches; return n })
+    animFrameRef.current=requestAnimationFrame(tick)
   }
 
-  function confirmSuggestion(idx: number, name: string) {
-    setPlayerInputs(prev => { const n = [...prev]; n[idx] = name; return n })
-    setConfirmedPlayers(prev => { const n = [...prev]; n[idx] = name; return n })
-    setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
-  }
-
-  function submitShot() {
-    if (!question || !currentHole) return
-    const named = confirmedPlayers.filter(Boolean) as string[]
-    if (named.length === 0) { setInputError('Select at least one player'); return }
+  function submitShot(){
+    if(!question||!currentHole) return
+    const named=confirmedPlayers.filter(Boolean) as string[]
+    if(named.length===0){ setInputError('Select at least one player');return }
     setInputError('')
 
-    // Client-side stat lookup — no API call needed
-    const breakdown: { name: string; value: number }[] = []
-    let total = 0
-    for (const name of named) {
-      const p = playerData[name]
-      if (!p) { breakdown.push({ name, value: 0 }); continue }
-      if (question.natFilter && p.nationality !== question.natFilter) { breakdown.push({ name, value: 0 }); continue }
-      let value = 0
-      if (question.clubFilter) {
-        const cf = question.clubFilter
-        if      (question.key === 'goals')        value = p.clubGoals[cf]       || 0
-        else if (question.key === 'assists')      value = p.clubAssists[cf]     || 0
-        else if (question.key === 'appearances')  value = p.clubGames[cf]       || 0
-        else if (question.key === 'yellow_cards') value = p.clubYellowCards[cf] || 0
-        else if (question.key === 'clean_sheets') value = p.clubCleanSheets[cf] || 0
-      } else {
-        if      (question.key === 'goals')        value = p.goals
-        else if (question.key === 'assists')      value = p.assists
-        else if (question.key === 'appearances')  value = p.games
-        else if (question.key === 'yellow_cards') value = p.yellow_cards
-        else if (question.key === 'clean_sheets') value = p.clean_sheets
+    const breakdown:{name:string;value:number}[]=[]
+    let total=0
+    for(const name of named){
+      const p=playerData[name]
+      if(!p){ breakdown.push({name,value:0});continue }
+      if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
+      let value=0
+      if(question.clubFilter){
+        const cf=question.clubFilter
+        if(question.key==='goals')        value=p.clubGoals[cf]||0
+        else if(question.key==='assists') value=p.clubAssists[cf]||0
+        else if(question.key==='appearances') value=p.clubGames[cf]||0
+        else if(question.key==='yellow_cards') value=p.clubYellowCards[cf]||0
+        else if(question.key==='clean_sheets') value=p.clubCleanSheets[cf]||0
+      }else{
+        if(question.key==='goals')        value=p.goals
+        else if(question.key==='assists') value=p.assists
+        else if(question.key==='appearances') value=p.games
+        else if(question.key==='yellow_cards') value=p.yellow_cards
+        else if(question.key==='clean_sheets') value=p.clean_sheets
       }
-      breakdown.push({ name, value })
-      total += value
+      breakdown.push({name,value})
+      total+=value
     }
 
-    // OOB: exceeded club max OR landed in a water hazard
-    const ballPos = currentHole.distance - remaining
-    let isOOB = false
-    let penaltyReason = ''
-    if (total > clubMax) {
-      isOOB = true
-      penaltyReason = `Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
+    let isOOB=false
+    let penaltyReason=''
+
+    // Club max exceeded
+    if(total>clubMax){
+      isOOB=true
+      penaltyReason=`Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
     }
-    if (!isOOB && currentHole.hazard) {
-      const newBallPos = ballPos + total
-      const { start, end } = currentHole.hazard
-      if (newBallPos >= start && newBallPos <= end) {
-        isOOB = true
-        penaltyReason = `Water hazard! Shot landed ${start}–${end} yds from tee`
+
+    // Water hazard
+    if(!isOOB && currentHole.hazard){
+      const newPos=ballPos+total
+      const {start,end}=currentHole.hazard
+      if(newPos>=start && newPos<=end){
+        isOOB=true
+        penaltyReason=`Water hazard! Ball landed in lake (${start}–${end} yds from tee)`
       }
     }
 
-    // Holed: within 5 yds of pin in either direction
-    const overshoot = total - remaining
-    const isHoled = !isOOB && overshoot >= 0 && overshoot <= 5
-    const isGimme = !isOOB && !isHoled && remaining - total >= 0 && remaining - total <= 5
-    const isOffGreen = false
+    const overshoot=total-remaining          // positive = went past hole
 
-    setShotResult({ total, breakdown, isOOB, isHoled, isGimme, isOffGreen, penaltyReason })
+    // More than 20 yards past = OOB
+    if(!isOOB && overshoot>20){
+      isOOB=true
+      penaltyReason=`${overshoot} yds past the flag — out of bounds!`
+    }
+
+    const isHoled  = !isOOB && overshoot>=0 && overshoot<=5
+    const isGimme  = !isOOB && !isHoled && (remaining-total)>=0 && (remaining-total)<=5
+
+    // Bunker: landing 20-40 yds short of hole (approach side only), only if not already in bunker
+    const wasInBunker = remaining>=20 && remaining<=40
+    const undershoot  = remaining-total
+    const isInBunker  = !isOOB && !isHoled && !isGimme && !wasInBunker && undershoot>=20 && undershoot<=40
+
+    const result:ShotResult={ total,breakdown,isOOB,isHoled,isGimme,isInBunker,penaltyReason }
+
+    // Animate to landing position (clamp to hole+20 for OOB-overshoot, otherwise real landing)
+    const toPos = isOOB && penaltyReason.includes('past')
+      ? currentHole.distance + 20           // show ball flying past
+      : Math.min(ballPos+total, currentHole.distance+20)
+
+    animateShot(ballPos, toPos, result)
   }
 
-  function advanceFromResult() {
-    if (!shotResult || !currentHole) return
-    const newStrokes = strokes + 1 + (shotResult.isOOB ? 1 : 0)
+  function advanceFromResult(extraPenalty=false){
+    if(!shotResult||!currentHole) return
+    const penaltyStrokes = (shotResult.isOOB?1:0) + (extraPenalty?1:0)
+    const newStrokes=strokes+1+penaltyStrokes
 
-    if (shotResult.isOOB) {
-      // Ball stays, new question same distance
+    const newLabel=question?.label
+    const newUsed=newLabel ? [...usedLabels, newLabel] : usedLabels
+
+    if(shotResult.isOOB){
+      // Ball returns to same spot
       setStrokes(newStrokes)
       setShotResult(null)
-      setQuestion(pickCategory(remaining))
+      setBunkerQ(null)
+      const cat=pickCategory(remaining,newUsed)
+      setUsedLabels([...newUsed,cat.label])
+      setQuestion(cat)
       resetInputs()
       return
     }
 
-    if (shotResult.isHoled || shotResult.isGimme) {
+    if(shotResult.isHoled||shotResult.isGimme){
+      setUsedLabels(newUsed)
       finishHole(newStrokes)
       return
     }
 
-    if (shotResult.isOffGreen) {
-      // Ball went past green, new distance = how far past
-      const newRemaining = shotResult.total - remaining
-      setRemaining(newRemaining)
-      setStrokes(newStrokes)
-      setShotResult(null)
-      setQuestion(pickCategory(newRemaining))
-      resetInputs()
-      return
-    }
+    // Normal advance — overshoot up to 20 = ball past flag
+    const undershoot=remaining-shotResult.total
+    const newRemaining=undershoot>=0 ? undershoot : -undershoot
 
-    // Normal advance — if overshot by >5 yds, ball is past the flag (use overshoot as new distance)
-    const undershoot = remaining - shotResult.total  // positive = still short, negative = past
-    const newRemaining = undershoot >= 0 ? undershoot : -undershoot
-    if (newRemaining <= 5) {
-      finishHole(newStrokes)
-      return
-    }
+    if(newRemaining<=5){ setUsedLabels(newUsed);finishHole(newStrokes);return }
+
     setRemaining(newRemaining)
     setStrokes(newStrokes)
     setShotResult(null)
-    setQuestion(pickCategory(newRemaining))
+    setBunkerQ(null)
+    const cat=pickCategory(newRemaining,newUsed)
+    setUsedLabels([...newUsed,cat.label])
+    setQuestion(cat)
     resetInputs()
   }
 
-  function finishHole(finalStrokes: number) {
-    const newScores = [...scores]
-    newScores[holeIdx] = finalStrokes
+  function answerBunkerQ(idx:number){
+    if(!bunkerQ) return
+    const correct=idx===bunkerQ.a
+    setBunkerQ(null)
+    advanceFromResult(!correct) // wrong answer = extra penalty
+  }
+
+  function triggerBunkerQuestion(){
+    // Pick a random bunker question not recently seen
+    const q=BUNKER_QUESTIONS[Math.floor(Math.random()*BUNKER_QUESTIONS.length)]
+    setBunkerQ(q)
+  }
+
+  function finishHole(finalStrokes:number){
+    const newScores=[...scores]
+    newScores[holeIdx]=finalStrokes
     setScores(newScores)
     setShotResult(null)
+    setBunkerQ(null)
     resetInputs()
-    if (holeIdx + 1 >= holes.length) {
+    if(holeIdx+1>=holes.length){
       setPhase('done')
-    } else {
-      const nextIdx = holeIdx + 1
+    }else{
+      const nextIdx=holeIdx+1
       setHoleIdx(nextIdx)
-      setRemaining(holes[nextIdx].distance)
+      const dist=holes[nextIdx].distance
+      setRemaining(dist)
       setStrokes(0)
-      setQuestion(pickCategory(holes[nextIdx].distance))
+      // Reset used labels per hole? No — keep them across the whole round for true no-repeat
+      const cat=pickCategory(dist,usedLabels)
+      setUsedLabels(prev=>[...prev,cat.label])
+      setQuestion(cat)
     }
   }
 
-  // ── Render ────────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
-  if (phase === 'setup') {
-    return <><NavBar /><SetupScreen numHoles={numHoles} setNumHoles={setNumHoles} onStart={startGame} /></>
-  }
+  if(phase==='setup') return <><NavBar /><SetupScreen numHoles={numHoles} setNumHoles={setNumHoles} onStart={startGame} /></>
+  if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={()=>setPhase('setup')} /></>
+  if(!currentHole) return null
 
-  if (phase === 'done') {
-    return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={() => setPhase('setup')} /></>
-  }
-
-  if (!currentHole) return null
-
-  const ballPos = currentHole.distance - remaining
-  const vsParStr = vsPar === 0 ? 'E' : vsPar > 0 ? `+${vsPar}` : String(vsPar)
+  // Display ball pos: animated when flying, real when static
+  const displayPos = isAnimating ? animBallPos : ballPos
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#0a0f1e', fontFamily: "'DM Sans', -apple-system, sans-serif" }}>
+    <div style={{minHeight:'100dvh',background:'#0a0f1e',fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');
-        * { box-sizing: border-box; }
-        input::placeholder { color: rgba(255,255,255,0.3); }
-        input:focus { outline: none; }
+        * { box-sizing:border-box; }
+        input::placeholder { color:rgba(255,255,255,0.3); }
+        input:focus { outline:none; }
+        @keyframes clubSwing {
+          0%   { transform: rotate(-50deg); }
+          35%  { transform: rotate(25deg); }
+          60%  { transform: rotate(-8deg); }
+          100% { transform: rotate(-8deg); }
+        }
+        .club-swing { animation: clubSwing 0.5s ease-out forwards; transform-origin: 0 0; }
       `}</style>
-
       <NavBar />
-
-      <div style={{ maxWidth: 520, margin: '0 auto', width: '100%' }}>
+      <div style={{maxWidth:520,margin:'0 auto',width:'100%'}}>
         <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
+        <div style={{display:'flex',alignItems:'stretch'}}>
 
-        {/* Main content: left 75% controls, right 25% course */}
-        <div style={{ display: 'flex', alignItems: 'stretch' }}>
-
-          {/* Left panel — 75% */}
-          <div style={{ flex: 3, padding: '12px 14px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
-          {/* Club + distance row */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '2px 0 4px' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-              Hole {currentHole.number} · Par {currentHole.par}
-            </div>
-            <div style={{ fontSize: 22, fontWeight: 900, color: 'white', lineHeight: 1.1 }}>
-              {remaining} yards to pin
-            </div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
-              {(() => {
-                const base = `${CLUB_LABEL[club]} · max ${clubMax} yds`
-                if (!currentHole.hazard) return base
-                const distToStart = currentHole.hazard.start - ballPos
-                const distToEnd = currentHole.hazard.end - ballPos
-                if (distToEnd <= 0) return base
-                const hazardText = distToStart <= 0
-                  ? ' · 💧 In water zone'
-                  : ` · 💧 Water: ${distToStart}–${distToEnd} yds ahead`
-                const hazardColor = distToStart <= 0 ? '#f87171' : '#60a5fa'
-                return <>{base}<span style={{ color: hazardColor }}>{hazardText}</span></>
-              })()}
-            </div>
-          </div>
-
-          {/* Question card */}
-          {question && (
-            <div style={{ background: '#1e2d4a', borderRadius: 10, padding: '9px 12px' }}>
-              <div style={{ fontSize: 9, fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>
-                Category
+          {/* Left panel */}
+          <div style={{flex:3,padding:'12px 14px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
+            <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
+              <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                Hole {currentHole.number} · Par {currentHole.par}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', lineHeight: 1.3 }}>{question.label}</div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', marginTop: 3 }}>
-                Up to 3 players — combined stat = shot distance
+              <div style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1.1}}>
+                {remaining} yards to pin
               </div>
-            </div>
-          )}
-
-          {/* Shot result or inputs */}
-          {shotResult ? (
-            <ShotResultPanel result={shotResult} club={club} remaining={remaining} onContinue={advanceFromResult} />
-          ) : (
-            <>
-              {namesLoading && (
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', padding: '4px 0' }}>
-                  Loading players…
+              <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
+                {(()=>{
+                  const base=`${CLUB_LABEL[club]} · max ${clubMax} yds`
+                  // Bunker indicator
+                  const inBunker=remaining>=20&&remaining<=40
+                  if(inBunker) return <>{base}<span style={{color:'#f59e0b'}}> · ⛺ In bunker zone</span></>
+                  if(!currentHole.hazard) return base
+                  const distToStart=currentHole.hazard.start-ballPos
+                  const distToEnd=currentHole.hazard.end-ballPos
+                  if(distToEnd<=0) return base
+                  const hazardText=distToStart<=0?' · 💧 In water zone':` · 💧 Water: ${distToStart}–${distToEnd} yds ahead`
+                  const hazardColor=distToStart<=0?'#f87171':'#60a5fa'
+                  return <>{base}<span style={{color:hazardColor}}>{hazardText}</span></>
+                })()}
+              </div>
+              {/* Bunker warning */}
+              {remaining>20&&remaining<=50&&(
+                <div style={{fontSize:11,color:'#f59e0b',fontWeight:700}}>
+                  ⛺ Bunker zone: 20–40 yards from pin
                 </div>
               )}
-              {[0, 1, 2].map(idx => (
-                <PlayerInputRow
-                  key={idx}
-                  idx={idx}
-                  value={playerInputs[idx]}
-                  confirmed={!!confirmedPlayers[idx]}
-                  suggestions={suggestions[idx]}
-                  onChange={val => onInputChange(idx, val)}
-                  onConfirm={name => confirmSuggestion(idx, name)}
-                  onClear={() => {
-                    setPlayerInputs(prev => { const n = [...prev]; n[idx] = ''; return n })
-                    setConfirmedPlayers(prev => { const n = [...prev]; n[idx] = null; return n })
-                    setSuggestions(prev => { const n = [...prev]; n[idx] = []; return n })
-                  }}
-                />
-              ))}
-              {inputError && (
-                <div style={{ fontSize: 12, color: '#dc2626', fontWeight: 700 }}>{inputError}</div>
-              )}
-              <button
-                onClick={submitShot}
-                disabled={confirmedPlayers.every(p => !p)}
-                style={{
-                  background: confirmedPlayers.every(p => !p) ? '#1a2540' : '#dc2626',
-                  color: 'white', border: 'none', borderRadius: 10, padding: '13px 0',
-                  fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-                  transition: 'background 0.2s', marginTop: 2,
-                }}
-              >
-                ⛳ Take Shot
-              </button>
-            </>
-          )}
-        </div>
-
-          {/* Right panel — 25% course view */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <CourseView hole={currentHole} ballPos={ballPos} strokes={strokes} />
-          </div>
-
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Scorecard ───────────────────────────────────────────────────────────────────
-
-function Scorecard({ holes, scores, currentIdx, vsParStr, vsPar }: {
-  holes: Hole[]; scores: (number | null)[]; currentIdx: number; vsParStr: string; vsPar: number
-}) {
-  const vsParColor = vsPar < 0 ? '#22c55e' : vsPar > 0 ? '#ef4444' : 'white'
-  return (
-    <div style={{ background: '#111827', padding: '8px 12px', overflowX: 'auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 'max-content' }}>
-        <div style={{ width: 22, fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>H</div>
-        {holes.map((h, i) => (
-          <div key={i} style={{
-            width: 26, textAlign: 'center', borderRadius: 4, padding: '2px 0',
-            background: i === currentIdx ? 'rgba(220,38,38,0.2)' : 'transparent',
-          }}>
-            <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.3)' }}>P{h.par}</div>
-            <div style={{
-              fontSize: 13, fontWeight: 800,
-              color: scores[i] == null ? 'rgba(255,255,255,0.18)'
-                : (scores[i]! < h.par) ? '#22c55e'
-                : (scores[i]! > h.par) ? '#ef4444'
-                : 'white',
-            }}>
-              {scores[i] ?? '·'}
             </div>
+
+            {/* Category */}
+            {question&&(
+              <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px'}}>
+                <div style={{fontSize:9,fontWeight:800,color:'#4a5568',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>Category</div>
+                <div style={{fontSize:13,fontWeight:800,color:'white',lineHeight:1.3}}>{question.label}</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:3}}>Up to 3 players — combined stat = shot distance</div>
+              </div>
+            )}
+
+            {/* Bunker MC question */}
+            {bunkerQ ? (
+              <BunkerPanel bq={bunkerQ} onAnswer={answerBunkerQ} />
+            ) : shotResult ? (
+              <ShotResultPanel
+                result={shotResult}
+                club={club}
+                remaining={remaining}
+                onContinue={shotResult.isInBunker ? triggerBunkerQuestion : advanceFromResult}
+                isBunker={shotResult.isInBunker}
+              />
+            ) : (
+              <>
+                {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
+                {[0,1,2].map(idx=>(
+                  <PlayerInputRow
+                    key={idx} idx={idx} value={playerInputs[idx]}
+                    confirmed={!!confirmedPlayers[idx]} suggestions={suggestions[idx]}
+                    onChange={val=>onInputChange(idx,val)} onConfirm={name=>confirmSuggestion(idx,name)}
+                    onClear={()=>{
+                      setPlayerInputs(prev=>{const n=[...prev];n[idx]='';return n})
+                      setConfirmedPlayers(prev=>{const n=[...prev];n[idx]=null;return n})
+                      setSuggestions(prev=>{const n=[...prev];n[idx]=[];return n})
+                    }}
+                  />
+                ))}
+                {inputError&&<div style={{fontSize:12,color:'#dc2626',fontWeight:700}}>{inputError}</div>}
+                <button
+                  onClick={submitShot}
+                  disabled={confirmedPlayers.every(p=>!p)||isAnimating}
+                  style={{
+                    background:confirmedPlayers.every(p=>!p)||isAnimating?'#1a2540':'#dc2626',
+                    color:'white',border:'none',borderRadius:10,padding:'13px 0',
+                    fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
+                    transition:'background 0.2s',marginTop:2,
+                  }}
+                >
+                  {isAnimating?'⛳ In flight…':'⛳ Take Shot'}
+                </button>
+              </>
+            )}
           </div>
-        ))}
-        <div style={{ marginLeft: 6, paddingLeft: 6, borderLeft: '1px solid rgba(255,255,255,0.1)', textAlign: 'center' }}>
-          <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.3)' }}>TOT</div>
-          <div style={{ fontSize: 15, fontWeight: 900, color: vsParColor }}>{vsParStr}</div>
+
+          {/* Right panel — course */}
+          <div style={{flex:1,minWidth:0}}>
+            <CourseView
+              hole={currentHole}
+              displayBallPos={displayPos}
+              arcOffset={arcOffset}
+              isAnimating={isAnimating}
+              strokes={strokes}
+            />
+          </div>
+
         </div>
       </div>
     </div>
   )
 }
 
-// ── Course view ─────────────────────────────────────────────────────────────────
+// ── Bunker MC panel ────────────────────────────────────────────────────────────
 
-function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; strokes: number }) {
-  const progress = hole.distance > 0 ? Math.min(1, ballPos / hole.distance) : 0
-  // tee is at y=148, green is at y=14 — ball travels upward as progress increases
-  const ballY = 148 - progress * 134
-  // Convert a yard-from-tee distance to SVG y coordinate
-  const yardToY = (d: number) => 148 - (d / hole.distance) * 134
+function BunkerPanel({bq,onAnswer}:{bq:BunkerQ;onAnswer:(idx:number)=>void}){
+  return(
+    <div style={{background:'#2a1f00',border:'1px solid #f59e0b',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+      <div>
+        <div style={{fontSize:10,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>⛺ Sand Trap — Answer to play on</div>
+        <div style={{fontSize:13,fontWeight:800,color:'white',lineHeight:1.4}}>{bq.q}</div>
+        <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:3}}>Wrong answer = +1 penalty stroke</div>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7}}>
+        {bq.opts.map((opt,i)=>(
+          <button
+            key={i}
+            onClick={()=>onAnswer(i)}
+            style={{
+              background:'#1e2d4a',border:'1px solid #2a3d5e',borderRadius:8,
+              padding:'10px 8px',fontSize:12,fontWeight:700,color:'white',
+              cursor:'pointer',fontFamily:'inherit',textAlign:'left',lineHeight:1.3,
+            }}
+            onMouseEnter={e=>(e.currentTarget.style.background='rgba(245,158,11,0.15)')}
+            onMouseLeave={e=>(e.currentTarget.style.background='#1e2d4a')}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Course view ────────────────────────────────────────────────────────────────
+
+function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
+  hole:Hole; displayBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number
+}){
+  const {x:ballX,y:ballY} = yardToSVG(displayBallPos, hole.distance, hole.shape)
+  const finalBallX = ballX + arcOffset
+
+  const yardToY=(d:number)=>{ const {y}=yardToSVG(d,hole.distance,hole.shape);return y }
+  const yardToX=(d:number)=>{ const {x}=yardToSVG(d,hole.distance,hole.shape);return x }
+
+  const teePos  = yardToSVG(0,           hole.distance, hole.shape)
+  const holePos = holeXY(hole.shape)
+
+  // Build fairway path based on shape
+  const fairwayPath = (()=>{
+    switch(hole.shape){
+      case 'dogleg-left':
+        // L-shape: bottom section centered x=50, top section centered x=26
+        return 'M 14,12 L 38,12 L 38,80 L 62,80 L 62,152 L 38,152 L 38,80 L 14,80 Z'
+      case 'dogleg-right':
+        return 'M 62,12 L 86,12 L 86,80 L 62,80 L 62,152 L 38,152 L 38,80 L 62,80 Z'
+      case 'slight-left':
+        return 'M 42,12 L 62,12 L 58,152 L 38,152 Z'
+      case 'slight-right':
+        return 'M 38,12 L 58,12 L 62,152 L 42,152 Z'
+      default: // straight
+        return null
+    }
+  })()
+
+  // Bunker zone: 20-40 yards from hole (approach side)
+  const bunkerNearY  = yardToY(hole.distance - 20) // 20 yds short
+  const bunkerFarY   = yardToY(hole.distance - 40) // 40 yds short
+  const bunkerCenterX= yardToX(hole.distance - 30)
 
   return (
-    <div style={{ userSelect: 'none', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <svg width="100%" viewBox="0 3 100 152" preserveAspectRatio="xMidYMid slice" style={{ display: 'block', flex: 1 }}>
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column'}}>
+      <svg width="100%" viewBox="0 3 100 152" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1a4a1a" />
-            <stop offset="100%" stopColor="#2d6a2d" />
+            <stop offset="0%" stopColor="#1a4a1a"/>
+            <stop offset="100%" stopColor="#2d6a2d"/>
+          </linearGradient>
+          <linearGradient id="rough" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#0f2e0f"/>
+            <stop offset="100%" stopColor="#1a3d1a"/>
+          </linearGradient>
+          <linearGradient id="sand" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#c8a96e"/>
+            <stop offset="100%" stopColor="#a8843e"/>
           </linearGradient>
         </defs>
+
+        {/* Background rough */}
+        <rect x={0} y={0} width={100} height={155} fill="#0f2e0f" opacity={0.6}/>
+
         {/* Fairway */}
-        <rect x={38} y={12} width={24} height={142} rx={3} fill="url(#fairway)" />
-        {/* Water hazard (par 3 only) */}
-        {hole.hazard && (() => {
-          const y1 = yardToY(hole.hazard.end)
-          const y2 = yardToY(hole.hazard.start)
-          return (
+        {fairwayPath ? (
+          <path d={fairwayPath} fill="url(#fairway)"/>
+        ) : (
+          <rect x={38} y={12} width={24} height={140} rx={3} fill="url(#fairway)"/>
+        )}
+
+        {/* Water hazard — organic shape */}
+        {hole.hazard&&(()=>{
+          const yt=yardToY(hole.hazard.end)
+          const yb=yardToY(hole.hazard.start)
+          const cx=yardToX((hole.hazard.start+hole.hazard.end)/2)
+          const halfH=(yb-yt)/2
+          const halfW=10
+          // Organic blob path
+          const waterPath=`M ${cx},${yt}
+            C ${cx+halfW+3},${yt+2} ${cx+halfW+4},${yb-halfH*0.3} ${cx+halfW},${yb}
+            C ${cx+halfW-3},${yb+2} ${cx-halfW+3},${yb+2} ${cx-halfW},${yb}
+            C ${cx-halfW-4},${yb-halfH*0.3} ${cx-halfW-3},${yt+2} ${cx},${yt} Z`
+          return(
             <>
-              <rect x={38} y={y1} width={24} height={y2 - y1} fill="#1d4ed8" opacity={0.85} />
-              <text x={50} y={(y1 + y2) / 2 + 1.5} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
+              <path d={waterPath} fill="#1d4ed8" opacity={0.85}/>
+              <path d={waterPath} fill="none" stroke="#3b82f6" strokeWidth={0.8} opacity={0.5}/>
+              {/* Ripple lines */}
+              <ellipse cx={cx} cy={(yt+yb)/2} rx={halfW*0.5} ry={halfH*0.25} fill="none" stroke="rgba(147,197,253,0.3)" strokeWidth={0.5}/>
+              <text x={cx} y={(yt+yb)/2+1.5} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
             </>
           )
         })()}
+
+        {/* Bunker sand traps near green */}
+        <ellipse cx={bunkerCenterX-9} cy={(bunkerNearY+bunkerFarY)/2+2} rx={6} ry={4} fill="url(#sand)" opacity={0.75}/>
+        <ellipse cx={bunkerCenterX+9} cy={(bunkerNearY+bunkerFarY)/2-1} rx={5} ry={3.5} fill="url(#sand)" opacity={0.7}/>
+
         {/* Tee box */}
-        <rect x={42} y={148} width={16} height={5} rx={2} fill="#4ade80" opacity={0.9} />
+        <rect x={teePos.x-8} y={teePos.y-1} width={16} height={5} rx={2} fill="#4ade80" opacity={0.9}/>
+
         {/* Green */}
-        <ellipse cx={50} cy={17} rx={13} ry={7} fill="#16a34a" />
-        <ellipse cx={50} cy={17} rx={10} ry={5} fill="#22c55e" opacity={0.6} />
-        {/* Hole */}
-        <circle cx={50} cy={17} r={1.8} fill="#0a0f1e" />
-        {/* Flag pole + flag */}
-        <line x1={50} y1={17} x2={50} y2={5} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7} />
-        <polygon points="50,5 57,8 50,11" fill="#dc2626" />
+        <ellipse cx={holePos.x} cy={holePos.y+5} rx={13} ry={7} fill="#16a34a"/>
+        <ellipse cx={holePos.x} cy={holePos.y+5} rx={10} ry={5} fill="#22c55e" opacity={0.6}/>
+
+        {/* Hole cup */}
+        <circle cx={holePos.x} cy={holePos.y+3} r={1.8} fill="#0a0f1e"/>
+        {/* Flag */}
+        <line x1={holePos.x} y1={holePos.y+3} x2={holePos.x} y2={holePos.y-8} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
+        <polygon points={`${holePos.x},${holePos.y-8} ${holePos.x+7},${holePos.y-5} ${holePos.x},${holePos.y-2}`} fill="#dc2626"/>
+
         {/* Yardage markers */}
         <text x={34} y={18} fontSize={4.5} fill="rgba(255,255,255,0.3)" fontWeight="bold" textAnchor="end">0</text>
         <text x={34} y={152} fontSize={4.5} fill="rgba(255,255,255,0.3)" fontWeight="bold" textAnchor="end">{hole.distance}</text>
+
+        {/* Golf club swing animation near tee */}
+        {isAnimating&&(
+          <g transform={`translate(${teePos.x+3},${teePos.y+1})`}>
+            <line className="club-swing" x1={0} y1={0} x2={7} y2={-14} stroke="rgba(255,220,100,0.9)" strokeWidth={1.5} strokeLinecap="round"/>
+          </g>
+        )}
+
+        {/* Ball trail when animating */}
+        {isAnimating&&(
+          <circle cx={finalBallX} cy={ballY+8} rx={2} ry={0.8} fill="rgba(255,255,255,0.15)"/>
+        )}
+
         {/* Ball shadow */}
-        <ellipse cx={50} cy={ballY + 2} rx={3} ry={1} fill="rgba(0,0,0,0.3)" />
+        <ellipse cx={finalBallX} cy={ballY+2} rx={3} ry={1} fill="rgba(0,0,0,0.3)"/>
         {/* Ball */}
-        <circle cx={50} cy={ballY} r={3.2} fill="white" />
+        <circle cx={finalBallX} cy={ballY} r={3.2} fill="white"/>
+        {isAnimating&&(
+          <circle cx={finalBallX} cy={ballY} r={4.5} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
+        )}
       </svg>
-      <div style={{
-        textAlign: 'center', fontSize: 9, fontWeight: 700,
-        color: 'rgba(255,255,255,0.3)', fontFamily: "'DM Sans', sans-serif",
-        padding: '4px 4px 8px',
-      }}>
-        H{hole.number} · P{hole.par}<br />{hole.distance}y · S{strokes + 1}
+      <div style={{textAlign:'center',fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.3)',fontFamily:"'DM Sans',sans-serif",padding:'4px 4px 8px'}}>
+        H{hole.number} · P{hole.par}<br/>{hole.distance}y · S{strokes+1}
       </div>
     </div>
   )
 }
 
-// ── Player input row ────────────────────────────────────────────────────────────
+// ── Scorecard ──────────────────────────────────────────────────────────────────
 
-function PlayerInputRow({ idx, value, confirmed, suggestions, onChange, onConfirm, onClear }: {
-  idx: number; value: string; confirmed: boolean; suggestions: string[]
-  onChange: (v: string) => void; onConfirm: (n: string) => void
-  onClear: () => void
-}) {
-  return (
-    <div style={{ position: 'relative' }}>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
+  holes:Hole[];scores:(number|null)[];currentIdx:number;vsParStr:string;vsPar:number
+}){
+  const vsParColor=vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'
+  return(
+    <div style={{background:'#111827',padding:'8px 12px',overflowX:'auto'}}>
+      <div style={{display:'flex',alignItems:'center',gap:6,minWidth:'max-content'}}>
+        <div style={{width:22,fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center'}}>H</div>
+        {holes.map((h,i)=>(
+          <div key={i} style={{width:26,textAlign:'center',borderRadius:4,padding:'2px 0',background:i===currentIdx?'rgba(220,38,38,0.2)':'transparent'}}>
+            <div style={{fontSize:8,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>P{h.par}</div>
+            <div style={{fontSize:13,fontWeight:800,color:scores[i]==null?'rgba(255,255,255,0.18)':scores[i]!<h.par?'#22c55e':scores[i]!>h.par?'#ef4444':'white'}}>
+              {scores[i]??'·'}
+            </div>
+          </div>
+        ))}
+        <div style={{marginLeft:6,paddingLeft:6,borderLeft:'1px solid rgba(255,255,255,0.1)',textAlign:'center'}}>
+          <div style={{fontSize:8,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>TOT</div>
+          <div style={{fontSize:15,fontWeight:900,color:vsParColor}}>{vsParStr}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Player input row ───────────────────────────────────────────────────────────
+
+function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onClear}:{
+  idx:number;value:string;confirmed:boolean;suggestions:string[]
+  onChange:(v:string)=>void;onConfirm:(n:string)=>void;onClear:()=>void
+}){
+  return(
+    <div style={{position:'relative'}}>
+      <div style={{display:'flex',gap:6,alignItems:'center'}}>
         <input
           type="text"
-          placeholder={idx === 0 ? 'Player 1 (required)' : `Player ${idx + 1} (optional)`}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          autoComplete="off"
-          style={{
-            flex: 1,
-            background: confirmed ? 'rgba(34,197,94,0.12)' : '#1e2d4a',
-            border: `1.5px solid ${confirmed ? 'rgba(34,197,94,0.4)' : 'transparent'}`,
-            borderRadius: 8, padding: '9px 12px',
-            fontSize: 13, fontWeight: 700, color: 'white', fontFamily: 'inherit',
-          }}
+          placeholder={idx===0?'Player 1 (required)':`Player ${idx+1} (optional)`}
+          value={value} onChange={e=>onChange(e.target.value)} autoComplete="off"
+          style={{flex:1,background:confirmed?'rgba(34,197,94,0.12)':'#1e2d4a',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'9px 12px',fontSize:13,fontWeight:700,color:'white',fontFamily:'inherit'}}
         />
-        {(value || confirmed) && (
-          <button onClick={onClear} style={{
-            background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)',
-            fontSize: 16, cursor: 'pointer', padding: '4px 6px', lineHeight: 1,
-          }}>×</button>
+        {(value||confirmed)&&(
+          <button onClick={onClear} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>×</button>
         )}
       </div>
-      {suggestions.length > 0 && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
-          background: '#1e2d4a', borderRadius: 8, marginTop: 2,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.6)', overflow: 'hidden',
-        }}>
-          {suggestions.map(name => (
-            <div
-              key={name}
-              onMouseDown={() => onConfirm(name)}
-              style={{
-                padding: '9px 12px', fontSize: 13, fontWeight: 700, color: 'white',
-                cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)',
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(220,38,38,0.2)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-            >
+      {suggestions.length>0&&(
+        <div style={{position:'absolute',top:'100%',left:0,right:0,zIndex:50,background:'#1e2d4a',borderRadius:8,marginTop:2,boxShadow:'0 4px 20px rgba(0,0,0,0.6)',overflow:'hidden'}}>
+          {suggestions.map(name=>(
+            <div key={name} onMouseDown={()=>onConfirm(name)}
+              style={{padding:'9px 12px',fontSize:13,fontWeight:700,color:'white',cursor:'pointer',borderBottom:'1px solid rgba(255,255,255,0.05)'}}
+              onMouseEnter={e=>(e.currentTarget.style.background='rgba(220,38,38,0.2)')}
+              onMouseLeave={e=>(e.currentTarget.style.background='transparent')}>
               {name}
             </div>
           ))}
@@ -639,169 +839,122 @@ function PlayerInputRow({ idx, value, confirmed, suggestions, onChange, onConfir
   )
 }
 
-// ── Shot result panel ───────────────────────────────────────────────────────────
+// ── Shot result panel ──────────────────────────────────────────────────────────
 
-function ShotResultPanel({ result, club, remaining, onContinue }: {
-  result: ShotResult; club: ClubType; remaining: number; onContinue: () => void
-}) {
-  const { total, breakdown, isOOB, isHoled, isGimme, isOffGreen, penaltyReason } = result
+function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
+  result:ShotResult;club:ClubType;remaining:number;onContinue:()=>void;isBunker:boolean
+}){
+  const {total,breakdown,isOOB,isHoled,isGimme,penaltyReason}=result
+  const overshoot=total-remaining
 
-  const headline = isOOB ? '🚫 Out of Bounds'
-    : isHoled || isGimme ? '⛳ In the Hole!'
-    : isOffGreen ? '😬 Off the Green'
+  const headline = isOOB          ? '🚫 Out of Bounds'
+    : isBunker                    ? '⛺ In the Bunker!'
+    : isHoled||isGimme            ? '⛳ In the Hole!'
+    : overshoot>0                 ? `${total} yds — past flag`
     : `${total} yds`
 
-  const headlineColor = isOOB ? '#ef4444' : (isHoled || isGimme) ? '#22c55e' : isOffGreen ? '#f59e0b' : 'white'
+  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':(isHoled||isGimme)?'#22c55e':'white'
 
-  const subtext = isOOB ? `${penaltyReason} · +1 stroke penalty`
-    : isGimme ? `${remaining - total} yards remaining — auto gimme`
-    : isHoled ? `${total - remaining === 0 ? 'Holed out' : `${total - remaining} yds past flag`}`
-    : isOffGreen ? `Went ${total - remaining} yds past the flag`
-    : `${remaining - total} yds remaining`
+  const subtext = isOOB          ? `${penaltyReason} · +1 stroke penalty`
+    : isBunker                   ? `Ball in sand trap — answer a question to continue`
+    : isGimme                    ? `${remaining-total} yds short — auto gimme`
+    : isHoled                    ? (overshoot===0?'Holed out':`${overshoot} yds past flag`)
+    : overshoot>0                ? `${overshoot} yds past the flag — playing from other side`
+    : `${remaining-total} yds remaining`
 
-  const btnLabel = isOOB ? 'Retake Shot →'
-    : (isHoled || isGimme) ? 'Next Hole →'
-    : 'Next Shot →'
+  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Next Hole →':'Next Shot →'
 
-  return (
-    <div style={{ background: '#1e2d4a', borderRadius: 12, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 22, fontWeight: 900, color: headlineColor }}>{headline}</div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>{subtext}</div>
+  return(
+    <div style={{background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:22,fontWeight:900,color:headlineColor}}>{headline}</div>
+        <div style={{fontSize:11,color:'rgba(255,255,255,0.45)',marginTop:3}}>{subtext}</div>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-        {breakdown.map(b => (
-          <div key={b.name} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-            <span style={{ fontWeight: 700, color: 'rgba(255,255,255,0.65)' }}>{b.name}</span>
-            <span style={{ fontWeight: 800, color: 'white' }}>{b.value}</span>
+      <div style={{display:'flex',flexDirection:'column',gap:5}}>
+        {breakdown.map(b=>(
+          <div key={b.name} style={{display:'flex',justifyContent:'space-between',fontSize:13}}>
+            <span style={{fontWeight:700,color:'rgba(255,255,255,0.65)'}}>{b.name}</span>
+            <span style={{fontWeight:800,color:'white'}}>{b.value}</span>
           </div>
         ))}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', fontSize: 14, fontWeight: 900, color: 'white',
-          borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 7, marginTop: 2,
-        }}>
-          <span>Total</span>
-          <span>{total} yds</span>
+        <div style={{display:'flex',justifyContent:'space-between',fontSize:14,fontWeight:900,color:'white',borderTop:'1px solid rgba(255,255,255,0.1)',paddingTop:7,marginTop:2}}>
+          <span>Total</span><span>{total} yds</span>
         </div>
       </div>
-      <button onClick={onContinue} style={{
-        background: isOOB ? '#7f1d1d' : '#dc2626',
-        color: 'white', border: 'none', borderRadius: 8, padding: '11px 0',
-        fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-      }}>
+      <button onClick={onContinue} style={{background:isOOB?'#7f1d1d':isBunker?'#92400e':'#dc2626',color:'white',border:'none',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}>
         {btnLabel}
       </button>
     </div>
   )
 }
 
-// ── Setup screen ────────────────────────────────────────────────────────────────
+// ── Setup screen ───────────────────────────────────────────────────────────────
 
-function SetupScreen({ numHoles, setNumHoles, onStart }: {
-  numHoles: number; setNumHoles: (n: any) => void; onStart: () => void
-}) {
-  return (
-    <div style={{
-      minHeight: '100dvh', background: '#0a0f1e',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: 32, fontFamily: "'DM Sans', sans-serif", padding: 24,
-    }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap'); * { box-sizing: border-box; }`}</style>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 48 }}>⛳</div>
-        <div style={{ fontSize: 30, fontWeight: 900, color: 'white', marginTop: 10, letterSpacing: '-0.5px' }}>Football Golf</div>
-        <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 6, lineHeight: 1.5 }}>
-          Name PL players to hit the green.<br />Their combined stat = your shot distance.
+function SetupScreen({numHoles,setNumHoles,onStart}:{numHoles:number;setNumHoles:(n:any)=>void;onStart:()=>void}){
+  return(
+    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:32,fontFamily:"'DM Sans',sans-serif",padding:24}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:48}}>⛳</div>
+        <div style={{fontSize:30,fontWeight:900,color:'white',marginTop:10,letterSpacing:'-0.5px'}}>Football Golf</div>
+        <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6,lineHeight:1.5}}>
+          Name PL players to hit the green.<br/>Their combined stat = your shot distance.
         </div>
       </div>
-      <div style={{ width: '100%', maxWidth: 300 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10, textAlign: 'center' }}>
-          How many holes?
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          {([3, 6, 9, 18] as const).map(n => (
-            <button key={n} onClick={() => setNumHoles(n)} style={{
-              background: numHoles === n ? '#dc2626' : '#1e2d4a',
-              color: 'white', border: 'none', borderRadius: 10, padding: '16px 0',
-              fontSize: 20, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit',
-              transition: 'background 0.15s',
-            }}>
+      <div style={{width:'100%',maxWidth:300}}>
+        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>How many holes?</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+          {([3,6,9,18] as const).map(n=>(
+            <button key={n} onClick={()=>setNumHoles(n)} style={{background:numHoles===n?'#dc2626':'#1e2d4a',color:'white',border:'none',borderRadius:10,padding:'16px 0',fontSize:20,fontWeight:900,cursor:'pointer',fontFamily:'inherit',transition:'background 0.15s'}}>
               {n}
             </button>
           ))}
         </div>
       </div>
-      <button onClick={onStart} style={{
-        background: '#dc2626', color: 'white', border: 'none', borderRadius: 12,
-        padding: '14px 52px', fontSize: 16, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit',
-      }}>
+      <button onClick={onStart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
         Tee Off →
       </button>
     </div>
   )
 }
 
-// ── Done screen ─────────────────────────────────────────────────────────────────
+// ── Done screen ────────────────────────────────────────────────────────────────
 
-function DoneScreen({ holes, scores, onRestart }: {
-  holes: Hole[]; scores: number[]; onRestart: () => void
-}) {
-  const totalStrokes = scores.reduce((s, n) => s + n, 0)
-  const totalPar = holes.reduce((s, h) => s + h.par, 0)
-  const vsPar = totalStrokes - totalPar
-  const vsParStr = vsPar === 0 ? 'Even' : vsPar > 0 ? `+${vsPar}` : String(vsPar)
-  const vsParColor = vsPar < 0 ? '#22c55e' : vsPar > 0 ? '#ef4444' : 'white'
-
-  return (
-    <div style={{
-      minHeight: '100dvh', background: '#0a0f1e',
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      gap: 24, fontFamily: "'DM Sans', sans-serif", padding: 24,
-    }}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap'); * { box-sizing: border-box; }`}</style>
-      <div style={{ fontSize: 48 }}>⛳</div>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>
-          Final Score
-        </div>
-        <div style={{ fontSize: 76, fontWeight: 900, color: vsParColor, lineHeight: 1 }}>{vsParStr}</div>
-        <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.4)', marginTop: 6 }}>
-          {totalStrokes} strokes · Par {totalPar}
-        </div>
+function DoneScreen({holes,scores,onRestart}:{holes:Hole[];scores:number[];onRestart:()=>void}){
+  const totalStrokes=scores.reduce((s,n)=>s+n,0)
+  const totalPar=holes.reduce((s,h)=>s+h.par,0)
+  const vsPar=totalStrokes-totalPar
+  const vsParStr=vsPar===0?'Even':vsPar>0?`+${vsPar}`:String(vsPar)
+  const vsParColor=vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'
+  return(
+    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:24}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <div style={{fontSize:48}}>⛳</div>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:12,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}}>Final Score</div>
+        <div style={{fontSize:76,fontWeight:900,color:vsParColor,lineHeight:1}}>{vsParStr}</div>
+        <div style={{fontSize:15,color:'rgba(255,255,255,0.4)',marginTop:6}}>{totalStrokes} strokes · Par {totalPar}</div>
       </div>
-
-      <div style={{ width: '100%', maxWidth: 340, background: '#111827', borderRadius: 12, overflow: 'hidden' }}>
-        <div style={{
-          display: 'grid', gridTemplateColumns: '36px 1fr 1fr 1fr',
-          padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)',
-        }}>
-          {['Hole', 'Par', 'Score', '+/−'].map(h => (
-            <div key={h} style={{ fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>{h}</div>
+      <div style={{width:'100%',maxWidth:340,background:'#111827',borderRadius:12,overflow:'hidden'}}>
+        <div style={{display:'grid',gridTemplateColumns:'36px 1fr 1fr 1fr',padding:'8px 12px',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+          {['Hole','Par','Score','+/−'].map(h=>(
+            <div key={h} style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase'}}>{h}</div>
           ))}
         </div>
-        {holes.map((h, i) => {
-          const s = scores[i] ?? 0
-          const diff = s - h.par
-          return (
-            <div key={i} style={{
-              display: 'grid', gridTemplateColumns: '36px 1fr 1fr 1fr',
-              padding: '7px 12px', borderBottom: '1px solid rgba(255,255,255,0.04)',
-            }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'rgba(255,255,255,0.5)' }}>{h.number}</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>{h.par}</div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'white' }}>{s}</div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: diff < 0 ? '#22c55e' : diff > 0 ? '#ef4444' : 'rgba(255,255,255,0.4)' }}>
-                {diff === 0 ? 'E' : diff > 0 ? `+${diff}` : diff}
-              </div>
+        {holes.map((h,i)=>{
+          const s=scores[i]??0
+          const diff=s-h.par
+          return(
+            <div key={i} style={{display:'grid',gridTemplateColumns:'36px 1fr 1fr 1fr',padding:'7px 12px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+              <div style={{fontSize:12,fontWeight:800,color:'rgba(255,255,255,0.5)'}}>{h.number}</div>
+              <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>{h.par}</div>
+              <div style={{fontSize:12,fontWeight:800,color:'white'}}>{s}</div>
+              <div style={{fontSize:12,fontWeight:800,color:diff<0?'#22c55e':diff>0?'#ef4444':'rgba(255,255,255,0.4)'}}>{diff===0?'E':diff>0?`+${diff}`:diff}</div>
             </div>
           )
         })}
       </div>
-
-      <button onClick={onRestart} style={{
-        background: '#dc2626', color: 'white', border: 'none', borderRadius: 12,
-        padding: '14px 52px', fontSize: 16, fontWeight: 900, cursor: 'pointer', fontFamily: 'inherit',
-      }}>
+      <button onClick={onRestart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
         Play Again
       </button>
     </div>
