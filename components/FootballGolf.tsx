@@ -1019,22 +1019,21 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
 
 function ScoreCell({score,par}:{score:number;par:number}){
   const diff=score-par
-  const s={display:'flex',alignItems:'center',justifyContent:'center',width:22,height:22,fontSize:12,fontWeight:900,color:'white'}
-  if(diff<=-2) return(  // eagle or better: double circle
+  const s={display:'flex',alignItems:'center',justifyContent:'center',width:18,height:18,fontSize:10,fontWeight:900,color:'white'}
+  if(diff<=-2) return(
     <div style={{...s,borderRadius:'50%',border:'2px solid #22c55e',outline:'2px solid #22c55e',outlineOffset:'2px'}}>{score}</div>
   )
-  if(diff===-1) return(  // birdie: green circle
+  if(diff===-1) return(
     <div style={{...s,borderRadius:'50%',background:'#22c55e',color:'#0a0f1e'}}>{score}</div>
   )
-  if(diff===0) return(   // par: plain white
+  if(diff===0) return(
     <div style={{...s}}>{score}</div>
   )
-  if(diff===1) return(   // bogey: red square
-    <div style={{...s,background:'#ef4444',color:'white',borderRadius:3}}>{score}</div>
+  if(diff===1) return(
+    <div style={{...s,background:'#ef4444',borderRadius:3}}>{score}</div>
   )
-  // double bogey or worse: double square (outlined + filled)
   return(
-    <div style={{...s,background:'#ef4444',color:'white',borderRadius:3,outline:'2px solid #ef4444',outlineOffset:'2px'}}>{score}</div>
+    <div style={{...s,background:'#ef4444',borderRadius:3,outline:'2px solid #ef4444',outlineOffset:'2px'}}>{score}</div>
   )
 }
 
@@ -1048,10 +1047,10 @@ function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
       <div style={{display:'flex',alignItems:'stretch',gap:4,minWidth:'max-content'}}>
 
         {/* Label column */}
-        <div style={{width:24,display:'flex',flexDirection:'column',gap:4,justifyContent:'space-around',paddingTop:2}}>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center',height:16,lineHeight:'16px'}}>H</div>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center',height:16,lineHeight:'16px'}}>P</div>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center',height:22,lineHeight:'22px'}}>S</div>
+        <div style={{width:32,display:'flex',flexDirection:'column',gap:4,justifyContent:'space-around',paddingTop:2}}>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:16,lineHeight:'16px'}}>Hole</div>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:16,lineHeight:'16px'}}>Par</div>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:26,lineHeight:'26px'}}>Score</div>
         </div>
 
         {/* Hole columns */}
@@ -1059,7 +1058,7 @@ function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
           <div key={i} style={col(i)}>
             <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.number}</div>
             <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.par}</div>
-            <div style={{height:22,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <div style={{height:26,display:'flex',alignItems:'center',justifyContent:'center'}}>
               {scores[i]==null
                 ? <div style={{width:4,height:4,borderRadius:'50%',background:'rgba(255,255,255,0.15)'}}/>
                 : <ScoreCell score={scores[i]!} par={h.par}/>
@@ -1069,10 +1068,10 @@ function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
         ))}
 
         {/* Total */}
-        <div style={{marginLeft:4,paddingLeft:6,borderLeft:'1px solid rgba(255,255,255,0.1)',display:'flex',flexDirection:'column',justifyContent:'space-around',textAlign:'center'}}>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',height:16,lineHeight:'16px'}}>TOT</div>
+        <div style={{marginLeft:4,paddingLeft:6,borderLeft:'1px solid rgba(255,255,255,0.1)',display:'flex',flexDirection:'column',justifyContent:'space-around',textAlign:'center',minWidth:36}}>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',height:16,lineHeight:'16px'}}>Total</div>
           <div style={{height:16}}/>
-          <div style={{fontSize:14,fontWeight:900,color:vsParColor,height:22,lineHeight:'22px'}}>{vsParStr}</div>
+          <div style={{fontSize:36,fontWeight:900,color:vsParColor,height:26,lineHeight:'26px',marginTop:4}}>{vsParStr}</div>
         </div>
 
       </div>
