@@ -325,7 +325,7 @@ export default function LandingPage() {
             <div style={{ padding: '6px 12px 0', flex: 1 }}>
               <div style={{ fontSize: 11, fontWeight: 900, color: 'white', marginBottom: 2 }}>125 yards to pin</div>
               <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626' }}>Dutch PL Goals</div>
-              <div style={{ fontSize: 9, color: '#4a5568', marginTop: 1 }}>Iron · max 260 yds · pick up to 3 players</div>
+              <div style={{ fontSize: 9, color: '#4a5568', marginTop: 1 }}>Pick up to 3 players</div>
             </div>
             {/* Horizontal hole SVG — bend bowing upward, tee left, green right */}
             <svg viewBox="0 0 160 54" width="100%" style={{ display: 'block', marginTop: 4 }}>
