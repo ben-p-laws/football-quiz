@@ -274,13 +274,13 @@ function generateHoles(count:3|6|9|18):Hole[]{
 // ── Club types ─────────────────────────────────────────────────────────────────
 
 function getClub(remaining:number):ClubType{
-  if(remaining>260)  return 'driver'
-  if(remaining>=120) return 'iron'
-  if(remaining>20)   return 'wedge'
+  if(remaining>260) return 'driver'
+  if(remaining>70)  return 'iron'
+  if(remaining>20)  return 'wedge'
   return 'putter'
 }
 
-const CLUB_RANGES:Record<ClubType,[number,number]>={driver:[250,300],iron:[120,260],wedge:[20,119],putter:[0,50]}
+const CLUB_RANGES:Record<ClubType,[number,number]>={driver:[250,300],iron:[120,260],wedge:[20,100],putter:[0,50]}
 const CLUB_LABEL:Record<ClubType,string>={driver:'Driver',iron:'Iron',wedge:'Wedge',putter:'Putter'}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
