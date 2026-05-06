@@ -1017,26 +1017,64 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
 
 // ── Scorecard ──────────────────────────────────────────────────────────────────
 
+function ScoreCell({score,par}:{score:number;par:number}){
+  const diff=score-par
+  const s={display:'flex',alignItems:'center',justifyContent:'center',width:22,height:22,fontSize:12,fontWeight:900,color:'white'}
+  if(diff<=-2) return(  // eagle or better: double circle
+    <div style={{...s,borderRadius:'50%',border:'2px solid #22c55e',outline:'2px solid #22c55e',outlineOffset:'2px'}}>{score}</div>
+  )
+  if(diff===-1) return(  // birdie: green circle
+    <div style={{...s,borderRadius:'50%',background:'#22c55e',color:'#0a0f1e'}}>{score}</div>
+  )
+  if(diff===0) return(   // par: plain white
+    <div style={{...s}}>{score}</div>
+  )
+  if(diff===1) return(   // bogey: red square
+    <div style={{...s,background:'#ef4444',color:'white',borderRadius:3}}>{score}</div>
+  )
+  // double bogey or worse: double square (outlined + filled)
+  return(
+    <div style={{...s,background:'#ef4444',color:'white',borderRadius:3,outline:'2px solid #ef4444',outlineOffset:'2px'}}>{score}</div>
+  )
+}
+
 function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
   holes:Hole[];scores:(number|null)[];currentIdx:number;vsParStr:string;vsPar:number
 }){
   const vsParColor=vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'
+  const col=(i:number)=>({width:26,textAlign:'center' as const,flexShrink:0,background:i===currentIdx?'rgba(220,38,38,0.15)':'transparent',borderRadius:4,padding:'2px 0'})
   return(
-    <div style={{background:'#111827',padding:'8px 12px',overflowX:'auto'}}>
-      <div style={{display:'flex',alignItems:'center',gap:6,minWidth:'max-content'}}>
-        <div style={{width:22,fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center'}}>H</div>
+    <div style={{background:'#111827',padding:'8px 10px',overflowX:'auto'}}>
+      <div style={{display:'flex',alignItems:'stretch',gap:4,minWidth:'max-content'}}>
+
+        {/* Label column */}
+        <div style={{width:24,display:'flex',flexDirection:'column',gap:4,justifyContent:'space-around',paddingTop:2}}>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center',height:16,lineHeight:'16px'}}>H</div>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center',height:16,lineHeight:'16px'}}>P</div>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'center',height:22,lineHeight:'22px'}}>S</div>
+        </div>
+
+        {/* Hole columns */}
         {holes.map((h,i)=>(
-          <div key={i} style={{width:26,textAlign:'center',borderRadius:4,padding:'2px 0',background:i===currentIdx?'rgba(220,38,38,0.2)':'transparent'}}>
-            <div style={{fontSize:8,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>P{h.par}</div>
-            <div style={{fontSize:13,fontWeight:800,color:scores[i]==null?'rgba(255,255,255,0.18)':scores[i]!<h.par?'#22c55e':scores[i]!>h.par?'#ef4444':'white'}}>
-              {scores[i]??'·'}
+          <div key={i} style={col(i)}>
+            <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.number}</div>
+            <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.par}</div>
+            <div style={{height:22,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {scores[i]==null
+                ? <div style={{width:4,height:4,borderRadius:'50%',background:'rgba(255,255,255,0.15)'}}/>
+                : <ScoreCell score={scores[i]!} par={h.par}/>
+              }
             </div>
           </div>
         ))}
-        <div style={{marginLeft:6,paddingLeft:6,borderLeft:'1px solid rgba(255,255,255,0.1)',textAlign:'center'}}>
-          <div style={{fontSize:8,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>TOT</div>
-          <div style={{fontSize:15,fontWeight:900,color:vsParColor}}>{vsParStr}</div>
+
+        {/* Total */}
+        <div style={{marginLeft:4,paddingLeft:6,borderLeft:'1px solid rgba(255,255,255,0.1)',display:'flex',flexDirection:'column',justifyContent:'space-around',textAlign:'center'}}>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',height:16,lineHeight:'16px'}}>TOT</div>
+          <div style={{height:16}}/>
+          <div style={{fontSize:14,fontWeight:900,color:vsParColor,height:22,lineHeight:'22px'}}>{vsParStr}</div>
         </div>
+
       </div>
     </div>
   )
