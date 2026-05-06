@@ -154,6 +154,7 @@ const BUNKER_QUESTIONS: BunkerQ[] = [
 // bend-left:  tee/green slightly right (x=58), fairway bows slightly left (x=42) at midpoint
 // straight:   tee and green both centred (x=50)
 type HoleShape = 'straight'|'bend-left'|'bend-right'
+type Tee = 'Blue'|'White'|'Red'
 
 // Quadratic bezier: tee→(control)→green
 // bend-right: P0=(42,148), ctrl=(74,82), P2=(42,17) — bows right
@@ -204,36 +205,49 @@ function shapeEndAngle(shape: HoleShape): number {
   return shape === 'bend-right' ? 26 : shape === 'bend-left' ? -26 : 0
 }
 
-// ── Hole generation ────────────────────────────────────────────────────────────
+// ── Course data ───────────────────────────────────────────────────────────────
 
-type Hazard = { start:number; end:number }
-type Bunker = { start:number; end:number }
-type Hole   = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; shape:HoleShape }
+type Hazard  = { start:number; end:number }
+type Bunker  = { start:number; end:number }
+type Hole    = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; shape:HoleShape }
+type HoleDef = { number:number; par:number; yardages:Record<Tee,number>; shape:HoleShape; hazardFrac:{startFrac:number;endFrac:number}|null; bunkerCount:number }
 
 function randBetween(min:number,max:number){ return min+Math.floor(Math.random()*(max-min+1)) }
 
-function shuffle<T>(arr:T[]):T[]{
-  const a=[...arr]
-  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]] }
-  return a
-}
-
-const ALL_SHAPES: HoleShape[] = ['straight','bend-left','bend-right']
+// Hole shapes derived from aerial images; hazardFrac = water zone as fraction of hole distance
+const PEBBLE_BEACH: HoleDef[] = [
+  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, shape:'bend-right', hazardFrac:{startFrac:0.72,endFrac:0.87}, bunkerCount:2 },
+  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
+  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, shape:'straight',   hazardFrac:null,                          bunkerCount:3 },
+  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
+  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, shape:'bend-right', hazardFrac:null,                          bunkerCount:2 },
+  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, shape:'bend-left',  hazardFrac:null,                          bunkerCount:2 },
+  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  shape:'straight',   hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
+  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, shape:'straight',   hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
+  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, shape:'bend-left',  hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
+  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, shape:'bend-right', hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
+  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, shape:'straight',   hazardFrac:{startFrac:0.68,endFrac:0.83}, bunkerCount:2 },
+  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
+  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, shape:'bend-right', hazardFrac:null,                          bunkerCount:3 },
+  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, shape:'straight',   hazardFrac:null,                          bunkerCount:3 },
+  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, shape:'bend-right', hazardFrac:null,                          bunkerCount:2 },
+  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
+  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, shape:'straight',   hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
+  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, shape:'bend-left',  hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
+]
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
   const bunkers: Bunker[] = []
-  const PIN_BUFFER  = 15   // no bunker within 15 yds of pin
-  const HOLE_RANGE  = 100  // bunkers only within 100 yds of hole
+  const PIN_BUFFER  = 15
+  const HOLE_RANGE  = 100
   const minStart    = distance - HOLE_RANGE
   const maxStart    = distance - PIN_BUFFER - 10
-  if (minStart >= maxStart) return bunkers  // hole too short to place bunkers
+  if (minStart >= maxStart) return bunkers
   for (let i = 0; i < count; i++) {
     for (let attempt = 0; attempt < 20; attempt++) {
       const start = Math.round(randBetween(minStart, maxStart) / 5) * 5
       const end   = start + 10
-      // No overlap with water (keep 10 yds clear)
       if (hazard && start < hazard.end + 10 && end > hazard.start - 10) continue
-      // No overlap with other bunkers (keep 20 yds clear)
       if (bunkers.some(b => start < b.end + 20 && end > b.start - 20)) continue
       bunkers.push({ start, end })
       break
@@ -242,33 +256,19 @@ function generateBunkers(distance: number, hazard: Hazard|null, count: number): 
   return bunkers
 }
 
-function generateHoles(count:3|6|9|18):Hole[]{
-  const holes:Hole[]=[]
-  const groups=count/3
-  const shapePool = shuffle([...ALL_SHAPES,...ALL_SHAPES,...ALL_SHAPES,...ALL_SHAPES])
-
-  for(let g=0;g<groups;g++){
-    for(const par of shuffle([3,4,5])){
-      const distance=par===3?randBetween(160,240):par===4?randBetween(320,380):randBetween(430,500)
-      let hazard:Hazard|null=null
-      if(par===3){
-        const start=Math.round(distance*(0.60+Math.random()*0.12)/5)*5
-        hazard={start,end:start+20}
-      }else if(par===5){
-        const start=randBetween(36,46)*5
-        hazard={start,end:start+30}
-      }else{
-        const fromHole=Math.round(randBetween(40,100)/5)*5
-        const start=distance-fromHole
-        hazard={start,end:start+20}
+function buildCourse(tee: Tee, count: number): Hole[] {
+  return PEBBLE_BEACH.slice(0, count).map(def => {
+    const distance = def.yardages[tee]
+    let hazard: Hazard | null = null
+    if (def.hazardFrac) {
+      hazard = {
+        start: Math.round(distance * def.hazardFrac.startFrac / 5) * 5,
+        end:   Math.round(distance * def.hazardFrac.endFrac   / 5) * 5,
       }
-      const bunkerCount = 1
-      const bunkers = generateBunkers(distance, hazard, bunkerCount)
-      const shape=shapePool[holes.length%shapePool.length]
-      holes.push({number:holes.length+1,par,distance,hazard,bunkers,shape})
     }
-  }
-  return holes
+    const bunkers = generateBunkers(distance, hazard, def.bunkerCount)
+    return { number: def.number, par: def.par, distance, hazard, bunkers, shape: def.shape }
+  })
 }
 
 // ── Club types ─────────────────────────────────────────────────────────────────
@@ -298,6 +298,7 @@ function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').r
 export default function FootballGolf(){
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'>('setup')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
+  const [tee,setTee]                     = useState<Tee>('White')
   const [holes,setHoles]                 = useState<Hole[]>([])
   const [holeIdx,setHoleIdx]             = useState(0)
   const [remaining,setRemaining]         = useState(0)
@@ -373,7 +374,7 @@ export default function FootballGolf(){
   }
 
   function startGame(){
-    const hs=generateHoles(numHoles)
+    const hs=buildCourse(tee,numHoles)
     usedLabels.current    = new Set()
     recentFilters.current = []
     setHoles(hs)
@@ -617,7 +618,7 @@ export default function FootballGolf(){
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if(phase==='setup') return <><NavBar /><SetupScreen numHoles={numHoles} setNumHoles={setNumHoles} onStart={startGame} /></>
+  if(phase==='setup') return <><NavBar /><SetupScreen numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} /></>
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={()=>setPhase('setup')} /></>
   if(!currentHole) return null
 
@@ -1070,15 +1071,33 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
 
 // ── Setup screen ───────────────────────────────────────────────────────────────
 
-function SetupScreen({numHoles,setNumHoles,onStart}:{numHoles:number;setNumHoles:(n:any)=>void;onStart:()=>void}){
+function SetupScreen({numHoles,setNumHoles,tee,setTee,onStart}:{numHoles:number;setNumHoles:(n:any)=>void;tee:Tee;setTee:(t:Tee)=>void;onStart:()=>void}){
+  const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
+    {value:'Red',  label:'Easy',  sub:'Red tees',  color:'#dc2626', ring:'rgba(220,38,38,0.4)'},
+    {value:'White',label:'Medium',sub:'White tees',color:'#9ca3af', ring:'rgba(156,163,175,0.4)'},
+    {value:'Blue', label:'Hard',  sub:'Blue tees', color:'#3b82f6', ring:'rgba(59,130,246,0.4)'},
+  ]
   return(
-    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:32,fontFamily:"'DM Sans',sans-serif",padding:24}}>
+    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:28,fontFamily:"'DM Sans',sans-serif",padding:24}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:48}}>⛳</div>
         <div style={{fontSize:30,fontWeight:900,color:'white',marginTop:10,letterSpacing:'-0.5px'}}>Football Golf</div>
+        <div style={{fontSize:12,fontWeight:700,color:'#4ade80',marginTop:4,letterSpacing:'0.05em'}}>Pebble Beach Golf Links</div>
         <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6,lineHeight:1.5}}>
           Name PL players to hit the green.<br/>Their combined stat = your shot distance.
+        </div>
+      </div>
+      <div style={{width:'100%',maxWidth:300}}>
+        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Select Tee</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+          {TEE_OPTIONS.map(({value,label,sub,color,ring})=>(
+            <button key={value} onClick={()=>setTee(value)}
+              style={{background:tee===value?`${color}22`:'#1e2d4a',color:'white',border:`2px solid ${tee===value?color:'transparent'}`,borderRadius:10,padding:'12px 4px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',boxShadow:tee===value?`0 0 12px ${ring}`:'none'}}>
+              <div style={{fontSize:14,fontWeight:900,color:tee===value?color:'white'}}>{label}</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:2}}>{sub}</div>
+            </button>
+          ))}
         </div>
       </div>
       <div style={{width:'100%',maxWidth:300}}>
