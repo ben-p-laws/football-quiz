@@ -120,23 +120,31 @@ const BUNKER_QUESTIONS: BunkerQ[] = [
 // straight:   tee and green both centred (x=50)
 type HoleShape = 'straight'|'bend-left'|'bend-right'
 
+// Quadratic bezier: tee→(control)→green
+// bend-right: P0=(42,148), ctrl=(74,82), P2=(42,17) — bows right
+// bend-left:  P0=(58,148), ctrl=(26,82), P2=(58,17) — bows left
+// straight:   simple vertical line through x=50
 function yardToSVG(yards: number, total: number, shape: HoleShape): { x:number; y:number } {
-  const p = Math.max(0, yards / total)
+  const t = Math.max(0, yards / total)
+  const mt = 1 - t
   switch (shape) {
     case 'bend-right':
-      // (42,148) → (58,75) → (42,17)
-      if (p <= 0.5) return { x: 42 + 32*p,  y: 148 - 146*p }
-      else          return { x: 74 - 32*p,  y: 133 - 116*p }
+      return { x: mt*mt*42 + 2*mt*t*74 + t*t*42, y: mt*mt*148 + 2*mt*t*82 + t*t*17 }
     case 'bend-left':
-      // (58,148) → (42,75) → (58,17)
-      if (p <= 0.5) return { x: 58 - 32*p,  y: 148 - 146*p }
-      else          return { x: 26 + 32*p,  y: 133 - 116*p }
-    default:        return { x: 50,          y: 148 - 131*p }
+      return { x: mt*mt*58 + 2*mt*t*26 + t*t*58, y: mt*mt*148 + 2*mt*t*82 + t*t*17 }
+    default:
+      return { x: 50, y: 148 - 131*t }
   }
 }
 
 function holeXY(shape: HoleShape): { x:number; y:number } {
   return yardToSVG(1, 1, shape)
+}
+
+// Rotation angle (°) for tee/green to align perpendicular to fairway at each end
+// Tangent at t=0 for bend-right: 2*(ctrl-P0)=(64,-132) → perpendicular angle ≈ 26°
+function shapeEndAngle(shape: HoleShape): number {
+  return shape === 'bend-right' ? 26 : shape === 'bend-left' ? -26 : 0
 }
 
 // ── Hole generation ────────────────────────────────────────────────────────────
@@ -783,39 +791,22 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
   const yardToY=(d:number)=>{ const {y}=yardToSVG(d,hole.distance,hole.shape);return y }
   const yardToX=(d:number)=>{ const {x}=yardToSVG(d,hole.distance,hole.shape);return x }
 
-  const teePos  = yardToSVG(0,           hole.distance, hole.shape)
+  const teePos  = yardToSVG(0, hole.distance, hole.shape)
   const holePos = holeXY(hole.shape)
+  const endAngle = shapeEndAngle(hole.shape)
 
-  // Fairway polygon paths — 12px wide either side of the centreline
-  // bend-right centreline: (42,148)→(58,75)→(42,17)
-  //   seg1 dir (16,-73), inner offset ≈(-12,-3), outer ≈(+12,+3)
-  //   seg2 dir (-16,-58), inner offset ≈(-12,+3), outer ≈(+12,-3)
-  // bend-left: mirror across x=50
-  const fairwayPath = (()=>{
-    switch(hole.shape){
-      case 'bend-right':
-        // inner: (30,145)→(46,72) then (46,78)→(30,20)  outer: (54,14)→(70,72) then (70,78)→(54,152)
-        return 'M 30,145 L 46,72 L 46,78 L 30,20 L 54,14 L 70,72 L 70,78 L 54,152 Z'
-      case 'bend-left':
-        return 'M 70,145 L 54,72 L 54,78 L 70,20 L 46,14 L 30,72 L 30,78 L 46,152 Z'
-      default: // straight
-        return null
-    }
-  })()
-
-  // Bunker SVG positions — computed from actual bunker yard positions
+  // SVG path for the fairway centreline (bezier or straight)
+  const fairwayD = hole.shape === 'bend-right' ? 'M 42,148 Q 74,82 42,17'
+                 : hole.shape === 'bend-left'  ? 'M 58,148 Q 26,82 58,17'
+                 : 'M 50,148 L 50,17'
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column'}}>
       <svg width="100%" viewBox="0 3 100 152" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1}}>
         <defs>
-          <linearGradient id="fairway" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
             <stop offset="100%" stopColor="#2d6a2d"/>
-          </linearGradient>
-          <linearGradient id="rough" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#0f2e0f"/>
-            <stop offset="100%" stopColor="#1a3d1a"/>
           </linearGradient>
           <linearGradient id="sand" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="#c8a96e"/>
@@ -826,21 +817,16 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
         {/* Background rough */}
         <rect x={0} y={0} width={100} height={155} fill="#0f2e0f" opacity={0.6}/>
 
-        {/* Fairway */}
-        {fairwayPath ? (
-          <path d={fairwayPath} fill="url(#fairway)"/>
-        ) : (
-          <rect x={38} y={12} width={24} height={140} rx={3} fill="url(#fairway)"/>
-        )}
+        {/* Fairway — smooth bezier stroke */}
+        <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>
 
-        {/* Water hazard — organic shape */}
+        {/* Water hazard */}
         {hole.hazard&&(()=>{
           const yt=yardToY(hole.hazard.end)
           const yb=yardToY(hole.hazard.start)
           const cx=yardToX((hole.hazard.start+hole.hazard.end)/2)
           const halfH=(yb-yt)/2
           const halfW=10
-          // Organic blob path
           const waterPath=`M ${cx},${yt}
             C ${cx+halfW+3},${yt+2} ${cx+halfW+4},${yb-halfH*0.3} ${cx+halfW},${yb}
             C ${cx+halfW-3},${yb+2} ${cx-halfW+3},${yb+2} ${cx-halfW},${yb}
@@ -849,19 +835,17 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
             <>
               <path d={waterPath} fill="#1d4ed8" opacity={0.85}/>
               <path d={waterPath} fill="none" stroke="#3b82f6" strokeWidth={0.8} opacity={0.5}/>
-              {/* Ripple lines */}
               <ellipse cx={cx} cy={(yt+yb)/2} rx={halfW*0.5} ry={halfH*0.25} fill="none" stroke="rgba(147,197,253,0.3)" strokeWidth={0.5}/>
               <text x={cx} y={(yt+yb)/2+1.5} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
             </>
           )
         })()}
 
-        {/* Bunker sand traps at their actual positions */}
+        {/* Bunker sand traps */}
         {hole.bunkers.map((b,i)=>{
           const midYards = (b.start + b.end) / 2
           const midPos   = yardToSVG(midYards, hole.distance, hole.shape)
-          // Alternate left/right of fairway centre
-          const sideX = i % 2 === 0 ? midPos.x - 8 : midPos.x + 8
+          const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
           return(
             <g key={i}>
               <ellipse cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
@@ -869,22 +853,22 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
           )
         })}
 
-        {/* Tee box */}
-        <rect x={teePos.x-8} y={teePos.y-1} width={16} height={5} rx={2} fill="#4ade80" opacity={0.9}/>
+        {/* Tee box — rotated to sit across the fairway */}
+        <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
+          <rect x={teePos.x-8} y={teePos.y-2} width={16} height={4} rx={1.5} fill="#4ade80" opacity={0.9}/>
+        </g>
 
-        {/* Green */}
-        <ellipse cx={holePos.x} cy={holePos.y+5} rx={13} ry={7} fill="#16a34a"/>
-        <ellipse cx={holePos.x} cy={holePos.y+5} rx={10} ry={5} fill="#22c55e" opacity={0.6}/>
+        {/* Green — rotated to sit across the fairway */}
+        <g transform={`rotate(${-endAngle}, ${holePos.x}, ${holePos.y+5})`}>
+          <ellipse cx={holePos.x} cy={holePos.y+5} rx={13} ry={7} fill="#16a34a"/>
+          <ellipse cx={holePos.x} cy={holePos.y+5} rx={10} ry={5} fill="#22c55e" opacity={0.6}/>
+        </g>
 
         {/* Hole cup */}
         <circle cx={holePos.x} cy={holePos.y+3} r={1.8} fill="#0a0f1e"/>
         {/* Flag */}
         <line x1={holePos.x} y1={holePos.y+3} x2={holePos.x} y2={holePos.y-8} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
         <polygon points={`${holePos.x},${holePos.y-8} ${holePos.x+7},${holePos.y-5} ${holePos.x},${holePos.y-2}`} fill="#dc2626"/>
-
-        {/* Yardage markers */}
-        <text x={34} y={18} fontSize={4.5} fill="rgba(255,255,255,0.3)" fontWeight="bold" textAnchor="end">0</text>
-        <text x={34} y={152} fontSize={4.5} fill="rgba(255,255,255,0.3)" fontWeight="bold" textAnchor="end">{hole.distance}</text>
 
         {/* Golf club swing animation near tee */}
         {isAnimating&&(
