@@ -155,6 +155,7 @@ export default function FootballGolf() {
   const [inputError, setInputError] = useState('')
   const [allPlayerNames, setAllPlayerNames] = useState<string[]>([])
   const [playerData, setPlayerData] = useState<Record<string, any>>({})
+  const [namesLoading, setNamesLoading] = useState(true)
   const searchTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null])
 
   // Preload all player names + stats once — enables instant client-side autocomplete and shot lookup
@@ -164,7 +165,9 @@ export default function FootballGolf() {
       .then(d => {
         setAllPlayerNames(d.playerNames || [])
         setPlayerData(d.players || {})
+        setNamesLoading(false)
       })
+      .catch(() => setNamesLoading(false))
   }, [])
 
   const currentHole = holes[holeIdx]
@@ -408,6 +411,11 @@ export default function FootballGolf() {
             <ShotResultPanel result={shotResult} club={club} remaining={remaining} onContinue={advanceFromResult} />
           ) : (
             <>
+              {namesLoading && (
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center', padding: '4px 0' }}>
+                  Loading players…
+                </div>
+              )}
               {[0, 1, 2].map(idx => (
                 <PlayerInputRow
                   key={idx}
