@@ -579,12 +579,12 @@ export default function FootballGolf(){
         .club-swing { animation: clubSwing 0.5s ease-out forwards; transform-origin: 0 0; }
       `}</style>
       <NavBar />
-      <div style={{maxWidth:520,margin:'0 auto',width:'100%'}}>
+      <div style={{maxWidth:520,margin:'0 auto',width:'100%',padding:'0 12px'}}>
         <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
         <div style={{display:'flex',alignItems:'stretch'}}>
 
           {/* Left panel */}
-          <div style={{flex:3,padding:'12px 14px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
+          <div style={{flex:2,padding:'12px 10px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
@@ -689,7 +689,7 @@ export default function FootballGolf(){
           </div>
 
           {/* Right panel — course */}
-          <div style={{flex:1,minWidth:0}}>
+          <div style={{flex:1,minWidth:0,minHeight:300}}>
             <CourseView
               hole={currentHole}
               displayBallPos={displayPos}
