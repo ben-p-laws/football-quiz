@@ -21,7 +21,7 @@ const NAT_LIST = [
 ]
 
 type StatKey = 'goals'|'assists'|'appearances'|'yellow_cards'|'clean_sheets'
-type Category = { key: StatKey; label: string; clubFilter?: string; natFilter?: string }
+type Category = { key: StatKey; label: string; clubFilter?: string; natFilter?: string; seasonFilter?: string }
 
 const ALL_TIME: Category[] = [
   { key:'goals',        label:'All-time PL Goals' },
@@ -43,6 +43,16 @@ const NAT_CATS: Category[] = NAT_LIST.flatMap(({code,label})=>[
   { key:'appearances', label:`${label} PL Appearances`, natFilter:code },
   { key:'yellow_cards',label:`${label} PL Yellow Cards`,natFilter:code },
 ])
+
+const BAD_LIE_SEASONS = ['2000-2001','2004-2005','2008-2009','2012-2013','2015-2016','2018-2019']
+
+function pickBadLieCategory(season: string): Category {
+  const keys: StatKey[] = ['goals','assists','yellow_cards']
+  const key = keys[Math.floor(Math.random() * keys.length)]
+  const [y1, y2] = season.split('-')
+  const label = `${key==='goals'?'Goals':key==='assists'?'Assists':'Yellow Cards'} in ${y1.slice(2)}/${y2.slice(2)}`
+  return { key, label, seasonFilter: season }
+}
 
 // Pick a category, excluding already-used labels this round
 function pickCategory(remaining: number, usedLabels: string[]): Category {
@@ -105,35 +115,21 @@ const BUNKER_QUESTIONS: BunkerQ[] = [
 
 // ── Hole shapes ────────────────────────────────────────────────────────────────
 
-type HoleShape = 'straight'|'dogleg-left'|'dogleg-right'|'slight-left'|'slight-right'
+// bend-right: tee bottom-left (20,148) → bend middle-right (80,75) → green top-left (20,17)  [C shape opening right]
+// bend-left:  tee bottom-right (80,148) → bend middle-left (20,75) → green top-right (80,17) [C shape opening left]
+// straight:   tee bottom-center (50,148) → green top-center (50,17)
+type HoleShape = 'straight'|'bend-left'|'bend-right'
 
-// Map yards-from-tee → SVG (x,y). ViewBox: 0 0 100 152. Tee at bottom (y≈148), hole at top (y≈17).
 function yardToSVG(yards: number, total: number, shape: HoleShape): { x:number; y:number } {
-  const p = Math.max(0, yards / total) // progress 0→1 (can exceed 1 if past hole)
+  const p = Math.max(0, yards / total)
   switch (shape) {
-    case 'dogleg-left': {
-      const bend = 0.45
-      if (p <= bend) {
-        const t = p / bend
-        return { x:50, y:148 - t*68 }             // 148→80, x stays 50
-      } else {
-        const t = (p - bend) / (1 - bend)
-        return { x:50 - t*8, y:80 - t*63 }         // 50→42, 80→17
-      }
-    }
-    case 'dogleg-right': {
-      const bend = 0.45
-      if (p <= bend) {
-        const t = p / bend
-        return { x:50, y:148 - t*68 }
-      } else {
-        const t = (p - bend) / (1 - bend)
-        return { x:50 + t*8, y:80 - t*63 }         // 50→58, 80→17
-      }
-    }
-    case 'slight-left':  return { x:50 - p*8,  y:148 - p*131 }   // 50→42
-    case 'slight-right': return { x:50 + p*8,  y:148 - p*131 }   // 50→58
-    default:             return { x:50,          y:148 - p*131 }
+    case 'bend-right':
+      if (p <= 0.5) return { x: 20 + 120*p,   y: 148 - 146*p }
+      else          return { x: 140 - 120*p,  y: 133 - 116*p }
+    case 'bend-left':
+      if (p <= 0.5) return { x: 80 - 120*p,   y: 148 - 146*p }
+      else          return { x: -40 + 120*p,  y: 133 - 116*p }
+    default:        return { x: 50,             y: 148 - 131*p }
   }
 }
 
@@ -155,7 +151,7 @@ function shuffle<T>(arr:T[]):T[]{
   return a
 }
 
-const ALL_SHAPES: HoleShape[] = ['straight','dogleg-left','dogleg-right','slight-left','slight-right']
+const ALL_SHAPES: HoleShape[] = ['straight','bend-left','bend-right']
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
   const bunkers: Bunker[] = []
@@ -199,8 +195,7 @@ function generateHoles(count:3|6|9|18):Hole[]{
         const start=distance-fromHole
         hazard={start,end:start+20}
       }
-      // 1 bunker for par 3, 1-2 for par 4/5
-      const bunkerCount = par===3 ? 1 : (Math.random()<0.5 ? 1 : 2)
+      const bunkerCount = 1
       const bunkers = generateBunkers(distance, hazard, bunkerCount)
       const shape=shapePool[holes.length%shapePool.length]
       holes.push({number:holes.length+1,par,distance,hazard,bunkers,shape})
@@ -259,9 +254,10 @@ export default function FootballGolf(){
   const [arcOffset,setArcOffset]         = useState(0)   // lateral arc during flight
   const [pendingResult,setPendingResult] = useState<ShotResult|null>(null)
   const animFrameRef = useRef<number|null>(null)
-  // Bunker MC question
   const [bunkerQ,setBunkerQ]             = useState<BunkerQ|null>(null)
-  // Whether ball has gone past the pin (overshoot 5-20 yds)
+  const [bunkerLieResult,setBunkerLieResult] = useState<'good'|'bad'|null>(null)
+  const [badLiePlayerData,setBadLiePlayerData] = useState<Record<string,{goals:number;assists:number;yellow_cards:number}>>({})
+  const badLieSeason = useRef<string>('')
   const [pastPin,setPastPin]             = useState(false)
 
   const normalisedNames = useRef<string[]>([])
@@ -277,6 +273,12 @@ export default function FootballGolf(){
 
   useEffect(()=>{
     fetch('/api/football-golf?data=1').then(r=>r.json()).then(d=>setPlayerData(d.players||{})).catch(()=>{})
+  },[])
+
+  useEffect(()=>{
+    const s = BAD_LIE_SEASONS[Math.floor(Math.random()*BAD_LIE_SEASONS.length)]
+    badLieSeason.current = s
+    fetch(`/api/football-golf?season=${s}`).then(r=>r.json()).then(d=>setBadLiePlayerData(d.players||{})).catch(()=>{})
   },[])
 
   useEffect(()=>()=>{ if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current) },[])
@@ -367,23 +369,32 @@ export default function FootballGolf(){
     const breakdown:{name:string;value:number}[]=[]
     let total=0
     for(const name of named){
-      const p=playerData[name]
-      if(!p){ breakdown.push({name,value:0});continue }
-      if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
       let value=0
-      if(question.clubFilter){
-        const cf=question.clubFilter
-        if(question.key==='goals')        value=p.clubGoals[cf]||0
-        else if(question.key==='assists') value=p.clubAssists[cf]||0
-        else if(question.key==='appearances') value=p.clubGames[cf]||0
-        else if(question.key==='yellow_cards') value=p.clubYellowCards[cf]||0
-        else if(question.key==='clean_sheets') value=p.clubCleanSheets[cf]||0
+      if(question.seasonFilter){
+        const p=badLiePlayerData[name]
+        if(p){
+          if(question.key==='goals')        value=p.goals
+          else if(question.key==='assists') value=p.assists
+          else if(question.key==='yellow_cards') value=p.yellow_cards
+        }
       }else{
-        if(question.key==='goals')        value=p.goals
-        else if(question.key==='assists') value=p.assists
-        else if(question.key==='appearances') value=p.games
-        else if(question.key==='yellow_cards') value=p.yellow_cards
-        else if(question.key==='clean_sheets') value=p.clean_sheets
+        const p=playerData[name]
+        if(!p){ breakdown.push({name,value:0});continue }
+        if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
+        if(question.clubFilter){
+          const cf=question.clubFilter
+          if(question.key==='goals')        value=p.clubGoals[cf]||0
+          else if(question.key==='assists') value=p.clubAssists[cf]||0
+          else if(question.key==='appearances') value=p.clubGames[cf]||0
+          else if(question.key==='yellow_cards') value=p.clubYellowCards[cf]||0
+          else if(question.key==='clean_sheets') value=p.clubCleanSheets[cf]||0
+        }else{
+          if(question.key==='goals')        value=p.goals
+          else if(question.key==='assists') value=p.assists
+          else if(question.key==='appearances') value=p.games
+          else if(question.key==='yellow_cards') value=p.yellow_cards
+          else if(question.key==='clean_sheets') value=p.clean_sheets
+        }
       }
       breakdown.push({name,value})
       total+=value
@@ -440,20 +451,27 @@ export default function FootballGolf(){
     animateShot(ballPos, toPos, result)
   }
 
-  function advanceFromResult(extraPenalty=false){
+  function advanceFromResult(){
     if(!shotResult||!currentHole) return
-    const penaltyStrokes = (shotResult.isOOB?1:0) + (extraPenalty?1:0)
+    const penaltyStrokes = shotResult.isOOB ? 1 : 0
     const newStrokes=strokes+1+penaltyStrokes
 
     const newLabel=question?.label
     const newUsed=newLabel ? [...usedLabels, newLabel] : usedLabels
 
+    const lieResult = bunkerLieResult
+    setBunkerLieResult(null)
+
+    function nextCat(dist: number): Category {
+      if (lieResult === 'bad') return pickBadLieCategory(badLieSeason.current)
+      return pickCategory(dist, newUsed)
+    }
+
     if(shotResult.isOOB){
-      // Ball returns to same spot — pastPin unchanged (stays wherever it was before shot)
       setStrokes(newStrokes)
       setShotResult(null)
       setBunkerQ(null)
-      const cat=pickCategory(remaining,newUsed)
+      const cat=nextCat(remaining)
       setUsedLabels([...newUsed,cat.label])
       setQuestion(cat)
       resetInputs()
@@ -466,19 +484,16 @@ export default function FootballGolf(){
       return
     }
 
-    // Normal advance — overshoot 5-20 = ball goes past flag (flip pastPin)
-    const overshoot = shotResult.total - remaining  // positive = past hole
+    const overshoot = shotResult.total - remaining
     let newRemaining: number
     let newPastPin: boolean
 
     if(overshoot > 0){
-      // Ball went past hole (overshoot 5-20, since >20 is OOB)
       newRemaining = overshoot
-      newPastPin   = !pastPin   // flip: was approaching → now past; was past → now approaching
+      newPastPin   = !pastPin
     } else {
-      // Ball stopped short (undershoot)
       newRemaining = remaining - shotResult.total
-      newPastPin   = pastPin    // stays on same side
+      newPastPin   = pastPin
     }
 
     setRemaining(newRemaining)
@@ -486,7 +501,7 @@ export default function FootballGolf(){
     setStrokes(newStrokes)
     setShotResult(null)
     setBunkerQ(null)
-    const cat=pickCategory(newRemaining,newUsed)
+    const cat=nextCat(newRemaining)
     setUsedLabels([...newUsed,cat.label])
     setQuestion(cat)
     resetInputs()
@@ -494,9 +509,9 @@ export default function FootballGolf(){
 
   function answerBunkerQ(idx:number){
     if(!bunkerQ) return
-    const correct=idx===bunkerQ.a
+    const correct = idx === bunkerQ.a
     setBunkerQ(null)
-    advanceFromResult(!correct) // wrong answer = extra penalty
+    setBunkerLieResult(correct ? 'good' : 'bad')
   }
 
   function triggerBunkerQuestion(){
@@ -511,6 +526,7 @@ export default function FootballGolf(){
     setScores(newScores)
     setShotResult(null)
     setBunkerQ(null)
+    setBunkerLieResult(null)
     resetInputs()
     if(holeIdx+1>=holes.length){
       setPhase('done')
@@ -535,7 +551,7 @@ export default function FootballGolf(){
   if(!currentHole) return null
 
   // Keep ball at landing spot while result/bunker panel is open; only reset to actual pos after advancing
-  const displayPos = (isAnimating || !!shotResult || !!bunkerQ) ? animBallPos : ballPos
+  const displayPos = (isAnimating || !!shotResult || !!bunkerQ || !!bunkerLieResult) ? animBallPos : ballPos
 
   return (
     <div style={{minHeight:'100dvh',background:'#0a0f1e',fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
@@ -571,39 +587,33 @@ export default function FootballGolf(){
               <div style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1.1}}>
                 {remaining} yards to pin
               </div>
-              <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
-                {(()=>{
-                  const base=`${CLUB_LABEL[club]} · max ${clubMax} yds`
-                  const approachPos = pastPin ? -1 : currentHole.distance - remaining  // -1 = disable water check when past pin
-                  // In a bunker
-                  const inBunker = !pastPin && currentHole.bunkers.some(b => approachPos >= b.start && approachPos <= b.end)
-                  if(inBunker) return <>{base}<span style={{color:'#f59e0b'}}> · ⛺ In bunker</span></>
-                  // Upcoming water
-                  if(currentHole.hazard && !pastPin){
-                    const distToStart=currentHole.hazard.start-approachPos
-                    const distToEnd=currentHole.hazard.end-approachPos
-                    if(distToEnd>0){
-                      const hazardText=distToStart<=0?' · 💧 In water':` · 💧 Water: ${distToStart}–${distToEnd} yds`
-                      const hazardColor=distToStart<=0?'#f87171':'#60a5fa'
-                      return <>{base}<span style={{color:hazardColor}}>{hazardText}</span></>
-                    }
-                  }
-                  return base
-                })()}
-              </div>
-              {/* Upcoming bunker distances (approach only, not past pin, not already in one) */}
-              {!pastPin && currentHole.bunkers.map((b,i)=>{
-                const approachPos = currentHole.distance - remaining
-                const distToStart = b.start - approachPos
-                const distToEnd   = b.end   - approachPos
-                // Only show if bunker is ahead (not yet passed) and ball not currently in it
-                if(distToEnd <= 0 || approachPos >= b.start) return null
-                return(
-                  <div key={i} style={{fontSize:11,color:'#f59e0b',fontWeight:700}}>
-                    ⛺ Bunker: {distToStart}–{distToEnd} yds ahead
-                  </div>
+              {(()=>{
+                const approachPos = pastPin ? -1 : currentHole.distance - remaining
+                const inBunker = !pastPin && currentHole.bunkers.some(b => approachPos >= b.start && approachPos <= b.end)
+                return (
+                  <>
+                    <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
+                      {CLUB_LABEL[club]} · max {clubMax} yds
+                      {inBunker && <span style={{color:'#f59e0b'}}> · ⛺ In bunker</span>}
+                    </div>
+                    {/* Water — own line */}
+                    {currentHole.hazard && !pastPin && (()=>{
+                      const distToStart = currentHole.hazard.start - approachPos
+                      const distToEnd   = currentHole.hazard.end   - approachPos
+                      if(distToEnd <= 0) return null
+                      if(distToStart <= 0) return <div style={{fontSize:13,fontWeight:700,color:'#f87171'}}>💧 In water zone</div>
+                      return <div style={{fontSize:13,fontWeight:700,color:'#60a5fa'}}>💧 Water: {distToStart}–{distToEnd} yds ahead</div>
+                    })()}
+                    {/* Bunker — own line */}
+                    {!pastPin && !inBunker && currentHole.bunkers.map((b,i)=>{
+                      const distToStart = b.start - approachPos
+                      const distToEnd   = b.end   - approachPos
+                      if(distToEnd <= 0 || approachPos >= b.start) return null
+                      return <div key={i} style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>⛺ Bunker: {distToStart}–{distToEnd} yds ahead</div>
+                    })}
+                  </>
                 )
-              })}
+              })()}
               {/* Past-pin indicator */}
               {pastPin&&(
                 <div style={{fontSize:11,color:'#f97316',fontWeight:700}}>
@@ -621,8 +631,10 @@ export default function FootballGolf(){
               </div>
             )}
 
-            {/* Bunker MC question */}
-            {bunkerQ ? (
+            {/* Bunker MC question → lie result → shot result */}
+            {bunkerLieResult ? (
+              <LieResultPanel result={bunkerLieResult} onContinue={advanceFromResult} />
+            ) : bunkerQ ? (
               <BunkerPanel bq={bunkerQ} onAnswer={answerBunkerQ} />
             ) : shotResult ? (
               <ShotResultPanel
@@ -714,6 +726,30 @@ function BunkerPanel({bq,onAnswer}:{bq:BunkerQ;onAnswer:(idx:number)=>void}){
   )
 }
 
+// ── Lie result panel ──────────────────────────────────────────────────────────
+
+function LieResultPanel({result,onContinue}:{result:'good'|'bad';onContinue:()=>void}){
+  const good = result==='good'
+  return(
+    <div style={{background:good?'#0d2d1a':'#2a1400',border:`1px solid ${good?'#22c55e':'#f59e0b'}`,borderRadius:12,padding:'16px',display:'flex',flexDirection:'column',gap:10}}>
+      <div style={{fontSize:20,fontWeight:900,color:good?'#22c55e':'#f59e0b',textAlign:'center'}}>
+        {good?'✅ Good Lie!':'⚠️ Bad Lie!'}
+      </div>
+      <div style={{fontSize:13,color:'rgba(255,255,255,0.65)',lineHeight:1.5}}>
+        {good
+          ? 'Correct answer — good lie in the bunker. Next shot plays normally from the sand.'
+          : 'Wrong answer — bad lie in the sand. Your next shot will be harder: the category will be restricted to a single season, so scores are likely to be lower.'}
+      </div>
+      <button
+        onClick={onContinue}
+        style={{background:good?'#16a34a':'#b45309',color:'white',border:'none',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}
+      >
+        Play from the bunker →
+      </button>
+    </div>
+  )
+}
+
 // ── Gimme panel ───────────────────────────────────────────────────────────────
 
 function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
@@ -749,20 +785,16 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
   const holePos = holeXY(hole.shape)
 
   // Build fairway path based on shape
+  // bend-right: tee bottom-left (20,148), bend middle-right (80,75), green top-left (20,17)
+  //   inner (concave) edge: (-9,-8) from seg1 centerline, (-8,+9) from seg2 centerline
+  //   outer (convex) edge: (+9,+8) from seg1 centerline, (+8,-9) from seg2 centerline
+  // bend-left: mirror of bend-right across x=50
   const fairwayPath = (()=>{
     switch(hole.shape){
-      case 'dogleg-left':
-        // L-shape: bottom center=50 (x=38-62), top center=42 (x=30-54). Traced without revisiting corners.
-        return 'M 30,12 L 54,12 L 54,80 L 62,80 L 62,152 L 38,152 L 38,80 L 30,80 Z'
-      case 'dogleg-right':
-        // L-shape: bottom center=50 (x=38-62), top center=58 (x=46-70).
-        return 'M 46,12 L 70,12 L 70,80 L 62,80 L 62,152 L 38,152 L 38,80 L 46,80 Z'
-      case 'slight-left':
-        // Bottom center=50 (x=38-62), top center=42 (x=30-54)
-        return 'M 30,12 L 54,12 L 62,152 L 38,152 Z'
-      case 'slight-right':
-        // Bottom center=50 (x=38-62), top center=58 (x=46-70)
-        return 'M 46,12 L 70,12 L 62,152 L 38,152 Z'
+      case 'bend-right':
+        return 'M 11,140 L 71,67 L 72,84 L 12,26 L 28,8 L 88,66 L 89,83 L 29,152 Z'
+      case 'bend-left':
+        return 'M 89,140 L 29,67 L 28,84 L 88,26 L 72,8 L 12,66 L 11,83 L 71,152 Z'
       default: // straight
         return null
     }

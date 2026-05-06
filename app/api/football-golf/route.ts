@@ -106,11 +106,36 @@ const buildCache = unstable_cache(
   { revalidate: 86400 }
 )
 
-// GET ?names=1 → player names only (small, fast — used for autocomplete)
-// GET ?data=1  → full stats for all players (used for shot calculation)
+const buildSeasonCache = unstable_cache(
+  async (season: string) => {
+    const { data } = await getClient()
+      .from('player_seasons')
+      .select('name_display,goals,assists,cards_yellow')
+      .eq('year_id', season)
+    const players: Record<string, { goals: number; assists: number; yellow_cards: number }> = {}
+    for (const row of (data || [])) {
+      const name = row.name_display as string
+      if (!players[name]) players[name] = { goals: 0, assists: 0, yellow_cards: 0 }
+      players[name].goals        += Number(row.goals)       || 0
+      players[name].assists      += Number(row.assists)     || 0
+      players[name].yellow_cards += Number(row.cards_yellow) || 0
+    }
+    return { players }
+  },
+  ['golf-season'],
+  { revalidate: 86400 }
+)
+
+// GET ?names=1   → player names only (small, fast — used for autocomplete)
+// GET ?data=1    → full stats for all players (used for shot calculation)
+// GET ?season=X  → per-player goals/assists/yellow_cards for one season (bad lie questions)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   try {
+    const season = searchParams.get('season')
+    if (season) {
+      return NextResponse.json(await buildSeasonCache(season))
+    }
     const { playerNames, players } = await buildCache()
     if (searchParams.get('names') === '1') {
       return NextResponse.json({ playerNames })
