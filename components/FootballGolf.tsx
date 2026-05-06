@@ -258,6 +258,7 @@ export default function FootballGolf(){
   // Animation
   const [isAnimating,setIsAnimating]     = useState(false)
   const [animBallPos,setAnimBallPos]     = useState(0)   // yards from tee
+  const [preAnimBallPos,setPreAnimBallPos] = useState(0) // ball pos before shot started (for swing graphic)
   const [arcOffset,setArcOffset]         = useState(0)   // lateral arc during flight
   const [pendingResult,setPendingResult] = useState<ShotResult|null>(null)
   const animFrameRef = useRef<number|null>(null)
@@ -344,6 +345,7 @@ export default function FootballGolf(){
   function animateShot(fromPos:number, toPos:number, result:ShotResult){
     if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
     setIsAnimating(true)
+    setPreAnimBallPos(fromPos)
     setPendingResult(result)
     setAnimBallPos(fromPos)
     setArcOffset(0)
@@ -431,8 +433,8 @@ export default function FootballGolf(){
 
     const overshoot = total - remaining     // positive = went past hole (or back past on pastPin side)
 
-    // More than 20 yards past hole = OOB (only on approach; when pastPin, overshoot means going back past the original approach side)
-    if(!isOOB && overshoot>20){
+    // >50 yards past hole = OOB (pin is centre of green; green extends 20 yds each way, OOB is 30 yds beyond the back)
+    if(!isOOB && overshoot>50){
       isOOB=true
       penaltyReason=`${overshoot} yds past the flag — out of bounds!`
     }
@@ -453,8 +455,8 @@ export default function FootballGolf(){
     const toPos = pastPin
       ? (isOOB ? ballPos - clubMax : ballPos - total)   // going back
       : (isOOB && penaltyReason.includes('past')
-          ? currentHole.distance + Math.min(overshoot, 35)
-          : Math.min(ballPos + total, currentHole.distance + 20))
+          ? currentHole.distance + Math.min(overshoot, 55)
+          : Math.min(ballPos + total, currentHole.distance + 50))
 
     animateShot(ballPos, toPos, result)
   }
@@ -682,6 +684,7 @@ export default function FootballGolf(){
             <CourseView
               hole={currentHole}
               displayBallPos={displayPos}
+              preAnimBallPos={preAnimBallPos}
               arcOffset={arcOffset}
               isAnimating={isAnimating}
               strokes={strokes}
@@ -771,11 +774,12 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
-  hole:Hole; displayBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number
 }){
   const {x:ballX,y:ballY} = yardToSVG(displayBallPos, hole.distance, hole.shape)
   const finalBallX = ballX + arcOffset
+  const {x:swingX,y:swingY} = yardToSVG(preAnimBallPos, hole.distance, hole.shape)
 
   const yardToY=(d:number)=>{ const {y}=yardToSVG(d,hole.distance,hole.shape);return y }
   const yardToX=(d:number)=>{ const {x}=yardToSVG(d,hole.distance,hole.shape);return x }
@@ -859,9 +863,9 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
         <line x1={holePos.x} y1={holePos.y+3} x2={holePos.x} y2={holePos.y-8} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
         <polygon points={`${holePos.x},${holePos.y-8} ${holePos.x+7},${holePos.y-5} ${holePos.x},${holePos.y-2}`} fill="#dc2626"/>
 
-        {/* Golf club swing animation near tee */}
+        {/* Golf club swing animation at ball's starting position */}
         {isAnimating&&(
-          <g transform={`translate(${teePos.x+3},${teePos.y+1})`}>
+          <g transform={`translate(${swingX+3},${swingY+1})`}>
             <line className="club-swing" x1={0} y1={0} x2={7} y2={-14} stroke="rgba(255,220,100,0.9)" strokeWidth={1.5} strokeLinecap="round"/>
           </g>
         )}
