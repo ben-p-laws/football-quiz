@@ -158,16 +158,20 @@ export default function FootballGolf() {
   const [namesLoading, setNamesLoading] = useState(true)
   const searchTimers = useRef<(ReturnType<typeof setTimeout> | null)[]>([null, null, null])
 
-  // Preload all player names + stats once — enables instant client-side autocomplete and shot lookup
+  // Fast: names only (~100KB) — enables autocomplete as soon as possible
+  useEffect(() => {
+    fetch('/api/football-golf?names=1')
+      .then(r => r.json())
+      .then(d => { setAllPlayerNames(d.playerNames || []); setNamesLoading(false) })
+      .catch(() => setNamesLoading(false))
+  }, [])
+
+  // Slower: full stats (~1.9MB) — enables client-side shot calculation
   useEffect(() => {
     fetch('/api/football-golf?data=1')
       .then(r => r.json())
-      .then(d => {
-        setAllPlayerNames(d.playerNames || [])
-        setPlayerData(d.players || {})
-        setNamesLoading(false)
-      })
-      .catch(() => setNamesLoading(false))
+      .then(d => { setPlayerData(d.players || {}) })
+      .catch(() => {})
   }, [])
 
   const currentHole = holes[holeIdx]
