@@ -212,6 +212,44 @@ type HoleDef = { number:number; par:number; yardages:Record<Tee,number>; path:Ho
 
 function randBetween(min:number,max:number){ return min+Math.floor(Math.random()*(max-min+1)) }
 
+function shuffle<T>(arr:T[]):T[]{
+  const a=[...arr]
+  for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]] }
+  return a
+}
+
+const RANDOM_PATHS: HolePath[] = [
+  {pts:[{x:50,y:148},{x:50,y:17}]},                           // straight
+  {pts:[{x:42,y:148},{x:74,y:82},{x:42,y:17}]},               // bend-right
+  {pts:[{x:58,y:148},{x:26,y:82},{x:58,y:17}]},               // bend-left
+]
+
+function generateHoles(count:3|6|9|18): Hole[] {
+  const holes: Hole[] = []
+  const groups = count / 3
+  const pathPool = shuffle([...RANDOM_PATHS,...RANDOM_PATHS,...RANDOM_PATHS,...RANDOM_PATHS])
+  for (let g = 0; g < groups; g++) {
+    for (const par of shuffle([3,4,5])) {
+      const distance = par===3 ? randBetween(160,240) : par===4 ? randBetween(320,380) : randBetween(430,500)
+      let hazard: Hazard|null = null
+      if (par===3) {
+        const start = Math.round(distance*(0.60+Math.random()*0.12)/5)*5
+        hazard = {start, end:start+20}
+      } else if (par===5) {
+        const start = randBetween(36,46)*5
+        hazard = {start, end:start+30}
+      } else {
+        const fromHole = Math.round(randBetween(40,100)/5)*5
+        hazard = {start:distance-fromHole, end:distance-fromHole+20}
+      }
+      const path = pathPool[holes.length % pathPool.length]
+      const bunkers = generateBunkers(distance, hazard, 1)
+      holes.push({number:holes.length+1, par, distance, hazard, bunkers, path})
+    }
+  }
+  return holes
+}
+
 // Paths derived from Pebble Beach aerial images.
 // Tee=pts[0] (y=148), green=pts[last] (y=17). 3pts=quadratic bezier, 4pts=cubic (S-curves).
 const PEBBLE_BEACH: HoleDef[] = [
@@ -314,6 +352,8 @@ function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').r
 
 export default function FootballGolf(){
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'>('setup')
+  const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
+  const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
   const [tee,setTee]                     = useState<Tee>('White')
   const [holes,setHoles]                 = useState<Hole[]>([])
@@ -391,7 +431,7 @@ export default function FootballGolf(){
   }
 
   function startGame(){
-    const hs=buildCourse(tee,numHoles)
+    const hs = courseMode === 'real' ? buildCourse(tee, numHoles) : generateHoles(numHoles)
     usedLabels.current    = new Set()
     recentFilters.current = []
     setHoles(hs)
@@ -635,7 +675,7 @@ export default function FootballGolf(){
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if(phase==='setup') return <><NavBar /><SetupScreen numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} /></>
+  if(phase==='setup') return <><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} /></>
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={()=>setPhase('setup')} /></>
   if(!currentHole) return null
 
@@ -1084,35 +1124,82 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
 
 // ── Setup screen ───────────────────────────────────────────────────────────────
 
-function SetupScreen({numHoles,setNumHoles,tee,setTee,onStart}:{numHoles:number;setNumHoles:(n:any)=>void;tee:Tee;setTee:(t:Tee)=>void;onStart:()=>void}){
+const REAL_COURSES = [
+  { id:'pebble-beach', name:'Pebble Beach Golf Links', available:true },
+  { id:'st-andrews',   name:'St Andrews — Old Course',  available:false },
+  { id:'augusta',      name:'Augusta National',          available:false },
+  { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
+]
+
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart}:{
+  courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
+  selectedCourse:string; setSelectedCourse:(c:string)=>void
+  numHoles:number; setNumHoles:(n:any)=>void
+  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void
+}){
   const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
     {value:'Red',  label:'Easy',  sub:'Red tees',  color:'#dc2626', ring:'rgba(220,38,38,0.4)'},
     {value:'White',label:'Medium',sub:'White tees',color:'#9ca3af', ring:'rgba(156,163,175,0.4)'},
     {value:'Blue', label:'Hard',  sub:'Blue tees', color:'#3b82f6', ring:'rgba(59,130,246,0.4)'},
   ]
   return(
-    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:28,fontFamily:"'DM Sans',sans-serif",padding:24}}>
+    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:24}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:48}}>⛳</div>
         <div style={{fontSize:30,fontWeight:900,color:'white',marginTop:10,letterSpacing:'-0.5px'}}>Football Golf</div>
-        <div style={{fontSize:12,fontWeight:700,color:'#4ade80',marginTop:4,letterSpacing:'0.05em'}}>Pebble Beach Golf Links</div>
         <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6,lineHeight:1.5}}>
           Name PL players to hit the green.<br/>Their combined stat = your shot distance.
         </div>
       </div>
+
+      {/* Course mode toggle */}
       <div style={{width:'100%',maxWidth:300}}>
-        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Select Tee</div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
-          {TEE_OPTIONS.map(({value,label,sub,color,ring})=>(
-            <button key={value} onClick={()=>setTee(value)}
-              style={{background:tee===value?`${color}22`:'#1e2d4a',color:'white',border:`2px solid ${tee===value?color:'transparent'}`,borderRadius:10,padding:'12px 4px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',boxShadow:tee===value?`0 0 12px ${ring}`:'none'}}>
-              <div style={{fontSize:14,fontWeight:900,color:tee===value?color:'white'}}>{label}</div>
-              <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:2}}>{sub}</div>
+        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Course Type</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+          {(['random','real'] as const).map(m=>(
+            <button key={m} onClick={()=>setCourseMode(m)}
+              style={{background:courseMode===m?'rgba(220,38,38,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode===m?'#dc2626':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
+              <div style={{fontSize:14,fontWeight:900}}>{m==='random'?'🎲 Random':'🏌️ Real Course'}</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>{m==='random'?'New layout each game':'Choose a course'}</div>
             </button>
           ))}
         </div>
       </div>
+
+      {/* Real course dropdown */}
+      {courseMode==='real'&&(
+        <div style={{width:'100%',maxWidth:300}}>
+          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Select Course</div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {REAL_COURSES.map(({id,name,available})=>(
+              <button key={id} onClick={()=>available&&setSelectedCourse(id)} disabled={!available}
+                style={{background:selectedCourse===id?'rgba(74,222,128,0.1)':'#1e2d4a',color:available?'white':'rgba(255,255,255,0.3)',border:`2px solid ${selectedCourse===id?'#4ade80':'transparent'}`,borderRadius:10,padding:'11px 14px',cursor:available?'pointer':'default',fontFamily:'inherit',transition:'all 0.15s',textAlign:'left',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:13,fontWeight:700}}>{name}</span>
+                {!available&&<span style={{fontSize:10,color:'rgba(255,255,255,0.25)',fontWeight:700}}>Coming Soon</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Tee selector — real courses only */}
+      {courseMode==='real'&&(
+        <div style={{width:'100%',maxWidth:300}}>
+          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Select Tee</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
+            {TEE_OPTIONS.map(({value,label,sub,color,ring})=>(
+              <button key={value} onClick={()=>setTee(value)}
+                style={{background:tee===value?`${color}22`:'#1e2d4a',color:'white',border:`2px solid ${tee===value?color:'transparent'}`,borderRadius:10,padding:'12px 4px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',boxShadow:tee===value?`0 0 12px ${ring}`:'none'}}>
+                <div style={{fontSize:14,fontWeight:900,color:tee===value?color:'white'}}>{label}</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:2}}>{sub}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Holes */}
       <div style={{width:'100%',maxWidth:300}}>
         <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>How many holes?</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
@@ -1123,6 +1210,7 @@ function SetupScreen({numHoles,setNumHoles,tee,setTee,onStart}:{numHoles:number;
           ))}
         </div>
       </div>
+
       <button onClick={onStart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
         Tee Off →
       </button>
