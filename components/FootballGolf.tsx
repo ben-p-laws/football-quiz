@@ -141,6 +141,28 @@ function holeXY(shape: HoleShape): { x:number; y:number } {
   return yardToSVG(1, 1, shape)
 }
 
+// Returns a unit normal vector perpendicular to the fairway at a given yard position.
+// lx/ly points left of travel direction, rx/ry points right.
+function fairwayNormal(yards: number, total: number, shape: HoleShape): { lx:number; ly:number; rx:number; ry:number } {
+  const t = Math.max(0.01, Math.min(0.99, yards / total))
+  let tx: number, ty: number
+  switch (shape) {
+    case 'bend-right':
+      tx = 2*(1-t)*(74-42) + 2*t*(42-74)
+      ty = 2*(1-t)*(82-148) + 2*t*(17-82)
+      break
+    case 'bend-left':
+      tx = 2*(1-t)*(26-58) + 2*t*(58-26)
+      ty = 2*(1-t)*(82-148) + 2*t*(17-82)
+      break
+    default:
+      tx = 0; ty = -131
+  }
+  const len = Math.sqrt(tx*tx + ty*ty)
+  const nx = -ty/len; const ny = tx/len
+  return { lx: nx, ly: ny, rx: -nx, ry: -ny }
+}
+
 // Rotation angle (°) for tee/green to align perpendicular to fairway at each end
 // Tangent at t=0 for bend-right: 2*(ctrl-P0)=(64,-132) → perpendicular angle ≈ 26°
 function shapeEndAngle(shape: HoleShape): number {
@@ -809,6 +831,30 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
 
         {/* Background rough */}
         <rect x={0} y={0} width={100} height={155} fill="#0f2e0f" opacity={0.6}/>
+
+        {/* Trees alongside fairway edges */}
+        {(()=>{
+          const trees: { x:number; y:number; r:number }[] = []
+          const step = Math.max(20, Math.floor(hole.distance / 9))
+          for (let yd = step * 0.4; yd < hole.distance - 15; yd += step) {
+            const pos  = yardToSVG(yd, hole.distance, hole.shape)
+            const norm = fairwayNormal(yd, hole.distance, hole.shape)
+            // deterministic size variation based on position
+            const rL = 3.5 + (Math.round(yd * 7) % 3) * 0.6
+            const rR = 3.5 + (Math.round(yd * 11) % 3) * 0.6
+            trees.push(
+              { x: pos.x + norm.lx * 14, y: pos.y + norm.ly * 14, r: rL },
+              { x: pos.x + norm.rx * 14, y: pos.y + norm.ry * 14, r: rR },
+            )
+          }
+          return trees.map((tr, i) => (
+            <g key={i}>
+              <circle cx={tr.x} cy={tr.y} r={tr.r + 0.8} fill="rgba(0,0,0,0.25)"/>
+              <circle cx={tr.x} cy={tr.y} r={tr.r} fill="#1a5216"/>
+              <circle cx={tr.x - tr.r*0.25} cy={tr.y - tr.r*0.25} r={tr.r * 0.55} fill="#2d7a29" opacity={0.7}/>
+            </g>
+          ))
+        })()}
 
         {/* Fairway — smooth bezier stroke */}
         <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>
