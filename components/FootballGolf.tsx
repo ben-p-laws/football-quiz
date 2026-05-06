@@ -832,44 +832,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Background rough */}
         <rect x={0} y={0} width={100} height={155} fill="#0f2e0f" opacity={0.6}/>
 
-        {/* Trees alongside fairway edges — tightly packed, slight elevation perspective */}
-        {(()=>{
-          // step in yards that yields ~5 SVG units spacing (fairway is ~131 SVG units for full distance)
-          const step = Math.max(5, Math.round(5 * hole.distance / 131))
-          const trees: { x:number; y:number; r:number; side:number }[] = []
-          for (let yd = step * 0.3; yd < hole.distance - 8; yd += step) {
-            const pos  = yardToSVG(yd, hole.distance, hole.shape)
-            const norm = fairwayNormal(yd, hole.distance, hole.shape)
-            // deterministic size variation
-            const rL = 2.8 + (Math.round(yd * 7)  % 4) * 0.3
-            const rR = 2.8 + (Math.round(yd * 13) % 4) * 0.3
-            // slight stagger outward per tree to break uniformity
-            const offL = 13 + (Math.round(yd * 3) % 3) * 0.5
-            const offR = 13 + (Math.round(yd * 5) % 3) * 0.5
-            trees.push(
-              { x: pos.x + norm.lx * offL, y: pos.y + norm.ly * offL, r: rL, side: -1 },
-              { x: pos.x + norm.rx * offR, y: pos.y + norm.ry * offR, r: rR, side:  1 },
-            )
-          }
-          return trees.map((tr, i) => {
-            const trunkW = tr.r * 0.4
-            const trunkH = tr.r * 0.9
-            return (
-              <g key={i}>
-                {/* Trunk visible below canopy — gives slight elevation look */}
-                <rect x={tr.x - trunkW/2} y={tr.y + tr.r*0.35} width={trunkW} height={trunkH} rx={trunkW*0.4} fill="#6b3e1e"/>
-                {/* Shadow under canopy */}
-                <circle cx={tr.x + 0.5} cy={tr.y + 0.6} r={tr.r} fill="rgba(0,0,0,0.22)"/>
-                {/* Main canopy */}
-                <circle cx={tr.x} cy={tr.y} r={tr.r} fill="#1c5c18"/>
-                {/* Highlight — offset top-left to suggest rounded top */}
-                <circle cx={tr.x - tr.r*0.28} cy={tr.y - tr.r*0.28} r={tr.r*0.52} fill="#2e8c28" opacity={0.65}/>
-              </g>
-            )
-          })
-        })()}
-
-        {/* Fairway — smooth bezier stroke */}
+{/* Fairway — smooth bezier stroke */}
         <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>
 
         {/* Water hazard */}
