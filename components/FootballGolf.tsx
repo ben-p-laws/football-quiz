@@ -124,14 +124,14 @@ type ClubType = 'driver' | 'iron' | 'wedge' | 'putter'
 function getClub(remaining: number): ClubType {
   if (remaining > 260) return 'driver'
   if (remaining >= 120) return 'iron'
-  if (remaining >= 50)  return 'wedge'
+  if (remaining > 20)   return 'wedge'
   return 'putter'
 }
 
 const CLUB_RANGES: Record<ClubType, [number, number]> = {
   driver: [250, 300],
   iron:   [120, 260],
-  wedge:  [50,  119],
+  wedge:  [20,  119],
   putter: [0,   50],
 }
 
