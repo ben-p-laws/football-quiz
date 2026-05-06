@@ -824,8 +824,7 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
           const sideX = i % 2 === 0 ? midPos.x - 8 : midPos.x + 8
           return(
             <g key={i}>
-              <ellipse cx={sideX}   cy={midPos.y}   rx={6} ry={3.5} fill="url(#sand)" opacity={0.78}/>
-              <ellipse cx={sideX+4} cy={midPos.y+2} rx={4} ry={2.5} fill="url(#sand)" opacity={0.55}/>
+              <ellipse cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
             </g>
           )
         })}
