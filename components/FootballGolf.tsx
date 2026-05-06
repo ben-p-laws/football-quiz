@@ -851,17 +851,15 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <rect x={teePos.x-8} y={teePos.y-2} width={16} height={4} rx={1.5} fill="#4ade80" opacity={0.9}/>
         </g>
 
-        {/* Green — rotated to sit across the fairway */}
-        <g transform={`rotate(${-endAngle}, ${holePos.x}, ${holePos.y+5})`}>
-          <ellipse cx={holePos.x} cy={holePos.y+5} rx={13} ry={7} fill="#16a34a"/>
-          <ellipse cx={holePos.x} cy={holePos.y+5} rx={10} ry={5} fill="#22c55e" opacity={0.6}/>
-        </g>
+        {/* Green — circular so pin is in the centre */}
+        <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
+        <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
 
-        {/* Hole cup */}
-        <circle cx={holePos.x} cy={holePos.y+3} r={1.8} fill="#0a0f1e"/>
+        {/* Hole cup — centre of the green */}
+        <circle cx={holePos.x} cy={holePos.y} r={1.8} fill="#0a0f1e"/>
         {/* Flag */}
-        <line x1={holePos.x} y1={holePos.y+3} x2={holePos.x} y2={holePos.y-8} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
-        <polygon points={`${holePos.x},${holePos.y-8} ${holePos.x+7},${holePos.y-5} ${holePos.x},${holePos.y-2}`} fill="#dc2626"/>
+        <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-11} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
+        <polygon points={`${holePos.x},${holePos.y-11} ${holePos.x+7},${holePos.y-8} ${holePos.x},${holePos.y-5}`} fill="#dc2626"/>
 
         {/* Golf club swing animation at ball's starting position */}
         {isAnimating&&(
