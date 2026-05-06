@@ -118,7 +118,7 @@ function yardToSVG(yards: number, total: number, shape: HoleShape): { x:number; 
         return { x:50, y:148 - t*68 }             // 148→80, x stays 50
       } else {
         const t = (p - bend) / (1 - bend)
-        return { x:50 - t*24, y:80 - t*63 }        // 50→26, 80→17
+        return { x:50 - t*8, y:80 - t*63 }         // 50→42, 80→17
       }
     }
     case 'dogleg-right': {
@@ -128,7 +128,7 @@ function yardToSVG(yards: number, total: number, shape: HoleShape): { x:number; 
         return { x:50, y:148 - t*68 }
       } else {
         const t = (p - bend) / (1 - bend)
-        return { x:50 + t*24, y:80 - t*63 }        // 50→74, 80→17
+        return { x:50 + t*8, y:80 - t*63 }         // 50→58, 80→17
       }
     }
     case 'slight-left':  return { x:50 - p*8,  y:148 - p*131 }   // 50→42
@@ -415,7 +415,8 @@ export default function FootballGolf(){
       penaltyReason=`${overshoot} yds past the flag — out of bounds!`
     }
 
-    const isHoled = !isOOB && overshoot>=0 && overshoot<=5
+    // Gimme: within 5 yards of pin (either short or slightly past) = auto-holed, costs the shot
+    const isHoled = !isOOB && Math.abs(total - remaining) <= 5
 
     // Bunker: ball lands in one of this hole's bunker zones (approach side only)
     const approachPosNow = currentHole.distance - remaining  // tee-relative position before shot
@@ -623,6 +624,8 @@ export default function FootballGolf(){
                 onContinue={shotResult.isInBunker ? triggerBunkerQuestion : advanceFromResult}
                 isBunker={shotResult.isInBunker}
               />
+            ) : remaining <= 5 ? (
+              <GimmePanel remaining={remaining} onAccept={() => finishHole(strokes + 1)} />
             ) : (
               <>
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
@@ -703,6 +706,26 @@ function BunkerPanel({bq,onAnswer}:{bq:BunkerQ;onAnswer:(idx:number)=>void}){
   )
 }
 
+// ── Gimme panel ───────────────────────────────────────────────────────────────
+
+function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
+  return(
+    <div style={{background:'#0d2d1a',border:'1px solid #22c55e',borderRadius:12,padding:'16px',display:'flex',flexDirection:'column',gap:10,textAlign:'center'}}>
+      <div style={{fontSize:22,fontWeight:900,color:'#22c55e'}}>🤝 Gimme!</div>
+      <div style={{fontSize:13,color:'rgba(255,255,255,0.6)',lineHeight:1.4}}>
+        {remaining === 0 ? 'Ball is at the pin' : `${remaining} yds from the pin`} — close enough to concede
+      </div>
+      <div style={{fontSize:10,color:'rgba(255,255,255,0.3)'}}>Counts as +1 stroke</div>
+      <button
+        onClick={onAccept}
+        style={{background:'#16a34a',color:'white',border:'none',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}
+      >
+        Pick it up →
+      </button>
+    </div>
+  )
+}
+
 // ── Course view ────────────────────────────────────────────────────────────────
 
 function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
@@ -721,10 +744,11 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
   const fairwayPath = (()=>{
     switch(hole.shape){
       case 'dogleg-left':
-        // L-shape: bottom section centered x=50, top section centered x=26
-        return 'M 14,12 L 38,12 L 38,80 L 62,80 L 62,152 L 38,152 L 38,80 L 14,80 Z'
+        // L-shape: bottom center=50 (x=38-62), top center=42 (x=30-54). Traced without revisiting corners.
+        return 'M 30,12 L 54,12 L 54,80 L 62,80 L 62,152 L 38,152 L 38,80 L 30,80 Z'
       case 'dogleg-right':
-        return 'M 62,12 L 86,12 L 86,80 L 62,80 L 62,152 L 38,152 L 38,80 L 62,80 Z'
+        // L-shape: bottom center=50 (x=38-62), top center=58 (x=46-70).
+        return 'M 46,12 L 70,12 L 70,80 L 62,80 L 62,152 L 38,152 L 38,80 L 46,80 Z'
       case 'slight-left':
         // Bottom center=50 (x=38-62), top center=42 (x=30-54)
         return 'M 30,12 L 54,12 L 62,152 L 38,152 Z'
@@ -917,16 +941,19 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   const {total,breakdown,isOOB,isHoled,penaltyReason}=result
   const overshoot=total-remaining
 
+  const isGimme = isHoled && total < remaining  // stopped within 5 yds short
   const headline = isOOB    ? '🚫 Out of Bounds'
     : isBunker              ? '⛺ In the Bunker!'
+    : isGimme               ? '🤝 Gimme!'
     : isHoled               ? '⛳ In the Hole!'
     : overshoot>0           ? `${total} yds — past flag`
     : `${total} yds`
 
-  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':isHoled?'#22c55e':'white'
+  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':(isHoled||isGimme)?'#22c55e':'white'
 
   const subtext = isOOB    ? `${penaltyReason} · +1 stroke penalty`
     : isBunker             ? `Ball in sand trap — answer a question to continue`
+    : isGimme              ? `${remaining-total} yds from pin — that counts!`
     : isHoled              ? (overshoot===0?'Holed out':`${overshoot} yds past flag`)
     : overshoot>0          ? `${overshoot} yds past the flag — playing from other side`
     : `${remaining-total} yds remaining`
