@@ -317,19 +317,46 @@ export default function LandingPage() {
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
             onClick={() => router.push('/football-golf')}>
-            <div style={{ padding: '10px 12px 8px' }}>
+            <div style={{ padding: '10px 12px 6px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Football Golf</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>Name players to hit the green · 3, 6, 9 or 18 holes</div>
             </div>
-            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column', gap: 6, justifyContent: 'center', minHeight: 90 }}>
-              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Sample hole</div>
-              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '7px 10px' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: 'white', marginBottom: 2 }}>Hole 1: Par 4 · 345 yds</div>
-                <div style={{ fontSize: 10, color: '#8899bb', marginBottom: 4 }}>Club: Iron · max 260 yds</div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626' }}>All-time PL Goals</div>
-                <div style={{ fontSize: 9, color: '#4a5568', marginTop: 1 }}>Pick up to 3 players — combined stat = shot</div>
-              </div>
+            {/* Info above hole */}
+            <div style={{ padding: '6px 12px 0', flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 900, color: 'white', marginBottom: 2 }}>125 yards to pin</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626' }}>Dutch PL Goals</div>
+              <div style={{ fontSize: 9, color: '#4a5568', marginTop: 1 }}>Iron · max 260 yds · pick up to 3 players</div>
             </div>
+            {/* Horizontal hole SVG — bend bowing upward, tee left, green right */}
+            <svg viewBox="0 0 160 54" width="100%" style={{ display: 'block', marginTop: 4 }}>
+              {/* Rough background */}
+              <rect x={0} y={0} width={160} height={54} fill="#0c200c"/>
+              {/* Fairway — quadratic bezier bowing up */}
+              <defs>
+                <linearGradient id="lg-fw" x1="0" y1="0" x2="160" y2="0" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#1a4a1a"/>
+                  <stop offset="100%" stopColor="#2d6a2d"/>
+                </linearGradient>
+              </defs>
+              <path d="M 12,38 Q 80,8 148,38" stroke="url(#lg-fw)" strokeWidth={20} fill="none" strokeLinecap="butt"/>
+              {/* Water hazard — roughly 60-80% along the hole */}
+              <ellipse cx={115} cy={32} rx={10} ry={5} fill="#1d4ed8" opacity={0.85}/>
+              <ellipse cx={115} cy={32} rx={7} ry={3} fill="none" stroke="#3b82f6" strokeWidth={0.7} opacity={0.5}/>
+              {/* Bunker */}
+              <ellipse cx={68} cy={20} rx={5} ry={2.5} fill="#c8a96e" opacity={0.85}/>
+              {/* Tee box */}
+              <rect x={8} y={34} width={4} height={12} rx={1.5} fill="#4ade80" opacity={0.9}/>
+              {/* Green — circle with hole cup */}
+              <circle cx={148} cy={38} r={9} fill="#16a34a"/>
+              <circle cx={148} cy={38} r={6.5} fill="#22c55e" opacity={0.6}/>
+              <circle cx={148} cy={38} r={1.5} fill="#0a0f1e"/>
+              {/* Flag */}
+              <line x1={148} y1={38} x2={148} y2={28} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
+              <polygon points="148,28 155,31 148,34" fill="#dc2626"/>
+              {/* Ball — at ~t=0.5 along bezier (midpoint bows to top) */}
+              <ellipse cx={80} cy={20} rx={2.5} ry={0.8} fill="rgba(0,0,0,0.3)"/>
+              <circle cx={80} cy={17.5} r={2.5} fill="white"/>
+            </svg>
             <div style={s.ctaSm}><span style={s.ctaText}>Play Football Golf →</span></div>
           </div>
 
