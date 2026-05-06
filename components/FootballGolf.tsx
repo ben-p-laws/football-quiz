@@ -115,21 +115,23 @@ const BUNKER_QUESTIONS: BunkerQ[] = [
 
 // ── Hole shapes ────────────────────────────────────────────────────────────────
 
-// bend-right: tee bottom-left (20,148) → bend middle-right (80,75) → green top-left (20,17)  [C shape opening right]
-// bend-left:  tee bottom-right (80,148) → bend middle-left (20,75) → green top-right (80,17) [C shape opening left]
-// straight:   tee bottom-center (50,148) → green top-center (50,17)
+// bend-right: tee/green slightly left (x=42), fairway bows slightly right (x=58) at midpoint
+// bend-left:  tee/green slightly right (x=58), fairway bows slightly left (x=42) at midpoint
+// straight:   tee and green both centred (x=50)
 type HoleShape = 'straight'|'bend-left'|'bend-right'
 
 function yardToSVG(yards: number, total: number, shape: HoleShape): { x:number; y:number } {
   const p = Math.max(0, yards / total)
   switch (shape) {
     case 'bend-right':
-      if (p <= 0.5) return { x: 20 + 120*p,   y: 148 - 146*p }
-      else          return { x: 140 - 120*p,  y: 133 - 116*p }
+      // (42,148) → (58,75) → (42,17)
+      if (p <= 0.5) return { x: 42 + 32*p,  y: 148 - 146*p }
+      else          return { x: 74 - 32*p,  y: 133 - 116*p }
     case 'bend-left':
-      if (p <= 0.5) return { x: 80 - 120*p,   y: 148 - 146*p }
-      else          return { x: -40 + 120*p,  y: 133 - 116*p }
-    default:        return { x: 50,             y: 148 - 131*p }
+      // (58,148) → (42,75) → (58,17)
+      if (p <= 0.5) return { x: 58 - 32*p,  y: 148 - 146*p }
+      else          return { x: 26 + 32*p,  y: 133 - 116*p }
+    default:        return { x: 50,          y: 148 - 131*p }
   }
 }
 
@@ -784,17 +786,18 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
   const teePos  = yardToSVG(0,           hole.distance, hole.shape)
   const holePos = holeXY(hole.shape)
 
-  // Build fairway path based on shape
-  // bend-right: tee bottom-left (20,148), bend middle-right (80,75), green top-left (20,17)
-  //   inner (concave) edge: (-9,-8) from seg1 centerline, (-8,+9) from seg2 centerline
-  //   outer (convex) edge: (+9,+8) from seg1 centerline, (+8,-9) from seg2 centerline
-  // bend-left: mirror of bend-right across x=50
+  // Fairway polygon paths — 12px wide either side of the centreline
+  // bend-right centreline: (42,148)→(58,75)→(42,17)
+  //   seg1 dir (16,-73), inner offset ≈(-12,-3), outer ≈(+12,+3)
+  //   seg2 dir (-16,-58), inner offset ≈(-12,+3), outer ≈(+12,-3)
+  // bend-left: mirror across x=50
   const fairwayPath = (()=>{
     switch(hole.shape){
       case 'bend-right':
-        return 'M 11,140 L 71,67 L 72,84 L 12,26 L 28,8 L 88,66 L 89,83 L 29,152 Z'
+        // inner: (30,145)→(46,72) then (46,78)→(30,20)  outer: (54,14)→(70,72) then (70,78)→(54,152)
+        return 'M 30,145 L 46,72 L 46,78 L 30,20 L 54,14 L 70,72 L 70,78 L 54,152 Z'
       case 'bend-left':
-        return 'M 89,140 L 29,67 L 28,84 L 88,26 L 72,8 L 12,66 L 11,83 L 71,152 Z'
+        return 'M 70,145 L 54,72 L 54,78 L 70,20 L 46,14 L 30,72 L 30,78 L 46,152 Z'
       default: // straight
         return null
     }
