@@ -287,7 +287,7 @@ const CLUB_LABEL:Record<ClubType,string>={driver:'Driver',iron:'Iron',wedge:'Wed
 
 type ShotResult={
   total:number; breakdown:{name:string;value:number}[]
-  isOOB:boolean; isHoled:boolean
+  isOOB:boolean; isHoled:boolean; isGimme:boolean
   isInBunker:boolean; penaltyReason:string
 }
 
@@ -507,17 +507,19 @@ export default function FootballGolf(){
       penaltyReason=`${overshoot} yds past the flag — out of bounds!`
     }
 
-    // Exact match = holed on this shot; within 5 yds (but not exact) = gimme next shot via GimmePanel
+    // Exact match = holed on this shot
     const isHoled = !isOOB && total === remaining
+    // Within 5 yds but not exact = gimme (tap-in conceded, +1 stroke added on advance)
+    const isGimme = !isOOB && !isHoled && Math.abs(overshoot) <= 5
 
     // Bunker: ball lands in one of this hole's bunker zones (approach side only)
     const approachPosNow = currentHole.distance - remaining  // tee-relative position before shot
     const approachPosNew = approachPosNow + total             // where ball lands (tee-relative)
     const wasInBunker = !pastPin && currentHole.bunkers.some(b => approachPosNow >= b.start && approachPosNow <= b.end)
-    const isInBunker  = !isOOB && !isHoled && !pastPin && !wasInBunker &&
+    const isInBunker  = !isOOB && !isHoled && !isGimme && !pastPin && !wasInBunker &&
       currentHole.bunkers.some(b => approachPosNew >= b.start && approachPosNew <= b.end)
 
-    const result:ShotResult={ total,breakdown,isOOB,isHoled,isInBunker,penaltyReason }
+    const result:ShotResult={ total,breakdown,isOOB,isHoled,isGimme,isInBunker,penaltyReason }
 
     // Animation: when pastPin ball flies BACK toward hole (decreasing absolute pos)
     const toPos = pastPin
@@ -553,8 +555,8 @@ export default function FootballGolf(){
       return
     }
 
-    if(shotResult.isHoled){
-      finishHole(newStrokes)
+    if(shotResult.isHoled || shotResult.isGimme){
+      finishHole(shotResult.isGimme ? newStrokes + 1 : newStrokes)
       return
     }
 
@@ -713,8 +715,6 @@ export default function FootballGolf(){
                 onContinue={shotResult.isInBunker ? triggerBunkerQuestion : advanceFromResult}
                 isBunker={shotResult.isInBunker}
               />
-            ) : remaining <= 5 ? (
-              <GimmePanel remaining={remaining} onAccept={() => finishHole(strokes + 1)} />
             ) : (
               <>
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
@@ -1023,24 +1023,26 @@ function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onCl
 function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   result:ShotResult;club:ClubType;remaining:number;onContinue:()=>void;isBunker:boolean
 }){
-  const {total,breakdown,isOOB,isHoled,penaltyReason}=result
+  const {total,breakdown,isOOB,isHoled,isGimme,penaltyReason}=result
   const overshoot=total-remaining
 
   const headline = isOOB    ? '🚫 Out of Bounds'
     : isBunker              ? '🏖️ In the Bunker!'
     : isHoled               ? '⛳ In the Hole!'
+    : isGimme               ? '🤝 Gimme!'
     : overshoot>0           ? `${total} yds — past flag`
     : `${total} yds`
 
-  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':isHoled?'#22c55e':'white'
+  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':(isHoled||isGimme)?'#22c55e':'white'
 
   const subtext = isOOB    ? `${penaltyReason} · +1 stroke penalty`
     : isBunker             ? `Ball in sand trap — answer a question to continue`
     : isHoled              ? 'Perfect — holed out!'
+    : isGimme              ? `${Math.abs(overshoot) || remaining - total} yds away — tap in conceded`
     : overshoot>0          ? `${overshoot} yds past the flag — playing from other side`
     : `${remaining-total} yds remaining`
 
-  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':isHoled?'Next Hole →':'Next Shot →'
+  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Finish Hole →':'Next Shot →'
 
   return(
     <div style={{background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
