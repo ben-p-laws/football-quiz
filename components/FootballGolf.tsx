@@ -560,8 +560,13 @@ export default function FootballGolf(){
           {/* Left panel */}
           <div style={{flex:3,padding:'12px 14px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
-              <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
-                Hole {currentHole.number} · Par {currentHole.par}
+              <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                  Hole {currentHole.number} · Par {currentHole.par}
+                </div>
+                <div style={{fontSize:13,fontWeight:800,color:'white',background:'#1e2d4a',borderRadius:6,padding:'2px 8px'}}>
+                  Shot {strokes + 1}
+                </div>
               </div>
               <div style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1.1}}>
                 {remaining} yards to pin
@@ -943,7 +948,8 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   const {total,breakdown,isOOB,isHoled,penaltyReason}=result
   const overshoot=total-remaining
 
-  const isGimme = isHoled && total < remaining  // stopped within 5 yds short
+  // Gimme = holed but ball didn't go exactly in (within 5 yds either side)
+  const isGimme = isHoled && overshoot !== 0
   const headline = isOOB    ? '🚫 Out of Bounds'
     : isBunker              ? '⛺ In the Bunker!'
     : isGimme               ? '🤝 Gimme!'
@@ -951,12 +957,13 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
     : overshoot>0           ? `${total} yds — past flag`
     : `${total} yds`
 
-  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':(isHoled||isGimme)?'#22c55e':'white'
+  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':isHoled?'#22c55e':'white'
 
   const subtext = isOOB    ? `${penaltyReason} · +1 stroke penalty`
     : isBunker             ? `Ball in sand trap — answer a question to continue`
-    : isGimme              ? `${remaining-total} yds from pin — that counts!`
-    : isHoled              ? (overshoot===0?'Holed out':`${overshoot} yds past flag`)
+    : isGimme && overshoot<0 ? `${remaining-total} yds short — tap in conceded`
+    : isGimme              ? `${overshoot} yds past flag — tap in conceded`
+    : isHoled              ? 'Holed out!'
     : overshoot>0          ? `${overshoot} yds past the flag — playing from other side`
     : `${remaining-total} yds remaining`
 
