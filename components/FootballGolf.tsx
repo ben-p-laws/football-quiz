@@ -439,17 +439,14 @@ export default function FootballGolf(){
       penaltyReason=`${overshoot} yds past the flag — out of bounds!`
     }
 
-    // Gimme: within 5 yards of pin (either short or slightly past) = auto-holed, costs the shot
-    const isHoled = !isOOB && Math.abs(total - remaining) <= 5
-
     // Bunker: ball lands in one of this hole's bunker zones (approach side only)
     const approachPosNow = currentHole.distance - remaining  // tee-relative position before shot
     const approachPosNew = approachPosNow + total             // where ball lands (tee-relative)
     const wasInBunker = !pastPin && currentHole.bunkers.some(b => approachPosNow >= b.start && approachPosNow <= b.end)
-    const isInBunker  = !isOOB && !isHoled && !pastPin && !wasInBunker &&
+    const isInBunker  = !isOOB && !pastPin && !wasInBunker &&
       currentHole.bunkers.some(b => approachPosNew >= b.start && approachPosNew <= b.end)
 
-    const result:ShotResult={ total,breakdown,isOOB,isHoled,isInBunker,penaltyReason }
+    const result:ShotResult={ total,breakdown,isOOB,isHoled:false,isInBunker,penaltyReason }
 
     // Animation: when pastPin ball flies BACK toward hole (decreasing absolute pos)
     const toPos = pastPin
@@ -482,11 +479,6 @@ export default function FootballGolf(){
       setBunkerQ(null)
       setQuestion(nextCat(remaining))
       resetInputs()
-      return
-    }
-
-    if(shotResult.isHoled){
-      finishHole(newStrokes)
       return
     }
 
@@ -955,29 +947,22 @@ function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onCl
 function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   result:ShotResult;club:ClubType;remaining:number;onContinue:()=>void;isBunker:boolean
 }){
-  const {total,breakdown,isOOB,isHoled,penaltyReason}=result
+  const {total,breakdown,isOOB,penaltyReason}=result
   const overshoot=total-remaining
 
-  // Gimme = holed but ball didn't go exactly in (within 5 yds either side)
-  const isGimme = isHoled && overshoot !== 0
   const headline = isOOB    ? '🚫 Out of Bounds'
     : isBunker              ? '⛺ In the Bunker!'
-    : isGimme               ? '🤝 Gimme!'
-    : isHoled               ? '⛳ In the Hole!'
     : overshoot>0           ? `${total} yds — past flag`
     : `${total} yds`
 
-  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':isHoled?'#22c55e':'white'
+  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':'white'
 
   const subtext = isOOB    ? `${penaltyReason} · +1 stroke penalty`
     : isBunker             ? `Ball in sand trap — answer a question to continue`
-    : isGimme && overshoot<0 ? `${remaining-total} yds short — tap in conceded`
-    : isGimme              ? `${overshoot} yds past flag — tap in conceded`
-    : isHoled              ? 'Holed out!'
     : overshoot>0          ? `${overshoot} yds past the flag — playing from other side`
     : `${remaining-total} yds remaining`
 
-  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':isHoled?'Next Hole →':'Next Shot →'
+  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':'Next Shot →'
 
   return(
     <div style={{background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
