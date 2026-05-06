@@ -159,16 +159,19 @@ const ALL_SHAPES: HoleShape[] = ['straight','dogleg-left','dogleg-right','slight
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
   const bunkers: Bunker[] = []
-  const TEE_BUFFER = 25   // no bunker within 25 yds of tee
-  const PIN_BUFFER = 15   // no bunker within 15 yds of pin
+  const PIN_BUFFER  = 15   // no bunker within 15 yds of pin
+  const HOLE_RANGE  = 100  // bunkers only within 100 yds of hole
+  const minStart    = distance - HOLE_RANGE
+  const maxStart    = distance - PIN_BUFFER - 10
+  if (minStart >= maxStart) return bunkers  // hole too short to place bunkers
   for (let i = 0; i < count; i++) {
-    for (let attempt = 0; attempt < 15; attempt++) {
-      const start = Math.round(randBetween(TEE_BUFFER, distance - PIN_BUFFER - 10) / 5) * 5
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const start = Math.round(randBetween(minStart, maxStart) / 5) * 5
       const end   = start + 10
       // No overlap with water (keep 10 yds clear)
       if (hazard && start < hazard.end + 10 && end > hazard.start - 10) continue
-      // No overlap with other bunkers (keep 15 yds clear)
-      if (bunkers.some(b => start < b.end + 15 && end > b.start - 15)) continue
+      // No overlap with other bunkers (keep 20 yds clear)
+      if (bunkers.some(b => start < b.end + 20 && end > b.start - 20)) continue
       bunkers.push({ start, end })
       break
     }
