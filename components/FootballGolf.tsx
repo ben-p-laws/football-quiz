@@ -42,21 +42,56 @@ const STAT_LABEL: Record<StatKey,string> = {
   appearances:'Appearances', yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
 }
 
-function pickCategory(remaining: number): Category {
-  // 51 pool: 30 nations + 20 clubs + 1 all-time, each equally likely
-  const pick = Math.floor(Math.random() * 51)
+function pickCategory(remaining: number, usedLabels: Set<string>, recentFilters: string[]): Category {
+  const recentSet = new Set(recentFilters)
   const stats = remaining > 150 ? LONG_STATS : SHORT_STATS
-  const key = stats[Math.floor(Math.random() * stats.length)]
 
+  // Up to 60 attempts to find a pool slot + stat combo that satisfies both constraints.
+  // Constraint 1: country/club not in recentFilters (last 10 shots).
+  // Constraint 2: exact label not already used this round.
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const pick = Math.floor(Math.random() * 51)
+
+    let natFilter: string | undefined
+    let clubFilter: string | undefined
+    let labelFn: (statLabel: string) => string
+
+    if (pick < 30) {
+      const { code, label } = TOP_NATIONS[pick]
+      if (recentSet.has(code)) continue
+      natFilter = code
+      labelFn = s => `${label} PL ${s}`
+    } else if (pick < 50) {
+      const clubName = TOP_CLUBS[pick - 30]
+      if (recentSet.has(clubName)) continue
+      clubFilter = clubName
+      labelFn = s => `PL ${s} for ${clubName}`
+    } else {
+      labelFn = s => `All-time PL ${s}`
+    }
+
+    // Try stats in shuffled order to find one whose full label hasn't been used yet.
+    const shuffled = [...stats].sort(() => Math.random() - 0.5)
+    for (const key of shuffled) {
+      const label = labelFn(STAT_LABEL[key])
+      if (!usedLabels.has(label)) {
+        return { key, label, ...(natFilter ? { natFilter } : {}), ...(clubFilter ? { clubFilter } : {}) }
+      }
+    }
+    // All stats for this pool entry exhausted — try a different pool slot.
+  }
+
+  // Fallback: ignore constraints (round is nearly exhausted).
+  const pick = Math.floor(Math.random() * 51)
+  const key = stats[Math.floor(Math.random() * stats.length)]
   if (pick < 30) {
     const { code, label } = TOP_NATIONS[pick]
     return { key, label: `${label} PL ${STAT_LABEL[key]}`, natFilter: code }
   } else if (pick < 50) {
-    const clubName = TOP_CLUBS[pick - 30]
-    return { key, label: `PL ${STAT_LABEL[key]} for ${clubName}`, clubFilter: clubName }
-  } else {
-    return { key, label: `All-time PL ${STAT_LABEL[key]}` }
+    const club = TOP_CLUBS[pick - 30]
+    return { key, label: `PL ${STAT_LABEL[key]} for ${club}`, clubFilter: club }
   }
+  return { key, label: `All-time PL ${STAT_LABEL[key]}` }
 }
 
 const BAD_LIE_SEASONS = ['2000-2001','2004-2005','2008-2009','2012-2013','2015-2016','2018-2019']
@@ -269,6 +304,8 @@ export default function FootballGolf(){
   const [strokes,setStrokes]             = useState(0)
   const [scores,setScores]               = useState<(number|null)[]>([])
   const [question,setQuestion]           = useState<Category|null>(null)
+  const usedLabels    = useRef<Set<string>>(new Set())
+  const recentFilters = useRef<string[]>([])
   const [playerInputs,setPlayerInputs]   = useState(['','',''])
   const [suggestions,setSuggestions]     = useState<string[][]>([[],[],[]])
   const [confirmedPlayers,setConfirmedPlayers] = useState<(string|null)[]>([null,null,null])
@@ -327,8 +364,18 @@ export default function FootballGolf(){
     ? (pastPin ? currentHole.distance + remaining : currentHole.distance - remaining)
     : 0
 
+  function nextPickedCategory(dist: number): Category {
+    const cat = pickCategory(dist, usedLabels.current, recentFilters.current)
+    usedLabels.current.add(cat.label)
+    const f = cat.natFilter || cat.clubFilter
+    if (f) recentFilters.current = [...recentFilters.current.slice(-9), f]
+    return cat
+  }
+
   function startGame(){
     const hs=generateHoles(numHoles)
+    usedLabels.current    = new Set()
+    recentFilters.current = []
     setHoles(hs)
     setScores(new Array(numHoles).fill(null))
     setHoleIdx(0)
@@ -336,8 +383,7 @@ export default function FootballGolf(){
     setStrokes(0)
     setShotResult(null)
     setPastPin(false)
-    const firstCat=pickCategory(hs[0].distance)
-    setQuestion(firstCat)
+    setQuestion(nextPickedCategory(hs[0].distance))
     resetInputs()
     setPhase('playing')
   }
@@ -495,7 +541,7 @@ export default function FootballGolf(){
     const keepBadLie = lieResult === 'bad' || (shotResult.isOOB && !!question?.seasonFilter)
     function nextCat(nextRemaining: number): Category {
       if (keepBadLie) return pickBadLieCategory(badLieSeason.current)
-      return pickCategory(nextRemaining)
+      return nextPickedCategory(nextRemaining)
     }
 
     if(shotResult.isOOB){
@@ -563,7 +609,7 @@ export default function FootballGolf(){
       setRemaining(dist)
       setPastPin(false)
       setStrokes(0)
-      setQuestion(pickCategory(dist))
+      setQuestion(nextPickedCategory(dist))
     }
   }
 
