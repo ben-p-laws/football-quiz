@@ -86,12 +86,6 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
-function generateHazard(distance: number): Hazard {
-  // Water hazard at 60–72% of hole distance, 20 yards wide, rounded to 5s
-  const start = Math.round(distance * (0.60 + Math.random() * 0.12) / 5) * 5
-  return { start, end: start + 20 }
-}
-
 function generateHoles(count: 3 | 6 | 9 | 18): Hole[] {
   const holes: Hole[] = []
   const groups = count / 3
@@ -100,7 +94,23 @@ function generateHoles(count: 3 | 6 | 9 | 18): Hole[] {
       const distance = par === 3 ? randBetween(160, 240)
         : par === 4 ? randBetween(320, 380)
         : randBetween(430, 500)
-      const hazard = par === 3 ? generateHazard(distance) : null
+
+      let hazard: Hazard | null = null
+      if (par === 3) {
+        // Water 60–72% of distance, 20 yds wide
+        const start = Math.round(distance * (0.60 + Math.random() * 0.12) / 5) * 5
+        hazard = { start, end: start + 20 }
+      } else if (par === 5) {
+        // Water 180–260 yds from tee, 30 yds wide
+        const start = randBetween(36, 46) * 5  // 180–230 in steps of 5
+        hazard = { start, end: start + 30 }
+      } else if (par === 4) {
+        // Water 40–100 yds from hole, 20 yds wide
+        const fromHole = Math.round(randBetween(40, 100) / 5) * 5
+        const start = distance - fromHole
+        hazard = { start, end: start + 20 }
+      }
+
       holes.push({ number: holes.length + 1, par, distance, hazard })
     }
   }
@@ -114,15 +124,15 @@ type ClubType = 'driver' | 'iron' | 'wedge' | 'putter'
 function getClub(remaining: number): ClubType {
   if (remaining > 260) return 'driver'
   if (remaining >= 120) return 'iron'
-  if (remaining >= 20)  return 'wedge'
+  if (remaining >= 50)  return 'wedge'
   return 'putter'
 }
 
 const CLUB_RANGES: Record<ClubType, [number, number]> = {
   driver: [250, 300],
   iron:   [120, 260],
-  wedge:  [20,  119],
-  putter: [0,   20],
+  wedge:  [50,  119],
+  putter: [0,   50],
 }
 
 const CLUB_LABEL: Record<ClubType, string> = {
