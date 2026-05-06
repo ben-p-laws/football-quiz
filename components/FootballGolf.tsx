@@ -150,90 +150,107 @@ const BUNKER_QUESTIONS: BunkerQ[] = [
 
 // ── Hole shapes ────────────────────────────────────────────────────────────────
 
-// bend-right: tee/green slightly left (x=42), fairway bows slightly right (x=58) at midpoint
-// bend-left:  tee/green slightly right (x=58), fairway bows slightly left (x=42) at midpoint
-// straight:   tee and green both centred (x=50)
-type HoleShape = 'straight'|'bend-left'|'bend-right'
 type Tee = 'Blue'|'White'|'Red'
+type Pt  = {x:number; y:number}
+// HolePath: 2pts = straight line, 3pts = quadratic bezier, 4pts = cubic bezier
+// Tee is always pts[0] (y≈148), green is always pts[last] (y≈17)
+type HolePath = {pts: Pt[]}
 
-// Quadratic bezier: tee→(control)→green
-// bend-right: P0=(42,148), ctrl=(74,82), P2=(42,17) — bows right
-// bend-left:  P0=(58,148), ctrl=(26,82), P2=(58,17) — bows left
-// straight:   simple vertical line through x=50
-function yardToSVG(yards: number, total: number, shape: HoleShape): { x:number; y:number } {
-  const t = Math.max(0, yards / total)
-  const mt = 1 - t
-  switch (shape) {
-    case 'bend-right':
-      return { x: mt*mt*42 + 2*mt*t*74 + t*t*42, y: mt*mt*148 + 2*mt*t*82 + t*t*17 }
-    case 'bend-left':
-      return { x: mt*mt*58 + 2*mt*t*26 + t*t*58, y: mt*mt*148 + 2*mt*t*82 + t*t*17 }
-    default:
-      return { x: 50, y: 148 - 131*t }
+function bezierAt(t:number, pts:Pt[]): Pt {
+  const u=1-t
+  if(pts.length===2) return {x:u*pts[0].x+t*pts[1].x, y:u*pts[0].y+t*pts[1].y}
+  if(pts.length===3) return {x:u*u*pts[0].x+2*u*t*pts[1].x+t*t*pts[2].x, y:u*u*pts[0].y+2*u*t*pts[1].y+t*t*pts[2].y}
+  return {
+    x:u*u*u*pts[0].x+3*u*u*t*pts[1].x+3*u*t*t*pts[2].x+t*t*t*pts[3].x,
+    y:u*u*u*pts[0].y+3*u*u*t*pts[1].y+3*u*t*t*pts[2].y+t*t*t*pts[3].y,
   }
 }
 
-function holeXY(shape: HoleShape): { x:number; y:number } {
-  return yardToSVG(1, 1, shape)
-}
-
-// Returns a unit normal vector perpendicular to the fairway at a given yard position.
-// lx/ly points left of travel direction, rx/ry points right.
-function fairwayNormal(yards: number, total: number, shape: HoleShape): { lx:number; ly:number; rx:number; ry:number } {
-  const t = Math.max(0.01, Math.min(0.99, yards / total))
-  let tx: number, ty: number
-  switch (shape) {
-    case 'bend-right':
-      tx = 2*(1-t)*(74-42) + 2*t*(42-74)
-      ty = 2*(1-t)*(82-148) + 2*t*(17-82)
-      break
-    case 'bend-left':
-      tx = 2*(1-t)*(26-58) + 2*t*(58-26)
-      ty = 2*(1-t)*(82-148) + 2*t*(17-82)
-      break
-    default:
-      tx = 0; ty = -131
+function bezierTangent(t:number, pts:Pt[]): Pt {
+  const u=1-t
+  if(pts.length===2) return {x:pts[1].x-pts[0].x, y:pts[1].y-pts[0].y}
+  if(pts.length===3) return {x:2*(u*(pts[1].x-pts[0].x)+t*(pts[2].x-pts[1].x)), y:2*(u*(pts[1].y-pts[0].y)+t*(pts[2].y-pts[1].y))}
+  return {
+    x:3*(u*u*(pts[1].x-pts[0].x)+2*u*t*(pts[2].x-pts[1].x)+t*t*(pts[3].x-pts[2].x)),
+    y:3*(u*u*(pts[1].y-pts[0].y)+2*u*t*(pts[2].y-pts[1].y)+t*t*(pts[3].y-pts[2].y)),
   }
-  const len = Math.sqrt(tx*tx + ty*ty)
-  const nx = -ty/len; const ny = tx/len
-  return { lx: nx, ly: ny, rx: -nx, ry: -ny }
 }
 
-// Rotation angle (°) for tee/green to align perpendicular to fairway at each end
-// Tangent at t=0 for bend-right: 2*(ctrl-P0)=(64,-132) → perpendicular angle ≈ 26°
-function shapeEndAngle(shape: HoleShape): number {
-  return shape === 'bend-right' ? 26 : shape === 'bend-left' ? -26 : 0
+function pathToD(pts:Pt[]): string {
+  if(pts.length===2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`
+  if(pts.length===3) return `M ${pts[0].x},${pts[0].y} Q ${pts[1].x},${pts[1].y} ${pts[2].x},${pts[2].y}`
+  return `M ${pts[0].x},${pts[0].y} C ${pts[1].x},${pts[1].y} ${pts[2].x},${pts[2].y} ${pts[3].x},${pts[3].y}`
+}
+
+function yardToSVG(yards:number, total:number, path:HolePath): Pt {
+  return bezierAt(Math.max(0, Math.min(1, yards/total)), path.pts)
+}
+
+function holeXY(path:HolePath): Pt {
+  return bezierAt(1, path.pts)
+}
+
+function fairwayNormal(yards:number, total:number, path:HolePath): {lx:number;ly:number;rx:number;ry:number} {
+  const t = Math.max(0.01, Math.min(0.99, yards/total))
+  const tang = bezierTangent(t, path.pts)
+  const len = Math.sqrt(tang.x*tang.x+tang.y*tang.y)
+  const nx=-tang.y/len, ny=tang.x/len
+  return {lx:nx, ly:ny, rx:-nx, ry:-ny}
+}
+
+function pathEndAngle(path:HolePath): number {
+  const tang = bezierTangent(0, path.pts)
+  return Math.atan2(tang.x, -tang.y) * 180 / Math.PI
 }
 
 // ── Course data ───────────────────────────────────────────────────────────────
 
 type Hazard  = { start:number; end:number }
 type Bunker  = { start:number; end:number }
-type Hole    = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; shape:HoleShape }
-type HoleDef = { number:number; par:number; yardages:Record<Tee,number>; shape:HoleShape; hazardFrac:{startFrac:number;endFrac:number}|null; bunkerCount:number }
+type Hole    = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; path:HolePath }
+type HoleDef = { number:number; par:number; yardages:Record<Tee,number>; path:HolePath; hazardFrac:{startFrac:number;endFrac:number}|null; bunkerCount:number }
 
 function randBetween(min:number,max:number){ return min+Math.floor(Math.random()*(max-min+1)) }
 
-// Hole shapes derived from aerial images; hazardFrac = water zone as fraction of hole distance
+// Paths derived from Pebble Beach aerial images.
+// Tee=pts[0] (y=148), green=pts[last] (y=17). 3pts=quadratic bezier, 4pts=cubic (S-curves).
 const PEBBLE_BEACH: HoleDef[] = [
-  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, shape:'bend-right', hazardFrac:{startFrac:0.72,endFrac:0.87}, bunkerCount:2 },
-  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
-  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, shape:'straight',   hazardFrac:null,                          bunkerCount:3 },
-  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
-  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, shape:'bend-right', hazardFrac:null,                          bunkerCount:2 },
-  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, shape:'bend-left',  hazardFrac:null,                          bunkerCount:2 },
-  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  shape:'straight',   hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
-  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, shape:'straight',   hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
-  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, shape:'bend-left',  hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
-  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, shape:'bend-right', hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
-  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, shape:'straight',   hazardFrac:{startFrac:0.68,endFrac:0.83}, bunkerCount:2 },
-  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
-  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, shape:'bend-right', hazardFrac:null,                          bunkerCount:3 },
-  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, shape:'straight',   hazardFrac:null,                          bunkerCount:3 },
-  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, shape:'bend-right', hazardFrac:null,                          bunkerCount:2 },
-  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, shape:'straight',   hazardFrac:null,                          bunkerCount:2 },
-  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, shape:'straight',   hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
-  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, shape:'bend-left',  hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
+  // H1  — strong banana arc along ocean (right)
+  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:42,y:148},{x:84,y:83},{x:42,y:17}]},                                          hazardFrac:{startFrac:0.72,endFrac:0.87}, bunkerCount:2 },
+  // H2  — straight inland, ocean cliff on one side
+  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
+  // H3  — straight, tree-lined
+  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:3 },
+  // H4  — straight, tree-lined
+  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
+  // H5  — mild bend right (par 3)
+  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:46,y:148},{x:68,y:83},{x:46,y:17}]},                                           hazardFrac:null,                          bunkerCount:2 },
+  // H6  — S-curve par 5: bends left then right
+  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:52,y:148},{x:26,y:112},{x:72,y:52},{x:52,y:17}]},                              hazardFrac:null,                          bunkerCount:2 },
+  // H7  — straight, compact par 3 over ocean cliffs
+  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
+  // H8  — straight along cliff, slight lean right
+  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:48,y:148},{x:60,y:83},{x:48,y:17}]},                                           hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
+  // H9  — strong bend left along the bay
+  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:58,y:148},{x:22,y:83},{x:58,y:17}]},                                           hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
+  // H10 — strong bend right (turn back inland)
+  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:42,y:148},{x:76,y:83},{x:42,y:17}]},                                           hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
+  // H11 — straight along cliff
+  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:{startFrac:0.68,endFrac:0.83}, bunkerCount:2 },
+  // H12 — straight par 3
+  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
+  // H13 — mild bend right
+  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:46,y:148},{x:68,y:83},{x:46,y:17}]},                                           hazardFrac:null,                          bunkerCount:3 },
+  // H14 — long straight par 5
+  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:3 },
+  // H15 — mild bend right
+  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:46,y:148},{x:66,y:83},{x:46,y:17}]},                                           hazardFrac:null,                          bunkerCount:2 },
+  // H16 — straight
+  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
+  // H17 — straight par 3 along cliff, lake in front of green
+  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
+  // H18 — iconic arc along Stillwater Cove (strong bend left, mirror of H1)
+  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:58,y:148},{x:18,y:83},{x:58,y:17}]},                                           hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
 ]
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
@@ -267,7 +284,7 @@ function buildCourse(tee: Tee, count: number): Hole[] {
       }
     }
     const bunkers = generateBunkers(distance, hazard, def.bunkerCount)
-    return { number: def.number, par: def.par, distance, hazard, bunkers, shape: def.shape }
+    return { number: def.number, par: def.par, distance, hazard, bunkers, path: def.path }
   })
 }
 
@@ -846,21 +863,17 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number
 }){
-  const {x:ballX,y:ballY} = yardToSVG(displayBallPos, hole.distance, hole.shape)
+  const {x:ballX,y:ballY} = yardToSVG(displayBallPos, hole.distance, hole.path)
   const finalBallX = ballX + arcOffset
-  const {x:swingX,y:swingY} = yardToSVG(preAnimBallPos, hole.distance, hole.shape)
+  const {x:swingX,y:swingY} = yardToSVG(preAnimBallPos, hole.distance, hole.path)
 
-  const yardToY=(d:number)=>{ const {y}=yardToSVG(d,hole.distance,hole.shape);return y }
-  const yardToX=(d:number)=>{ const {x}=yardToSVG(d,hole.distance,hole.shape);return x }
+  const yardToY=(d:number)=>{ const {y}=yardToSVG(d,hole.distance,hole.path);return y }
+  const yardToX=(d:number)=>{ const {x}=yardToSVG(d,hole.distance,hole.path);return x }
 
-  const teePos  = yardToSVG(0, hole.distance, hole.shape)
-  const holePos = holeXY(hole.shape)
-  const endAngle = shapeEndAngle(hole.shape)
-
-  // SVG path for the fairway centreline (bezier or straight)
-  const fairwayD = hole.shape === 'bend-right' ? 'M 42,148 Q 74,82 42,17'
-                 : hole.shape === 'bend-left'  ? 'M 58,148 Q 26,82 58,17'
-                 : 'M 50,148 L 50,17'
+  const teePos  = yardToSVG(0, hole.distance, hole.path)
+  const holePos = holeXY(hole.path)
+  const endAngle = pathEndAngle(hole.path)
+  const fairwayD = pathToD(hole.path.pts)
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column'}}>
@@ -906,7 +919,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Bunker sand traps */}
         {hole.bunkers.map((b,i)=>{
           const midYards = (b.start + b.end) / 2
-          const midPos   = yardToSVG(midYards, hole.distance, hole.shape)
+          const midPos   = yardToSVG(midYards, hole.distance, hole.path)
           const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
           return(
             <g key={i}>
