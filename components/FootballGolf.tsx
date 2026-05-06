@@ -344,6 +344,7 @@ type ShotResult={
   total:number; breakdown:{name:string;value:number}[]
   isOOB:boolean; isHoled:boolean; isGimme:boolean
   isInBunker:boolean; penaltyReason:string
+  waterDropRemaining?:number  // set when OOB was a water hazard; new remaining after drop
 }
 
 function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/['''`]/g,'').toLowerCase()}
@@ -546,14 +547,16 @@ export default function FootballGolf(){
     }
 
     // Water hazard — only on approach (not when going back from past the pin)
+    let waterDropRemaining: number|undefined
     if(!isOOB && !pastPin && currentHole.hazard){
-      // ballPos for approach = hole.distance - remaining (absolute tee-side position)
       const approachPos = currentHole.distance - remaining
       const newPos = approachPos + total
       const {start,end} = currentHole.hazard
       if(newPos>=start && newPos<=end){
         isOOB=true
-        penaltyReason=`Water hazard! Ball landed in lake (${start}–${end} yds from tee)`
+        const dropYards = start - 1  // just in front of the tee-side water edge
+        waterDropRemaining = currentHole.distance - dropYards
+        penaltyReason=`Water hazard! Drop at ${dropYards} yds from tee (+1 stroke)`
       }
     }
 
@@ -577,7 +580,7 @@ export default function FootballGolf(){
     const isInBunker  = !isOOB && !isHoled && !isGimme && !pastPin && !wasInBunker &&
       currentHole.bunkers.some(b => approachPosNew >= b.start && approachPosNew <= b.end)
 
-    const result:ShotResult={ total,breakdown,isOOB,isHoled,isGimme,isInBunker,penaltyReason }
+    const result:ShotResult={ total,breakdown,isOOB,isHoled,isGimme,isInBunker,penaltyReason,waterDropRemaining }
 
     // Animation: when pastPin ball flies BACK toward hole (decreasing absolute pos)
     const toPos = pastPin
@@ -605,10 +608,12 @@ export default function FootballGolf(){
     }
 
     if(shotResult.isOOB){
+      const newRemaining = shotResult.waterDropRemaining ?? remaining
+      setRemaining(newRemaining)
       setStrokes(newStrokes)
       setShotResult(null)
       setBunkerQ(null)
-      setQuestion(nextCat(remaining))
+      setQuestion(nextCat(newRemaining))
       resetInputs()
       return
     }
@@ -1077,26 +1082,28 @@ function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onCl
 function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   result:ShotResult;club:ClubType;remaining:number;onContinue:()=>void;isBunker:boolean
 }){
-  const {total,breakdown,isOOB,isHoled,isGimme,penaltyReason}=result
+  const {total,breakdown,isOOB,isHoled,isGimme,penaltyReason,waterDropRemaining}=result
   const overshoot=total-remaining
+  const isWater = isOOB && waterDropRemaining !== undefined
 
-  const headline = isOOB    ? '🚫 Out of Bounds'
-    : isBunker              ? '🏖️ In the Bunker!'
-    : isHoled               ? '⛳ In the Hole!'
-    : isGimme               ? '🤝 Gimme!'
-    : overshoot>0           ? `${total} yds — past flag`
+  const headline = isWater   ? '💧 Water Hazard!'
+    : isOOB                  ? '🚫 Out of Bounds'
+    : isBunker               ? '🏖️ In the Bunker!'
+    : isHoled                ? '⛳ In the Hole!'
+    : isGimme                ? '🤝 Gimme!'
+    : overshoot>0            ? `${total} yds — past flag`
     : `${total} yds`
 
-  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':(isHoled||isGimme)?'#22c55e':'white'
+  const headlineColor = (isOOB&&!isWater)?'#ef4444':isWater?'#60a5fa':isBunker?'#f59e0b':(isHoled||isGimme)?'#22c55e':'white'
 
-  const subtext = isOOB    ? `${penaltyReason} · +1 stroke penalty`
+  const subtext = isOOB    ? `${penaltyReason}`
     : isBunker             ? `Ball in sand trap — answer a question to continue`
     : isHoled              ? 'Perfect — holed out!'
     : isGimme              ? `${Math.abs(overshoot) || remaining - total} yds away — tap in conceded`
     : overshoot>0          ? `${overshoot} yds past the flag — playing from other side`
     : `${remaining-total} yds remaining`
 
-  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Finish Hole →':'Next Shot →'
+  const btnLabel = isWater?'Take Drop →':isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Finish Hole →':'Next Shot →'
 
   return(
     <div style={{background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
