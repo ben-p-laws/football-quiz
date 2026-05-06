@@ -456,7 +456,7 @@ export default function FootballGolf() {
         </div>
 
           {/* Right panel — 25% course view */}
-          <div style={{ flex: 1, borderLeft: '1px solid #1e2d4a', minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <CourseView hole={currentHole} ballPos={ballPos} strokes={strokes} />
           </div>
 
@@ -512,7 +512,7 @@ function CourseView({ hole, ballPos, strokes }: { hole: Hole; ballPos: number; s
   const yardToY = (d: number) => 148 - (d / hole.distance) * 134
 
   return (
-    <div style={{ background: '#0d1b2a', userSelect: 'none', height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ userSelect: 'none', height: '100%', display: 'flex', flexDirection: 'column' }}>
       <svg width="100%" viewBox="0 3 100 152" preserveAspectRatio="xMidYMid slice" style={{ display: 'block', flex: 1 }}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="0" x2="0" y2="1">
