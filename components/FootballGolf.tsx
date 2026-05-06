@@ -367,16 +367,16 @@ export default function FootballGolf() {
           {/* Left panel — 75% */}
           <div style={{ flex: 3, padding: '12px 14px 20px', display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
           {/* Club + distance row */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '2px 0 4px' }}>
-            <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>
-              Hole {currentHole.number}: Par {currentHole.par}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '2px 0 4px' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Hole {currentHole.number} · Par {currentHole.par}
             </div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
-              {ordinal(strokes + 1)} shot · {remaining} yards to pin
+            <div style={{ fontSize: 22, fontWeight: 900, color: 'white', lineHeight: 1.1 }}>
+              {remaining} yards to pin
             </div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.55)' }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
               {(() => {
-                const base = `Club: ${CLUB_LABEL[club]} · max ${clubMax} yds`
+                const base = `${CLUB_LABEL[club]} · max ${clubMax} yds`
                 if (!currentHole.hazard) return base
                 const distToStart = currentHole.hazard.start - ballPos
                 const distToEnd = currentHole.hazard.end - ballPos
