@@ -202,7 +202,7 @@ const CLUB_LABEL:Record<ClubType,string>={driver:'Driver',iron:'Iron',wedge:'Wed
 
 type ShotResult={
   total:number; breakdown:{name:string;value:number}[]
-  isOOB:boolean; isHoled:boolean; isGimme:boolean
+  isOOB:boolean; isHoled:boolean
   isInBunker:boolean; penaltyReason:string
 }
 
@@ -236,6 +236,8 @@ export default function FootballGolf(){
   const animFrameRef = useRef<number|null>(null)
   // Bunker MC question
   const [bunkerQ,setBunkerQ]             = useState<BunkerQ|null>(null)
+  // Whether ball has gone past the pin (overshoot 5-20 yds)
+  const [pastPin,setPastPin]             = useState(false)
 
   const normalisedNames = useRef<string[]>([])
 
@@ -263,8 +265,10 @@ export default function FootballGolf(){
   const vsPar           = totalStrokes-completedPar
   const vsParStr        = vsPar===0?'E':vsPar>0?`+${vsPar}`:String(vsPar)
 
-  // Current ball pos in yards from tee (for non-animating display)
-  const ballPos = currentHole ? currentHole.distance - remaining : 0
+  // Absolute ball pos in yards from tee — >distance means ball is past the pin
+  const ballPos = currentHole
+    ? (pastPin ? currentHole.distance + remaining : currentHole.distance - remaining)
+    : 0
 
   function startGame(){
     const hs=generateHoles(numHoles)
@@ -274,6 +278,7 @@ export default function FootballGolf(){
     setRemaining(hs[0].distance)
     setStrokes(0)
     setShotResult(null)
+    setPastPin(false)
     setUsedLabels([])
     const firstCat=pickCategory(hs[0].distance,[])
     setQuestion(firstCat)
@@ -368,38 +373,41 @@ export default function FootballGolf(){
       penaltyReason=`Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
     }
 
-    // Water hazard
-    if(!isOOB && currentHole.hazard){
-      const newPos=ballPos+total
-      const {start,end}=currentHole.hazard
+    // Water hazard — only on approach (not when going back from past the pin)
+    if(!isOOB && !pastPin && currentHole.hazard){
+      // ballPos for approach = hole.distance - remaining (absolute tee-side position)
+      const approachPos = currentHole.distance - remaining
+      const newPos = approachPos + total
+      const {start,end} = currentHole.hazard
       if(newPos>=start && newPos<=end){
         isOOB=true
         penaltyReason=`Water hazard! Ball landed in lake (${start}–${end} yds from tee)`
       }
     }
 
-    const overshoot=total-remaining          // positive = went past hole
+    const overshoot = total - remaining     // positive = went past hole (or back past on pastPin side)
 
-    // More than 20 yards past = OOB
+    // More than 20 yards past hole = OOB (only on approach; when pastPin, overshoot means going back past the original approach side)
     if(!isOOB && overshoot>20){
       isOOB=true
       penaltyReason=`${overshoot} yds past the flag — out of bounds!`
     }
 
-    const isHoled  = !isOOB && overshoot>=0 && overshoot<=5
-    const isGimme  = !isOOB && !isHoled && (remaining-total)>=0 && (remaining-total)<=5
+    const isHoled = !isOOB && overshoot>=0 && overshoot<=5
 
-    // Bunker: landing 20-40 yds short of hole (approach side only), only if not already in bunker
-    const wasInBunker = remaining>=20 && remaining<=40
-    const undershoot  = remaining-total
-    const isInBunker  = !isOOB && !isHoled && !isGimme && !wasInBunker && undershoot>=20 && undershoot<=40
+    // Bunker: landing 20-40 yds SHORT of hole (approach side only), only if not already in bunker
+    const wasInBunker = !pastPin && remaining>=20 && remaining<=40
+    const undershoot  = remaining - total   // positive = still short of hole
+    const isInBunker  = !isOOB && !isHoled && !pastPin && !wasInBunker && undershoot>=20 && undershoot<=40
 
-    const result:ShotResult={ total,breakdown,isOOB,isHoled,isGimme,isInBunker,penaltyReason }
+    const result:ShotResult={ total,breakdown,isOOB,isHoled,isInBunker,penaltyReason }
 
-    // Animate to landing position (clamp to hole+20 for OOB-overshoot, otherwise real landing)
-    const toPos = isOOB && penaltyReason.includes('past')
-      ? currentHole.distance + 20           // show ball flying past
-      : Math.min(ballPos+total, currentHole.distance+20)
+    // Animation: when pastPin ball flies BACK toward hole (decreasing absolute pos)
+    const toPos = pastPin
+      ? (isOOB ? ballPos - clubMax : ballPos - total)   // going back
+      : (isOOB && penaltyReason.includes('past')
+          ? currentHole.distance + Math.min(overshoot, 35)
+          : Math.min(ballPos + total, currentHole.distance + 20))
 
     animateShot(ballPos, toPos, result)
   }
@@ -413,7 +421,7 @@ export default function FootballGolf(){
     const newUsed=newLabel ? [...usedLabels, newLabel] : usedLabels
 
     if(shotResult.isOOB){
-      // Ball returns to same spot
+      // Ball returns to same spot — pastPin unchanged (stays wherever it was before shot)
       setStrokes(newStrokes)
       setShotResult(null)
       setBunkerQ(null)
@@ -424,19 +432,29 @@ export default function FootballGolf(){
       return
     }
 
-    if(shotResult.isHoled||shotResult.isGimme){
+    if(shotResult.isHoled){
       setUsedLabels(newUsed)
       finishHole(newStrokes)
       return
     }
 
-    // Normal advance — overshoot up to 20 = ball past flag
-    const undershoot=remaining-shotResult.total
-    const newRemaining=undershoot>=0 ? undershoot : -undershoot
+    // Normal advance — overshoot 5-20 = ball goes past flag (flip pastPin)
+    const overshoot = shotResult.total - remaining  // positive = past hole
+    let newRemaining: number
+    let newPastPin: boolean
 
-    if(newRemaining<=5){ setUsedLabels(newUsed);finishHole(newStrokes);return }
+    if(overshoot > 0){
+      // Ball went past hole (overshoot 5-20, since >20 is OOB)
+      newRemaining = overshoot
+      newPastPin   = !pastPin   // flip: was approaching → now past; was past → now approaching
+    } else {
+      // Ball stopped short (undershoot)
+      newRemaining = remaining - shotResult.total
+      newPastPin   = pastPin    // stays on same side
+    }
 
     setRemaining(newRemaining)
+    setPastPin(newPastPin)
     setStrokes(newStrokes)
     setShotResult(null)
     setBunkerQ(null)
@@ -473,6 +491,7 @@ export default function FootballGolf(){
       setHoleIdx(nextIdx)
       const dist=holes[nextIdx].distance
       setRemaining(dist)
+      setPastPin(false)
       setStrokes(0)
       // Reset used labels per hole? No — keep them across the whole round for true no-repeat
       const cat=pickCategory(dist,usedLabels)
@@ -522,22 +541,29 @@ export default function FootballGolf(){
               <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
                 {(()=>{
                   const base=`${CLUB_LABEL[club]} · max ${clubMax} yds`
-                  // Bunker indicator
-                  const inBunker=remaining>=20&&remaining<=40
-                  if(inBunker) return <>{base}<span style={{color:'#f59e0b'}}> · ⛺ In bunker zone</span></>
+                  // Bunker indicator (only on approach side)
+                  const inBunker=!pastPin&&remaining>=20&&remaining<=40
+                  if(inBunker) return <>{base}<span style={{color:'#f59e0b'}}> · ⛺ In bunker</span></>
                   if(!currentHole.hazard) return base
-                  const distToStart=currentHole.hazard.start-ballPos
-                  const distToEnd=currentHole.hazard.end-ballPos
+                  const approachPos = pastPin ? 0 : currentHole.distance - remaining
+                  const distToStart=currentHole.hazard.start-approachPos
+                  const distToEnd=currentHole.hazard.end-approachPos
                   if(distToEnd<=0) return base
                   const hazardText=distToStart<=0?' · 💧 In water zone':` · 💧 Water: ${distToStart}–${distToEnd} yds ahead`
                   const hazardColor=distToStart<=0?'#f87171':'#60a5fa'
                   return <>{base}<span style={{color:hazardColor}}>{hazardText}</span></>
                 })()}
               </div>
-              {/* Bunker warning */}
-              {remaining>20&&remaining<=50&&(
+              {/* Bunker warning — only on approach */}
+              {!pastPin&&remaining>20&&remaining<=50&&(
                 <div style={{fontSize:11,color:'#f59e0b',fontWeight:700}}>
-                  ⛺ Bunker zone: 20–40 yards from pin
+                  ⛺ Bunker: 20–40 yards from pin
+                </div>
+              )}
+              {/* Past-pin indicator */}
+              {pastPin&&(
+                <div style={{fontSize:11,color:'#f97316',fontWeight:700}}>
+                  📍 Ball is {remaining} yds past the flag
                 </div>
               )}
             </div>
@@ -665,9 +691,11 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
       case 'dogleg-right':
         return 'M 62,12 L 86,12 L 86,80 L 62,80 L 62,152 L 38,152 L 38,80 L 62,80 Z'
       case 'slight-left':
-        return 'M 42,12 L 62,12 L 58,152 L 38,152 Z'
+        // Bottom center=50 (x=38-62), top center=42 (x=30-54)
+        return 'M 30,12 L 54,12 L 62,152 L 38,152 Z'
       case 'slight-right':
-        return 'M 38,12 L 58,12 L 62,152 L 42,152 Z'
+        // Bottom center=50 (x=38-62), top center=58 (x=46-70)
+        return 'M 46,12 L 70,12 L 62,152 L 38,152 Z'
       default: // straight
         return null
     }
@@ -844,25 +872,24 @@ function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onCl
 function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   result:ShotResult;club:ClubType;remaining:number;onContinue:()=>void;isBunker:boolean
 }){
-  const {total,breakdown,isOOB,isHoled,isGimme,penaltyReason}=result
+  const {total,breakdown,isOOB,isHoled,penaltyReason}=result
   const overshoot=total-remaining
 
-  const headline = isOOB          ? '🚫 Out of Bounds'
-    : isBunker                    ? '⛺ In the Bunker!'
-    : isHoled||isGimme            ? '⛳ In the Hole!'
-    : overshoot>0                 ? `${total} yds — past flag`
+  const headline = isOOB    ? '🚫 Out of Bounds'
+    : isBunker              ? '⛺ In the Bunker!'
+    : isHoled               ? '⛳ In the Hole!'
+    : overshoot>0           ? `${total} yds — past flag`
     : `${total} yds`
 
-  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':(isHoled||isGimme)?'#22c55e':'white'
+  const headlineColor = isOOB?'#ef4444':isBunker?'#f59e0b':isHoled?'#22c55e':'white'
 
-  const subtext = isOOB          ? `${penaltyReason} · +1 stroke penalty`
-    : isBunker                   ? `Ball in sand trap — answer a question to continue`
-    : isGimme                    ? `${remaining-total} yds short — auto gimme`
-    : isHoled                    ? (overshoot===0?'Holed out':`${overshoot} yds past flag`)
-    : overshoot>0                ? `${overshoot} yds past the flag — playing from other side`
+  const subtext = isOOB    ? `${penaltyReason} · +1 stroke penalty`
+    : isBunker             ? `Ball in sand trap — answer a question to continue`
+    : isHoled              ? (overshoot===0?'Holed out':`${overshoot} yds past flag`)
+    : overshoot>0          ? `${overshoot} yds past the flag — playing from other side`
     : `${remaining-total} yds remaining`
 
-  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Next Hole →':'Next Shot →'
+  const btnLabel = isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':isHoled?'Next Hole →':'Next Shot →'
 
   return(
     <div style={{background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
