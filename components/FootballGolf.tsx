@@ -144,7 +144,8 @@ function holeXY(shape: HoleShape): { x:number; y:number } {
 // ── Hole generation ────────────────────────────────────────────────────────────
 
 type Hazard = { start:number; end:number }
-type Hole   = { number:number; par:number; distance:number; hazard:Hazard|null; shape:HoleShape }
+type Bunker = { start:number; end:number }
+type Hole   = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; shape:HoleShape }
 
 function randBetween(min:number,max:number){ return min+Math.floor(Math.random()*(max-min+1)) }
 
@@ -156,10 +157,28 @@ function shuffle<T>(arr:T[]):T[]{
 
 const ALL_SHAPES: HoleShape[] = ['straight','dogleg-left','dogleg-right','slight-left','slight-right']
 
+function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
+  const bunkers: Bunker[] = []
+  const TEE_BUFFER = 25   // no bunker within 25 yds of tee
+  const PIN_BUFFER = 15   // no bunker within 15 yds of pin
+  for (let i = 0; i < count; i++) {
+    for (let attempt = 0; attempt < 15; attempt++) {
+      const start = Math.round(randBetween(TEE_BUFFER, distance - PIN_BUFFER - 10) / 5) * 5
+      const end   = start + 10
+      // No overlap with water (keep 10 yds clear)
+      if (hazard && start < hazard.end + 10 && end > hazard.start - 10) continue
+      // No overlap with other bunkers (keep 15 yds clear)
+      if (bunkers.some(b => start < b.end + 15 && end > b.start - 15)) continue
+      bunkers.push({ start, end })
+      break
+    }
+  }
+  return bunkers
+}
+
 function generateHoles(count:3|6|9|18):Hole[]{
   const holes:Hole[]=[]
   const groups=count/3
-  // Build a shuffled shape pool so no two consecutive holes share a shape
   const shapePool = shuffle([...ALL_SHAPES,...ALL_SHAPES,...ALL_SHAPES,...ALL_SHAPES])
 
   for(let g=0;g<groups;g++){
@@ -177,8 +196,11 @@ function generateHoles(count:3|6|9|18):Hole[]{
         const start=distance-fromHole
         hazard={start,end:start+20}
       }
+      // 1 bunker for par 3, 1-2 for par 4/5
+      const bunkerCount = par===3 ? 1 : (Math.random()<0.5 ? 1 : 2)
+      const bunkers = generateBunkers(distance, hazard, bunkerCount)
       const shape=shapePool[holes.length%shapePool.length]
-      holes.push({number:holes.length+1,par,distance,hazard,shape})
+      holes.push({number:holes.length+1,par,distance,hazard,bunkers,shape})
     }
   }
   return holes
@@ -315,7 +337,7 @@ export default function FootballGolf(){
     setAnimBallPos(fromPos)
     setArcOffset(0)
     const startTime = performance.now()
-    const duration  = 700
+    const duration  = 1100
     const tick = (now:number)=>{
       const t     = Math.min(1,(now-startTime)/duration)
       const eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2
@@ -395,10 +417,12 @@ export default function FootballGolf(){
 
     const isHoled = !isOOB && overshoot>=0 && overshoot<=5
 
-    // Bunker: landing 20-40 yds SHORT of hole (approach side only), only if not already in bunker
-    const wasInBunker = !pastPin && remaining>=20 && remaining<=40
-    const undershoot  = remaining - total   // positive = still short of hole
-    const isInBunker  = !isOOB && !isHoled && !pastPin && !wasInBunker && undershoot>=20 && undershoot<=40
+    // Bunker: ball lands in one of this hole's bunker zones (approach side only)
+    const approachPosNow = currentHole.distance - remaining  // tee-relative position before shot
+    const approachPosNew = approachPosNow + total             // where ball lands (tee-relative)
+    const wasInBunker = !pastPin && currentHole.bunkers.some(b => approachPosNow >= b.start && approachPosNow <= b.end)
+    const isInBunker  = !isOOB && !isHoled && !pastPin && !wasInBunker &&
+      currentHole.bunkers.some(b => approachPosNew >= b.start && approachPosNew <= b.end)
 
     const result:ShotResult={ total,breakdown,isOOB,isHoled,isInBunker,penaltyReason }
 
@@ -506,8 +530,8 @@ export default function FootballGolf(){
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={()=>setPhase('setup')} /></>
   if(!currentHole) return null
 
-  // Display ball pos: animated when flying, real when static
-  const displayPos = isAnimating ? animBallPos : ballPos
+  // Keep ball at landing spot while result/bunker panel is open; only reset to actual pos after advancing
+  const displayPos = (isAnimating || !!shotResult || !!bunkerQ) ? animBallPos : ballPos
 
   return (
     <div style={{minHeight:'100dvh',background:'#0a0f1e',fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
@@ -541,29 +565,40 @@ export default function FootballGolf(){
               <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
                 {(()=>{
                   const base=`${CLUB_LABEL[club]} · max ${clubMax} yds`
-                  // Bunker indicator (only on approach side)
-                  const inBunker=!pastPin&&remaining>=20&&remaining<=40
+                  const approachPos = pastPin ? -1 : currentHole.distance - remaining  // -1 = disable water check when past pin
+                  // In a bunker
+                  const inBunker = !pastPin && currentHole.bunkers.some(b => approachPos >= b.start && approachPos <= b.end)
                   if(inBunker) return <>{base}<span style={{color:'#f59e0b'}}> · ⛺ In bunker</span></>
-                  if(!currentHole.hazard) return base
-                  const approachPos = pastPin ? 0 : currentHole.distance - remaining
-                  const distToStart=currentHole.hazard.start-approachPos
-                  const distToEnd=currentHole.hazard.end-approachPos
-                  if(distToEnd<=0) return base
-                  const hazardText=distToStart<=0?' · 💧 In water zone':` · 💧 Water: ${distToStart}–${distToEnd} yds ahead`
-                  const hazardColor=distToStart<=0?'#f87171':'#60a5fa'
-                  return <>{base}<span style={{color:hazardColor}}>{hazardText}</span></>
+                  // Upcoming water
+                  if(currentHole.hazard && !pastPin){
+                    const distToStart=currentHole.hazard.start-approachPos
+                    const distToEnd=currentHole.hazard.end-approachPos
+                    if(distToEnd>0){
+                      const hazardText=distToStart<=0?' · 💧 In water':` · 💧 Water: ${distToStart}–${distToEnd} yds`
+                      const hazardColor=distToStart<=0?'#f87171':'#60a5fa'
+                      return <>{base}<span style={{color:hazardColor}}>{hazardText}</span></>
+                    }
+                  }
+                  return base
                 })()}
               </div>
-              {/* Bunker warning — only on approach */}
-              {!pastPin&&remaining>20&&remaining<=50&&(
-                <div style={{fontSize:11,color:'#f59e0b',fontWeight:700}}>
-                  ⛺ Bunker: 20–40 yards from pin
-                </div>
-              )}
+              {/* Upcoming bunker distances (approach only, not past pin, not already in one) */}
+              {!pastPin && currentHole.bunkers.map((b,i)=>{
+                const approachPos = currentHole.distance - remaining
+                const distToStart = b.start - approachPos
+                const distToEnd   = b.end   - approachPos
+                // Only show if bunker is ahead (not yet passed) and ball not currently in it
+                if(distToEnd <= 0 || approachPos >= b.start) return null
+                return(
+                  <div key={i} style={{fontSize:11,color:'#f59e0b',fontWeight:700}}>
+                    ⛺ Bunker: {distToStart}–{distToEnd} yds ahead
+                  </div>
+                )
+              })}
               {/* Past-pin indicator */}
               {pastPin&&(
                 <div style={{fontSize:11,color:'#f97316',fontWeight:700}}>
-                  📍 Ball is {remaining} yds past the flag
+                  📍 {remaining} yds past the flag
                 </div>
               )}
             </div>
@@ -701,10 +736,7 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
     }
   })()
 
-  // Bunker zone: 20-40 yards from hole (approach side)
-  const bunkerNearY  = yardToY(hole.distance - 20) // 20 yds short
-  const bunkerFarY   = yardToY(hole.distance - 40) // 40 yds short
-  const bunkerCenterX= yardToX(hole.distance - 30)
+  // Bunker SVG positions — computed from actual bunker yard positions
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column'}}>
@@ -757,9 +789,19 @@ function CourseView({hole,displayBallPos,arcOffset,isAnimating,strokes}:{
           )
         })()}
 
-        {/* Bunker sand traps near green */}
-        <ellipse cx={bunkerCenterX-9} cy={(bunkerNearY+bunkerFarY)/2+2} rx={6} ry={4} fill="url(#sand)" opacity={0.75}/>
-        <ellipse cx={bunkerCenterX+9} cy={(bunkerNearY+bunkerFarY)/2-1} rx={5} ry={3.5} fill="url(#sand)" opacity={0.7}/>
+        {/* Bunker sand traps at their actual positions */}
+        {hole.bunkers.map((b,i)=>{
+          const midYards = (b.start + b.end) / 2
+          const midPos   = yardToSVG(midYards, hole.distance, hole.shape)
+          // Alternate left/right of fairway centre
+          const sideX = i % 2 === 0 ? midPos.x - 8 : midPos.x + 8
+          return(
+            <g key={i}>
+              <ellipse cx={sideX}   cy={midPos.y}   rx={6} ry={3.5} fill="url(#sand)" opacity={0.78}/>
+              <ellipse cx={sideX+4} cy={midPos.y+2} rx={4} ry={2.5} fill="url(#sand)" opacity={0.55}/>
+            </g>
+          )
+        })}
 
         {/* Tee box */}
         <rect x={teePos.x-8} y={teePos.y-1} width={16} height={5} rx={2} fill="#4ade80" opacity={0.9}/>
