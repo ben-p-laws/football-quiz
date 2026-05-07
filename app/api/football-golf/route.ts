@@ -194,7 +194,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, top3Cache }
   },
-  ['football-golf-meta'],
+  ['football-golf-meta-v2'],
   { revalidate: 86400 }
 )
 
