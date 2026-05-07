@@ -824,14 +824,16 @@ export default function FootballGolf(){
               <div style={{height:16}}/>
               <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
             </div>
-            <CourseView
-              hole={currentHole}
-              displayBallPos={displayPos}
-              preAnimBallPos={preAnimBallPos}
-              arcOffset={arcOffset}
-              isAnimating={isAnimating}
-              strokes={strokes}
-            />
+            <div style={{flex:1,minHeight:0,marginTop:22}}>
+              <CourseView
+                hole={currentHole}
+                displayBallPos={displayPos}
+                preAnimBallPos={preAnimBallPos}
+                arcOffset={arcOffset}
+                isAnimating={isAnimating}
+                strokes={strokes}
+              />
+            </div>
           </div>
 
         </div>
