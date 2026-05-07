@@ -437,34 +437,13 @@ export default function FootballGolf(){
   },[])
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/football-golf?meta=1').then(r => r.json()),
-      fetch('/api/football-golf?data=1').then(r => r.json()),
-    ]).then(([meta, playerData]: [{ clubs: string[]; nations: string[] }, { players: Record<string, PlayerDataLocal> }]) => {
-      metaNations.current = meta.nations.map(code => ({ code, label: NAT_LABELS[code] ?? code }))
-      metaClubs.current = meta.clubs
-      // pre-compute top3 sums for all stat × filter combinations
-      const cache: Record<string, number> = {}
-      const allStats: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets']
-      const players = Object.values(playerData.players)
-      for (const key of allStats) {
-        // all-time
-        const allVals = players.map(p => statValue(p, key)).sort((a, b) => b - a)
-        cache[`${key}::`] = (allVals[0]||0) + (allVals[1]||0) + (allVals[2]||0)
-        // by nation
-        for (const { code } of metaNations.current) {
-          const vals = players.filter(p => p.nationality === code).map(p => statValue(p, key)).sort((a, b) => b - a)
-          cache[`${key}:${code}:`] = (vals[0]||0) + (vals[1]||0) + (vals[2]||0)
-        }
-        // by club
-        for (const club of metaClubs.current) {
-          const vals = players.map(p => statValue(p, key, club)).filter(v => v > 0).sort((a, b) => b - a)
-          cache[`${key}::${club}`] = (vals[0]||0) + (vals[1]||0) + (vals[2]||0)
-        }
-      }
-      top3Cache.current = cache
-      setMetaReady(true)
-    }).catch(console.error)
+    fetch('/api/football-golf?meta=1').then(r => r.json())
+      .then((meta: { clubs: string[]; nations: string[]; top3Cache: Record<string, number> }) => {
+        metaNations.current = meta.nations.map(code => ({ code, label: NAT_LABELS[code] ?? code }))
+        metaClubs.current = meta.clubs
+        top3Cache.current = meta.top3Cache
+        setMetaReady(true)
+      }).catch(console.error)
   }, [])
 
   useEffect(()=>{

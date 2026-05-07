@@ -106,8 +106,31 @@ const buildCache = unstable_cache(
   { revalidate: 86400 }
 )
 
+const ALL_STAT_KEYS = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets'] as const
+type StatKey = typeof ALL_STAT_KEYS[number]
+
+function pStatValue(p: PlayerData, key: StatKey, cf?: string): number {
+  const g  = cf ? (p.clubGames[cf]       || 0) : p.games
+  const go = cf ? (p.clubGoals[cf]       || 0) : p.goals
+  const a  = cf ? (p.clubAssists[cf]     || 0) : p.assists
+  if (key === 'goals')            return go
+  if (key === 'assists')          return a
+  if (key === 'goals_assists')    return go + a
+  if (key === 'appearances')      return g
+  if (key === 'apps_minus_goals') return Math.max(0, g - go)
+  if (key === 'yellow_cards')     return cf ? (p.clubYellowCards[cf] || 0) : p.yellow_cards
+  if (key === 'clean_sheets')     return cf ? (p.clubCleanSheets[cf] || 0) : p.clean_sheets
+  return 0
+}
+
+function top3(vals: number[]): number {
+  vals.sort((a, b) => b - a)
+  return (vals[0] || 0) + (vals[1] || 0) + (vals[2] || 0)
+}
+
 const buildMetaCache = unstable_cache(
   async () => {
+    // Lightweight query for club-season counts and nation totals
     const columns = 'year_id,games,nationality,teams_played_for'
     const all: any[] = []
     let offset = 0
@@ -122,23 +145,15 @@ const buildMetaCache = unstable_cache(
       offset += 1000
     }
 
-    // club → { seasons: Set<string>, apps: number }
     const clubMap: Record<string, { seasons: Set<string>; apps: number }> = {}
-    // nat code → total apps
     const natApps: Record<string, number> = {}
 
     for (const row of all) {
       const g = Number(row.games) || 0
-
-      // nationality
       if (row.nationality) {
         const nat = fmtNat(row.nationality as string)
-        if (/^[A-Z]{2,4}$/.test(nat)) {
-          natApps[nat] = (natApps[nat] || 0) + g
-        }
+        if (/^[A-Z]{2,4}$/.test(nat)) natApps[nat] = (natApps[nat] || 0) + g
       }
-
-      // clubs — only single-team rows
       const teams = String(row.teams_played_for || '')
         .split(',').map((t: string) => normTeam(t.trim())).filter((t: string) => t && t !== '2 Teams')
       if (teams.length === 1) {
@@ -149,19 +164,35 @@ const buildMetaCache = unstable_cache(
       }
     }
 
-    // clubs with >3 distinct seasons, sorted by total apps descending
     const clubs = Object.entries(clubMap)
       .filter(([, v]) => v.seasons.size > 3)
       .sort((a, b) => b[1].apps - a[1].apps)
       .map(([name]) => name)
 
-    // top 60 nations by total appearances, sorted descending
     const nations = Object.entries(natApps)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 60)
       .map(([code]) => code)
 
-    return { clubs, nations }
+    // Pre-compute top-3 sums server-side using already-cached player data
+    const { players } = await buildCache()
+    const playerList = Object.values(players)
+    const top3Cache: Record<string, number> = {}
+
+    for (const key of ALL_STAT_KEYS) {
+      // all-time
+      top3Cache[`${key}::`] = top3(playerList.map(p => pStatValue(p, key)))
+      // by nation
+      for (const code of nations) {
+        top3Cache[`${key}:${code}:`] = top3(playerList.filter(p => p.nationality === code).map(p => pStatValue(p, key)))
+      }
+      // by club
+      for (const club of clubs) {
+        top3Cache[`${key}::${club}`] = top3(playerList.map(p => pStatValue(p, key, club)).filter(v => v > 0))
+      }
+    }
+
+    return { clubs, nations, top3Cache }
   },
   ['football-golf-meta'],
   { revalidate: 86400 }
