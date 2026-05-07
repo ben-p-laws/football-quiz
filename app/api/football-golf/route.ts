@@ -130,8 +130,8 @@ function top3(vals: number[]): number {
 
 const buildMetaCache = unstable_cache(
   async () => {
-    // Lightweight query for club-season counts and nation totals
-    const columns = 'year_id,games,nationality,teams_played_for'
+    // Single fetch with all columns needed — avoids calling buildCache() separately
+    const columns = 'name_display,year_id,games,goals,assists,gk_clean_sheets,cards_yellow,nationality,teams_played_for'
     const all: any[] = []
     let offset = 0
     while (true) {
@@ -147,13 +147,38 @@ const buildMetaCache = unstable_cache(
 
     const clubMap: Record<string, { seasons: Set<string>; apps: number }> = {}
     const natApps: Record<string, number> = {}
+    // player aggregates keyed by name
+    const byName: Record<string, PlayerData> = {}
+    const natFreq: Record<string, Record<string, number>> = {}
 
     for (const row of all) {
-      const g = Number(row.games) || 0
+      const g   = Number(row.games)           || 0
+      const go  = Number(row.goals)           || 0
+      const a   = Number(row.assists)         || 0
+      const yc  = Number(row.cards_yellow)    || 0
+      const cs  = Number(row.gk_clean_sheets) || 0
+      const name = row.name_display as string
+
+      // nation totals (for ranking)
       if (row.nationality) {
         const nat = fmtNat(row.nationality as string)
         if (/^[A-Z]{2,4}$/.test(nat)) natApps[nat] = (natApps[nat] || 0) + g
       }
+
+      // player aggregate
+      if (!byName[name]) {
+        byName[name] = { goals:0,assists:0,games:0,yellow_cards:0,clean_sheets:0,nationality:'',
+          clubGoals:{},clubAssists:{},clubGames:{},clubYellowCards:{},clubCleanSheets:{} }
+        natFreq[name] = {}
+      }
+      const p = byName[name]
+      p.goals += go; p.assists += a; p.games += g; p.yellow_cards += yc; p.clean_sheets += cs
+      if (row.nationality) {
+        const nat = fmtNat(row.nationality as string)
+        natFreq[name][nat] = (natFreq[name][nat] || 0) + 1
+      }
+
+      // club aggregates + season tracking
       const teams = String(row.teams_played_for || '')
         .split(',').map((t: string) => normTeam(t.trim())).filter((t: string) => t && t !== '2 Teams')
       if (teams.length === 1) {
@@ -161,7 +186,17 @@ const buildMetaCache = unstable_cache(
         if (!clubMap[team]) clubMap[team] = { seasons: new Set(), apps: 0 }
         if (row.year_id) clubMap[team].seasons.add(String(row.year_id))
         clubMap[team].apps += g
+        p.clubGoals[team]       = (p.clubGoals[team]       || 0) + go
+        p.clubAssists[team]     = (p.clubAssists[team]     || 0) + a
+        p.clubGames[team]       = (p.clubGames[team]       || 0) + g
+        p.clubYellowCards[team] = (p.clubYellowCards[team] || 0) + yc
+        p.clubCleanSheets[team] = (p.clubCleanSheets[team] || 0) + cs
       }
+    }
+
+    // resolve nationality per player
+    for (const [name, freq] of Object.entries(natFreq)) {
+      byName[name].nationality = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
     }
 
     const clubs = Object.entries(clubMap)
@@ -174,19 +209,14 @@ const buildMetaCache = unstable_cache(
       .slice(0, 60)
       .map(([code]) => code)
 
-    // Pre-compute top-3 sums server-side using already-cached player data
-    const { players } = await buildCache()
-    const playerList = Object.values(players)
+    const playerList = Object.values(byName)
     const top3Cache: Record<string, number> = {}
 
     for (const key of ALL_STAT_KEYS) {
-      // all-time
       top3Cache[`${key}::`] = top3(playerList.map(p => pStatValue(p, key)))
-      // by nation
       for (const code of nations) {
         top3Cache[`${key}:${code}:`] = top3(playerList.filter(p => p.nationality === code).map(p => pStatValue(p, key)))
       }
-      // by club
       for (const club of clubs) {
         top3Cache[`${key}::${club}`] = top3(playerList.map(p => pStatValue(p, key, club)).filter(v => v > 0))
       }
@@ -194,7 +224,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, top3Cache }
   },
-  ['football-golf-meta-v2'],
+  ['football-golf-meta-v3'],
   { revalidate: 86400 }
 )
 
