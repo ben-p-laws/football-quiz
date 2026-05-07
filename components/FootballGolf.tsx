@@ -32,7 +32,7 @@ const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','appearances',
 
 const STAT_LABEL: Record<StatKey,string> = {
   goals:'Goals', assists:'Assists', goals_assists:'Goals + Assists',
-  appearances:'Appearances', apps_minus_goals:'Apps − Goals',
+  appearances:'Appearances', apps_minus_goals:'Appearances − Goals',
   yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
 }
 
