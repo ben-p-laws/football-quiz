@@ -818,7 +818,7 @@ export default function FootballGolf(){
           </div>
 
           {/* Right panel — course */}
-          <div style={{flex:1,minWidth:0,minHeight:300,display:'flex',flexDirection:'column'}}>
+          <div style={{flex:1,minWidth:0,minHeight:300,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
             <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
@@ -933,8 +933,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const fairwayD = pathToD(hole.path.pts)
 
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:12,overflow:'hidden'}}>
-      <svg width="100%" viewBox="0 -20 100 175" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1}}>
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden'}}>
+      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -947,7 +947,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         </defs>
 
         {/* Background rough */}
-        <rect x={0} y={-20} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>
+        <rect x={0} y={-10} width={100} height={165} fill="#0f2e0f" opacity={0.6}/>
 
 {/* Fairway — smooth bezier stroke */}
         <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>
