@@ -711,11 +711,11 @@ export default function FootballGolf(){
       `}</style>
       <NavBar />
       <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
-        <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
         <div style={{display:'flex',alignItems:'stretch'}}>
 
           {/* Left panel */}
           <div style={{flex:2,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
+            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
@@ -818,7 +818,8 @@ export default function FootballGolf(){
           </div>
 
           {/* Right panel — course */}
-          <div style={{flex:1,minWidth:0,minHeight:300}}>
+          <div style={{flex:1,minWidth:0,minHeight:300,display:'flex',flexDirection:'column'}}>
+            <div style={{textAlign:'center',padding:'12px 0 4px',fontSize:28,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',lineHeight:1}}>{vsParStr}</div>
             <CourseView
               hole={currentHole}
               displayBallPos={displayPos}
@@ -1015,9 +1016,6 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <circle cx={finalBallX} cy={ballY} r={4.5} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
       </svg>
-      <div style={{textAlign:'center',fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.3)',fontFamily:"'DM Sans',sans-serif",padding:'4px 4px 8px'}}>
-        H{hole.number} · P{hole.par}<br/>{hole.distance}y · S{strokes+1}
-      </div>
     </div>
   )
 }
@@ -1044,20 +1042,19 @@ function ScoreCell({score,par}:{score:number;par:number}){
   )
 }
 
-function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
-  holes:Hole[];scores:(number|null)[];currentIdx:number;vsParStr:string;vsPar:number
+function Scorecard({holes,scores,currentIdx}:{
+  holes:Hole[];scores:(number|null)[];currentIdx:number
 }){
-  const vsParColor=vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'
   const col=(i:number)=>({width:26,textAlign:'center' as const,flexShrink:0,background:i===currentIdx?'rgba(220,38,38,0.15)':'transparent',borderRadius:4,padding:'2px 0'})
   return(
-    <div style={{background:'#111827',padding:'8px 10px',overflowX:'auto'}}>
+    <div style={{padding:'8px 0',overflowX:'auto'}}>
       <div style={{display:'flex',alignItems:'stretch',gap:4,minWidth:'max-content'}}>
 
         {/* Label column */}
         <div style={{width:32,display:'flex',flexDirection:'column',gap:4,justifyContent:'space-around',paddingTop:2}}>
           <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:16,lineHeight:'16px'}}>Hole</div>
           <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:16,lineHeight:'16px'}}>Par</div>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:26,lineHeight:'26px'}}>Score</div>
+          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:18,lineHeight:'18px'}}>Score</div>
         </div>
 
         {/* Hole columns */}
@@ -1065,7 +1062,7 @@ function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
           <div key={i} style={col(i)}>
             <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.number}</div>
             <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.par}</div>
-            <div style={{height:26,display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <div style={{height:18,display:'flex',alignItems:'center',justifyContent:'center'}}>
               {scores[i]==null
                 ? <div style={{width:4,height:4,borderRadius:'50%',background:'rgba(255,255,255,0.15)'}}/>
                 : <ScoreCell score={scores[i]!} par={h.par}/>
@@ -1073,13 +1070,6 @@ function Scorecard({holes,scores,currentIdx,vsParStr,vsPar}:{
             </div>
           </div>
         ))}
-
-        {/* Total */}
-        <div style={{marginLeft:4,paddingLeft:6,borderLeft:'1px solid rgba(255,255,255,0.1)',display:'flex',flexDirection:'column',justifyContent:'space-around',textAlign:'center',minWidth:36}}>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',height:16,lineHeight:'16px'}}>Total</div>
-          <div style={{height:16}}/>
-          <div style={{fontSize:36,fontWeight:900,color:vsParColor,height:26,lineHeight:'26px',marginTop:4}}>{vsParStr}</div>
-        </div>
 
       </div>
     </div>
