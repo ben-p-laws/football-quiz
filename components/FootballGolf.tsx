@@ -384,6 +384,7 @@ function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').r
 
 export default function FootballGolf(){
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'>('setup')
+  const [metaReady,setMetaReady]         = useState(false)
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('random')
   const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
@@ -462,6 +463,7 @@ export default function FootballGolf(){
         }
       }
       top3Cache.current = cache
+      setMetaReady(true)
     }).catch(console.error)
   }, [])
 
@@ -746,7 +748,7 @@ export default function FootballGolf(){
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if(phase==='setup') return <><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} /></>
+  if(phase==='setup') return <><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} metaReady={metaReady} /></>
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={()=>setPhase('setup')} /></>
   if(!currentHole) return null
 
@@ -1237,11 +1239,11 @@ const REAL_COURSES = [
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart,metaReady}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
-  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void
+  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void; metaReady:boolean
 }){
   const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
     {value:'Red',  label:'Easy',  sub:'Red tees',  color:'#dc2626', ring:'rgba(220,38,38,0.4)'},
@@ -1319,8 +1321,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       </div>
 
-      <button onClick={onStart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-        Tee Off →
+      <button onClick={onStart} disabled={!metaReady} style={{background:metaReady?'#dc2626':'#1e2d4a',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',transition:'background 0.3s'}}>
+        {metaReady?'Tee Off →':'Loading…'}
       </button>
     </div>
   )
