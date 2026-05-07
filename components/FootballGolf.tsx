@@ -353,7 +353,7 @@ function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').r
 
 export default function FootballGolf(){
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'>('setup')
-  const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
+  const [courseMode,setCourseMode]       = useState<'random'|'real'>('random')
   const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
   const [tee,setTee]                     = useState<Tee>('White')
@@ -1201,13 +1201,16 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       <div style={{width:'100%',maxWidth:300}}>
         <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Course Type</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-          {(['random','real'] as const).map(m=>(
-            <button key={m} onClick={()=>setCourseMode(m)}
-              style={{background:courseMode===m?'rgba(220,38,38,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode===m?'#dc2626':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
-              <div style={{fontSize:14,fontWeight:900}}>{m==='random'?'🎲 Random':'🏌️ Real Course'}</div>
-              <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>{m==='random'?'New layout each game':'Choose a course'}</div>
-            </button>
-          ))}
+          <button onClick={()=>setCourseMode('random')}
+            style={{background:courseMode==='random'?'rgba(220,38,38,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode==='random'?'#dc2626':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
+            <div style={{fontSize:14,fontWeight:900}}>🎲 Random</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>New layout each game</div>
+          </button>
+          <button disabled
+            style={{background:'#1e2d4a',color:'rgba(255,255,255,0.3)',border:'2px solid transparent',borderRadius:10,padding:'12px 8px',cursor:'default',fontFamily:'inherit',textAlign:'center'}}>
+            <div style={{fontSize:14,fontWeight:900}}>🏌️ Real Course</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',marginTop:2}}>Coming Soon</div>
+          </button>
         </div>
       </div>
 
