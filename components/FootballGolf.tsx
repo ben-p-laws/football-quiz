@@ -708,45 +708,14 @@ export default function FootballGolf(){
           100% { transform: rotate(-8deg); }
         }
         .club-swing { animation: clubSwing 0.5s ease-out forwards; transform-origin: 0 0; }
-        .fg-body { display:flex; flex-direction:column; }
-        .fg-course { order:0; height:240px; }
-        .fg-qa { order:1; display:flex; flex-direction:column; gap:10px; padding:12px 0 20px; }
-        @media (min-width:601px) {
-          .fg-body { flex-direction:row; align-items:stretch; }
-          .fg-course { order:1; flex:1; height:auto; min-height:300px; }
-          .fg-qa { order:0; flex:2; padding:12px 8px 20px; }
-        }
       `}</style>
       <NavBar />
       <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
-
-        {/* Top bar: scorecard + overall score — always a flex row */}
         <div style={{display:'flex',alignItems:'stretch'}}>
-          <div style={{flex:2}}><Scorecard holes={holes} scores={scores} currentIdx={holeIdx} /></div>
-          <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10,minWidth:54}}>
-            <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
-            <div style={{height:16}}/>
-            <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
-          </div>
-        </div>
 
-        {/* Body: course on top on mobile, side-by-side on desktop */}
-        <div className="fg-body">
-
-          {/* Course */}
-          <div className="fg-course">
-            <CourseView
-              hole={currentHole}
-              displayBallPos={displayPos}
-              preAnimBallPos={preAnimBallPos}
-              arcOffset={arcOffset}
-              isAnimating={isAnimating}
-              strokes={strokes}
-            />
-          </div>
-
-          {/* Q&A */}
-          <div className="fg-qa">
+          {/* Left panel */}
+          <div style={{flex:2,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
+            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
@@ -768,6 +737,7 @@ export default function FootballGolf(){
                       {CLUB_LABEL[club]} · max {clubMax} yds
                       {inBunker && <span style={{color:'#f59e0b'}}> · ⛺ In bunker</span>}
                     </div>
+                    {/* Water — own line */}
                     {currentHole.hazard && !pastPin && (()=>{
                       const distToStart = currentHole.hazard.start - approachPos
                       const distToEnd   = currentHole.hazard.end   - approachPos
@@ -775,6 +745,7 @@ export default function FootballGolf(){
                       if(distToStart <= 0) return <div style={{fontSize:13,fontWeight:700,color:'#f87171'}}>💧 In water zone</div>
                       return <div style={{fontSize:13,fontWeight:700,color:'#60a5fa'}}>💧 Water: {distToStart}–{distToEnd} yds ahead</div>
                     })()}
+                    {/* Bunker — own line */}
                     {!pastPin && !inBunker && currentHole.bunkers.map((b,i)=>{
                       const distToStart = b.start - approachPos
                       const distToEnd   = b.end   - approachPos
@@ -784,6 +755,7 @@ export default function FootballGolf(){
                   </>
                 )
               })()}
+              {/* Past-pin indicator */}
               {pastPin&&(
                 <div style={{fontSize:11,color:'#f97316',fontWeight:700}}>
                   📍 {remaining} yds past the flag
@@ -791,6 +763,7 @@ export default function FootballGolf(){
               )}
             </div>
 
+            {/* Category */}
             {question&&(
               <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px'}}>
                 <div style={{fontSize:9,fontWeight:800,color:'#4a5568',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>Category</div>
@@ -799,6 +772,7 @@ export default function FootballGolf(){
               </div>
             )}
 
+            {/* Bunker MC question → lie result → shot result */}
             {bunkerLieResult ? (
               <LieResultPanel result={bunkerLieResult} onContinue={advanceFromResult} />
             ) : bunkerQ ? (
@@ -841,6 +815,23 @@ export default function FootballGolf(){
                 </button>
               </>
             )}
+          </div>
+
+          {/* Right panel — course */}
+          <div style={{flex:1,minWidth:0,minHeight:300,display:'flex',flexDirection:'column'}}>
+            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
+              <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
+              <div style={{height:16}}/>
+              <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
+            </div>
+            <CourseView
+              hole={currentHole}
+              displayBallPos={displayPos}
+              preAnimBallPos={preAnimBallPos}
+              arcOffset={arcOffset}
+              isAnimating={isAnimating}
+              strokes={strokes}
+            />
           </div>
 
         </div>
