@@ -183,7 +183,14 @@ function pathToD(pts:Pt[]): string {
 }
 
 function yardToSVG(yards:number, total:number, path:HolePath): Pt {
-  return bezierAt(Math.max(0, Math.min(1, yards/total)), path.pts)
+  if(yards <= total) return bezierAt(Math.max(0, yards/total), path.pts)
+  // extrapolate past the hole along the end tangent
+  const start = path.pts[0], end = path.pts[path.pts.length-1]
+  const svgSpan = Math.sqrt((end.x-start.x)**2+(end.y-start.y)**2)||131
+  const tan = bezierTangent(1, path.pts)
+  const tanLen = Math.sqrt(tan.x*tan.x+tan.y*tan.y)||1
+  const extra = (yards-total)/total*svgSpan
+  return {x:end.x+tan.x/tanLen*extra, y:end.y+tan.y/tanLen*extra}
 }
 
 function holeXY(path:HolePath): Pt {
