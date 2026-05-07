@@ -106,128 +106,6 @@ const buildCache = unstable_cache(
   { revalidate: 86400 }
 )
 
-const ALL_STAT_KEYS = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets'] as const
-type StatKey = typeof ALL_STAT_KEYS[number]
-
-function pStatValue(p: PlayerData, key: StatKey, cf?: string): number {
-  const g  = cf ? (p.clubGames[cf]       || 0) : p.games
-  const go = cf ? (p.clubGoals[cf]       || 0) : p.goals
-  const a  = cf ? (p.clubAssists[cf]     || 0) : p.assists
-  if (key === 'goals')            return go
-  if (key === 'assists')          return a
-  if (key === 'goals_assists')    return go + a
-  if (key === 'appearances')      return g
-  if (key === 'apps_minus_goals') return Math.max(0, g - go)
-  if (key === 'yellow_cards')     return cf ? (p.clubYellowCards[cf] || 0) : p.yellow_cards
-  if (key === 'clean_sheets')     return cf ? (p.clubCleanSheets[cf] || 0) : p.clean_sheets
-  return 0
-}
-
-function top3(vals: number[]): number {
-  vals.sort((a, b) => b - a)
-  return (vals[0] || 0) + (vals[1] || 0) + (vals[2] || 0)
-}
-
-const buildMetaCache = unstable_cache(
-  async () => {
-    // Single fetch with all columns needed — avoids calling buildCache() separately
-    const columns = 'name_display,year_id,games,goals,assists,gk_clean_sheets,cards_yellow,nationality,teams_played_for'
-    const all: any[] = []
-    let offset = 0
-    while (true) {
-      const { data } = await getClient()
-        .from('player_seasons')
-        .select(columns)
-        .range(offset, offset + 999)
-      if (!data || data.length === 0) break
-      all.push(...data)
-      if (data.length < 1000) break
-      offset += 1000
-    }
-
-    const clubMap: Record<string, { seasons: Set<string>; apps: number }> = {}
-    const natApps: Record<string, number> = {}
-    // player aggregates keyed by name
-    const byName: Record<string, PlayerData> = {}
-    const natFreq: Record<string, Record<string, number>> = {}
-
-    for (const row of all) {
-      const g   = Number(row.games)           || 0
-      const go  = Number(row.goals)           || 0
-      const a   = Number(row.assists)         || 0
-      const yc  = Number(row.cards_yellow)    || 0
-      const cs  = Number(row.gk_clean_sheets) || 0
-      const name = row.name_display as string
-
-      // nation totals (for ranking)
-      if (row.nationality) {
-        const nat = fmtNat(row.nationality as string)
-        if (/^[A-Z]{2,4}$/.test(nat)) natApps[nat] = (natApps[nat] || 0) + g
-      }
-
-      // player aggregate
-      if (!byName[name]) {
-        byName[name] = { goals:0,assists:0,games:0,yellow_cards:0,clean_sheets:0,nationality:'',
-          clubGoals:{},clubAssists:{},clubGames:{},clubYellowCards:{},clubCleanSheets:{} }
-        natFreq[name] = {}
-      }
-      const p = byName[name]
-      p.goals += go; p.assists += a; p.games += g; p.yellow_cards += yc; p.clean_sheets += cs
-      if (row.nationality) {
-        const nat = fmtNat(row.nationality as string)
-        natFreq[name][nat] = (natFreq[name][nat] || 0) + 1
-      }
-
-      // club aggregates + season tracking
-      const teams = String(row.teams_played_for || '')
-        .split(',').map((t: string) => normTeam(t.trim())).filter((t: string) => t && t !== '2 Teams')
-      if (teams.length === 1) {
-        const team = teams[0]
-        if (!clubMap[team]) clubMap[team] = { seasons: new Set(), apps: 0 }
-        if (row.year_id) clubMap[team].seasons.add(String(row.year_id))
-        clubMap[team].apps += g
-        p.clubGoals[team]       = (p.clubGoals[team]       || 0) + go
-        p.clubAssists[team]     = (p.clubAssists[team]     || 0) + a
-        p.clubGames[team]       = (p.clubGames[team]       || 0) + g
-        p.clubYellowCards[team] = (p.clubYellowCards[team] || 0) + yc
-        p.clubCleanSheets[team] = (p.clubCleanSheets[team] || 0) + cs
-      }
-    }
-
-    // resolve nationality per player
-    for (const [name, freq] of Object.entries(natFreq)) {
-      byName[name].nationality = Object.entries(freq).sort((a, b) => b[1] - a[1])[0]?.[0] ?? ''
-    }
-
-    const clubs = Object.entries(clubMap)
-      .filter(([, v]) => v.seasons.size > 3)
-      .sort((a, b) => b[1].apps - a[1].apps)
-      .map(([name]) => name)
-
-    const nations = Object.entries(natApps)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 60)
-      .map(([code]) => code)
-
-    const playerList = Object.values(byName)
-    const top3Cache: Record<string, number> = {}
-
-    for (const key of ALL_STAT_KEYS) {
-      top3Cache[`${key}::`] = top3(playerList.map(p => pStatValue(p, key)))
-      for (const code of nations) {
-        top3Cache[`${key}:${code}:`] = top3(playerList.filter(p => p.nationality === code).map(p => pStatValue(p, key)))
-      }
-      for (const club of clubs) {
-        top3Cache[`${key}::${club}`] = top3(playerList.map(p => pStatValue(p, key, club)).filter(v => v > 0))
-      }
-    }
-
-    return { clubs, nations, top3Cache }
-  },
-  ['football-golf-meta-v3'],
-  { revalidate: 86400 }
-)
-
 const buildSeasonCache = unstable_cache(
   async (season: string) => {
     const { data } = await getClient()
@@ -254,9 +132,6 @@ const buildSeasonCache = unstable_cache(
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   try {
-    if (searchParams.get('meta') === '1') {
-      return NextResponse.json(await buildMetaCache())
-    }
     const season = searchParams.get('season')
     if (season) {
       return NextResponse.json(await buildSeasonCache(season))
@@ -294,21 +169,17 @@ export async function POST(req: Request) {
 
       let value = 0
       if (clubFilter) {
-        if      (category === 'goals')           value = p.clubGoals[clubFilter]       || 0
-        else if (category === 'assists')         value = p.clubAssists[clubFilter]     || 0
-        else if (category === 'goals_assists')   value = (p.clubGoals[clubFilter] || 0) + (p.clubAssists[clubFilter] || 0)
-        else if (category === 'appearances')     value = p.clubGames[clubFilter]       || 0
-        else if (category === 'apps_minus_goals') value = Math.max(0, (p.clubGames[clubFilter] || 0) - (p.clubGoals[clubFilter] || 0))
-        else if (category === 'yellow_cards')   value = p.clubYellowCards[clubFilter] || 0
-        else if (category === 'clean_sheets')   value = p.clubCleanSheets[clubFilter] || 0
+        if      (category === 'goals')        value = p.clubGoals[clubFilter]       || 0
+        else if (category === 'assists')      value = p.clubAssists[clubFilter]     || 0
+        else if (category === 'appearances')  value = p.clubGames[clubFilter]       || 0
+        else if (category === 'yellow_cards') value = p.clubYellowCards[clubFilter] || 0
+        else if (category === 'clean_sheets') value = p.clubCleanSheets[clubFilter] || 0
       } else {
-        if      (category === 'goals')           value = p.goals
-        else if (category === 'assists')         value = p.assists
-        else if (category === 'goals_assists')   value = p.goals + p.assists
-        else if (category === 'appearances')     value = p.games
-        else if (category === 'apps_minus_goals') value = Math.max(0, p.games - p.goals)
-        else if (category === 'yellow_cards')   value = p.yellow_cards
-        else if (category === 'clean_sheets')   value = p.clean_sheets
+        if      (category === 'goals')        value = p.goals
+        else if (category === 'assists')      value = p.assists
+        else if (category === 'appearances')  value = p.games
+        else if (category === 'yellow_cards') value = p.yellow_cards
+        else if (category === 'clean_sheets') value = p.clean_sheets
       }
 
       breakdown.push({ name, value })
