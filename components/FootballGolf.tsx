@@ -710,12 +710,12 @@ export default function FootballGolf(){
         .club-swing { animation: clubSwing 0.5s ease-out forwards; transform-origin: 0 0; }
       `}</style>
       <NavBar />
-      <div style={{maxWidth:520,margin:'0 auto',width:'100%',padding:'0 12px'}}>
+      <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
         <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} vsParStr={vsParStr} vsPar={vsPar} />
         <div style={{display:'flex',alignItems:'stretch'}}>
 
           {/* Left panel */}
-          <div style={{flex:2,padding:'12px 10px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
+          <div style={{flex:2,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
@@ -1194,11 +1194,10 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
     {value:'Blue', label:'Hard',  sub:'Blue tees', color:'#3b82f6', ring:'rgba(59,130,246,0.4)'},
   ]
   return(
-    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:24}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
       <div style={{textAlign:'center'}}>
-        <div style={{fontSize:48}}>⛳</div>
-        <div style={{fontSize:30,fontWeight:900,color:'white',marginTop:10,letterSpacing:'-0.5px'}}>Football Golf</div>
+        <div style={{fontSize:30,fontWeight:900,color:'white',letterSpacing:'-0.5px'}}>Football Golf</div>
         <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6,lineHeight:1.5}}>
           Name PL players to hit the green.<br/>Their combined stat = your shot distance.
         </div>
