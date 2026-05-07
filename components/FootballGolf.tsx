@@ -933,8 +933,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const fairwayD = pathToD(hole.path.pts)
 
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column'}}>
-      <svg width="100%" viewBox="0 3 100 152" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1}}>
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:12,overflow:'hidden'}}>
+      <svg width="100%" viewBox="0 -20 100 175" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -947,7 +947,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         </defs>
 
         {/* Background rough */}
-        <rect x={0} y={0} width={100} height={155} fill="#0f2e0f" opacity={0.6}/>
+        <rect x={0} y={-20} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>
 
 {/* Fairway — smooth bezier stroke */}
         <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>
