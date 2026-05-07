@@ -819,9 +819,10 @@ export default function FootballGolf(){
 
           {/* Right panel — course */}
           <div style={{flex:1,minWidth:0,minHeight:300,display:'flex',flexDirection:'column'}}>
-            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',justifyContent:'space-between',height:74}}>
-              <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Overall</div>
-              <div style={{fontSize:28,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',lineHeight:1}}>{vsParStr}</div>
+            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
+              <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
+              <div style={{height:16}}/>
+              <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
             </div>
             <CourseView
               hole={currentHole}
