@@ -392,6 +392,7 @@ export default function FootballGolf(){
   const [badLiePlayerData,setBadLiePlayerData] = useState<Record<string,{goals:number;assists:number;yellow_cards:number}>>({})
   const badLieSeason = useRef<string>('')
   const [pastPin,setPastPin]             = useState(false)
+  const [holeResult,setHoleResult]       = useState<{label:string;color:string;diff:number}|null>(null)
 
   const normalisedNames = useRef<string[]>([])
 
@@ -672,17 +673,34 @@ export default function FootballGolf(){
     setBunkerQ(null)
     setBunkerLieResult(null)
     resetInputs()
-    if(holeIdx+1>=holes.length){
-      setPhase('done')
-    }else{
-      const nextIdx=holeIdx+1
-      setHoleIdx(nextIdx)
-      const dist=holes[nextIdx].distance
-      setRemaining(dist)
-      setPastPin(false)
-      setStrokes(0)
-      setQuestion(nextPickedCategory(dist))
+
+    const par=currentHole?.par??4
+    const diff=finalStrokes-par
+    const resultMap:{[k:number]:{label:string;color:string}}={
+      [-3]:{label:'Albatross',color:'#22c55e'},
+      [-2]:{label:'Eagle',color:'#22c55e'},
+      [-1]:{label:'Birdie',color:'#22c55e'},
+      [0]: {label:'Par',color:'#94a3b8'},
+      [1]: {label:'Bogey',color:'#ef4444'},
+      [2]: {label:'Double Bogey',color:'#ef4444'},
     }
+    const res=resultMap[diff]??{label:`+${diff}`,color:'#ef4444'}
+    setHoleResult({...res,diff})
+
+    setTimeout(()=>{
+      setHoleResult(null)
+      if(holeIdx+1>=holes.length){
+        setPhase('done')
+      }else{
+        const nextIdx=holeIdx+1
+        setHoleIdx(nextIdx)
+        const dist=holes[nextIdx].distance
+        setRemaining(dist)
+        setPastPin(false)
+        setStrokes(0)
+        setQuestion(nextPickedCategory(dist))
+      }
+    },3000)
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -708,8 +726,40 @@ export default function FootballGolf(){
           100% { transform: rotate(-8deg); }
         }
         .club-swing { animation: clubSwing 0.5s ease-out forwards; transform-origin: 0 0; }
+        @keyframes holeResultIn {
+          0%   { opacity:0; transform:translate(-50%,-50%) scale(0.5); }
+          15%  { opacity:1; transform:translate(-50%,-50%) scale(1.12); }
+          30%  { transform:translate(-50%,-50%) scale(1); }
+          80%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+          100% { opacity:0; transform:translate(-50%,-50%) scale(0.9); }
+        }
+        .hole-result-pop { animation: holeResultIn 3s ease-in-out forwards; }
       `}</style>
       <NavBar />
+      {holeResult && (
+        <div style={{position:'fixed',inset:0,zIndex:999,pointerEvents:'none'}}>
+          <div className="hole-result-pop" style={{
+            position:'absolute',top:'50%',left:'50%',
+            transform:'translate(-50%,-50%)',
+            textAlign:'center',
+            background:'rgba(10,15,30,0.85)',
+            border:`3px solid ${holeResult.color}`,
+            borderRadius:20,
+            padding:'28px 48px',
+            boxShadow:`0 0 60px ${holeResult.color}55`,
+          }}>
+            <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',letterSpacing:'0.1em',textTransform:'uppercase',marginBottom:6}}>
+              Hole {currentHole?.number} · {currentHole?.par && `Par ${currentHole.par}`}
+            </div>
+            <div style={{fontSize:42,fontWeight:900,color:holeResult.color,lineHeight:1}}>
+              {holeResult.label}
+            </div>
+            <div style={{fontSize:20,fontWeight:700,color:'white',marginTop:8}}>
+              {holeResult.diff===0?'E':holeResult.diff>0?`+${holeResult.diff}`:holeResult.diff}
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
         <div style={{display:'flex',alignItems:'stretch'}}>
 
