@@ -387,6 +387,7 @@ export default function FootballGolf(){
   const [arcOffset,setArcOffset]         = useState(0)   // lateral arc during flight
   const [pendingResult,setPendingResult] = useState<ShotResult|null>(null)
   const animFrameRef = useRef<number|null>(null)
+  const oobDir       = useRef<0|1|-1>(0)
   const [bunkerQ,setBunkerQ]             = useState<BunkerQ|null>(null)
   const [bunkerLieResult,setBunkerLieResult] = useState<'good'|'bad'|null>(null)
   const [badLiePlayerData,setBadLiePlayerData] = useState<Record<string,{goals:number;assists:number;yellow_cards:number}>>({})
@@ -486,16 +487,21 @@ export default function FootballGolf(){
     setArcOffset(0)
     const startTime = performance.now()
     const duration  = 1100
+    const dir = oobDir.current
     const tick = (now:number)=>{
       const t     = Math.min(1,(now-startTime)/duration)
       const eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2
       setAnimBallPos(fromPos+(toPos-fromPos)*eased)
-      setArcOffset(Math.sin(Math.PI*eased)*7)
+      if(dir!==0){
+        setArcOffset(dir*eased*50)
+      }else{
+        setArcOffset(Math.sin(Math.PI*eased)*7)
+      }
       if(t<1){
         animFrameRef.current=requestAnimationFrame(tick)
       }else{
         setIsAnimating(false)
-        setArcOffset(0)
+        if(dir===0) setArcOffset(0)
         setShotResult(result)
         setPendingResult(null)
       }
@@ -549,9 +555,13 @@ export default function FootballGolf(){
     let penaltyReason=''
 
     // Club max exceeded
-    if(total>clubMax){
+    const isClubMaxOOB = total > clubMax
+    if(isClubMaxOOB){
       isOOB=true
       penaltyReason=`Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
+      oobDir.current = Math.random()<0.5 ? 1 : -1
+    }else{
+      oobDir.current = 0
     }
 
     // Water hazard — only on approach (not when going back from past the pin)
@@ -593,9 +603,11 @@ export default function FootballGolf(){
     // Animation: when pastPin ball flies BACK toward hole (decreasing absolute pos)
     const toPos = pastPin
       ? (isOOB ? ballPos - clubMax : ballPos - total)   // going back
-      : (isOOB && penaltyReason.includes('past')
-          ? currentHole.distance + Math.min(overshoot, 55)
-          : Math.min(ballPos + total, currentHole.distance + 50))
+      : isClubMaxOOB
+          ? Math.min(ballPos + 300, currentHole.distance + 10)  // flies 300 yds but off to side
+          : (isOOB && penaltyReason.includes('past')
+              ? currentHole.distance + Math.min(overshoot, 55)
+              : Math.min(ballPos + total, currentHole.distance + 50))
 
     animateShot(ballPos, toPos, result)
   }
@@ -623,6 +635,8 @@ export default function FootballGolf(){
       setBunkerQ(null)
       setQuestion(nextCat(newRemaining))
       resetInputs()
+      oobDir.current = 0
+      setArcOffset(0)
       return
     }
 
