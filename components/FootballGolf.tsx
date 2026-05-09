@@ -562,10 +562,8 @@ export default function FootballGolf(){
       penaltyReason=`Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
       const dir: 1|-1 = Math.random()<0.5 ? 1 : -1
       oobDir.current = dir
-      // compute arcOffset needed to land exactly at SVG edge (x=4 or x=96)
-      const oobToPos = Math.min(ballPos + 300, currentHole.distance + 10)
-      const finalPathX = yardToSVG(oobToPos, currentHole.distance, currentHole.path).x
-      oobTargetArcOffset.current = (dir > 0 ? 96 : 4) - finalPathX
+      // offset ~50% of fairway width (strokeWidth=24) past the fairway edge = 24 units from centre
+      oobTargetArcOffset.current = dir * 24
     }else{
       oobDir.current = 0
       oobTargetArcOffset.current = 0
