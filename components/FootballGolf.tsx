@@ -799,7 +799,7 @@ export default function FootballGolf(){
                   <>
                     <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
                       {CLUB_LABEL[club]} · max {clubMax} yds
-                      {inBunker && <span style={{color:'#f59e0b'}}> · ⛺ In bunker</span>}
+                      {inBunker && <span style={{color:'#f59e0b'}}> · 🏖️ In bunker</span>}
                     </div>
                   </>
                 )
@@ -872,8 +872,8 @@ export default function FootballGolf(){
             )}
           </div>
 
-          {/* Right panel — course */}
-          <div style={{flex:1,minWidth:0,minHeight:300,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
+          {/* Right panel — course — fixed height so animation in left panel never resizes it */}
+          <div style={{flex:1,minWidth:0,height:400,alignSelf:'flex-start',display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
             <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
@@ -903,7 +903,7 @@ function BunkerPanel({bq,onAnswer}:{bq:BunkerQ;onAnswer:(idx:number)=>void}){
   return(
     <div style={{background:'#2a1f00',border:'1px solid #f59e0b',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
       <div>
-        <div style={{fontSize:10,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>⛺ Sand Trap — Answer to play on</div>
+        <div style={{fontSize:10,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>🏖️ Sand Trap — Answer to play on</div>
         <div style={{fontSize:13,fontWeight:800,color:'white',lineHeight:1.4}}>{bq.q}</div>
         <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:3}}>Wrong answer = bad lie next shot</div>
       </div>
@@ -1052,9 +1052,14 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const cx = yardToX((hole.hazard.start + hole.hazard.end) / 2)
           const cy = yardToY((hole.hazard.start + hole.hazard.end) / 2)
           const labelX = cx > 50 ? cx - 14 : cx + 14
-          const txt = distToStart <= 0 ? '💧 In water' : `💧 ${distToStart}–${distToEnd}yd`
+          if(distToStart <= 0) return (
+            <text x={labelX} y={cy+1.5} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>💧 In water</text>
+          )
           return (
-            <text x={labelX} y={cy+1.5} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>{txt}</text>
+            <text x={labelX} y={cy-1} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>
+              <tspan x={labelX} dy="0">💧 {distToStart}</tspan>
+              <tspan x={labelX} dy="5.5">–{distToEnd}yd</tspan>
+            </text>
           )
         })()}
 
@@ -1068,7 +1073,10 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           if(distToEnd <= 0 || ballTeePosForLabels >= b.start) return null
           const labelX = sideX > 50 ? sideX - 11 : sideX + 11
           return (
-            <text key={i} x={labelX} y={midPos.y+1.5} fontSize={4.5} fill="#fcd34d" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>⛺ {distToStart}–{distToEnd}yd</text>
+            <text key={i} x={labelX} y={midPos.y-1} fontSize={4.5} fill="#fcd34d" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>
+              <tspan x={labelX} dy="0">🏖️ {distToStart}</tspan>
+              <tspan x={labelX} dy="5.5">–{distToEnd}yd</tspan>
+            </text>
           )
         })}
 
