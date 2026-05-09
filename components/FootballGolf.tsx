@@ -953,11 +953,13 @@ export default function FootballGolf(){
             {/* Category — two side-by-side boxes, fixed height so layout never shifts */}
             {question&&(
               <div style={{display:'flex',gap:8,minHeight:58}}>
-                <div style={{flex:1,background:'#1e2d4a',borderRadius:10,padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  <div style={{fontSize:15,fontWeight:800,color:'#dc2626',lineHeight:1.3,textAlign:'center'}}>{question.statLabel}</div>
+                <div style={{flex:1,background:'#1e2d4a',borderRadius:10,padding:'7px 12px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2}}>
+                  <div style={{fontSize:10,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em'}}>Stat</div>
+                  <div style={{fontSize:15,fontWeight:800,color:'white',lineHeight:1.3,textAlign:'center'}}>{question.statLabel}</div>
                 </div>
-                <div style={{flex:1,background:'#1e2d4a',borderRadius:10,padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                  <div style={{fontSize:13,fontWeight:600,color:'#c8d6f0',lineHeight:1.3,textAlign:'center'}}>{makeFilterLabel(question)}</div>
+                <div style={{flex:1,background:'#1e2d4a',borderRadius:10,padding:'7px 12px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:2}}>
+                  <div style={{fontSize:10,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em'}}>Filter</div>
+                  <div style={{fontSize:13,fontWeight:600,color:'white',lineHeight:1.3,textAlign:'center'}}>{makeFilterLabel(question)}</div>
                 </div>
               </div>
             )}
