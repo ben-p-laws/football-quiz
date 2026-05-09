@@ -115,6 +115,20 @@ function makeCategoryLabel(stat: StatKey, f: FilterSpec): { label: string; statL
   return { label: makeLabel(stat, f), statLabel: STAT_LABEL[stat] }
 }
 
+function makeFilterLabel(cat: Category): string {
+  if (cat.seasonFilter) {
+    const [y1, y2] = cat.seasonFilter.split('-')
+    return `in ${y1.slice(2)}/${y2.slice(2)}`
+  }
+  if (cat.continentFilter && cat.clubFilter) {
+    return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${cat.clubFilter} players`
+  }
+  if (cat.continentFilter) return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} players`
+  if (cat.clubFilter)      return `${cat.clubFilter} players`
+  if (cat.natFilter)       return `${NAT_LABELS[cat.natFilter] ?? cat.natFilter} players`
+  return 'All PL players'
+}
+
 function pickCategory(
   remaining: number,
   club: ClubType,
@@ -936,14 +950,14 @@ export default function FootballGolf(){
             {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
             <div style={{flex:1,display:'flex',flexDirection:'column',gap:10,minHeight:0}}>
 
-            {/* Category — fixed 2-line height so layout never shifts */}
+            {/* Category — two side-by-side boxes, fixed height so layout never shifts */}
             {question&&(
-              <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px',minHeight:58,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <div style={{fontSize:16,fontWeight:800,color:'white',lineHeight:1.3,textAlign:'center'}}>
-                  {question.statLabel ? (() => {
-                    const parts = question.label.split(question.statLabel)
-                    return <>{parts[0]}<span style={{color:'#dc2626'}}>{question.statLabel}</span>{parts[1]}</>
-                  })() : question.label}
+              <div style={{display:'flex',gap:8,minHeight:58}}>
+                <div style={{flex:1,background:'#1e2d4a',borderRadius:10,padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <div style={{fontSize:15,fontWeight:800,color:'#dc2626',lineHeight:1.3,textAlign:'center'}}>{question.statLabel}</div>
+                </div>
+                <div style={{flex:1,background:'#1e2d4a',borderRadius:10,padding:'9px 12px',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                  <div style={{fontSize:13,fontWeight:600,color:'#c8d6f0',lineHeight:1.3,textAlign:'center'}}>{makeFilterLabel(question)}</div>
                 </div>
               </div>
             )}
