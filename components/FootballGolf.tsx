@@ -775,7 +775,7 @@ export default function FootballGolf(){
         </div>
       )}
       <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
-        <div style={{display:'flex',alignItems:'stretch',height:'calc(100dvh - 56px)'}}>
+        <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)'}}>
 
           {/* Left panel */}
           <div style={{flex:2,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0,overflow:'hidden'}}>
@@ -1049,42 +1049,6 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
         })}
 
-        {/* Water hazard distance label */}
-        {hole.hazard && displayBallPos <= hole.distance && (()=>{
-          const distToStart = Math.round(hole.hazard.start - ballTeePosForLabels)
-          const distToEnd   = Math.round(hole.hazard.end   - ballTeePosForLabels)
-          if(distToEnd <= 0) return null
-          const cx = yardToX((hole.hazard.start + hole.hazard.end) / 2)
-          const cy = yardToY((hole.hazard.start + hole.hazard.end) / 2)
-          const labelX = cx > 50 ? cx - 14 : cx + 14
-          if(distToStart <= 0) return (
-            <text x={labelX} y={cy+1.5} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>💧 In water</text>
-          )
-          return (
-            <text x={labelX} y={cy-1} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>
-              <tspan x={labelX} dy="0">💧 {distToStart}</tspan>
-              <tspan x={labelX} dy="5.5">–{distToEnd}yd</tspan>
-            </text>
-          )
-        })()}
-
-        {/* Bunker distance labels */}
-        {displayBallPos <= hole.distance && hole.bunkers.map((b,i)=>{
-          const midYards = (b.start + b.end) / 2
-          const midPos   = yardToSVG(midYards, hole.distance, hole.path)
-          const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
-          const distToStart = Math.round(b.start - ballTeePosForLabels)
-          const distToEnd   = Math.round(b.end   - ballTeePosForLabels)
-          if(distToEnd <= 0 || ballTeePosForLabels >= b.start) return null
-          const labelX = sideX > 50 ? sideX - 11 : sideX + 11
-          return (
-            <text key={i} x={labelX} y={midPos.y-1} fontSize={4.5} fill="#fcd34d" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>
-              <tspan x={labelX} dy="0">🏖️ {distToStart}</tspan>
-              <tspan x={labelX} dy="5.5">–{distToEnd}yd</tspan>
-            </text>
-          )
-        })}
-
         {/* Tee box — rotated to sit across the fairway */}
         <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
           <rect x={teePos.x-8} y={teePos.y-2} width={16} height={4} rx={1.5} fill="#4ade80" opacity={0.9}/>
@@ -1119,6 +1083,40 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {isAnimating&&(
           <circle cx={finalBallX} cy={ballY} r={4.5} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
+
+        {/* Hazard distance labels — rendered last so they sit above everything */}
+        {hole.hazard && displayBallPos <= hole.distance && (()=>{
+          const distToNear = Math.round(hole.hazard.start - ballTeePosForLabels)
+          const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
+          if(distToFar <= 0) return null
+          const cx = yardToX((hole.hazard.start + hole.hazard.end) / 2)
+          const cy = yardToY((hole.hazard.start + hole.hazard.end) / 2)
+          const labelX = cx > 50 ? cx - 14 : cx + 14
+          if(distToNear <= 0) return (
+            <text x={labelX} y={cy+1.5} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
+          )
+          return (
+            <text x={labelX} y={cy-1} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
+              <tspan x={labelX} dy="0">💧 {distToFar}</tspan>
+              <tspan x={labelX} dy="5.5">–{distToNear}yd</tspan>
+            </text>
+          )
+        })()}
+        {displayBallPos <= hole.distance && hole.bunkers.map((b,i)=>{
+          const midYards = (b.start + b.end) / 2
+          const midPos   = yardToSVG(midYards, hole.distance, hole.path)
+          const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
+          const distToNear = Math.round(b.start - ballTeePosForLabels)
+          const distToFar  = Math.round(b.end   - ballTeePosForLabels)
+          if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
+          const labelX = sideX > 50 ? sideX - 11 : sideX + 11
+          return (
+            <text key={i} x={labelX} y={midPos.y-1} fontSize={4.5} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
+              <tspan x={labelX} dy="0">🏖️ {distToFar}</tspan>
+              <tspan x={labelX} dy="5.5">–{distToNear}yd</tspan>
+            </text>
+          )
+        })}
       </svg>
     </div>
   )
