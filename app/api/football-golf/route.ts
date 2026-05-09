@@ -38,7 +38,7 @@ const CONTINENT_MAP: Record<string, string> = {
   PAR: 'S. America', CHI: 'S. America', VEN: 'S. America', ECU: 'S. America',
   JPN: 'Asia', KOR: 'Asia',
   USA: 'N. America', CAN: 'N. America',
-  JAM: 'Caribbean', TRI: 'Caribbean',
+  JAM: 'N. America', TRI: 'N. America',
   AUS: 'Oceania', NZL: 'Oceania',
 }
 
@@ -321,7 +321,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, continents, contClubPairs, top3Cache }
   },
-  ['football-golf-meta-v5'],
+  ['football-golf-meta-v6'],
   { revalidate: 86400 }
 )
 

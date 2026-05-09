@@ -31,14 +31,14 @@ const CONTINENT_MEMBERS: Record<string, string> = {
   PAR:'S. America',CHI:'S. America',VEN:'S. America',ECU:'S. America',
   JPN:'Asia',KOR:'Asia',
   USA:'N. America',CAN:'N. America',
-  JAM:'Caribbean',TRI:'Caribbean',
+  JAM:'N. America',TRI:'N. America',
   AUS:'Oceania',NZL:'Oceania',
 }
 
 // Adjective form for category labels e.g. "African PL Goals"
 const CONTINENT_LABELS: Record<string, string> = {
   'Africa':'African','S. America':'S. American','Asia':'Asian',
-  'N. America':'N. American','Caribbean':'Caribbean','Oceania':'Oceanian',
+  'N. America':'N. American','Oceania':'Oceanian',
 }
 
 type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals'|
@@ -474,7 +474,7 @@ export default function FootballGolf(){
   const recentFilters = useRef<string[]>([])
   const metaNations      = useRef<NationEntry[]>(FALLBACK_NATIONS)
   const metaClubs        = useRef<string[]>(FALLBACK_CLUBS)
-  const metaContinents   = useRef<string[]>(['Africa','S. America','Asia','N. America','Caribbean','Oceania'])
+  const metaContinents   = useRef<string[]>(['Africa','S. America','Asia','N. America','Oceania'])
   const metaContClubPairs = useRef<[string,string][]>([])
   const top3CacheRef     = useRef<Record<string,number>|null>(null)
   const [metaReady, setMetaReady] = useState(false)
