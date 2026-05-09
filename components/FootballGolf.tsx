@@ -775,10 +775,10 @@ export default function FootballGolf(){
         </div>
       )}
       <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
-        <div style={{display:'flex',alignItems:'stretch'}}>
+        <div style={{display:'flex',alignItems:'stretch',height:'calc(100dvh - 56px)'}}>
 
           {/* Left panel */}
-          <div style={{flex:2,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
+          <div style={{flex:2,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0,overflow:'hidden'}}>
             <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -812,6 +812,9 @@ export default function FootballGolf(){
               )}
             </div>
 
+            {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
+            <div style={{flex:1,display:'flex',flexDirection:'column',gap:10,minHeight:0}}>
+
             {/* Category */}
             {question&&(
               <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px'}}>
@@ -833,7 +836,7 @@ export default function FootballGolf(){
                 isBunker={shotResult.isInBunker}
               />
             ) : isAnimating ? (
-              <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'16px 0'}}>
+              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4}}>
                 <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Distance</div>
                 <div style={{fontSize:52,fontWeight:900,color:'white',lineHeight:1,fontVariantNumeric:'tabular-nums'}}>
                   {Math.abs(Math.round(animBallPos - preAnimBallPos))}
@@ -870,10 +873,12 @@ export default function FootballGolf(){
                 </button>
               </>
             )}
+
+            </div>{/* end bottom section */}
           </div>
 
-          {/* Right panel — course — fixed height so animation in left panel never resizes it */}
-          <div style={{flex:1,minWidth:0,height:400,alignSelf:'flex-start',display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
+          {/* Right panel — course */}
+          <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
             <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
@@ -901,7 +906,7 @@ export default function FootballGolf(){
 
 function BunkerPanel({bq,onAnswer}:{bq:BunkerQ;onAnswer:(idx:number)=>void}){
   return(
-    <div style={{background:'#2a1f00',border:'1px solid #f59e0b',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+    <div style={{flex:1,background:'#2a1f00',border:'1px solid #f59e0b',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
       <div>
         <div style={{fontSize:10,fontWeight:800,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>🏖️ Sand Trap — Answer to play on</div>
         <div style={{fontSize:13,fontWeight:800,color:'white',lineHeight:1.4}}>{bq.q}</div>
@@ -933,7 +938,7 @@ function BunkerPanel({bq,onAnswer}:{bq:BunkerQ;onAnswer:(idx:number)=>void}){
 function LieResultPanel({result,onContinue}:{result:'good'|'bad';onContinue:()=>void}){
   const good = result==='good'
   return(
-    <div style={{background:good?'#0d2d1a':'#2a1400',border:`1px solid ${good?'#22c55e':'#f59e0b'}`,borderRadius:12,padding:'16px',display:'flex',flexDirection:'column',gap:10}}>
+    <div style={{flex:1,background:good?'#0d2d1a':'#2a1400',border:`1px solid ${good?'#22c55e':'#f59e0b'}`,borderRadius:12,padding:'16px',display:'flex',flexDirection:'column',gap:10}}>
       <div style={{fontSize:20,fontWeight:900,color:good?'#22c55e':'#f59e0b',textAlign:'center'}}>
         {good?'✅ Good Lie!':'⚠️ Bad Lie!'}
       </div>
@@ -1239,7 +1244,7 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
   const btnLabel = isWater?'Take Drop →':isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Finish Hole →':'Next Shot →'
 
   return(
-    <div style={{background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
+    <div style={{flex:1,background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:22,fontWeight:900,color:headlineColor}}>{headline}</div>
         <div style={{fontSize:11,color:'rgba(255,255,255,0.45)',marginTop:3}}>{subtext}</div>
