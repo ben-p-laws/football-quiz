@@ -725,7 +725,7 @@ export default function FootballGolf(){
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if(phase==='setup') return <><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} /></>
-  if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} onRestart={()=>setPhase('setup')} /></>
+  if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(!currentHole) return null
 
   // Keep ball at landing spot while result/bunker panel is open; only reset to actual pos after advancing
@@ -1382,41 +1382,116 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
 // ── Done screen ────────────────────────────────────────────────────────────────
 
-function DoneScreen({holes,scores,onRestart}:{holes:Hole[];scores:number[];onRestart:()=>void}){
-  const totalStrokes=scores.reduce((s,n)=>s+n,0)
-  const totalPar=holes.reduce((s,h)=>s+h.par,0)
-  const vsPar=totalStrokes-totalPar
-  const vsParStr=vsPar===0?'Even':vsPar>0?`+${vsPar}`:String(vsPar)
-  const vsParColor=vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'
+type LeaderboardEntry = { username: string; holes: number; strokes: number; vs_par: number }
+
+function vsParLabel(n: number) { return n === 0 ? 'E' : n > 0 ? `+${n}` : String(n) }
+
+function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:number[];numHoles:number;onRestart:()=>void}){
+  const totalStrokes = scores.reduce((s,n)=>s+n,0)
+  const totalPar     = holes.reduce((s,h)=>s+h.par,0)
+  const vsPar        = totalStrokes - totalPar
+  const vsParColor   = vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'
+
+  const [name,setName]               = useState('')
+  const [submitted,setSubmitted]     = useState(false)
+  const [saving,setSaving]           = useState(false)
+  const [leaderboard,setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [lbLoading,setLbLoading]     = useState(true)
+
+  useEffect(()=>{
+    fetch(`/api/golf-leaderboard?holes=${numHoles}`)
+      .then(r=>r.json()).then(d=>setLeaderboard(d.leaderboard??[])).finally(()=>setLbLoading(false))
+  },[numHoles])
+
+  async function saveScore(){
+    if(!name.trim()||saving) return
+    setSaving(true)
+    const res = await fetch('/api/golf-leaderboard',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({username:name.trim(),holes:numHoles,strokes:totalStrokes,vs_par:vsPar}),
+    })
+    const data = await res.json()
+    setLeaderboard(data.leaderboard??[])
+    setSubmitted(true)
+    setSaving(false)
+  }
+
   return(
-    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:24}}>
+    <div style={{minHeight:'100dvh',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',gap:20,fontFamily:"'DM Sans',sans-serif",padding:'28px 20px 40px',overflowY:'auto'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
-      <div style={{fontSize:48}}>⛳</div>
+
+      {/* Score */}
       <div style={{textAlign:'center'}}>
-        <div style={{fontSize:12,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:6}}>Final Score</div>
-        <div style={{fontSize:76,fontWeight:900,color:vsParColor,lineHeight:1}}>{vsParStr}</div>
-        <div style={{fontSize:15,color:'rgba(255,255,255,0.4)',marginTop:6}}>{totalStrokes} strokes · Par {totalPar}</div>
+        <div style={{fontSize:12,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>Final Score · {numHoles} Holes</div>
+        <div style={{fontSize:72,fontWeight:900,color:vsParColor,lineHeight:1}}>{vsParLabel(vsPar)}</div>
+        <div style={{fontSize:14,color:'rgba(255,255,255,0.4)',marginTop:4}}>{totalStrokes} strokes · Par {totalPar}</div>
       </div>
+
+      {/* Hole breakdown */}
       <div style={{width:'100%',maxWidth:340,background:'#111827',borderRadius:12,overflow:'hidden'}}>
-        <div style={{display:'grid',gridTemplateColumns:'36px 1fr 1fr 1fr',padding:'8px 12px',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
+        <div style={{display:'grid',gridTemplateColumns:'36px 1fr 1fr 1fr',padding:'7px 12px',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
           {['Hole','Par','Score','+/−'].map(h=>(
             <div key={h} style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase'}}>{h}</div>
           ))}
         </div>
         {holes.map((h,i)=>{
-          const s=scores[i]??0
-          const diff=s-h.par
+          const s=scores[i]??0; const diff=s-h.par
           return(
-            <div key={i} style={{display:'grid',gridTemplateColumns:'36px 1fr 1fr 1fr',padding:'7px 12px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+            <div key={i} style={{display:'grid',gridTemplateColumns:'36px 1fr 1fr 1fr',padding:'6px 12px',borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
               <div style={{fontSize:12,fontWeight:800,color:'rgba(255,255,255,0.5)'}}>{h.number}</div>
               <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>{h.par}</div>
               <div style={{fontSize:12,fontWeight:800,color:'white'}}>{s}</div>
-              <div style={{fontSize:12,fontWeight:800,color:diff<0?'#22c55e':diff>0?'#ef4444':'rgba(255,255,255,0.4)'}}>{diff===0?'E':diff>0?`+${diff}`:diff}</div>
+              <div style={{fontSize:12,fontWeight:800,color:diff<0?'#22c55e':diff>0?'#ef4444':'rgba(255,255,255,0.4)'}}>{vsParLabel(diff)}</div>
             </div>
           )
         })}
       </div>
-      <button onClick={onRestart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+
+      {/* Save score */}
+      {!submitted ? (
+        <div style={{width:'100%',maxWidth:340,display:'flex',gap:8}}>
+          <input
+            value={name} onChange={e=>setName(e.target.value)}
+            onKeyDown={e=>e.key==='Enter'&&saveScore()}
+            placeholder="Your name"
+            maxLength={20}
+            style={{flex:1,background:'#1e2d4a',border:'1.5px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'11px 14px',fontSize:14,fontWeight:700,color:'white',fontFamily:'inherit'}}
+          />
+          <button onClick={saveScore} disabled={!name.trim()||saving}
+            style={{background:name.trim()&&!saving?'#dc2626':'#1e2d4a',color:'white',border:'none',borderRadius:10,padding:'11px 18px',fontSize:14,fontWeight:800,cursor:name.trim()?'pointer':'default',fontFamily:'inherit',transition:'background 0.2s'}}>
+            {saving?'…':'Save'}
+          </button>
+        </div>
+      ) : (
+        <div style={{fontSize:13,fontWeight:700,color:'#22c55e'}}>✓ Score saved</div>
+      )}
+
+      {/* Leaderboard */}
+      <div style={{width:'100%',maxWidth:340}}>
+        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>{numHoles}-Hole Leaderboard</div>
+        {lbLoading ? (
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.3)',textAlign:'center',padding:'16px 0'}}>Loading…</div>
+        ) : leaderboard.length===0 ? (
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.3)',textAlign:'center',padding:'16px 0'}}>No scores yet — be the first!</div>
+        ) : (
+          <div style={{background:'#111827',borderRadius:12,overflow:'hidden'}}>
+            {leaderboard.map((e,i)=>{
+              const isMe = submitted && e.username===name.trim() && e.vs_par===vsPar && e.strokes===totalStrokes
+              return(
+                <div key={i} style={{display:'grid',gridTemplateColumns:'28px 1fr auto auto',alignItems:'center',padding:'8px 12px',borderBottom:'1px solid rgba(255,255,255,0.04)',background:isMe?'rgba(220,38,38,0.08)':'transparent'}}>
+                  <div style={{fontSize:11,fontWeight:800,color:i===0?'#fbbf24':i===1?'#94a3b8':i===2?'#cd7c3c':'rgba(255,255,255,0.3)'}}>{i+1}</div>
+                  <div style={{fontSize:13,fontWeight:700,color:isMe?'white':'rgba(255,255,255,0.75)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{e.username}</div>
+                  <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.4)',marginRight:10}}>{e.strokes} str</div>
+                  <div style={{fontSize:13,fontWeight:900,color:e.vs_par<0?'#22c55e':e.vs_par>0?'#ef4444':'white',minWidth:28,textAlign:'right'}}>{vsParLabel(e.vs_par)}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
+      <button onClick={onRestart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'13px 48px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
         Play Again
       </button>
     </div>
