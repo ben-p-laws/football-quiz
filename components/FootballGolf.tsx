@@ -1114,8 +1114,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
           return (
             <text x={labelX} y={cy-1} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
-              <tspan x={labelX} dy="0">💧 {distToFar}</tspan>
-              <tspan x={labelX} dy="5.5">–{distToNear}yd</tspan>
+              <tspan x={labelX} dy="0">💧 {distToNear}</tspan>
+              <tspan x={labelX} dy="5.5">–{distToFar}yd</tspan>
             </text>
           )
         })()}
@@ -1129,8 +1129,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const labelX = sideX > 50 ? sideX - 11 : sideX + 11
           return (
             <text key={i} x={labelX} y={midPos.y-1} fontSize={4.5} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
-              <tspan x={labelX} dy="0">🏖️ {distToFar}</tspan>
-              <tspan x={labelX} dy="5.5">–{distToNear}yd</tspan>
+              <tspan x={labelX} dy="0">🏖️ {distToNear}</tspan>
+              <tspan x={labelX} dy="5.5">–{distToFar}yd</tspan>
             </text>
           )
         })}
