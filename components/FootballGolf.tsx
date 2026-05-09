@@ -778,7 +778,7 @@ export default function FootballGolf(){
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)'}}>
 
           {/* Left panel */}
-          <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0,overflow:'hidden'}}>
+          <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
             <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
