@@ -486,7 +486,7 @@ export default function FootballGolf(){
     setAnimBallPos(fromPos)
     setArcOffset(0)
     const startTime = performance.now()
-    const duration  = 1100
+    const duration  = 2000
     const dir = oobDir.current
     const tick = (now:number)=>{
       const t     = Math.min(1,(now-startTime)/duration)
@@ -801,21 +801,6 @@ export default function FootballGolf(){
                       {CLUB_LABEL[club]} · max {clubMax} yds
                       {inBunker && <span style={{color:'#f59e0b'}}> · ⛺ In bunker</span>}
                     </div>
-                    {/* Water — own line */}
-                    {currentHole.hazard && !pastPin && (()=>{
-                      const distToStart = currentHole.hazard.start - approachPos
-                      const distToEnd   = currentHole.hazard.end   - approachPos
-                      if(distToEnd <= 0) return null
-                      if(distToStart <= 0) return <div style={{fontSize:13,fontWeight:700,color:'#f87171'}}>💧 In water zone</div>
-                      return <div style={{fontSize:13,fontWeight:700,color:'#60a5fa'}}>💧 Water: {distToStart}–{distToEnd} yds ahead</div>
-                    })()}
-                    {/* Bunker — own line */}
-                    {!pastPin && !inBunker && currentHole.bunkers.map((b,i)=>{
-                      const distToStart = b.start - approachPos
-                      const distToEnd   = b.end   - approachPos
-                      if(distToEnd <= 0 || approachPos >= b.start) return null
-                      return <div key={i} style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>⛺ Bunker: {distToStart}–{distToEnd} yds ahead</div>
-                    })}
                   </>
                 )
               })()}
@@ -830,9 +815,7 @@ export default function FootballGolf(){
             {/* Category */}
             {question&&(
               <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px'}}>
-                <div style={{fontSize:9,fontWeight:800,color:'#4a5568',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>Category</div>
-                <div style={{fontSize:13,fontWeight:800,color:'white',lineHeight:1.3}}>{question.label}</div>
-                <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:3}}>Up to 3 players — combined stat = shot distance</div>
+                <div style={{fontSize:16,fontWeight:800,color:'white',lineHeight:1.3}}>{question.label}</div>
               </div>
             )}
 
@@ -849,6 +832,14 @@ export default function FootballGolf(){
                 onContinue={shotResult.isInBunker ? triggerBunkerQuestion : advanceFromResult}
                 isBunker={shotResult.isInBunker}
               />
+            ) : isAnimating ? (
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,padding:'16px 0'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Distance</div>
+                <div style={{fontSize:52,fontWeight:900,color:'white',lineHeight:1,fontVariantNumeric:'tabular-nums'}}>
+                  {Math.abs(Math.round(animBallPos - preAnimBallPos))}
+                </div>
+                <div style={{fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>yards</div>
+              </div>
             ) : (
               <>
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
@@ -986,6 +977,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number
 }){
+  // displayBallPos is yards-from-tee; past-pin if > hole.distance
+  const ballTeePosForLabels = Math.min(displayBallPos, hole.distance)
   const {x:ballX,y:ballY} = yardToSVG(displayBallPos, hole.distance, hole.path)
   const finalBallX = ballX + arcOffset
   const {x:swingX,y:swingY} = yardToSVG(preAnimBallPos, hole.distance, hole.path)
@@ -1048,6 +1041,34 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
             <g key={i}>
               <ellipse cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
             </g>
+          )
+        })}
+
+        {/* Water hazard distance label */}
+        {hole.hazard && displayBallPos <= hole.distance && (()=>{
+          const distToStart = Math.round(hole.hazard.start - ballTeePosForLabels)
+          const distToEnd   = Math.round(hole.hazard.end   - ballTeePosForLabels)
+          if(distToEnd <= 0) return null
+          const cx = yardToX((hole.hazard.start + hole.hazard.end) / 2)
+          const cy = yardToY((hole.hazard.start + hole.hazard.end) / 2)
+          const labelX = cx > 50 ? cx - 14 : cx + 14
+          const txt = distToStart <= 0 ? '💧 In water' : `💧 ${distToStart}–${distToEnd}yd`
+          return (
+            <text x={labelX} y={cy+1.5} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>{txt}</text>
+          )
+        })()}
+
+        {/* Bunker distance labels */}
+        {displayBallPos <= hole.distance && hole.bunkers.map((b,i)=>{
+          const midYards = (b.start + b.end) / 2
+          const midPos   = yardToSVG(midYards, hole.distance, hole.path)
+          const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
+          const distToStart = Math.round(b.start - ballTeePosForLabels)
+          const distToEnd   = Math.round(b.end   - ballTeePosForLabels)
+          if(distToEnd <= 0 || ballTeePosForLabels >= b.start) return null
+          const labelX = sideX > 50 ? sideX - 11 : sideX + 11
+          return (
+            <text key={i} x={labelX} y={midPos.y+1.5} fontSize={4.5} fill="#fcd34d" textAnchor="middle" fontWeight="bold" style={{fontFamily:'inherit'}}>⛺ {distToStart}–{distToEnd}yd</text>
           )
         })}
 
