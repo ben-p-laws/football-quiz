@@ -1574,25 +1574,33 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
   const [name,setName]               = useState('')
   const [submitted,setSubmitted]     = useState(false)
   const [saving,setSaving]           = useState(false)
+  const [saveError,setSaveError]     = useState('')
   const [leaderboard,setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [lbLoading,setLbLoading]     = useState(true)
+  const [lbError,setLbError]         = useState('')
 
   useEffect(()=>{
     fetch(`/api/golf-leaderboard?holes=${numHoles}`)
-      .then(r=>r.json()).then(d=>setLeaderboard(d.leaderboard??[])).finally(()=>setLbLoading(false))
+      .then(r=>r.json())
+      .then(d=>{ if(d.error) setLbError(d.error); else setLeaderboard(d.leaderboard??[]) })
+      .catch(e=>setLbError(String(e)))
+      .finally(()=>setLbLoading(false))
   },[numHoles])
 
   async function saveScore(){
     if(!name.trim()||saving) return
     setSaving(true)
-    const res = await fetch('/api/golf-leaderboard',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({username:name.trim(),holes:numHoles,strokes:totalStrokes,vs_par:vsPar}),
-    })
-    const data = await res.json()
-    setLeaderboard(data.leaderboard??[])
-    setSubmitted(true)
+    setSaveError('')
+    try{
+      const res = await fetch('/api/golf-leaderboard',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username:name.trim(),holes:numHoles,strokes:totalStrokes,vs_par:vsPar}),
+      })
+      const data = await res.json()
+      if(data.error) setSaveError(data.error)
+      else { setLeaderboard(data.leaderboard??[]); setSubmitted(true) }
+    }catch(e){ setSaveError(String(e)) }
     setSaving(false)
   }
 
@@ -1645,12 +1653,15 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
       ) : (
         <div style={{fontSize:13,fontWeight:700,color:'#22c55e'}}>✓ Score saved</div>
       )}
+      {saveError&&<div style={{fontSize:11,color:'#ef4444',textAlign:'center',maxWidth:300}}>{saveError}</div>}
 
       {/* Leaderboard */}
       <div style={{width:'100%',maxWidth:340}}>
         <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>{numHoles}-Hole Leaderboard</div>
         {lbLoading ? (
           <div style={{fontSize:12,color:'rgba(255,255,255,0.3)',textAlign:'center',padding:'16px 0'}}>Loading…</div>
+        ) : lbError ? (
+          <div style={{fontSize:11,color:'#ef4444',textAlign:'center',padding:'16px 0'}}>{lbError}</div>
         ) : leaderboard.length===0 ? (
           <div style={{fontSize:12,color:'rgba(255,255,255,0.3)',textAlign:'center',padding:'16px 0'}}>No scores yet — be the first!</div>
         ) : (
