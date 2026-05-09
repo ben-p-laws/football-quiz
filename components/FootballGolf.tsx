@@ -167,15 +167,20 @@ function pickCategory(
   club: ClubType,
   usedLabels: Set<string>,
   recentFilters: string[],
+  recentStats: StatKey[],
   nations: NationEntry[],
   clubs: string[],
   continents: string[],
   contClubPairs: [string,string][],
   top3Cache: Record<string,number> | null,
 ): Category {
-  const recentSet = new Set(recentFilters)
+  const recentSet      = new Set(recentFilters)
+  const recentStatsSet = new Set(recentStats)
   const threshold = CLUB_THRESHOLD[club]
   const stats = remaining > 150 ? LONG_STATS : SHORT_STATS
+  // Prefer stats not recently used; fall back to full pool if all are recent
+  const freshStats = stats.filter(s => !recentStatsSet.has(s))
+  const statPool = freshStats.length > 0 ? freshStats : stats
 
   // Build full filter pool
   const allFilters: FilterSpec[] = [
@@ -187,7 +192,7 @@ function pickCategory(
   ]
 
   for (let attempt = 0; attempt < 120; attempt++) {
-    const stat = stats[Math.floor(Math.random() * stats.length)]
+    const stat = statPool[Math.floor(Math.random() * statPool.length)]
     const isClubStat = CLUB_STATS.includes(stat)
 
     const valid = allFilters.filter(f => {
@@ -505,6 +510,7 @@ export default function FootballGolf(){
   const [question,setQuestion]           = useState<Category|null>(null)
   const usedLabels    = useRef<Set<string>>(new Set())
   const recentFilters = useRef<string[]>([])
+  const recentStats   = useRef<StatKey[]>([])
   const metaNations      = useRef<NationEntry[]>(FALLBACK_NATIONS)
   const metaClubs        = useRef<string[]>(FALLBACK_CLUBS)
   const metaContinents   = useRef<string[]>(['Africa','Europe','Asia','S. America','N. America','Oceania'])
@@ -586,7 +592,7 @@ export default function FootballGolf(){
 
   function nextPickedCategory(dist: number): Category {
     const cat = pickCategory(
-      dist, club, usedLabels.current, recentFilters.current,
+      dist, club, usedLabels.current, recentFilters.current, recentStats.current,
       metaNations.current, metaClubs.current,
       metaContinents.current, metaContClubPairs.current,
       top3CacheRef.current,
@@ -594,6 +600,7 @@ export default function FootballGolf(){
     usedLabels.current.add(cat.label)
     const f = cat.natFilter || cat.clubFilter || cat.continentFilter
     if (f) recentFilters.current = [...recentFilters.current.slice(-9), f]
+    recentStats.current = [...recentStats.current.slice(-3), cat.key]
     return cat
   }
 
@@ -601,6 +608,7 @@ export default function FootballGolf(){
     const hs = courseMode === 'real' ? buildCourse(tee, numHoles) : generateHoles(numHoles)
     usedLabels.current    = new Set()
     recentFilters.current = []
+    recentStats.current   = []
     setHoles(hs)
     setScores(new Array(numHoles).fill(null))
     setHoleIdx(0)
