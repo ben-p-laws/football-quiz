@@ -386,8 +386,9 @@ export default function FootballGolf(){
   const [preAnimBallPos,setPreAnimBallPos] = useState(0) // ball pos before shot started (for swing graphic)
   const [arcOffset,setArcOffset]         = useState(0)   // lateral arc during flight
   const [pendingResult,setPendingResult] = useState<ShotResult|null>(null)
-  const animFrameRef = useRef<number|null>(null)
-  const oobDir       = useRef<0|1|-1>(0)
+  const animFrameRef       = useRef<number|null>(null)
+  const oobDir             = useRef<0|1|-1>(0)
+  const oobTargetArcOffset = useRef<number>(0)
   const [bunkerQ,setBunkerQ]             = useState<BunkerQ|null>(null)
   const [bunkerLieResult,setBunkerLieResult] = useState<'good'|'bad'|null>(null)
   const [badLiePlayerData,setBadLiePlayerData] = useState<Record<string,{goals:number;assists:number;yellow_cards:number}>>({})
@@ -493,7 +494,7 @@ export default function FootballGolf(){
       const eased = t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2
       setAnimBallPos(fromPos+(toPos-fromPos)*eased)
       if(dir!==0){
-        setArcOffset(dir*eased*50)
+        setArcOffset(oobTargetArcOffset.current*eased)
       }else{
         setArcOffset(Math.sin(Math.PI*eased)*7)
       }
@@ -559,9 +560,15 @@ export default function FootballGolf(){
     if(isClubMaxOOB){
       isOOB=true
       penaltyReason=`Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`
-      oobDir.current = Math.random()<0.5 ? 1 : -1
+      const dir: 1|-1 = Math.random()<0.5 ? 1 : -1
+      oobDir.current = dir
+      // compute arcOffset needed to land exactly at SVG edge (x=4 or x=96)
+      const oobToPos = Math.min(ballPos + 300, currentHole.distance + 10)
+      const finalPathX = yardToSVG(oobToPos, currentHole.distance, currentHole.path).x
+      oobTargetArcOffset.current = (dir > 0 ? 96 : 4) - finalPathX
     }else{
       oobDir.current = 0
+      oobTargetArcOffset.current = 0
     }
 
     // Water hazard — only on approach (not when going back from past the pin)
