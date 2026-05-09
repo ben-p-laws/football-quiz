@@ -4,94 +4,166 @@ import NavBar from '@/components/NavBar'
 
 // ── Categories ───────────────────────────────────────────────────────────────
 
-const TOP_NATIONS: { code: string; label: string }[] = [
-  { code:'ENG', label:'English' },   { code:'FRA', label:'French' },
-  { code:'IRL', label:'Irish' },     { code:'SCO', label:'Scottish' },
-  { code:'WAL', label:'Welsh' },     { code:'ESP', label:'Spanish' },
-  { code:'NED', label:'Dutch' },     { code:'BRA', label:'Brazilian' },
-  { code:'POR', label:'Portuguese' },{ code:'NOR', label:'Norwegian' },
-  { code:'DEN', label:'Danish' },    { code:'ARG', label:'Argentine' },
-  { code:'NIR', label:'N. Irish' },  { code:'BEL', label:'Belgian' },
-  { code:'GER', label:'German' },    { code:'NGA', label:'Nigerian' },
-  { code:'JAM', label:'Jamaican' },  { code:'SWE', label:'Swedish' },
-  { code:'ITA', label:'Italian' },   { code:'USA', label:'American' },
-  { code:'SEN', label:'Senegalese' },{ code:'AUS', label:'Australian' },
-  { code:'CIV', label:"Ivorian" },   { code:'CZE', label:'Czech' },
-  { code:'SRB', label:'Serbian' },   { code:'CMR', label:'Cameroonian' },
-  { code:'GHA', label:'Ghanaian' },  { code:'SUI', label:'Swiss' },
-  { code:'CRO', label:'Croatian' },  { code:'ISL', label:'Icelandic' },
-]
-
-const TOP_CLUBS: string[] = [
-  'Tottenham Hotspur','Manchester United','Everton','Chelsea','Arsenal',
-  'Liverpool','West Ham United','Newcastle United','Aston Villa','Manchester City',
-  'Southampton','Fulham','Crystal Palace','Leicester City','Sunderland',
-  'Blackburn Rovers','Middlesbrough','Leeds United','Wolves','West Bromwich Albion',
-]
-
-type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'yellow_cards'|'clean_sheets'
-type Category = { key: StatKey; label: string; clubFilter?: string; natFilter?: string; seasonFilter?: string }
-type ClubType='driver'|'iron'|'wedge'|'putter'
-
-// >150 yds: long-range stats only. <=150 yds: all 5.
-const LONG_STATS:  StatKey[] = ['goals','goals_assists','appearances']
-const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','yellow_cards']
-
-const STAT_LABEL: Record<StatKey,string> = {
-  goals:'Goals', assists:'Assists', goals_assists:'Goals + Assists',
-  appearances:'Appearances', yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
+// Nationality labels for display
+const NAT_LABELS: Record<string, string> = {
+  ENG:'English',FRA:'French',IRL:'Irish',SCO:'Scottish',WAL:'Welsh',ESP:'Spanish',
+  NED:'Dutch',BRA:'Brazilian',POR:'Portuguese',NOR:'Norwegian',DEN:'Danish',ARG:'Argentine',
+  NIR:'N. Irish',BEL:'Belgian',GER:'German',NGA:'Nigerian',JAM:'Jamaican',SWE:'Swedish',
+  ITA:'Italian',USA:'American',SEN:'Senegalese',AUS:'Australian',CIV:'Ivorian',CZE:'Czech',
+  SRB:'Serbian',CMR:'Cameroonian',GHA:'Ghanaian',SUI:'Swiss',CRO:'Croatian',ISL:'Icelandic',
+  ZIM:'Zimbabwean',TRI:'Trinidadian',KOR:'South Korean',URU:'Uruguayan',ALG:'Algerian',
+  BUL:'Bulgarian',ROU:'Romanian',EGY:'Egyptian',TUR:'Turkish',RUS:'Russian',UKR:'Ukrainian',
+  COL:'Colombian',MLI:'Malian',TGO:'Togolese',NZL:'New Zealand',ZAF:'South African',
+  ECU:'Ecuadorian',FIN:'Finnish',JPN:'Japanese',BIH:'Bosnian',SVK:'Slovak',PAR:'Paraguayan',
+  GRE:'Greek',TUN:'Tunisian',MAR:'Moroccan',HUN:'Hungarian',ARM:'Armenian',AUT:'Austrian',
+  ISR:'Israeli',SVN:'Slovenian',MNE:'Montenegrin',LIB:'Liberian',POL:'Polish',VEN:'Venezuelan',
+  COD:'Congolese',GAM:'Gambian',CAN:'Canadian',CHI:'Chilean',GEO:'Georgian',ALB:'Albanian',
+  MKD:'Macedonian',KVX:'Kosovar',
 }
 
-function pickCategory(remaining: number, usedLabels: Set<string>, recentFilters: string[]): Category {
+// Nationality code → continent name (must match server CONTINENT_MAP)
+const CONTINENT_MEMBERS: Record<string, string> = {
+  NGA:'Africa',GHA:'Africa',CMR:'Africa',SEN:'Africa',CIV:'Africa',EGY:'Africa',
+  ALG:'Africa',TUN:'Africa',MAR:'Africa',ZIM:'Africa',ZAF:'Africa',TGO:'Africa',
+  MLI:'Africa',COD:'Africa',GAM:'Africa',LIB:'Africa',
+  BRA:'S. America',ARG:'S. America',URU:'S. America',COL:'S. America',
+  PAR:'S. America',CHI:'S. America',VEN:'S. America',ECU:'S. America',
+  JPN:'Asia',KOR:'Asia',
+  USA:'N. America',CAN:'N. America',
+  JAM:'Caribbean',TRI:'Caribbean',
+  AUS:'Oceania',NZL:'Oceania',
+}
+
+// Adjective form for category labels e.g. "African PL Goals"
+const CONTINENT_LABELS: Record<string, string> = {
+  'Africa':'African','S. America':'S. American','Asia':'Asian',
+  'N. America':'N. American','Caribbean':'Caribbean','Oceania':'Oceanian',
+}
+
+type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals'|
+               'yellow_cards'|'clean_sheets'|'goals_2010'|'ga_2010'|'goals_2015'|'ga_2015'
+type Category = { key: StatKey; label: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string }
+type ClubType = 'driver'|'iron'|'wedge'|'putter'
+
+// Driver/iron: stats where all-time top-3 easily hits 150+
+const LONG_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','goals_2010','ga_2010','goals_2015','ga_2015']
+// Wedge/putter: all stats including niche ones
+const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','goals_2010','ga_2010','goals_2015','ga_2015','clean_sheets']
+
+const STAT_LABEL: Record<StatKey, string> = {
+  goals:'Goals', assists:'Assists', goals_assists:'Goals + Assists',
+  appearances:'Appearances', apps_minus_goals:'Appearances − Goals',
+  yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
+  goals_2010:'Goals (since 10/11)', ga_2010:'Goals + Assists (since 10/11)',
+  goals_2015:'Goals (since 15/16)', ga_2015:'Goals + Assists (since 15/16)',
+}
+
+// Stats that support per-club and continent+club queries (2010/2015 stats do not)
+const CLUB_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets']
+
+const CLUB_THRESHOLD: Record<ClubType, number> = { driver:250, iron:150, wedge:50, putter:10 }
+
+type NationEntry = { code: string; label: string }
+
+// Fallback nation list (used before meta loads)
+const FALLBACK_NATIONS: NationEntry[] = [
+  'ENG','FRA','IRL','SCO','WAL','ESP','NED','BRA','POR','NOR','DEN','ARG','NIR','BEL','GER',
+  'NGA','JAM','SWE','ITA','USA','SEN','AUS','CIV','CZE','SRB','CMR','GHA','SUI','CRO','ISL',
+].map(c => ({ code:c, label:NAT_LABELS[c]??c }))
+
+const FALLBACK_CLUBS = [
+  'Tottenham Hotspur','Manchester United','Everton','Chelsea','Arsenal','Liverpool',
+  'West Ham United','Newcastle United','Aston Villa','Manchester City','Southampton',
+  'Fulham','Crystal Palace','Leicester City','Sunderland','Blackburn Rovers',
+  'Middlesbrough','Leeds United','Wolves','West Bromwich Albion',
+]
+
+type FilterSpec =
+  | { k:'all' }
+  | { k:'nat'; code:string; label:string }
+  | { k:'club'; name:string }
+  | { k:'cont'; name:string }
+  | { k:'cc'; continent:string; club:string }
+
+function cacheKeyFor(stat: StatKey, f: FilterSpec): string {
+  if (f.k==='all')  return `${stat}::`
+  if (f.k==='nat')  return `${stat}:${f.code}:`
+  if (f.k==='club') return `${stat}::${f.name}`
+  if (f.k==='cont') return `${stat}:cont:${f.name}`
+  return `${stat}:cont:${f.continent}:${f.club}`
+}
+
+function filterStr(f: FilterSpec): string {
+  if (f.k==='all')  return ''
+  if (f.k==='nat')  return f.code
+  if (f.k==='club') return f.name
+  if (f.k==='cont') return f.name
+  return `${f.continent}:${f.club}`
+}
+
+function makeLabel(stat: StatKey, f: FilterSpec): string {
+  const sl = STAT_LABEL[stat]
+  if (f.k==='all')  return `All-time PL ${sl}`
+  if (f.k==='nat')  return `${f.label} PL ${sl}`
+  if (f.k==='club') return `PL ${sl} for ${f.name}`
+  if (f.k==='cont') return `${CONTINENT_LABELS[f.name]??f.name} PL ${sl}`
+  return `${CONTINENT_LABELS[f.continent]??f.continent} PL ${sl} for ${f.club}`
+}
+
+function pickCategory(
+  remaining: number,
+  club: ClubType,
+  usedLabels: Set<string>,
+  recentFilters: string[],
+  nations: NationEntry[],
+  clubs: string[],
+  continents: string[],
+  contClubPairs: [string,string][],
+  top3Cache: Record<string,number> | null,
+): Category {
   const recentSet = new Set(recentFilters)
+  const threshold = CLUB_THRESHOLD[club]
   const stats = remaining > 150 ? LONG_STATS : SHORT_STATS
 
-  // Up to 60 attempts to find a pool slot + stat combo that satisfies both constraints.
-  // Constraint 1: country/club not in recentFilters (last 10 shots).
-  // Constraint 2: exact label not already used this round.
-  for (let attempt = 0; attempt < 60; attempt++) {
-    const pick = Math.floor(Math.random() * 51)
+  // Build full filter pool
+  const allFilters: FilterSpec[] = [
+    { k:'all' },
+    ...nations.map(n => ({ k:'nat' as const, code:n.code, label:n.label })),
+    ...clubs.map(c => ({ k:'club' as const, name:c })),
+    ...continents.map(c => ({ k:'cont' as const, name:c })),
+    ...contClubPairs.map(([cont,cl]) => ({ k:'cc' as const, continent:cont, club:cl })),
+  ]
 
-    let natFilter: string | undefined
-    let clubFilter: string | undefined
-    let labelFn: (statLabel: string) => string
+  for (let attempt = 0; attempt < 120; attempt++) {
+    const stat = stats[Math.floor(Math.random() * stats.length)]
+    const isClubStat = CLUB_STATS.includes(stat)
 
-    if (pick < 30) {
-      const { code, label } = TOP_NATIONS[pick]
-      if (recentSet.has(code)) continue
-      natFilter = code
-      labelFn = s => `${label} PL ${s}`
-    } else if (pick < 50) {
-      const clubName = TOP_CLUBS[pick - 30]
-      if (recentSet.has(clubName)) continue
-      clubFilter = clubName
-      labelFn = s => `PL ${s} for ${clubName}`
-    } else {
-      labelFn = s => `All-time PL ${s}`
-    }
-
-    // Try stats in shuffled order to find one whose full label hasn't been used yet.
-    const shuffled = [...stats].sort(() => Math.random() - 0.5)
-    for (const key of shuffled) {
-      const label = labelFn(STAT_LABEL[key])
-      if (!usedLabels.has(label)) {
-        return { key, label, ...(natFilter ? { natFilter } : {}), ...(clubFilter ? { clubFilter } : {}) }
+    const valid = allFilters.filter(f => {
+      if (!isClubStat && (f.k==='club' || f.k==='cc')) return false
+      const fs = filterStr(f)
+      if (fs && recentSet.has(fs)) return false
+      if (top3Cache) {
+        const sum = top3Cache[cacheKeyFor(stat, f)] ?? 0
+        if (sum < threshold) return false
       }
-    }
-    // All stats for this pool entry exhausted — try a different pool slot.
+      return !usedLabels.has(makeLabel(stat, f))
+    })
+
+    if (valid.length === 0) continue
+
+    const f = valid[Math.floor(Math.random() * valid.length)]
+    const label = makeLabel(stat, f)
+    const cat: Category = { key:stat, label }
+    if (f.k==='nat') cat.natFilter = f.code
+    if (f.k==='club') cat.clubFilter = f.name
+    if (f.k==='cont') cat.continentFilter = f.name
+    if (f.k==='cc') { cat.continentFilter = f.continent; cat.clubFilter = f.club }
+    return cat
   }
 
-  // Fallback: ignore constraints (round is nearly exhausted).
-  const pick = Math.floor(Math.random() * 51)
-  const key = stats[Math.floor(Math.random() * stats.length)]
-  if (pick < 30) {
-    const { code, label } = TOP_NATIONS[pick]
-    return { key, label: `${label} PL ${STAT_LABEL[key]}`, natFilter: code }
-  } else if (pick < 50) {
-    const club = TOP_CLUBS[pick - 30]
-    return { key, label: `PL ${STAT_LABEL[key]} for ${club}`, clubFilter: club }
-  }
-  return { key, label: `All-time PL ${STAT_LABEL[key]}` }
+  // Fallback
+  const stat = stats[Math.floor(Math.random() * stats.length)]
+  return { key:stat, label:`All-time PL ${STAT_LABEL[stat]}` }
 }
 
 const BAD_LIE_SEASONS = ['2000-2001','2004-2005','2008-2009','2012-2013','2015-2016','2018-2019']
@@ -354,6 +426,13 @@ type ShotResult={
   waterDropRemaining?:number  // set when OOB was a water hazard; new remaining after drop
 }
 
+type PlayerDataLocal = {
+  goals:number; assists:number; games:number; yellow_cards:number; clean_sheets:number; nationality:string
+  goals2010:number; ga2010:number; goals2015:number; ga2015:number
+  clubGoals:Record<string,number>; clubAssists:Record<string,number>; clubGames:Record<string,number>
+  clubYellowCards:Record<string,number>; clubCleanSheets:Record<string,number>
+}
+
 function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/['''`]/g,'').toLowerCase()}
 
 // ── Main component ─────────────────────────────────────────────────────────────
@@ -372,13 +451,19 @@ export default function FootballGolf(){
   const [question,setQuestion]           = useState<Category|null>(null)
   const usedLabels    = useRef<Set<string>>(new Set())
   const recentFilters = useRef<string[]>([])
+  const metaNations      = useRef<NationEntry[]>(FALLBACK_NATIONS)
+  const metaClubs        = useRef<string[]>(FALLBACK_CLUBS)
+  const metaContinents   = useRef<string[]>(['Africa','S. America','Asia','N. America','Caribbean','Oceania'])
+  const metaContClubPairs = useRef<[string,string][]>([])
+  const top3CacheRef     = useRef<Record<string,number>|null>(null)
+  const [metaReady, setMetaReady] = useState(false)
   const [playerInputs,setPlayerInputs]   = useState(['','',''])
   const [suggestions,setSuggestions]     = useState<string[][]>([[],[],[]])
   const [confirmedPlayers,setConfirmedPlayers] = useState<(string|null)[]>([null,null,null])
   const [shotResult,setShotResult]       = useState<ShotResult|null>(null)
   const [inputError,setInputError]       = useState('')
   const [allPlayerNames,setAllPlayerNames] = useState<string[]>([])
-  const [playerData,setPlayerData]       = useState<Record<string,any>>({})
+  const [playerData,setPlayerData]       = useState<Record<string,PlayerDataLocal>>({})
   const [namesLoading,setNamesLoading]   = useState(true)
   // Animation
   const [isAnimating,setIsAnimating]     = useState(false)
@@ -412,6 +497,18 @@ export default function FootballGolf(){
   },[])
 
   useEffect(()=>{
+    fetch('/api/football-golf?meta=1').then(r=>r.json())
+      .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>})=>{
+        metaNations.current      = m.nations.map(c=>({code:c,label:NAT_LABELS[c]??c}))
+        metaClubs.current        = m.clubs
+        metaContinents.current   = m.continents
+        metaContClubPairs.current = m.contClubPairs
+        top3CacheRef.current     = m.top3Cache
+        setMetaReady(true)
+      }).catch(()=>setMetaReady(true)) // on error, allow play with fallback lists
+  },[])
+
+  useEffect(()=>{
     const s = BAD_LIE_SEASONS[Math.floor(Math.random()*BAD_LIE_SEASONS.length)]
     badLieSeason.current = s
     fetch(`/api/football-golf?season=${s}`).then(r=>r.json()).then(d=>setBadLiePlayerData(d.players||{})).catch(()=>{})
@@ -434,9 +531,14 @@ export default function FootballGolf(){
     : 0
 
   function nextPickedCategory(dist: number): Category {
-    const cat = pickCategory(dist, usedLabels.current, recentFilters.current)
+    const cat = pickCategory(
+      dist, club, usedLabels.current, recentFilters.current,
+      metaNations.current, metaClubs.current,
+      metaContinents.current, metaContClubPairs.current,
+      top3CacheRef.current,
+    )
     usedLabels.current.add(cat.label)
-    const f = cat.natFilter || cat.clubFilter
+    const f = cat.natFilter || cat.clubFilter || cat.continentFilter
     if (f) recentFilters.current = [...recentFilters.current.slice(-9), f]
     return cat
   }
@@ -531,12 +633,14 @@ export default function FootballGolf(){
         const p=playerData[name]
         if(!p){ breakdown.push({name,value:0});continue }
         if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
-        if(question.clubFilter){
-          const cf=question.clubFilter
+        if(question.continentFilter && CONTINENT_MEMBERS[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
+        const cf=question.clubFilter
+        if(cf){
           if(question.key==='goals')              value=p.clubGoals[cf]||0
           else if(question.key==='assists')       value=p.clubAssists[cf]||0
           else if(question.key==='goals_assists') value=(p.clubGoals[cf]||0)+(p.clubAssists[cf]||0)
           else if(question.key==='appearances')   value=p.clubGames[cf]||0
+          else if(question.key==='apps_minus_goals') value=Math.max(0,(p.clubGames[cf]||0)-(p.clubGoals[cf]||0))
           else if(question.key==='yellow_cards')  value=p.clubYellowCards[cf]||0
           else if(question.key==='clean_sheets')  value=p.clubCleanSheets[cf]||0
         }else{
@@ -544,8 +648,13 @@ export default function FootballGolf(){
           else if(question.key==='assists')       value=p.assists
           else if(question.key==='goals_assists') value=p.goals+p.assists
           else if(question.key==='appearances')   value=p.games
+          else if(question.key==='apps_minus_goals') value=Math.max(0,p.games-p.goals)
           else if(question.key==='yellow_cards')  value=p.yellow_cards
           else if(question.key==='clean_sheets')  value=p.clean_sheets
+          else if(question.key==='goals_2010')    value=p.goals2010??0
+          else if(question.key==='ga_2010')       value=p.ga2010??0
+          else if(question.key==='goals_2015')    value=p.goals2015??0
+          else if(question.key==='ga_2015')       value=p.ga2015??0
         }
       }
       breakdown.push({name,value})
@@ -724,7 +833,7 @@ export default function FootballGolf(){
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if(phase==='setup') return <><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} /></>
+  if(phase==='setup') return <><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} metaReady={metaReady} /></>
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(!currentHole) return null
 
@@ -1291,11 +1400,11 @@ const REAL_COURSES = [
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart,metaReady}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
-  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void
+  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void; metaReady:boolean
 }){
   const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
     {value:'Red',  label:'Easy',  sub:'Red tees',  color:'#dc2626', ring:'rgba(220,38,38,0.4)'},
@@ -1373,8 +1482,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       </div>
 
-      <button onClick={onStart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-        Tee Off →
+      <button onClick={onStart} disabled={!metaReady} style={{background:metaReady?'#dc2626':'#1e2d4a',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',transition:'background 0.3s'}}>
+        {metaReady?'Tee Off →':'Loading…'}
       </button>
     </div>
   )
