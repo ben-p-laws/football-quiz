@@ -592,10 +592,13 @@ export default function FootballGolf(){
     : 0
 
   function nextPickedCategory(dist: number): Category {
+    const clubForDist = dist > 0 ? getClub(dist) : 'driver'
+    // Only include cont+club pairs when top3Cache is loaded — they require threshold enforcement
+    const contClubPairs = top3CacheRef.current ? metaContClubPairs.current : []
     const cat = pickCategory(
-      dist, club, usedLabels.current, recentFilters.current, recentStats.current,
+      dist, clubForDist, usedLabels.current, recentFilters.current, recentStats.current,
       metaNations.current, metaClubs.current,
-      metaContinents.current, metaContClubPairs.current,
+      metaContinents.current, contClubPairs,
       top3CacheRef.current,
     )
     usedLabels.current.add(cat.label)
