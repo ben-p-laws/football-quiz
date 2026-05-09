@@ -30,8 +30,11 @@ const CONTINENT_MEMBERS: Record<string, string> = {
   BRA:'S. America',ARG:'S. America',URU:'S. America',COL:'S. America',
   PAR:'S. America',CHI:'S. America',VEN:'S. America',ECU:'S. America',
   JPN:'Asia',KOR:'Asia',
-  USA:'N. America',CAN:'N. America',
-  JAM:'N. America',TRI:'N. America',
+  USA:'N. America',CAN:'N. America',MEX:'N. America',
+  JAM:'N. America',TRI:'N. America',HAI:'N. America',CUB:'N. America',DOM:'N. America',
+  BRB:'N. America',GRN:'N. America',ATG:'N. America',SKN:'N. America',LCA:'N. America',
+  VIN:'N. America',CUW:'N. America',SUR:'N. America',GUY:'N. America',BLZ:'N. America',
+  HON:'N. America',CRC:'N. America',PAN:'N. America',GUA:'N. America',SLV:'N. America',NCA:'N. America',
   AUS:'Oceania',NZL:'Oceania',
 }
 
