@@ -778,7 +778,7 @@ export default function FootballGolf(){
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)'}}>
 
           {/* Left panel */}
-          <div style={{flex:2,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0,overflow:'hidden'}}>
+          <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0,overflow:'hidden'}}>
             <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -815,10 +815,10 @@ export default function FootballGolf(){
             {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
             <div style={{flex:1,display:'flex',flexDirection:'column',gap:10,minHeight:0}}>
 
-            {/* Category */}
+            {/* Category — fixed 2-line height so layout never shifts */}
             {question&&(
-              <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px'}}>
-                <div style={{fontSize:16,fontWeight:800,color:'white',lineHeight:1.3}}>{question.label}</div>
+              <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px',minHeight:58,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{fontSize:16,fontWeight:800,color:'white',lineHeight:1.3,textAlign:'center'}}>{question.label}</div>
               </div>
             )}
 
@@ -878,7 +878,7 @@ export default function FootballGolf(){
           </div>
 
           {/* Right panel — course */}
-          <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
+          <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
             <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
