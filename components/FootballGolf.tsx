@@ -149,17 +149,18 @@ function makeCategoryLabel(stat: StatKey, f: FilterSpec): { label: string; statL
 }
 
 function makeFilterLabel(cat: Category): string {
+  const noun = cat.key === 'clean_sheets' ? 'goalkeepers' : 'players'
   if (cat.seasonFilter) {
     const [y1, y2] = cat.seasonFilter.split('-')
     return `in ${y1.slice(2)}/${y2.slice(2)}`
   }
   if (cat.continentFilter && cat.clubFilter) {
-    return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${cat.clubFilter} players`
+    return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${cat.clubFilter} ${noun}`
   }
-  if (cat.continentFilter) return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} players`
-  if (cat.clubFilter)      return `${cat.clubFilter} players`
-  if (cat.natFilter)       return `${NAT_LABELS[cat.natFilter] ?? cat.natFilter} players`
-  return 'All PL players'
+  if (cat.continentFilter) return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${noun}`
+  if (cat.clubFilter)      return `${cat.clubFilter} ${noun}`
+  if (cat.natFilter)       return `${NAT_LABELS[cat.natFilter] ?? cat.natFilter} ${noun}`
+  return `All PL ${noun}`
 }
 
 function pickCategory(
