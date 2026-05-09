@@ -892,6 +892,7 @@ export default function FootballGolf(){
                 arcOffset={arcOffset}
                 isAnimating={isAnimating}
                 strokes={strokes}
+                maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
               />
             </div>
           </div>
@@ -979,8 +980,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number
 }){
   // displayBallPos is yards-from-tee; past-pin if > hole.distance
   const ballTeePosForLabels = Math.min(displayBallPos, hole.distance)
@@ -1048,6 +1049,17 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
             </g>
           )
         })}
+
+        {/* Max range indicator — shown when pin is beyond club max */}
+        {maxRangePos !== undefined && maxRangePos < hole.distance && (()=>{
+          const {x:mx,y:my} = yardToSVG(maxRangePos, hole.distance, hole.path)
+          return (
+            <g opacity={0.85}>
+              <line x1={mx-12} y1={my} x2={mx+12} y2={my} stroke="#f97316" strokeWidth={1.2} strokeDasharray="2.5,2" strokeLinecap="round"/>
+              <text x={mx+14} y={my+1.5} fontSize={4} fill="#f97316" fontWeight="bold" textAnchor="start">max</text>
+            </g>
+          )
+        })()}
 
         {/* Tee box — rotated to sit across the fairway */}
         <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
