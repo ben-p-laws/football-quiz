@@ -32,7 +32,8 @@ const CONTINENT_MAP: Record<string, string> = {
   NGA: 'Africa', GHA: 'Africa', CMR: 'Africa', SEN: 'Africa', CIV: 'Africa',
   EGY: 'Africa', ALG: 'Africa', TUN: 'Africa', MAR: 'Africa', ZIM: 'Africa',
   ZAF: 'Africa', TGO: 'Africa', MLI: 'Africa', COD: 'Africa', GAM: 'Africa',
-  LIB: 'Africa',
+  LIB: 'Africa', BEN: 'Africa', GAB: 'Africa', BFA: 'Africa', GUI: 'Africa',
+  COG: 'Africa', SLE: 'Africa', ANG: 'Africa', GNB: 'Africa',
   BRA: 'S. America', ARG: 'S. America', URU: 'S. America', COL: 'S. America',
   PAR: 'S. America', CHI: 'S. America', VEN: 'S. America', ECU: 'S. America',
   JPN: 'Asia', KOR: 'Asia',
@@ -320,7 +321,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, continents, contClubPairs, top3Cache }
   },
-  ['football-golf-meta-v4'],
+  ['football-golf-meta-v5'],
   { revalidate: 86400 }
 )
 

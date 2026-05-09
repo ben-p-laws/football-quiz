@@ -25,7 +25,8 @@ const NAT_LABELS: Record<string, string> = {
 const CONTINENT_MEMBERS: Record<string, string> = {
   NGA:'Africa',GHA:'Africa',CMR:'Africa',SEN:'Africa',CIV:'Africa',EGY:'Africa',
   ALG:'Africa',TUN:'Africa',MAR:'Africa',ZIM:'Africa',ZAF:'Africa',TGO:'Africa',
-  MLI:'Africa',COD:'Africa',GAM:'Africa',LIB:'Africa',
+  MLI:'Africa',COD:'Africa',GAM:'Africa',LIB:'Africa',BEN:'Africa',GAB:'Africa',
+  BFA:'Africa',GUI:'Africa',COG:'Africa',SLE:'Africa',ANG:'Africa',GNB:'Africa',
   BRA:'S. America',ARG:'S. America',URU:'S. America',COL:'S. America',
   PAR:'S. America',CHI:'S. America',VEN:'S. America',ECU:'S. America',
   JPN:'Asia',KOR:'Asia',
@@ -42,7 +43,7 @@ const CONTINENT_LABELS: Record<string, string> = {
 
 type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals'|
                'yellow_cards'|'clean_sheets'|'goals_2010'|'ga_2010'|'goals_2015'|'ga_2015'
-type Category = { key: StatKey; label: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string }
+type Category = { key: StatKey; label: string; statLabel: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string }
 type ClubType = 'driver'|'iron'|'wedge'|'putter'
 
 // Driver/iron: stats where all-time top-3 easily hits 150+
@@ -110,6 +111,10 @@ function makeLabel(stat: StatKey, f: FilterSpec): string {
   return `${CONTINENT_LABELS[f.continent]??f.continent} PL ${sl} for ${f.club}`
 }
 
+function makeCategoryLabel(stat: StatKey, f: FilterSpec): { label: string; statLabel: string } {
+  return { label: makeLabel(stat, f), statLabel: STAT_LABEL[stat] }
+}
+
 function pickCategory(
   remaining: number,
   club: ClubType,
@@ -152,8 +157,8 @@ function pickCategory(
     if (valid.length === 0) continue
 
     const f = valid[Math.floor(Math.random() * valid.length)]
-    const label = makeLabel(stat, f)
-    const cat: Category = { key:stat, label }
+    const { label, statLabel } = makeCategoryLabel(stat, f)
+    const cat: Category = { key:stat, label, statLabel }
     if (f.k==='nat') cat.natFilter = f.code
     if (f.k==='club') cat.clubFilter = f.name
     if (f.k==='cont') cat.continentFilter = f.name
@@ -163,7 +168,8 @@ function pickCategory(
 
   // Fallback
   const stat = stats[Math.floor(Math.random() * stats.length)]
-  return { key:stat, label:`All-time PL ${STAT_LABEL[stat]}` }
+  const sl = STAT_LABEL[stat]
+  return { key:stat, label:`All-time PL ${sl}`, statLabel:sl }
 }
 
 const BAD_LIE_SEASONS = ['2000-2001','2004-2005','2008-2009','2012-2013','2015-2016','2018-2019']
@@ -172,8 +178,9 @@ function pickBadLieCategory(season: string): Category {
   const keys: StatKey[] = ['goals','assists','yellow_cards']
   const key = keys[Math.floor(Math.random() * keys.length)]
   const [y1, y2] = season.split('-')
-  const label = `${key==='goals'?'Goals':key==='assists'?'Assists':'Yellow Cards'} in ${y1.slice(2)}/${y2.slice(2)}`
-  return { key, label, seasonFilter: season }
+  const statLabel = key==='goals'?'Goals':key==='assists'?'Assists':'Yellow Cards'
+  const label = `${statLabel} in ${y1.slice(2)}/${y2.slice(2)}`
+  return { key, label, statLabel, seasonFilter: season }
 }
 
 
@@ -932,7 +939,12 @@ export default function FootballGolf(){
             {/* Category — fixed 2-line height so layout never shifts */}
             {question&&(
               <div style={{background:'#1e2d4a',borderRadius:10,padding:'9px 12px',minHeight:58,display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <div style={{fontSize:16,fontWeight:800,color:'white',lineHeight:1.3,textAlign:'center'}}>{question.label}</div>
+                <div style={{fontSize:16,fontWeight:800,color:'white',lineHeight:1.3,textAlign:'center'}}>
+                  {question.statLabel ? (() => {
+                    const parts = question.label.split(question.statLabel)
+                    return <>{parts[0]}<span style={{color:'#dc2626'}}>{question.statLabel}</span>{parts[1]}</>
+                  })() : question.label}
+                </div>
               </div>
             )}
 
