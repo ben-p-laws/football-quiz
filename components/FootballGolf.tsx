@@ -392,43 +392,28 @@ function generateHoles(count:3|6|9|18): Hole[] {
 // Paths derived from Pebble Beach aerial images.
 // pts[0]=tee, pts[last]=green. y-values mapped from actual image positions.
 // SVG viewBox "0 -10 100 165": y = imageFraction*165-10
+// Path pts derived from aerial image analysis.
+// For real-course mode these are remapped to HOLE_POSITIONS tee/green;
+// the intermediate control points define the fairway bend shape.
 const PEBBLE_BEACH: HoleDef[] = [
-  // H1  — banana arc (green≈19% tee≈82%), no water in image
-  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:42,y:125},{x:84,y:73},{x:42,y:21}]},                                           hazardFrac:null,                          bunkerCount:2 },
-  // H2  — straight inland (green≈13% tee≈81%)
-  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:50,y:124},{x:50,y:12}]},                                                        hazardFrac:null,                          bunkerCount:2 },
-  // H3  — straight, tree-lined (green≈15% tee≈85%)
-  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:50,y:130},{x:50,y:15}]},                                                        hazardFrac:null,                          bunkerCount:3 },
-  // H4  — straight, ocean cliff right (green≈15% tee≈86%)
-  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:50,y:133},{x:50,y:16}]},                                                        hazardFrac:{startFrac:0.45,endFrac:0.85}, bunkerCount:2 },
-  // H5  — par 3, ocean right (green≈15% tee≈78%)
-  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:46,y:120},{x:68,y:68},{x:46,y:15}]},                                            hazardFrac:{startFrac:0.35,endFrac:0.80}, bunkerCount:2 },
-  // H6  — S-curve par 5, large ocean right (green≈11% tee≈86%)
-  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:52,y:132},{x:26,y:91},{x:72,y:49},{x:52,y:8}]},                                 hazardFrac:{startFrac:0.40,endFrac:0.80}, bunkerCount:2 },
-  // H7  — compact par 3 over ocean (green≈25% tee≈60%, tee notably higher in image)
-  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:50,y:89},{x:50,y:31}]},                                                         hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
-  // H8  — slight bend right, ocean cliff (green≈16% tee≈81%)
-  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:48,y:124},{x:60,y:70},{x:48,y:16}]},                                            hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
-  // H9  — strong bend left along bay (green≈11% tee≈84%)
-  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:58,y:129},{x:22,y:69},{x:58,y:8}]},                                             hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
-  // H10 — strong bend right (green≈14% tee≈84%)
-  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:42,y:128},{x:76,y:71},{x:42,y:13}]},                                            hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
-  // H11 — straight, no water in image (green≈15% tee≈81%)
-  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:50,y:124},{x:50,y:15}]},                                                        hazardFrac:null,                          bunkerCount:2 },
-  // H12 — par 3, tee notably higher than most (green≈17% tee≈71%)
-  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:50,y:107},{x:50,y:18}]},                                                        hazardFrac:null,                          bunkerCount:2 },
-  // H13 — mild bend right (green≈12% tee≈81%)
-  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:46,y:124},{x:68,y:67},{x:46,y:10}]},                                            hazardFrac:null,                          bunkerCount:3 },
-  // H14 — long straight par 5 (green≈13% tee≈81%)
-  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:50,y:125},{x:50,y:12}]},                                                        hazardFrac:null,                          bunkerCount:3 },
-  // H15 — mild bend right (green≈11% tee≈80%)
-  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:46,y:121},{x:66,y:65},{x:46,y:9}]},                                             hazardFrac:null,                          bunkerCount:2 },
-  // H16 — straight (green≈12% tee≈84%)
-  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:50,y:128},{x:50,y:11}]},                                                        hazardFrac:null,                          bunkerCount:2 },
-  // H17 — par 3, ocean top (green≈14% tee≈80%)
-  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:50,y:122},{x:50,y:13}]},                                                        hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
-  // H18 — arc along Stillwater Cove, bend left (green≈11% tee≈78%)
-  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:58,y:119},{x:18,y:64},{x:58,y:8}]},                                             hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
+  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:59.8,y:135.1},{x:37.6,y:56},{x:46,y:89},{x:70.8,y:6.7}]},   hazardFrac:null,                          bunkerCount:2 },
+  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:57.5,y:144.7},{x:50.7,y:64},{x:47.9,y:97},{x:32.4,y:15.7}]}, hazardFrac:null,                          bunkerCount:2 },
+  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:67.7,y:111.3},{x:58.4,y:56},{x:59.7,y:81},{x:54.1,y:19.8}]}, hazardFrac:null,                          bunkerCount:3 },
+  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:40,y:130.4},{x:49.7,y:73},{x:50.8,y:97},{x:73.3,y:32.3}]},   hazardFrac:{startFrac:0.45,endFrac:0.85}, bunkerCount:2 },
+  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:55.2,y:133.6},{x:48.8,y:64},{x:50,y:97},{x:56.1,y:30.7}]},   hazardFrac:{startFrac:0.35,endFrac:0.80}, bunkerCount:2 },
+  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:42.4,y:144.7},{x:43.1,y:56},{x:60.2,y:97},{x:33.4,y:0.9}]},  hazardFrac:{startFrac:0.40,endFrac:0.80}, bunkerCount:2 },
+  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:35.8,y:119.1},{x:56,y:64},{x:39.6,y:89},{x:73.9,y:25.6}]},   hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
+  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:60.5,y:127.5},{x:24.8,y:56},{x:46.2,y:89},{x:20,y:22}]},     hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
+  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:40,y:128.6},{x:37.9,y:56},{x:42.2,y:89},{x:58.2,y:13.5}]},   hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
+  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:34.6,y:135.4},{x:33.1,y:56},{x:38.4,y:89},{x:33.8,y:11.4}]}, hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
+  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:57.6,y:136.9},{x:45.4,y:56},{x:49,y:89},{x:32.9,y:13.2}]},   hazardFrac:null,                          bunkerCount:2 },
+  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:25.8,y:97},{x:41.6,y:56},{x:43.5,y:73},{x:42.8,y:31.2}]},    hazardFrac:null,                          bunkerCount:2 },
+  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:60.5,y:143.1},{x:50.7,y:64},{x:44.5,y:97},{x:68.6,y:15.6}]}, hazardFrac:null,                          bunkerCount:3 },
+  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:44.8,y:128.8},{x:43.2,y:56},{x:40.4,y:89},{x:49.5,y:14.6}]}, hazardFrac:null,                          bunkerCount:3 },
+  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:29.5,y:139.9},{x:43.2,y:56},{x:53.1,y:97},{x:33.3,y:7.1}]},  hazardFrac:null,                          bunkerCount:2 },
+  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:45.7,y:122.3},{x:44.1,y:64},{x:60.8,y:89},{x:56.3,y:28.6}]}, hazardFrac:null,                          bunkerCount:2 },
+  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:70,y:139.7},{x:55.3,y:81},{x:54.1,y:106},{x:44.1,y:43.8}]},  hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
+  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:70.3,y:122.4},{x:70,y:73},{x:67.7,y:97},{x:47.7,y:41.4}]},   hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
 ]
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
@@ -542,11 +527,6 @@ export default function FootballGolf(){
   const badLieSeason = useRef<string>('')
   const [pastPin,setPastPin]             = useState(false)
   const [holeResult,setHoleResult]       = useState<{label:string;color:string;diff:number}|null>(null)
-  const [holePositions,setHolePositions] = useState<Record<number,{teeFrac:[number,number];greenFrac:[number,number]}>>(() => {
-    try { const s=localStorage.getItem('pebble-pos'); return s ? {...DEFAULT_HOLE_POSITIONS,...JSON.parse(s)} : DEFAULT_HOLE_POSITIONS } catch { return DEFAULT_HOLE_POSITIONS }
-  })
-  const [calibStep,setCalibStep]         = useState<null|'green'|'tee'>(null)
-
   const normalisedNames = useRef<string[]>([])
 
   useEffect(()=>{
@@ -1071,17 +1051,10 @@ export default function FootballGolf(){
 
           {/* Right panel — course */}
           <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
-            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10,position:'relative'}}>
+            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
               <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
-              {/* Calibration button — real course only */}
-              {courseMode==='real' && (
-                <button onClick={()=>setCalibStep(s=>s?null:'green')}
-                  style={{position:'absolute',top:8,right:0,background:calibStep?'#4ade80':'rgba(255,255,255,0.08)',border:'none',borderRadius:6,padding:'3px 6px',cursor:'pointer',fontSize:11,color:calibStep?'#0a0f1e':'rgba(255,255,255,0.5)',fontWeight:700}}>
-                  {calibStep ? (calibStep==='green' ? '⛳ tap green' : '🏌️ tap tee') : '📍'}
-                </button>
-              )}
             </div>
             <div style={{flex:1,minHeight:0,marginTop:22}}>
               <CourseView
@@ -1094,23 +1067,8 @@ export default function FootballGolf(){
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
-                realTeePos={courseMode==='real' ? fracToSVG((holePositions[currentHole.number]??DEFAULT_HOLE_POSITIONS[currentHole.number]).teeFrac) : undefined}
-                realGreenPos={courseMode==='real' ? fracToSVG((holePositions[currentHole.number]??DEFAULT_HOLE_POSITIONS[currentHole.number]).greenFrac) : undefined}
-                calibStep={calibStep}
-                onCalibClick={(svgX,svgY)=>{
-                  const xFrac=svgX/100, yFrac=(svgY+10)/165
-                  const hNum=currentHole.number
-                  setHolePositions(prev=>{
-                    const cur=prev[hNum]??DEFAULT_HOLE_POSITIONS[hNum]
-                    const updated=calibStep==='green'
-                      ? {...cur, greenFrac:[xFrac,yFrac] as [number,number]}
-                      : {...cur, teeFrac:[xFrac,yFrac] as [number,number]}
-                    const next={...prev,[hNum]:updated}
-                    try{localStorage.setItem('pebble-pos',JSON.stringify(next))}catch{}
-                    return next
-                  })
-                  setCalibStep(s=>s==='green'?'tee':null)
-                }}
+                realTeePos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].teeFrac) : undefined}
+                realGreenPos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].greenFrac) : undefined}
               />
             </div>
           </div>
@@ -1198,10 +1156,9 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,calibStep,onCalibClick}:{
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number
   realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}
-  calibStep?:null|'green'|'tee'; onCalibClick?:(svgX:number,svgY:number)=>void
 }){
   // Remap the hole path so pts[0]=realTeePos and pts[last]=realGreenPos when calibrated
   const effectivePath = useMemo(()=>{
@@ -1236,14 +1193,6 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
 
   const rot = imageRotation ?? 0
 
-  function handleSVGClick(e:React.MouseEvent<SVGSVGElement>){
-    if(!calibStep||!onCalibClick) return
-    const rect=e.currentTarget.getBoundingClientRect()
-    const xFrac=(e.clientX-rect.left)/rect.width
-    const yFrac=(e.clientY-rect.top)/rect.height
-    onCalibClick(xFrac*100, yFrac*165-10)
-  }
-
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
 
@@ -1259,9 +1208,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Slight dark scrim so labels stay readable */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice"
-        style={{display:'block',flex:1,position:'relative',cursor:calibStep?'crosshair':'default'}}
-        onClick={handleSVGClick}>
+      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -1331,17 +1278,6 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-11} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
         <polygon points={`${holePos.x},${holePos.y-11} ${holePos.x+7},${holePos.y-8} ${holePos.x},${holePos.y-5}`} fill="#dc2626"/>
 
-        {/* Calibration crosshairs — visible when calibStep is active */}
-        {calibStep && <>
-          <line x1={holePos.x-8} y1={holePos.y} x2={holePos.x+8} y2={holePos.y} stroke="#4ade80" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
-          <line x1={holePos.x} y1={holePos.y-8} x2={holePos.x} y2={holePos.y+8} stroke="#4ade80" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
-          <circle cx={holePos.x} cy={holePos.y} r={4} fill="none" stroke="#4ade80" strokeWidth={0.7} opacity={0.8}/>
-          <line x1={teePos.x-8} y1={teePos.y} x2={teePos.x+8} y2={teePos.y} stroke="#f97316" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
-          <line x1={teePos.x} y1={teePos.y-8} x2={teePos.x} y2={teePos.y+8} stroke="#f97316" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
-          <circle cx={teePos.x} cy={teePos.y} r={4} fill="none" stroke="#f97316" strokeWidth={0.7} opacity={0.8}/>
-          <text x={holePos.x+5} y={holePos.y-6} fontSize={4} fill="#4ade80" fontWeight="bold">⛳</text>
-          <text x={teePos.x+5} y={teePos.y-6} fontSize={4} fill="#f97316" fontWeight="bold">🏌️</text>
-        </>}
 
         {/* Swing animation */}
         {isAnimating&&(
@@ -1546,27 +1482,27 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
 // Per-hole photo rotation for Pebble Beach (degrees). Add entries as needed.
 const PEBBLE_PHOTO_ROTATIONS: Record<number, number> = {}
 
-// Default tee and green positions per hole as [xFrac, yFrac] (0-1) of the aerial image.
-// Calibrate in-game with the 📍 button to move them to the exact spot.
-const DEFAULT_HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]}> = {
-  1:  {teeFrac:[0.42,0.82], greenFrac:[0.35,0.12]},
-  2:  {teeFrac:[0.50,0.81], greenFrac:[0.50,0.13]},
-  3:  {teeFrac:[0.50,0.85], greenFrac:[0.50,0.15]},
-  4:  {teeFrac:[0.50,0.87], greenFrac:[0.50,0.15]},
-  5:  {teeFrac:[0.46,0.78], greenFrac:[0.46,0.15]},
-  6:  {teeFrac:[0.52,0.86], greenFrac:[0.52,0.11]},
-  7:  {teeFrac:[0.50,0.60], greenFrac:[0.50,0.25]},
-  8:  {teeFrac:[0.48,0.81], greenFrac:[0.48,0.16]},
-  9:  {teeFrac:[0.58,0.84], greenFrac:[0.58,0.11]},
-  10: {teeFrac:[0.42,0.84], greenFrac:[0.42,0.14]},
-  11: {teeFrac:[0.50,0.81], greenFrac:[0.50,0.15]},
-  12: {teeFrac:[0.50,0.71], greenFrac:[0.50,0.17]},
-  13: {teeFrac:[0.46,0.81], greenFrac:[0.46,0.12]},
-  14: {teeFrac:[0.50,0.81], greenFrac:[0.50,0.13]},
-  15: {teeFrac:[0.46,0.80], greenFrac:[0.46,0.11]},
-  16: {teeFrac:[0.50,0.84], greenFrac:[0.50,0.12]},
-  17: {teeFrac:[0.50,0.80], greenFrac:[0.50,0.14]},
-  18: {teeFrac:[0.58,0.78], greenFrac:[0.58,0.11]},
+// Tee and green positions per hole as [xFrac, yFrac] (0–1) of the aerial image.
+// Derived by image analysis (brightness-cluster detection on pre-rotated 600×1560 portraits).
+const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]}> = {
+  1:  {teeFrac:[0.598,0.879], greenFrac:[0.708,0.101]},
+  2:  {teeFrac:[0.575,0.938], greenFrac:[0.324,0.156]},
+  3:  {teeFrac:[0.677,0.735], greenFrac:[0.541,0.181]},
+  4:  {teeFrac:[0.400,0.851], greenFrac:[0.733,0.257]},
+  5:  {teeFrac:[0.552,0.870], greenFrac:[0.561,0.247]},
+  6:  {teeFrac:[0.424,0.937], greenFrac:[0.334,0.066]},
+  7:  {teeFrac:[0.358,0.783], greenFrac:[0.739,0.216]},
+  8:  {teeFrac:[0.605,0.834], greenFrac:[0.200,0.194]},
+  9:  {teeFrac:[0.400,0.840], greenFrac:[0.582,0.142]},
+  10: {teeFrac:[0.346,0.881], greenFrac:[0.338,0.129]},
+  11: {teeFrac:[0.576,0.890], greenFrac:[0.329,0.141]},
+  12: {teeFrac:[0.258,0.648], greenFrac:[0.428,0.250]},
+  13: {teeFrac:[0.605,0.928], greenFrac:[0.686,0.155]},
+  14: {teeFrac:[0.448,0.841], greenFrac:[0.495,0.149]},
+  15: {teeFrac:[0.295,0.909], greenFrac:[0.333,0.104]},
+  16: {teeFrac:[0.457,0.802], greenFrac:[0.563,0.234]},
+  17: {teeFrac:[0.700,0.907], greenFrac:[0.441,0.326]},
+  18: {teeFrac:[0.703,0.802], greenFrac:[0.477,0.311]},
 }
 function fracToSVG(frac:[number,number]):{x:number;y:number}{
   return {x:frac[0]*100, y:frac[1]*165-10}
