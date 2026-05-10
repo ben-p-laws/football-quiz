@@ -1298,37 +1298,46 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <circle cx={finalBallX} cy={ballY} r={4.5} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
 
-        {/* Distance labels */}
+        {/* Distance labels — dark pill so they read on any background */}
         {hole.hazard && displayBallPos <= hole.distance && (()=>{
           const distToNear = Math.round(hole.hazard.start - ballTeePosForLabels)
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
           const cx = yardToX((hole.hazard.start + hole.hazard.end) / 2)
           const cy = yardToY((hole.hazard.start + hole.hazard.end) / 2)
-          const labelX = cx > 50 ? cx - 14 : cx + 14
+          const lx = Math.max(16, Math.min(84, cx))
           if(distToNear <= 0) return (
-            <text x={labelX} y={cy+1.5} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
+            <g>
+              <rect x={lx-14} y={cy-5} width={28} height={9} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <text x={lx} y={cy+2} fontSize={5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
+            </g>
           )
           return (
-            <text x={labelX} y={cy-1} fontSize={4.5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
-              <tspan x={labelX} dy="0">💧 {distToNear}</tspan>
-              <tspan x={labelX} dy="5.5">–{distToFar}yd</tspan>
-            </text>
+            <g>
+              <rect x={lx-14} y={cy-7} width={28} height={14} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <text x={lx} y={cy-1} fontSize={5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
+                <tspan x={lx} dy="0">💧 {distToNear}</tspan>
+                <tspan x={lx} dy="6">–{distToFar}yd</tspan>
+              </text>
+            </g>
           )
         })()}
         {displayBallPos <= hole.distance && hole.bunkers.map((b,i)=>{
           const midYards = (b.start + b.end) / 2
-          const midPos   = yardToSVG(midYards, hole.distance, hole.path)
-          const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
+          const midPos   = yardToSVG(midYards, hole.distance, effectivePath)
           const distToNear = Math.round(b.start - ballTeePosForLabels)
           const distToFar  = Math.round(b.end   - ballTeePosForLabels)
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
-          const labelX = sideX > 50 ? sideX - 11 : sideX + 11
+          const offset = i % 2 === 0 ? -16 : 16
+          const lx = Math.max(16, Math.min(84, midPos.x + offset))
           return (
-            <text key={i} x={labelX} y={midPos.y-1} fontSize={4.5} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
-              <tspan x={labelX} dy="0">🏖️ {distToNear}</tspan>
-              <tspan x={labelX} dy="5.5">–{distToFar}yd</tspan>
-            </text>
+            <g key={i}>
+              <rect x={lx-14} y={midPos.y-7} width={28} height={14} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <text x={lx} y={midPos.y-1} fontSize={5} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
+                <tspan x={lx} dy="0">🏖️ {distToNear}</tspan>
+                <tspan x={lx} dy="6">–{distToFar}yd</tspan>
+              </text>
+            </g>
           )
         })}
       </svg>
@@ -1485,24 +1494,24 @@ const PEBBLE_PHOTO_ROTATIONS: Record<number, number> = {}
 // Tee and green positions per hole as [xFrac, yFrac] (0–1) of the aerial image.
 // Derived by image analysis (brightness-cluster detection on pre-rotated 600×1560 portraits).
 const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]}> = {
-  1:  {teeFrac:[0.598,0.879], greenFrac:[0.708,0.101]},
-  2:  {teeFrac:[0.575,0.938], greenFrac:[0.324,0.156]},
-  3:  {teeFrac:[0.677,0.735], greenFrac:[0.541,0.181]},
-  4:  {teeFrac:[0.400,0.851], greenFrac:[0.733,0.257]},
-  5:  {teeFrac:[0.552,0.870], greenFrac:[0.561,0.247]},
-  6:  {teeFrac:[0.424,0.937], greenFrac:[0.334,0.066]},
-  7:  {teeFrac:[0.358,0.783], greenFrac:[0.739,0.216]},
-  8:  {teeFrac:[0.605,0.834], greenFrac:[0.200,0.194]},
-  9:  {teeFrac:[0.400,0.840], greenFrac:[0.582,0.142]},
-  10: {teeFrac:[0.346,0.881], greenFrac:[0.338,0.129]},
-  11: {teeFrac:[0.576,0.890], greenFrac:[0.329,0.141]},
-  12: {teeFrac:[0.258,0.648], greenFrac:[0.428,0.250]},
-  13: {teeFrac:[0.605,0.928], greenFrac:[0.686,0.155]},
-  14: {teeFrac:[0.448,0.841], greenFrac:[0.495,0.149]},
-  15: {teeFrac:[0.295,0.909], greenFrac:[0.333,0.104]},
-  16: {teeFrac:[0.457,0.802], greenFrac:[0.563,0.234]},
-  17: {teeFrac:[0.700,0.907], greenFrac:[0.441,0.326]},
-  18: {teeFrac:[0.703,0.802], greenFrac:[0.477,0.311]},
+  1:  {teeFrac:[0.768,0.900], greenFrac:[0.603,0.094]},
+  2:  {teeFrac:[0.585,0.930], greenFrac:[0.521,0.090]},
+  3:  {teeFrac:[0.211,0.870], greenFrac:[0.291,0.132]},
+  4:  {teeFrac:[0.535,0.865], greenFrac:[0.538,0.124]},
+  5:  {teeFrac:[0.390,0.886], greenFrac:[0.496,0.156]},
+  6:  {teeFrac:[0.583,0.955], greenFrac:[0.487,0.059]},
+  7:  {teeFrac:[0.425,0.731], greenFrac:[0.439,0.300]},
+  8:  {teeFrac:[0.650,0.847], greenFrac:[0.556,0.135]},
+  9:  {teeFrac:[0.520,0.858], greenFrac:[0.488,0.136]},
+  10: {teeFrac:[0.546,0.903], greenFrac:[0.545,0.098]},
+  11: {teeFrac:[0.492,0.894], greenFrac:[0.596,0.106]},
+  12: {teeFrac:[0.613,0.877], greenFrac:[0.500,0.112]},
+  13: {teeFrac:[0.501,0.933], greenFrac:[0.520,0.091]},
+  14: {teeFrac:[0.610,0.867], greenFrac:[0.684,0.140]},
+  15: {teeFrac:[0.388,0.923], greenFrac:[0.521,0.082]},
+  16: {teeFrac:[0.556,0.891], greenFrac:[0.610,0.095]},
+  17: {teeFrac:[0.523,0.924], greenFrac:[0.538,0.183]},
+  18: {teeFrac:[0.441,0.870], greenFrac:[0.408,0.094]},
 }
 function fracToSVG(frac:[number,number]):{x:number;y:number}{
   return {x:frac[0]*100, y:frac[1]*165-10}
