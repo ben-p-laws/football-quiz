@@ -1081,7 +1081,7 @@ export default function FootballGolf(){
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : undefined}
-                imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 270) : undefined}
+                imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
               />
             </div>
           </div>
@@ -1191,18 +1191,14 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
 
-      {/* Real course photo — landscape 1560×600 images (AR=2.6) rotated to fill portrait container.
-           width:260% makes CSS width=2.6×containerW, height:auto → CSS height=containerW.
-           After rotate: visual width=containerW, visual height=2.6×containerW (both fill). */}
+      {/* Real course photo — images are pre-rotated to 600×1560 portrait, display fills naturally */}
       {imageUrl && (
-        <div style={{position:'absolute',inset:0,overflow:'hidden'}}>
-          <img src={imageUrl} alt="" style={{
-            position:'absolute',
-            width:'260%', height:'auto',
-            top:'50%', left:'50%',
-            transform:`translate(-50%,-50%) rotate(${rot}deg)`,
-          }}/>
-        </div>
+        <img src={imageUrl} alt="" style={{
+          position:'absolute', inset:0,
+          width:'100%', height:'100%',
+          objectFit:'cover', objectPosition:'center',
+          ...(rot ? {transform:`rotate(${rot}deg)`} : {}),
+        }}/>
       )}
       {/* Slight dark scrim so labels stay readable */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
