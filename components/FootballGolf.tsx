@@ -1081,7 +1081,7 @@ export default function FootballGolf(){
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : undefined}
-                imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
+                imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 90) : undefined}
               />
             </div>
           </div>
@@ -1191,13 +1191,16 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
 
-      {/* Real course photo */}
+      {/* Real course photo — landscape image rotated to fill portrait container */}
       {imageUrl && (
-        <img src={imageUrl} alt="" style={{
-          position:'absolute', inset:0, width:'100%', height:'100%',
-          objectFit:'cover', objectPosition:'center',
-          ...(rot ? {transform:`rotate(${rot}deg)`, ...(rot===90||rot===270 ? {scale:'1.78'} : {})} : {}),
-        }}/>
+        <div style={{position:'absolute',inset:0,overflow:'hidden'}}>
+          <img src={imageUrl} alt="" style={{
+            position:'absolute',
+            height:'100%', width:'auto',
+            top:'50%', left:'50%',
+            transform:`translate(-50%,-50%) rotate(${rot}deg)`,
+          }}/>
+        </div>
       )}
       {/* Slight dark scrim so labels stay readable */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
