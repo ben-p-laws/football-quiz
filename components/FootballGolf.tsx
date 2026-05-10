@@ -1081,6 +1081,7 @@ export default function FootballGolf(){
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : undefined}
+                imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
               />
             </div>
           </div>
@@ -1168,8 +1169,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number
 }){
   // displayBallPos is yards-from-tee; past-pin if > hole.distance
   const ballTeePosForLabels = Math.min(displayBallPos, hole.distance)
@@ -1185,10 +1186,22 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const endAngle = pathEndAngle(hole.path)
   const fairwayD = pathToD(hole.path.pts)
 
+  const rot = imageRotation ?? 0
+
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative',
-      ...(imageUrl ? {backgroundImage:`url(${imageUrl})`,backgroundSize:'cover',backgroundPosition:'center'} : {})}}>
-      {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.35)',borderRadius:28,pointerEvents:'none'}}/>}
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
+
+      {/* Real course photo */}
+      {imageUrl && (
+        <img src={imageUrl} alt="" style={{
+          position:'absolute', inset:0, width:'100%', height:'100%',
+          objectFit:'cover', objectPosition:'center',
+          ...(rot ? {transform:`rotate(${rot}deg)`, ...(rot===90||rot===270 ? {scale:'1.78'} : {})} : {}),
+        }}/>
+      )}
+      {/* Slight dark scrim so labels stay readable */}
+      {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
+
       <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
@@ -1201,13 +1214,17 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           </linearGradient>
         </defs>
 
-        {/* Background rough — hidden when showing real photo */}
+        {/* Generated-course-only: rough background + fairway + bunker fills */}
         {!imageUrl && <rect x={0} y={-10} width={100} height={165} fill="#0f2e0f" opacity={0.6}/>}
+        {!imageUrl && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
+        {!imageUrl && hole.bunkers.map((b,i)=>{
+          const midYards = (b.start+b.end)/2
+          const midPos   = yardToSVG(midYards,hole.distance,hole.path)
+          const sideX    = b.start%20<10 ? midPos.x-9 : midPos.x+9
+          return <ellipse key={i} cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
+        })}
 
-        {/* Fairway — solid for generated, semi-transparent guide for real photos */}
-        <path d={fairwayD} stroke={imageUrl?"rgba(74,222,128,0.25)":"url(#fairway)"} strokeWidth={imageUrl?18:24} fill="none" strokeLinecap="butt"/>
-
-        {/* Water hazard */}
+        {/* Water hazard — blob only for generated, text label for both */}
         {hole.hazard&&(()=>{
           const yt=yardToY(hole.hazard.end)
           const yb=yardToY(hole.hazard.start)
@@ -1218,29 +1235,17 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
             C ${cx+halfW+3},${yt+2} ${cx+halfW+4},${yb-halfH*0.3} ${cx+halfW},${yb}
             C ${cx+halfW-3},${yb+2} ${cx-halfW+3},${yb+2} ${cx-halfW},${yb}
             C ${cx-halfW-4},${yb-halfH*0.3} ${cx-halfW-3},${yt+2} ${cx},${yt} Z`
-          return(
-            <>
+          return <>
+            {!imageUrl && <>
               <path d={waterPath} fill="#1d4ed8" opacity={0.85}/>
               <path d={waterPath} fill="none" stroke="#3b82f6" strokeWidth={0.8} opacity={0.5}/>
               <ellipse cx={cx} cy={(yt+yb)/2} rx={halfW*0.5} ry={halfH*0.25} fill="none" stroke="rgba(147,197,253,0.3)" strokeWidth={0.5}/>
-              <text x={cx} y={(yt+yb)/2+1.5} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
-            </>
-          )
+            </>}
+            <text x={cx} y={(yt+yb)/2+1.5} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
+          </>
         })()}
 
-        {/* Bunker sand traps — only drawn for generated courses; real photos show them naturally */}
-        {!imageUrl && hole.bunkers.map((b,i)=>{
-          const midYards = (b.start + b.end) / 2
-          const midPos   = yardToSVG(midYards, hole.distance, hole.path)
-          const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
-          return(
-            <g key={i}>
-              <ellipse cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
-            </g>
-          )
-        })}
-
-        {/* Max range indicator — shown when pin is beyond club max */}
+        {/* Max range indicator */}
         {maxRangePos !== undefined && maxRangePos < hole.distance && (()=>{
           const {x:mx,y:my} = yardToSVG(maxRangePos, hole.distance, hole.path)
           return (
@@ -1251,42 +1256,42 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
         })()}
 
-        {/* Tee box — rotated to sit across the fairway */}
-        <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
-          <rect x={teePos.x-8} y={teePos.y-2} width={16} height={4} rx={1.5} fill="#4ade80" opacity={0.9}/>
-        </g>
+        {/* Generated-course-only: tee box + big green circles */}
+        {!imageUrl && (
+          <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
+            <rect x={teePos.x-8} y={teePos.y-2} width={16} height={4} rx={1.5} fill="#4ade80" opacity={0.9}/>
+          </g>
+        )}
+        {!imageUrl && <>
+          <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
+          <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
+        </>}
 
-        {/* Green — circular so pin is in the centre */}
-        <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
-        <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
-
-        {/* Hole cup — centre of the green */}
+        {/* Flag — always shown so players know where the pin sits in the SVG */}
         <circle cx={holePos.x} cy={holePos.y} r={1.8} fill="#0a0f1e"/>
-        {/* Flag */}
         <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-11} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
         <polygon points={`${holePos.x},${holePos.y-11} ${holePos.x+7},${holePos.y-8} ${holePos.x},${holePos.y-5}`} fill="#dc2626"/>
 
-        {/* Golf club swing animation at ball's starting position */}
+        {/* Swing animation */}
         {isAnimating&&(
           <g transform={`translate(${swingX+3},${swingY+1})`}>
             <line className="club-swing" x1={0} y1={0} x2={7} y2={-14} stroke="rgba(255,220,100,0.9)" strokeWidth={1.5} strokeLinecap="round"/>
           </g>
         )}
 
-        {/* Ball trail when animating */}
+        {/* Ball trail */}
         {isAnimating&&(
           <circle cx={finalBallX} cy={ballY+8} rx={2} ry={0.8} fill="rgba(255,255,255,0.15)"/>
         )}
 
-        {/* Ball shadow */}
-        <ellipse cx={finalBallX} cy={ballY+2} rx={3} ry={1} fill="rgba(0,0,0,0.3)"/>
         {/* Ball */}
+        <ellipse cx={finalBallX} cy={ballY+2} rx={3} ry={1} fill="rgba(0,0,0,0.3)"/>
         <circle cx={finalBallX} cy={ballY} r={3.2} fill="white"/>
         {isAnimating&&(
           <circle cx={finalBallX} cy={ballY} r={4.5} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
 
-        {/* Hazard distance labels — rendered last so they sit above everything */}
+        {/* Distance labels */}
         {hole.hazard && displayBallPos <= hole.distance && (()=>{
           const distToNear = Math.round(hole.hazard.start - ballTeePosForLabels)
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
@@ -1466,6 +1471,9 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
     </div>
   )
 }
+
+// Per-hole photo rotation for Pebble Beach (degrees). Add entries as needed.
+const PEBBLE_PHOTO_ROTATIONS: Record<number, number> = {}
 
 // ── Setup screen ───────────────────────────────────────────────────────────────
 
