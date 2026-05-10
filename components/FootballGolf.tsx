@@ -390,44 +390,45 @@ function generateHoles(count:3|6|9|18): Hole[] {
 }
 
 // Paths derived from Pebble Beach aerial images.
-// Tee=pts[0] (y=148), green=pts[last] (y=17). 3pts=quadratic bezier, 4pts=cubic (S-curves).
+// pts[0]=tee, pts[last]=green. y-values mapped from actual image positions.
+// SVG viewBox "0 -10 100 165": y = imageFraction*165-10
 const PEBBLE_BEACH: HoleDef[] = [
-  // H1  — strong banana arc along ocean (right)
-  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:42,y:148},{x:84,y:83},{x:42,y:17}]},                                          hazardFrac:{startFrac:0.72,endFrac:0.87}, bunkerCount:2 },
-  // H2  — straight inland, ocean cliff on one side
-  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
-  // H3  — straight, tree-lined
-  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:3 },
-  // H4  — straight, tree-lined
-  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
-  // H5  — mild bend right (par 3)
-  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:46,y:148},{x:68,y:83},{x:46,y:17}]},                                           hazardFrac:null,                          bunkerCount:2 },
-  // H6  — S-curve par 5: bends left then right
-  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:52,y:148},{x:26,y:112},{x:72,y:52},{x:52,y:17}]},                              hazardFrac:null,                          bunkerCount:2 },
-  // H7  — straight, compact par 3 over ocean cliffs
-  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
-  // H8  — straight along cliff, slight lean right
-  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:48,y:148},{x:60,y:83},{x:48,y:17}]},                                           hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
-  // H9  — strong bend left along the bay
-  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:58,y:148},{x:22,y:83},{x:58,y:17}]},                                           hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
-  // H10 — strong bend right (turn back inland)
-  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:42,y:148},{x:76,y:83},{x:42,y:17}]},                                           hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
-  // H11 — straight along cliff
-  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:{startFrac:0.68,endFrac:0.83}, bunkerCount:2 },
-  // H12 — straight par 3
-  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
-  // H13 — mild bend right
-  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:46,y:148},{x:68,y:83},{x:46,y:17}]},                                           hazardFrac:null,                          bunkerCount:3 },
-  // H14 — long straight par 5
-  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:3 },
-  // H15 — mild bend right
-  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:46,y:148},{x:66,y:83},{x:46,y:17}]},                                           hazardFrac:null,                          bunkerCount:2 },
-  // H16 — straight
-  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:null,                          bunkerCount:2 },
-  // H17 — straight par 3 along cliff, lake in front of green
-  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:50,y:148},{x:50,y:17}]},                                                       hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
-  // H18 — iconic arc along Stillwater Cove (strong bend left, mirror of H1)
-  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:58,y:148},{x:18,y:83},{x:58,y:17}]},                                           hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
+  // H1  — banana arc (green≈19% tee≈82%), no water in image
+  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:42,y:125},{x:84,y:73},{x:42,y:21}]},                                           hazardFrac:null,                          bunkerCount:2 },
+  // H2  — straight inland (green≈13% tee≈81%)
+  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:50,y:124},{x:50,y:12}]},                                                        hazardFrac:null,                          bunkerCount:2 },
+  // H3  — straight, tree-lined (green≈15% tee≈85%)
+  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:50,y:130},{x:50,y:15}]},                                                        hazardFrac:null,                          bunkerCount:3 },
+  // H4  — straight, ocean cliff right (green≈15% tee≈86%)
+  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:50,y:133},{x:50,y:16}]},                                                        hazardFrac:{startFrac:0.45,endFrac:0.85}, bunkerCount:2 },
+  // H5  — par 3, ocean right (green≈15% tee≈78%)
+  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:46,y:120},{x:68,y:68},{x:46,y:15}]},                                            hazardFrac:{startFrac:0.35,endFrac:0.80}, bunkerCount:2 },
+  // H6  — S-curve par 5, large ocean right (green≈11% tee≈86%)
+  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:52,y:132},{x:26,y:91},{x:72,y:49},{x:52,y:8}]},                                 hazardFrac:{startFrac:0.40,endFrac:0.80}, bunkerCount:2 },
+  // H7  — compact par 3 over ocean (green≈25% tee≈60%, tee notably higher in image)
+  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:50,y:89},{x:50,y:31}]},                                                         hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
+  // H8  — slight bend right, ocean cliff (green≈16% tee≈81%)
+  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:48,y:124},{x:60,y:70},{x:48,y:16}]},                                            hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
+  // H9  — strong bend left along bay (green≈11% tee≈84%)
+  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:58,y:129},{x:22,y:69},{x:58,y:8}]},                                             hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
+  // H10 — strong bend right (green≈14% tee≈84%)
+  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:42,y:128},{x:76,y:71},{x:42,y:13}]},                                            hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
+  // H11 — straight, no water in image (green≈15% tee≈81%)
+  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:50,y:124},{x:50,y:15}]},                                                        hazardFrac:null,                          bunkerCount:2 },
+  // H12 — par 3, tee notably higher than most (green≈17% tee≈71%)
+  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:50,y:107},{x:50,y:18}]},                                                        hazardFrac:null,                          bunkerCount:2 },
+  // H13 — mild bend right (green≈12% tee≈81%)
+  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:46,y:124},{x:68,y:67},{x:46,y:10}]},                                            hazardFrac:null,                          bunkerCount:3 },
+  // H14 — long straight par 5 (green≈13% tee≈81%)
+  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:50,y:125},{x:50,y:12}]},                                                        hazardFrac:null,                          bunkerCount:3 },
+  // H15 — mild bend right (green≈11% tee≈80%)
+  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:46,y:121},{x:66,y:65},{x:46,y:9}]},                                             hazardFrac:null,                          bunkerCount:2 },
+  // H16 — straight (green≈12% tee≈84%)
+  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:50,y:128},{x:50,y:11}]},                                                        hazardFrac:null,                          bunkerCount:2 },
+  // H17 — par 3, ocean top (green≈14% tee≈80%)
+  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:50,y:122},{x:50,y:13}]},                                                        hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
+  // H18 — arc along Stillwater Cove, bend left (green≈11% tee≈78%)
+  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:58,y:119},{x:18,y:64},{x:58,y:8}]},                                             hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
 ]
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
