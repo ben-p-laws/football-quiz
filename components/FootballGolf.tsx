@@ -391,29 +391,29 @@ function generateHoles(count:3|6|9|18): Hole[] {
 
 // Paths derived from Pebble Beach aerial images.
 // pts[0]=tee, pts[last]=green. y-values mapped from actual image positions.
-// SVG viewBox "0 -10 100 165": y = imageFraction*165-10
+// SVG viewBox "0 0 100 260": y = imageFraction*260  (matches 600×1560 image ratio 5:13)
 // Path pts derived from aerial image analysis.
 // For real-course mode these are remapped to HOLE_POSITIONS tee/green;
 // the intermediate control points define the fairway bend shape.
 const PEBBLE_BEACH: HoleDef[] = [
-  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:59.8,y:135.1},{x:37.6,y:56},{x:46,y:89},{x:70.8,y:6.7}]},   hazardFrac:null,                          bunkerCount:2 },
-  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:57.5,y:144.7},{x:50.7,y:64},{x:47.9,y:97},{x:32.4,y:15.7}]}, hazardFrac:null,                          bunkerCount:2 },
-  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:67.7,y:111.3},{x:58.4,y:56},{x:59.7,y:81},{x:54.1,y:19.8}]}, hazardFrac:null,                          bunkerCount:3 },
-  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:40,y:130.4},{x:49.7,y:73},{x:50.8,y:97},{x:73.3,y:32.3}]},   hazardFrac:{startFrac:0.45,endFrac:0.85}, bunkerCount:2 },
-  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:55.2,y:133.6},{x:48.8,y:64},{x:50,y:97},{x:56.1,y:30.7}]},   hazardFrac:{startFrac:0.35,endFrac:0.80}, bunkerCount:2 },
-  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:42.4,y:144.7},{x:43.1,y:56},{x:60.2,y:97},{x:33.4,y:0.9}]},  hazardFrac:{startFrac:0.40,endFrac:0.80}, bunkerCount:2 },
-  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:35.8,y:119.1},{x:56,y:64},{x:39.6,y:89},{x:73.9,y:25.6}]},   hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
-  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:60.5,y:127.5},{x:24.8,y:56},{x:46.2,y:89},{x:20,y:22}]},     hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
-  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:40,y:128.6},{x:37.9,y:56},{x:42.2,y:89},{x:58.2,y:13.5}]},   hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
-  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:34.6,y:135.4},{x:33.1,y:56},{x:38.4,y:89},{x:33.8,y:11.4}]}, hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
-  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:57.6,y:136.9},{x:45.4,y:56},{x:49,y:89},{x:32.9,y:13.2}]},   hazardFrac:null,                          bunkerCount:2 },
-  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:25.8,y:97},{x:41.6,y:56},{x:43.5,y:73},{x:42.8,y:31.2}]},    hazardFrac:null,                          bunkerCount:2 },
-  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:60.5,y:143.1},{x:50.7,y:64},{x:44.5,y:97},{x:68.6,y:15.6}]}, hazardFrac:null,                          bunkerCount:3 },
-  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:44.8,y:128.8},{x:43.2,y:56},{x:40.4,y:89},{x:49.5,y:14.6}]}, hazardFrac:null,                          bunkerCount:3 },
-  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:29.5,y:139.9},{x:43.2,y:56},{x:53.1,y:97},{x:33.3,y:7.1}]},  hazardFrac:null,                          bunkerCount:2 },
-  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:45.7,y:122.3},{x:44.1,y:64},{x:60.8,y:89},{x:56.3,y:28.6}]}, hazardFrac:null,                          bunkerCount:2 },
-  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:70,y:139.7},{x:55.3,y:81},{x:54.1,y:106},{x:44.1,y:43.8}]},  hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
-  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:70.3,y:122.4},{x:70,y:73},{x:67.7,y:97},{x:47.7,y:41.4}]},   hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
+  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:59.8,y:228.6},{x:37.6,y:104.0},{x:46,y:156.0},{x:70.8,y:26.3}]},   hazardFrac:null,                          bunkerCount:2 },
+  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:57.5,y:243.8},{x:50.7,y:116.6},{x:47.9,y:168.6},{x:32.4,y:40.5}]}, hazardFrac:null,                          bunkerCount:2 },
+  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:67.7,y:191.1},{x:58.4,y:104.0},{x:59.7,y:143.4},{x:54.1,y:47.0}]}, hazardFrac:null,                          bunkerCount:3 },
+  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:40,y:221.2},{x:49.7,y:130.8},{x:50.8,y:168.6},{x:73.3,y:66.7}]},   hazardFrac:{startFrac:0.45,endFrac:0.85}, bunkerCount:2 },
+  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:55.2,y:226.3},{x:48.8,y:116.6},{x:50,y:168.6},{x:56.1,y:64.1}]},   hazardFrac:{startFrac:0.35,endFrac:0.80}, bunkerCount:2 },
+  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:42.4,y:243.8},{x:43.1,y:104.0},{x:60.2,y:168.6},{x:33.4,y:17.2}]},  hazardFrac:{startFrac:0.40,endFrac:0.80}, bunkerCount:2 },
+  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:35.8,y:203.4},{x:56,y:116.6},{x:39.6,y:156.0},{x:73.9,y:56.1}]},   hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
+  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:60.5,y:216.7},{x:24.8,y:104.0},{x:46.2,y:156.0},{x:20,y:50.4}]},   hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
+  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:40,y:218.4},{x:37.9,y:104.0},{x:42.2,y:156.0},{x:58.2,y:37.0}]},   hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
+  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:34.6,y:229.1},{x:33.1,y:104.0},{x:38.4,y:156.0},{x:33.8,y:33.7}]}, hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
+  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:57.6,y:231.5},{x:45.4,y:104.0},{x:49,y:156.0},{x:32.9,y:36.6}]},   hazardFrac:null,                          bunkerCount:2 },
+  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:25.8,y:168.6},{x:41.6,y:104.0},{x:43.5,y:130.8},{x:42.8,y:64.9}]}, hazardFrac:null,                          bunkerCount:2 },
+  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:60.5,y:241.3},{x:50.7,y:116.6},{x:44.5,y:168.6},{x:68.6,y:40.3}]}, hazardFrac:null,                          bunkerCount:3 },
+  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:44.8,y:218.7},{x:43.2,y:104.0},{x:40.4,y:156.0},{x:49.5,y:38.8}]}, hazardFrac:null,                          bunkerCount:3 },
+  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:29.5,y:236.2},{x:43.2,y:104.0},{x:53.1,y:168.6},{x:33.3,y:26.9}]}, hazardFrac:null,                          bunkerCount:2 },
+  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:45.7,y:208.5},{x:44.1,y:116.6},{x:60.8,y:156.0},{x:56.3,y:60.8}]}, hazardFrac:null,                          bunkerCount:2 },
+  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:70,y:235.9},{x:55.3,y:143.4},{x:54.1,y:182.8},{x:44.1,y:84.8}]},  hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
+  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:70.3,y:208.6},{x:70,y:130.8},{x:67.7,y:168.6},{x:47.7,y:81.0}]},  hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
 ]
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
@@ -1208,9 +1208,9 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Slight dark scrim so labels stay readable */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
+      <svg width="100%" viewBox="0 0 100 260" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
         <defs>
-          <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
+          <linearGradient id="fairway" x1="0" y1="35" x2="0" y2="255" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
             <stop offset="100%" stopColor="#2d6a2d"/>
           </linearGradient>
@@ -1221,13 +1221,13 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         </defs>
 
         {/* Generated-course-only: rough background + fairway + bunker fills */}
-        {!imageUrl && <rect x={0} y={-10} width={100} height={165} fill="#0f2e0f" opacity={0.6}/>}
+        {!imageUrl && <rect x={0} y={0} width={100} height={260} fill="#0f2e0f" opacity={0.6}/>}
         {!imageUrl && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
         {!imageUrl && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
           const midPos   = yardToSVG(midYards,hole.distance,hole.path)
-          const sideX    = b.start%20<10 ? midPos.x-9 : midPos.x+9
-          return <ellipse key={i} cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
+          const sideX    = b.start%20<10 ? midPos.x-14 : midPos.x+14
+          return <ellipse key={i} cx={sideX} cy={midPos.y} rx={9} ry={5.5} fill="url(#sand)" opacity={0.85}/>
         })}
 
         {/* Water hazard — blob only for generated, text label for both */}
@@ -1247,7 +1247,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
               <path d={waterPath} fill="none" stroke="#3b82f6" strokeWidth={0.8} opacity={0.5}/>
               <ellipse cx={cx} cy={(yt+yb)/2} rx={halfW*0.5} ry={halfH*0.25} fill="none" stroke="rgba(147,197,253,0.3)" strokeWidth={0.5}/>
             </>}
-            <text x={cx} y={(yt+yb)/2+1.5} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
+            <text x={cx} y={(yt+yb)/2+1.5} fontSize={6} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
           </>
         })()}
 
@@ -1257,7 +1257,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           return (
             <g opacity={0.85}>
               <line x1={mx-12} y1={my} x2={mx+12} y2={my} stroke="#f97316" strokeWidth={1.2} strokeDasharray="2.5,2" strokeLinecap="round"/>
-              <text x={mx+14} y={my+1.5} fontSize={4} fill="#f97316" fontWeight="bold" textAnchor="start">max</text>
+              <text x={mx+22} y={my+1.5} fontSize={6} fill="#f97316" fontWeight="bold" textAnchor="start">max</text>
             </g>
           )
         })()}
@@ -1265,37 +1265,37 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Generated-course-only: tee box + big green circles */}
         {!imageUrl && (
           <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
-            <rect x={teePos.x-8} y={teePos.y-2} width={16} height={4} rx={1.5} fill="#4ade80" opacity={0.9}/>
+            <rect x={teePos.x-13} y={teePos.y-3} width={26} height={6} rx={1.5} fill="#4ade80" opacity={0.9}/>
           </g>
         )}
         {!imageUrl && <>
-          <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
-          <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
+          <circle cx={holePos.x} cy={holePos.y} r={17} fill="#16a34a"/>
+          <circle cx={holePos.x} cy={holePos.y} r={13} fill="#22c55e" opacity={0.6}/>
         </>}
 
         {/* Flag — always shown so players know where the pin sits in the SVG */}
-        <circle cx={holePos.x} cy={holePos.y} r={1.8} fill="#0a0f1e"/>
-        <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-11} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
-        <polygon points={`${holePos.x},${holePos.y-11} ${holePos.x+7},${holePos.y-8} ${holePos.x},${holePos.y-5}`} fill="#dc2626"/>
+        <circle cx={holePos.x} cy={holePos.y} r={2.8} fill="#0a0f1e"/>
+        <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-17} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
+        <polygon points={`${holePos.x},${holePos.y-17} ${holePos.x+11},${holePos.y-13} ${holePos.x},${holePos.y-8}`} fill="#dc2626"/>
 
 
         {/* Swing animation */}
         {isAnimating&&(
-          <g transform={`translate(${swingX+3},${swingY+1})`}>
-            <line className="club-swing" x1={0} y1={0} x2={7} y2={-14} stroke="rgba(255,220,100,0.9)" strokeWidth={1.5} strokeLinecap="round"/>
+          <g transform={`translate(${swingX+5},${swingY+2})`}>
+            <line className="club-swing" x1={0} y1={0} x2={11} y2={-22} stroke="rgba(255,220,100,0.9)" strokeWidth={1.5} strokeLinecap="round"/>
           </g>
         )}
 
         {/* Ball trail */}
         {isAnimating&&(
-          <circle cx={finalBallX} cy={ballY+8} rx={2} ry={0.8} fill="rgba(255,255,255,0.15)"/>
+          <circle cx={finalBallX} cy={ballY+13} rx={3} ry={1.2} fill="rgba(255,255,255,0.15)"/>
         )}
 
         {/* Ball */}
-        <ellipse cx={finalBallX} cy={ballY+2} rx={3} ry={1} fill="rgba(0,0,0,0.3)"/>
-        <circle cx={finalBallX} cy={ballY} r={3.2} fill="white"/>
+        <ellipse cx={finalBallX} cy={ballY+3} rx={5} ry={2} fill="rgba(0,0,0,0.3)"/>
+        <circle cx={finalBallX} cy={ballY} r={5} fill="white"/>
         {isAnimating&&(
-          <circle cx={finalBallX} cy={ballY} r={4.5} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
+          <circle cx={finalBallX} cy={ballY} r={7} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
 
         {/* Distance labels — dark pill so they read on any background */}
@@ -1308,16 +1308,16 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const lx = Math.max(16, Math.min(84, cx))
           if(distToNear <= 0) return (
             <g>
-              <rect x={lx-14} y={cy-5} width={28} height={9} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={cy+2} fontSize={5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
+              <rect x={lx-14} y={cy-8} width={28} height={14} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <text x={lx} y={cy+3} fontSize={8} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
             </g>
           )
           return (
             <g>
-              <rect x={lx-14} y={cy-7} width={28} height={14} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={cy-1} fontSize={5} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
+              <rect x={lx-14} y={cy-11} width={28} height={22} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <text x={lx} y={cy-2} fontSize={8} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">💧 {distToNear}</tspan>
-                <tspan x={lx} dy="6">–{distToFar}yd</tspan>
+                <tspan x={lx} dy="9">–{distToFar}yd</tspan>
               </text>
             </g>
           )
@@ -1332,10 +1332,10 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const lx = Math.max(16, Math.min(84, midPos.x + offset))
           return (
             <g key={i}>
-              <rect x={lx-14} y={midPos.y-7} width={28} height={14} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={midPos.y-1} fontSize={5} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
+              <rect x={lx-14} y={midPos.y-11} width={28} height={22} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <text x={lx} y={midPos.y-2} fontSize={8} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">🏖️ {distToNear}</tspan>
-                <tspan x={lx} dy="6">–{distToFar}yd</tspan>
+                <tspan x={lx} dy="9">–{distToFar}yd</tspan>
               </text>
             </g>
           )
@@ -1514,7 +1514,7 @@ const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number
  18:  {teeFrac:[0.36,0.82], greenFrac:[0.47,0.09]},
 }
 function fracToSVG(frac:[number,number]):{x:number;y:number}{
-  return {x:frac[0]*100, y:frac[1]*165-10}
+  return {x:frac[0]*100, y:frac[1]*260}
 }
 
 // ── Setup screen ───────────────────────────────────────────────────────────────
