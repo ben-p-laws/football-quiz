@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import NavBar from '@/components/NavBar'
 
 // ── Categories ───────────────────────────────────────────────────────────────
@@ -542,6 +542,10 @@ export default function FootballGolf(){
   const badLieSeason = useRef<string>('')
   const [pastPin,setPastPin]             = useState(false)
   const [holeResult,setHoleResult]       = useState<{label:string;color:string;diff:number}|null>(null)
+  const [holePositions,setHolePositions] = useState<Record<number,{teeFrac:[number,number];greenFrac:[number,number]}>>(() => {
+    try { const s=localStorage.getItem('pebble-pos'); return s ? {...DEFAULT_HOLE_POSITIONS,...JSON.parse(s)} : DEFAULT_HOLE_POSITIONS } catch { return DEFAULT_HOLE_POSITIONS }
+  })
+  const [calibStep,setCalibStep]         = useState<null|'green'|'tee'>(null)
 
   const normalisedNames = useRef<string[]>([])
 
@@ -1067,10 +1071,17 @@ export default function FootballGolf(){
 
           {/* Right panel — course */}
           <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
-            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
+            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10,position:'relative'}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
               <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
+              {/* Calibration button — real course only */}
+              {courseMode==='real' && (
+                <button onClick={()=>setCalibStep(s=>s?null:'green')}
+                  style={{position:'absolute',top:8,right:0,background:calibStep?'#4ade80':'rgba(255,255,255,0.08)',border:'none',borderRadius:6,padding:'3px 6px',cursor:'pointer',fontSize:11,color:calibStep?'#0a0f1e':'rgba(255,255,255,0.5)',fontWeight:700}}>
+                  {calibStep ? (calibStep==='green' ? '⛳ tap green' : '🏌️ tap tee') : '📍'}
+                </button>
+              )}
             </div>
             <div style={{flex:1,minHeight:0,marginTop:22}}>
               <CourseView
@@ -1083,6 +1094,23 @@ export default function FootballGolf(){
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
+                realTeePos={courseMode==='real' ? fracToSVG((holePositions[currentHole.number]??DEFAULT_HOLE_POSITIONS[currentHole.number]).teeFrac) : undefined}
+                realGreenPos={courseMode==='real' ? fracToSVG((holePositions[currentHole.number]??DEFAULT_HOLE_POSITIONS[currentHole.number]).greenFrac) : undefined}
+                calibStep={calibStep}
+                onCalibClick={(svgX,svgY)=>{
+                  const xFrac=svgX/100, yFrac=(svgY+10)/165
+                  const hNum=currentHole.number
+                  setHolePositions(prev=>{
+                    const cur=prev[hNum]??DEFAULT_HOLE_POSITIONS[hNum]
+                    const updated=calibStep==='green'
+                      ? {...cur, greenFrac:[xFrac,yFrac] as [number,number]}
+                      : {...cur, teeFrac:[xFrac,yFrac] as [number,number]}
+                    const next={...prev,[hNum]:updated}
+                    try{localStorage.setItem('pebble-pos',JSON.stringify(next))}catch{}
+                    return next
+                  })
+                  setCalibStep(s=>s==='green'?'tee':null)
+                }}
               />
             </div>
           </div>
@@ -1170,24 +1198,51 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation}:{
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,calibStep,onCalibClick}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number
+  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}
+  calibStep?:null|'green'|'tee'; onCalibClick?:(svgX:number,svgY:number)=>void
 }){
+  // Remap the hole path so pts[0]=realTeePos and pts[last]=realGreenPos when calibrated
+  const effectivePath = useMemo(()=>{
+    if(!realTeePos||!realGreenPos) return hole.path
+    const pts=hole.path.pts
+    const oldTee=pts[0], oldGreen=pts[pts.length-1]
+    const oldSpanY=oldGreen.y-oldTee.y
+    const newPts=pts.map((p,i)=>{
+      if(i===0) return realTeePos
+      if(i===pts.length-1) return realGreenPos
+      const t=oldSpanY!==0?(p.y-oldTee.y)/oldSpanY:i/(pts.length-1)
+      const oldCx=oldTee.x+t*(oldGreen.x-oldTee.x)
+      const newCx=realTeePos.x+t*(realGreenPos.x-realTeePos.x)
+      return {x:newCx+(p.x-oldCx), y:realTeePos.y+t*(realGreenPos.y-realTeePos.y)}
+    })
+    return {pts:newPts}
+  },[hole.path,realTeePos,realGreenPos])
+
   // displayBallPos is yards-from-tee; past-pin if > hole.distance
   const ballTeePosForLabels = Math.min(displayBallPos, hole.distance)
-  const {x:ballX,y:ballY} = yardToSVG(displayBallPos, hole.distance, hole.path)
+  const {x:ballX,y:ballY} = yardToSVG(displayBallPos, hole.distance, effectivePath)
   const finalBallX = ballX + arcOffset
-  const {x:swingX,y:swingY} = yardToSVG(preAnimBallPos, hole.distance, hole.path)
+  const {x:swingX,y:swingY} = yardToSVG(preAnimBallPos, hole.distance, effectivePath)
 
-  const yardToY=(d:number)=>{ const {y}=yardToSVG(d,hole.distance,hole.path);return y }
-  const yardToX=(d:number)=>{ const {x}=yardToSVG(d,hole.distance,hole.path);return x }
+  const yardToY=(d:number)=>{ const {y}=yardToSVG(d,hole.distance,effectivePath);return y }
+  const yardToX=(d:number)=>{ const {x}=yardToSVG(d,hole.distance,effectivePath);return x }
 
-  const teePos  = yardToSVG(0, hole.distance, hole.path)
-  const holePos = holeXY(hole.path)
-  const endAngle = pathEndAngle(hole.path)
-  const fairwayD = pathToD(hole.path.pts)
+  const teePos  = yardToSVG(0, hole.distance, effectivePath)
+  const holePos = holeXY(effectivePath)
+  const endAngle = pathEndAngle(effectivePath)
+  const fairwayD = pathToD(effectivePath.pts)
 
   const rot = imageRotation ?? 0
+
+  function handleSVGClick(e:React.MouseEvent<SVGSVGElement>){
+    if(!calibStep||!onCalibClick) return
+    const rect=e.currentTarget.getBoundingClientRect()
+    const xFrac=(e.clientX-rect.left)/rect.width
+    const yFrac=(e.clientY-rect.top)/rect.height
+    onCalibClick(xFrac*100, yFrac*165-10)
+  }
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
@@ -1204,7 +1259,9 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Slight dark scrim so labels stay readable */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
+      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice"
+        style={{display:'block',flex:1,position:'relative',cursor:calibStep?'crosshair':'default'}}
+        onClick={handleSVGClick}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -1273,6 +1330,18 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         <circle cx={holePos.x} cy={holePos.y} r={1.8} fill="#0a0f1e"/>
         <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-11} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
         <polygon points={`${holePos.x},${holePos.y-11} ${holePos.x+7},${holePos.y-8} ${holePos.x},${holePos.y-5}`} fill="#dc2626"/>
+
+        {/* Calibration crosshairs — visible when calibStep is active */}
+        {calibStep && <>
+          <line x1={holePos.x-8} y1={holePos.y} x2={holePos.x+8} y2={holePos.y} stroke="#4ade80" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
+          <line x1={holePos.x} y1={holePos.y-8} x2={holePos.x} y2={holePos.y+8} stroke="#4ade80" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
+          <circle cx={holePos.x} cy={holePos.y} r={4} fill="none" stroke="#4ade80" strokeWidth={0.7} opacity={0.8}/>
+          <line x1={teePos.x-8} y1={teePos.y} x2={teePos.x+8} y2={teePos.y} stroke="#f97316" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
+          <line x1={teePos.x} y1={teePos.y-8} x2={teePos.x} y2={teePos.y+8} stroke="#f97316" strokeWidth={0.8} strokeDasharray="2,1" opacity={0.8}/>
+          <circle cx={teePos.x} cy={teePos.y} r={4} fill="none" stroke="#f97316" strokeWidth={0.7} opacity={0.8}/>
+          <text x={holePos.x+5} y={holePos.y-6} fontSize={4} fill="#4ade80" fontWeight="bold">⛳</text>
+          <text x={teePos.x+5} y={teePos.y-6} fontSize={4} fill="#f97316" fontWeight="bold">🏌️</text>
+        </>}
 
         {/* Swing animation */}
         {isAnimating&&(
@@ -1476,6 +1545,32 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
 
 // Per-hole photo rotation for Pebble Beach (degrees). Add entries as needed.
 const PEBBLE_PHOTO_ROTATIONS: Record<number, number> = {}
+
+// Default tee and green positions per hole as [xFrac, yFrac] (0-1) of the aerial image.
+// Calibrate in-game with the 📍 button to move them to the exact spot.
+const DEFAULT_HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]}> = {
+  1:  {teeFrac:[0.42,0.82], greenFrac:[0.35,0.12]},
+  2:  {teeFrac:[0.50,0.81], greenFrac:[0.50,0.13]},
+  3:  {teeFrac:[0.50,0.85], greenFrac:[0.50,0.15]},
+  4:  {teeFrac:[0.50,0.87], greenFrac:[0.50,0.15]},
+  5:  {teeFrac:[0.46,0.78], greenFrac:[0.46,0.15]},
+  6:  {teeFrac:[0.52,0.86], greenFrac:[0.52,0.11]},
+  7:  {teeFrac:[0.50,0.60], greenFrac:[0.50,0.25]},
+  8:  {teeFrac:[0.48,0.81], greenFrac:[0.48,0.16]},
+  9:  {teeFrac:[0.58,0.84], greenFrac:[0.58,0.11]},
+  10: {teeFrac:[0.42,0.84], greenFrac:[0.42,0.14]},
+  11: {teeFrac:[0.50,0.81], greenFrac:[0.50,0.15]},
+  12: {teeFrac:[0.50,0.71], greenFrac:[0.50,0.17]},
+  13: {teeFrac:[0.46,0.81], greenFrac:[0.46,0.12]},
+  14: {teeFrac:[0.50,0.81], greenFrac:[0.50,0.13]},
+  15: {teeFrac:[0.46,0.80], greenFrac:[0.46,0.11]},
+  16: {teeFrac:[0.50,0.84], greenFrac:[0.50,0.12]},
+  17: {teeFrac:[0.50,0.80], greenFrac:[0.50,0.14]},
+  18: {teeFrac:[0.58,0.78], greenFrac:[0.58,0.11]},
+}
+function fracToSVG(frac:[number,number]):{x:number;y:number}{
+  return {x:frac[0]*100, y:frac[1]*165-10}
+}
 
 // ── Setup screen ───────────────────────────────────────────────────────────────
 
