@@ -1226,8 +1226,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {!imageUrl && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
           const midPos   = yardToSVG(midYards,hole.distance,hole.path)
-          const sideX    = b.start%20<10 ? midPos.x-14 : midPos.x+14
-          return <ellipse key={i} cx={sideX} cy={midPos.y} rx={9} ry={5.5} fill="url(#sand)" opacity={0.85}/>
+          const sideX    = b.start%20<10 ? midPos.x-9 : midPos.x+9
+          return <ellipse key={i} cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
         })}
 
         {/* Water hazard — blob only for generated, text label for both */}
@@ -1265,12 +1265,12 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Generated-course-only: tee box + big green circles */}
         {!imageUrl && (
           <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
-            <rect x={teePos.x-13} y={teePos.y-3} width={26} height={6} rx={1.5} fill="#4ade80" opacity={0.9}/>
+            <rect x={teePos.x-8} y={teePos.y-2} width={16} height={4} rx={1.5} fill="#4ade80" opacity={0.9}/>
           </g>
         )}
         {!imageUrl && <>
-          <circle cx={holePos.x} cy={holePos.y} r={17} fill="#16a34a"/>
-          <circle cx={holePos.x} cy={holePos.y} r={13} fill="#22c55e" opacity={0.6}/>
+          <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
+          <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
         </>}
 
         {/* Flag — always shown so players know where the pin sits in the SVG */}
@@ -1494,24 +1494,24 @@ const PEBBLE_PHOTO_ROTATIONS: Record<number, number> = {}
 // Tee and green positions per hole as [xFrac, yFrac] (0–1) of the aerial image.
 // Derived by image analysis (brightness-cluster detection on pre-rotated 600×1560 portraits).
 const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]}> = {
-  1:  {teeFrac:[0.47,0.85], greenFrac:[0.40,0.12]},
-  2:  {teeFrac:[0.44,0.84], greenFrac:[0.44,0.09]},
-  3:  {teeFrac:[0.27,0.88], greenFrac:[0.35,0.17]},
-  4:  {teeFrac:[0.44,0.87], greenFrac:[0.36,0.13]},
-  5:  {teeFrac:[0.36,0.86], greenFrac:[0.37,0.12]},
-  6:  {teeFrac:[0.43,0.90], greenFrac:[0.33,0.07]},
-  7:  {teeFrac:[0.43,0.67], greenFrac:[0.44,0.28]},
-  8:  {teeFrac:[0.42,0.88], greenFrac:[0.36,0.10]},
-  9:  {teeFrac:[0.39,0.82], greenFrac:[0.33,0.10]},
- 10:  {teeFrac:[0.40,0.86], greenFrac:[0.40,0.10]},
- 11:  {teeFrac:[0.42,0.87], greenFrac:[0.44,0.10]},
- 12:  {teeFrac:[0.40,0.78], greenFrac:[0.37,0.18]},
- 13:  {teeFrac:[0.45,0.88], greenFrac:[0.44,0.14]},
- 14:  {teeFrac:[0.55,0.90], greenFrac:[0.46,0.11]},
- 15:  {teeFrac:[0.37,0.88], greenFrac:[0.37,0.09]},
- 16:  {teeFrac:[0.41,0.86], greenFrac:[0.43,0.09]},
- 17:  {teeFrac:[0.43,0.82], greenFrac:[0.52,0.17]},
- 18:  {teeFrac:[0.36,0.82], greenFrac:[0.47,0.09]},
+  1:  {teeFrac:[0.48,0.86], greenFrac:[0.47,0.17]},
+  2:  {teeFrac:[0.44,0.84], greenFrac:[0.43,0.12]},
+  3:  {teeFrac:[0.24,0.88], greenFrac:[0.37,0.19]},
+  4:  {teeFrac:[0.36,0.88], greenFrac:[0.33,0.22]},
+  5:  {teeFrac:[0.27,0.89], greenFrac:[0.38,0.16]},
+  6:  {teeFrac:[0.38,0.90], greenFrac:[0.28,0.08]},
+  7:  {teeFrac:[0.38,0.73], greenFrac:[0.42,0.25]},
+  8:  {teeFrac:[0.43,0.86], greenFrac:[0.28,0.13]},
+  9:  {teeFrac:[0.26,0.87], greenFrac:[0.28,0.11]},
+ 10:  {teeFrac:[0.33,0.86], greenFrac:[0.25,0.14]},
+ 11:  {teeFrac:[0.52,0.87], greenFrac:[0.43,0.11]},
+ 12:  {teeFrac:[0.38,0.80], greenFrac:[0.37,0.22]},
+ 13:  {teeFrac:[0.46,0.87], greenFrac:[0.42,0.12]},
+ 14:  {teeFrac:[0.58,0.92], greenFrac:[0.45,0.12]},
+ 15:  {teeFrac:[0.40,0.86], greenFrac:[0.38,0.12]},
+ 16:  {teeFrac:[0.37,0.88], greenFrac:[0.28,0.09]},
+ 17:  {teeFrac:[0.44,0.76], greenFrac:[0.44,0.21]},
+ 18:  {teeFrac:[0.35,0.83], greenFrac:[0.35,0.09]},
 }
 function fracToSVG(frac:[number,number]):{x:number;y:number}{
   return {x:frac[0]*100, y:frac[1]*260}
