@@ -1080,6 +1080,7 @@ export default function FootballGolf(){
                 isAnimating={isAnimating}
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
+                imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : undefined}
               />
             </div>
           </div>
@@ -1167,8 +1168,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string
 }){
   // displayBallPos is yards-from-tee; past-pin if > hole.distance
   const ballTeePosForLabels = Math.min(displayBallPos, hole.distance)
@@ -1185,8 +1186,10 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const fairwayD = pathToD(hole.path.pts)
 
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden'}}>
-      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1}}>
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative',
+      ...(imageUrl ? {backgroundImage:`url(${imageUrl})`,backgroundSize:'cover',backgroundPosition:'center'} : {})}}>
+      {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.35)',borderRadius:28,pointerEvents:'none'}}/>}
+      <svg width="100%" viewBox="0 -10 100 165" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="12" x2="0" y2="152" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -1198,11 +1201,11 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           </linearGradient>
         </defs>
 
-        {/* Background rough */}
-        <rect x={0} y={-10} width={100} height={165} fill="#0f2e0f" opacity={0.6}/>
+        {/* Background rough — hidden when showing real photo */}
+        {!imageUrl && <rect x={0} y={-10} width={100} height={165} fill="#0f2e0f" opacity={0.6}/>}
 
-{/* Fairway — smooth bezier stroke */}
-        <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>
+        {/* Fairway — solid for generated, semi-transparent guide for real photos */}
+        <path d={fairwayD} stroke={imageUrl?"rgba(74,222,128,0.25)":"url(#fairway)"} strokeWidth={imageUrl?18:24} fill="none" strokeLinecap="butt"/>
 
         {/* Water hazard */}
         {hole.hazard&&(()=>{
@@ -1225,8 +1228,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
         })()}
 
-        {/* Bunker sand traps */}
-        {hole.bunkers.map((b,i)=>{
+        {/* Bunker sand traps — only drawn for generated courses; real photos show them naturally */}
+        {!imageUrl && hole.bunkers.map((b,i)=>{
           const midYards = (b.start + b.end) / 2
           const midPos   = yardToSVG(midYards, hole.distance, hole.path)
           const sideX    = b.start % 20 < 10 ? midPos.x - 9 : midPos.x + 9
@@ -1503,10 +1506,10 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
             <div style={{fontSize:14,fontWeight:900}}>🎲 Random</div>
             <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>New layout each game</div>
           </button>
-          <button disabled
-            style={{background:'#1e2d4a',color:'rgba(255,255,255,0.3)',border:'2px solid transparent',borderRadius:10,padding:'12px 8px',cursor:'default',fontFamily:'inherit',textAlign:'center'}}>
+          <button onClick={()=>setCourseMode('real')}
+            style={{background:courseMode==='real'?'rgba(74,222,128,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode==='real'?'#4ade80':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
             <div style={{fontSize:14,fontWeight:900}}>🏌️ Real Course</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',marginTop:2}}>Coming Soon</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>Real Courses</div>
           </button>
         </div>
       </div>
