@@ -371,15 +371,17 @@ function generateHoles(count:3|6|9|18): Hole[] {
     for (const par of shuffle([3,4,5])) {
       const distance = par===3 ? randBetween(160,240) : par===4 ? randBetween(320,380) : randBetween(430,500)
       let hazard: Hazard|null = null
+      const PIN_CLEAR = 20
       if (par===3) {
         const start = Math.round(distance*(0.60+Math.random()*0.12)/5)*5
-        hazard = {start, end:start+40}
+        hazard = {start, end:Math.min(start+40, distance-PIN_CLEAR)}
       } else if (par===5) {
         const start = randBetween(36,46)*5
-        hazard = {start, end:start+40}
+        hazard = {start, end:Math.min(start+40, distance-PIN_CLEAR)}
       } else {
         const fromHole = Math.round(randBetween(40,100)/5)*5
-        hazard = {start:distance-fromHole, end:distance-fromHole+40}
+        const start = distance-fromHole
+        hazard = {start, end:Math.min(start+40, distance-PIN_CLEAR)}
       }
       const path = pathPool[holes.length % pathPool.length]
       const bunkers = generateBunkers(distance, hazard, 1)
@@ -418,10 +420,9 @@ const PEBBLE_BEACH: HoleDef[] = [
 
 function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
   const bunkers: Bunker[] = []
-  const PIN_BUFFER  = 15
   const HOLE_RANGE  = 100
   const minStart    = distance - HOLE_RANGE
-  const maxStart    = distance - PIN_BUFFER - 10
+  const maxStart    = distance - 40  // end = start+20, so end ≤ distance-20
   if (minStart >= maxStart) return bunkers
   for (let i = 0; i < count; i++) {
     for (let attempt = 0; attempt < 20; attempt++) {
