@@ -161,7 +161,7 @@ export default function AroundTheWorld() {
   const [step,       setStep]       = useState(0)
   const [completed,  setCompleted]  = useState<Step[]>([])
   const [failReason, setFailReason] = useState('')
-  const [mode,       setMode]       = useState<'easy' | 'hard'>('easy')
+  const [mode,       setMode]       = useState<'easy' | 'medium' | 'hard'>('easy')
   const [proj,       setProj]       = useState<{ center: [number, number]; scale: number }>({ center: [0, 20], scale: 160 })
 
   const [input,       setInput]       = useState('')
@@ -327,16 +327,22 @@ export default function AroundTheWorld() {
             <p style={{ color: '#4a5568', fontSize: 12, marginBottom: 28 }}>
               Wrong nationality = game over · 0 is valid if a player has 0 of that stat
             </p>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 28 }}>
-              {(['easy', 'hard'] as const).map(m => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', marginBottom: 28 }}>
+              {([
+                { m: 'easy',   label: 'Easy',   sub: 'Country names shown · running total visible' },
+                { m: 'medium', label: 'Medium', sub: 'No country names · running total visible' },
+                { m: 'hard',   label: 'Hard',   sub: 'No country names · score revealed at end' },
+              ] as const).map(({ m, label, sub }) => (
                 <button key={m} onClick={() => setMode(m)} style={{
-                  padding: '10px 22px', borderRadius: 8,
+                  padding: '10px 22px', borderRadius: 8, width: 320,
                   border: `2px solid ${mode === m ? '#dc2626' : '#2a3d5e'}`,
                   background: mode === m ? 'rgba(220,38,38,0.12)' : 'transparent',
                   color: mode === m ? 'white' : '#6b7fa3',
                   fontWeight: 700, cursor: 'pointer', fontSize: 13,
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2,
                 }}>
-                  {m === 'easy' ? '🗺️ Easy — labels shown' : '🌐 Hard — no labels'}
+                  <span>{label}</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: mode === m ? '#8899bb' : '#4a5568' }}>{sub}</span>
                 </button>
               ))}
             </div>
@@ -428,7 +434,7 @@ export default function AroundTheWorld() {
   // ── PLAYING ────────────────────────────────────────────────────────
   const countryLabel = currentCode
     ? (mode === 'easy' ? (COUNTRY_NAMES[currentCode] ?? currentCode) : '???')
-    : ''
+    : '' // medium + hard: no country name shown
 
   return (
     <div style={{ ...page, display: 'flex', flexDirection: 'column' }}>
@@ -441,29 +447,30 @@ export default function AroundTheWorld() {
       <div style={WRAP}>
 
         {/* ── Banner ── */}
-        <div style={{ borderBottom: '1px solid #1e2d4a', padding: '10px 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' as const, gap: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: '#8899bb', lineHeight: 1.7 }}>
-            {route!.countries.map((c, i) => {
-              const done = completedSet.has(c), cur = c === currentCode
-              return (
-                <span key={c} style={{ color: done ? '#22c55e' : cur ? '#f59e0b' : '#2a3d5e' }}>
-                  {i > 0 && <span style={{ color: '#1e2d4a' }}> → </span>}
-                  {mode === 'easy' ? (COUNTRY_NAMES[c] ?? c) : (done ? (COUNTRY_NAMES[c] ?? c) : cur ? '???' : '?')}
-                </span>
-              )
-            })}
-          </div>
-          <div style={{ display: 'flex', gap: 18, alignItems: 'center' }}>
-            {[
-              { label: STAT_LABELS[stat], val: String(runningTotal), color: 'white' },
-              { label: 'Target',          val: String(target),       color: '#f59e0b' },
-              { label: 'Step',            val: `${step + 1}/${route!.countries.length}`, color: '#8899bb' },
-            ].map(({ label, val, color }) => (
-              <div key={label} style={{ textAlign: 'center' as const }}>
-                <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>{label}</div>
-                <div style={{ fontSize: 16, fontWeight: 900, color, lineHeight: 1 }}>{val}</div>
+        <div style={{ padding: '12px 0 10px', borderBottom: '1px solid #1e2d4a' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+            {/* Stat category */}
+            <div style={{ flex: 1, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 10, padding: '10px 14px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Stat</div>
+              <div style={{ fontSize: 17, fontWeight: 900, color: 'white', lineHeight: 1 }}>{STAT_LABELS[stat]}</div>
+            </div>
+            {/* Target */}
+            <div style={{ flex: 1, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: 10, padding: '10px 14px' }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#a07830', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Target</div>
+              <div style={{ fontSize: 17, fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>{target}</div>
+            </div>
+            {/* Running total — hidden in hard mode */}
+            {mode !== 'hard' && (
+              <div style={{ flex: 1, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.22)', borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#2a6645', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Score</div>
+                <div style={{ fontSize: 17, fontWeight: 900, color: '#22c55e', lineHeight: 1 }}>{runningTotal}</div>
               </div>
-            ))}
+            )}
+            {/* Step counter */}
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid #1e2d4a', borderRadius: 10, padding: '10px 14px', minWidth: 56, textAlign: 'center' as const }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Step</div>
+              <div style={{ fontSize: 17, fontWeight: 900, color: '#8899bb', lineHeight: 1 }}>{step + 1}<span style={{ fontSize: 11, fontWeight: 500, color: '#4a5568' }}>/{route!.countries.length}</span></div>
+            </div>
           </div>
         </div>
 
