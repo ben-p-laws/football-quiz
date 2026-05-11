@@ -1325,18 +1325,36 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToNear = Math.round(hole.hazard.start - ballTeePosForLabels)
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
+          if(!imageUrl) {
+            const hw = 13
+            const farCtr  = yardToSVG(hole.hazard.end,   hole.distance, effectivePath)
+            const nearCtr = yardToSVG(hole.hazard.start, hole.distance, effectivePath)
+            const farNorm  = fairwayNormal(hole.hazard.end,   hole.distance, effectivePath)
+            const nearNorm = fairwayNormal(hole.hazard.start, hole.distance, effectivePath)
+            const tm = hw + 3.5
+            return (
+              <g>
+                <line x1={farCtr.x+farNorm.lx*hw} y1={farCtr.y+farNorm.ly*hw} x2={farCtr.x+farNorm.rx*hw} y2={farCtr.y+farNorm.ry*hw} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1"/>
+                <text x={farCtr.x+farNorm.rx*tm} y={farCtr.y+farNorm.ry*tm+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">{distToFar}</text>
+                {distToNear > 0 && <>
+                  <line x1={nearCtr.x+nearNorm.lx*hw} y1={nearCtr.y+nearNorm.ly*hw} x2={nearCtr.x+nearNorm.rx*hw} y2={nearCtr.y+nearNorm.ry*hw} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1"/>
+                  <text x={nearCtr.x+nearNorm.rx*tm} y={nearCtr.y+nearNorm.ry*tm+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">{distToNear}</text>
+                </>}
+              </g>
+            )
+          }
           const cx = yardToX((hole.hazard.start + hole.hazard.end) / 2)
           const cy = yardToY((hole.hazard.start + hole.hazard.end) / 2)
           const lx = Math.max(16, Math.min(84, cx))
           if(distToNear <= 0) return (
             <g>
-              {imageUrl && <rect x={lx-bHalf} y={cy-bSingle/2} width={bHalf*2} height={bSingle} rx={2} fill="rgba(0,0,0,0.72)"/>}
+              <rect x={lx-bHalf} y={cy-bSingle/2} width={bHalf*2} height={bSingle} rx={2} fill="rgba(0,0,0,0.72)"/>
               <text x={lx} y={cy+3} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
             </g>
           )
           return (
             <g>
-              {imageUrl && <rect x={lx-bHalf} y={cy-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>}
+              <rect x={lx-bHalf} y={cy-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>
               <text x={lx} y={cy-2} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">{distToFar}</tspan>
                 <tspan x={lx} dy="9">{distToNear}</tspan>
@@ -1345,16 +1363,34 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
         })()}
         {displayBallPos <= hole.distance && hole.bunkers.map((b,i)=>{
-          const midYards = (b.start + b.end) / 2
-          const midPos   = yardToSVG(midYards, hole.distance, effectivePath)
           const distToNear = Math.round(b.start - ballTeePosForLabels)
           const distToFar  = Math.round(b.end   - ballTeePosForLabels)
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
           const sideLeft = b.start % 20 < 10
+          if(!imageUrl) {
+            const hw = 13
+            const farCtr   = yardToSVG(b.end,   hole.distance, effectivePath)
+            const nearCtr  = yardToSVG(b.start, hole.distance, effectivePath)
+            const farNorm  = fairwayNormal(b.end,   hole.distance, effectivePath)
+            const nearNorm = fairwayNormal(b.start, hole.distance, effectivePath)
+            const tm = hw + 3.5
+            const fSide  = sideLeft ? {x:farNorm.rx,  y:farNorm.ry}  : {x:farNorm.lx,  y:farNorm.ly}
+            const nSide  = sideLeft ? {x:nearNorm.rx, y:nearNorm.ry} : {x:nearNorm.lx, y:nearNorm.ly}
+            return (
+              <g key={i}>
+                <line x1={farCtr.x+farNorm.lx*hw} y1={farCtr.y+farNorm.ly*hw} x2={farCtr.x+farNorm.rx*hw} y2={farCtr.y+farNorm.ry*hw} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1"/>
+                <text x={farCtr.x+fSide.x*tm} y={farCtr.y+fSide.y*tm+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">{distToFar}</text>
+                <line x1={nearCtr.x+nearNorm.lx*hw} y1={nearCtr.y+nearNorm.ly*hw} x2={nearCtr.x+nearNorm.rx*hw} y2={nearCtr.y+nearNorm.ry*hw} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1"/>
+                <text x={nearCtr.x+nSide.x*tm} y={nearCtr.y+nSide.y*tm+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">{distToNear}</text>
+              </g>
+            )
+          }
+          const midYards = (b.start + b.end) / 2
+          const midPos   = yardToSVG(midYards, hole.distance, effectivePath)
           const lx = Math.max(16, Math.min(84, midPos.x + (sideLeft ? -16 : 16)))
           return (
             <g key={i}>
-              {imageUrl && <rect x={lx-bHalf} y={midPos.y-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>}
+              <rect x={lx-bHalf} y={midPos.y-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>
               <text x={lx} y={midPos.y-2} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">{distToFar}</tspan>
                 <tspan x={lx} dy="9">{distToNear}</tspan>
