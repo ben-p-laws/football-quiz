@@ -1326,19 +1326,15 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
           if(!imageUrl) {
-            const hw = 13
-            const farCtr  = yardToSVG(hole.hazard.end,   hole.distance, effectivePath)
-            const nearCtr = yardToSVG(hole.hazard.start, hole.distance, effectivePath)
-            const farNorm  = fairwayNormal(hole.hazard.end,   hole.distance, effectivePath)
-            const nearNorm = fairwayNormal(hole.hazard.start, hole.distance, effectivePath)
-            const tm = hw + 3.5
+            const fy = yardToY(hole.hazard.end)
+            const ny = yardToY(hole.hazard.start)
             return (
               <g>
-                <line x1={farCtr.x+farNorm.lx*hw} y1={farCtr.y+farNorm.ly*hw} x2={farCtr.x+farNorm.rx*hw} y2={farCtr.y+farNorm.ry*hw} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={farCtr.x+farNorm.rx*tm} y={farCtr.y+farNorm.ry*tm+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">{distToFar}</text>
+                <line x1={0} y1={fy} x2={100} y2={fy} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={3} y={fy+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="start" fontWeight="bold">{distToFar}</text>
                 {distToNear > 0 && <>
-                  <line x1={nearCtr.x+nearNorm.lx*hw} y1={nearCtr.y+nearNorm.ly*hw} x2={nearCtr.x+nearNorm.rx*hw} y2={nearCtr.y+nearNorm.ry*hw} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                  <text x={nearCtr.x+nearNorm.rx*tm} y={nearCtr.y+nearNorm.ry*tm+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">{distToNear}</text>
+                  <line x1={0} y1={ny} x2={100} y2={ny} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                  <text x={3} y={ny+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="start" fontWeight="bold">{distToNear}</text>
                 </>}
               </g>
             )
@@ -1368,20 +1364,16 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
           const sideLeft = b.start % 20 < 10
           if(!imageUrl) {
-            const hw = 13
-            const farCtr   = yardToSVG(b.end,   hole.distance, effectivePath)
-            const nearCtr  = yardToSVG(b.start, hole.distance, effectivePath)
-            const farNorm  = fairwayNormal(b.end,   hole.distance, effectivePath)
-            const nearNorm = fairwayNormal(b.start, hole.distance, effectivePath)
-            const tm = hw + 3.5
-            const fSide  = sideLeft ? {x:farNorm.rx,  y:farNorm.ry}  : {x:farNorm.lx,  y:farNorm.ly}
-            const nSide  = sideLeft ? {x:nearNorm.rx, y:nearNorm.ry} : {x:nearNorm.lx, y:nearNorm.ly}
+            const fy = yardToY(b.end)
+            const ny = yardToY(b.start)
+            const tx = sideLeft ? 3 : 97
+            const anchor = sideLeft ? 'start' : 'end'
             return (
               <g key={i}>
-                <line x1={farCtr.x+farNorm.lx*hw} y1={farCtr.y+farNorm.ly*hw} x2={farCtr.x+farNorm.rx*hw} y2={farCtr.y+farNorm.ry*hw} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={farCtr.x+fSide.x*tm} y={farCtr.y+fSide.y*tm+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">{distToFar}</text>
-                <line x1={nearCtr.x+nearNorm.lx*hw} y1={nearCtr.y+nearNorm.ly*hw} x2={nearCtr.x+nearNorm.rx*hw} y2={nearCtr.y+nearNorm.ry*hw} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={nearCtr.x+nSide.x*tm} y={nearCtr.y+nSide.y*tm+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">{distToNear}</text>
+                <line x1={0} y1={fy} x2={100} y2={fy} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={tx} y={fy+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
+                <line x1={0} y1={ny} x2={100} y2={ny} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={tx} y={ny+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
               </g>
             )
           }
