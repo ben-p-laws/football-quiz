@@ -252,9 +252,9 @@ export default function LandingPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
                 <BCell label="100+ Goals"  player="Salah"    state="green" />
                 <BCell label="3+ Titles"                     state="none" />
-                <BCell label="Never won"   player="Henry"    state="red" />
+                <BCell label="Never won PL" player="Henry"    state="red" />
                 <BCell label="4+ Clubs"                      state="none" />
-                <BCell label="3+ Pens miss" player="Ronaldo" state="green" />
+                <BCell label="3+ Pens missed" player="Ronaldo" state="green" />
                 <BCell label="400+ Apps"                     state="none" />
               </div>
             </div>
