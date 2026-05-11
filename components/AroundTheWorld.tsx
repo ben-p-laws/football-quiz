@@ -53,6 +53,20 @@ const CENTROIDS: Record<string, [number, number]> = {
   ARG: [-64.0,-34.0], BRA: [-51.9,-14.2], URU: [-55.8,-32.5], COL: [-74.3, 4.6],
   VEN: [-66.6, 8.0],  CHI: [-71.5,-35.7], ECU: [-78.1, -1.8], PER: [-75.0, -9.2],
   BOL: [-64.9,-16.3], PAR: [-58.4,-23.4],
+  // British Isles
+  ENG: [-1.5,  52.5], SCO: [-4.0,  56.8], WAL: [-3.5,  52.3], NIR: [-6.5,  54.7],
+  IRL: [-8.0,  53.2],
+  // North/Central America
+  USA: [-98.0, 38.9], CAN: [-96.8, 56.1],
+  MEX: [-102.5,23.9], GUA: [-90.5, 15.8], HON: [-86.6, 15.2], SLV: [-88.9, 13.8],
+  NCA: [-85.2, 12.9], CRC: [-83.8,  9.8], PAN: [-80.8,  8.6],
+  // More Africa
+  MLI: [-2.0,  17.3], BFA: [-1.7,  12.4], MTN: [-11.0, 20.3],
+  // Middle East
+  SYR: [38.5,  35.0], LBN: [35.9,  33.9], ISR: [35.2,  31.5],
+  JOR: [36.5,  30.6], IRQ: [44.4,  33.2], IRN: [53.7,  32.7],
+  KOR: [127.8, 35.9], JPN: [138.3, 36.5],
+  RUS: [45.0,  60.0],
 }
 
 function computeProjection(countries: string[]): { center: [number, number]; scale: number } {
@@ -91,29 +105,43 @@ type Phase = 'setup' | 'playing' | 'won' | 'failed'
 // Adjacency: each country lists its valid neighbours (FIFA codes)
 // Used to validate routes and reject any with non-bordering consecutive pairs
 const BORDERS: Record<string, string[]> = {
+  // British Isles (IRL-NIR land; NIR-SCO sea crossing allowed)
+  IRL: ['NIR'],
+  NIR: ['IRL','SCO'],
+  SCO: ['NIR','ENG'],
+  ENG: ['SCO','WAL'],
+  WAL: ['ENG'],
+  // Europe
   POR: ['ESP'],
   ESP: ['POR','FRA','MAR'],
   FRA: ['ESP','BEL','GER','SUI','ITA'],
   BEL: ['FRA','NED','GER'],
   NED: ['BEL','GER'],
   GER: ['FRA','BEL','NED','DEN','CZE','AUT','SUI','POL'],
-  DEN: ['GER'],          // Jutland peninsula land border only — no bridge to SWE
-  SWE: ['NOR','FIN'],   // NOR+FIN land borders; DEN is water crossing
-  NOR: ['SWE','FIN'],
+  DEN: ['GER','SWE'],
+  SWE: ['NOR','FIN','DEN'],
+  NOR: ['SWE','FIN','RUS'],
+  FIN: ['SWE','NOR','RUS'],
   ITA: ['FRA','SUI','AUT','SVN'],
   SUI: ['FRA','GER','AUT','ITA'],
   AUT: ['GER','CZE','SVK','HUN','SVN','ITA','SUI'],
   CZE: ['GER','POL','SVK','AUT'],
   GRE: ['ALB','MKD','BUL','TUR'],
-  TUR: ['GRE','BUL'],
+  TUR: ['GRE','BUL','SYR','IRQ','IRN'],
   SRB: ['HUN','CRO','BIH','MNE','ALB','MKD','BUL','ROU'],
   CRO: ['SVN','HUN','SRB','BIH','MNE'],
   BUL: ['ROU','SRB','MKD','GRE','TUR'],
-  POL: ['GER','CZE','SVK','UKR','BLR','RUS','LTU'],
+  POL: ['GER','CZE','SVK','UKR'],
   SVK: ['CZE','POL','UKR','HUN','AUT'],
+  UKR: ['POL','SVK','HUN','ROU','RUS'],
+  RUS: ['NOR','FIN','UKR','USA'],
+  // Africa
   MAR: ['ESP','ALG'],
   ALG: ['MAR','TUN','MLI','MTN'],
   TUN: ['ALG'],
+  MTN: ['MAR','ALG','MLI','SEN'],
+  MLI: ['MTN','ALG','SEN','GUI','CIV','BFA'],
+  BFA: ['MLI','BEN','TGO','GHA','CIV'],
   SEN: ['MTN','MLI','GUI','GNB','GAM'],
   GUI: ['SEN','MLI','CIV','SLE','LBR','GNB'],
   CIV: ['GUI','MLI','BFA','GHA','LBR'],
@@ -121,12 +149,30 @@ const BORDERS: Record<string, string[]> = {
   TGO: ['GHA','BFA','BEN'],
   BEN: ['TGO','NGA','BFA'],
   NGA: ['BEN','CMR'],
-  CMR: ['NGA','CAF','COG','GAB'],
+  CMR: ['NGA','COG','GAB'],
   GAB: ['CMR','COG'],
   COG: ['GAB','CMR','COD'],
-  COD: ['COG','CAF','UGA','RWA','BDI','TAN','ZAM','ANG'],
-  ZIM: ['ZAM','MOZ','ZAF','BWA'],
-  ZAF: ['NAM','BWA','ZIM','MOZ','SWZ','LSO'],
+  COD: ['COG','ZAM','ANG'],
+  ZIM: ['ZAM','MOZ','ZAF'],
+  ZAF: ['ZIM','MOZ'],
+  // Middle East / Asia
+  SYR: ['TUR','LBN','JOR','IRQ'],
+  LBN: ['SYR','ISR'],
+  ISR: ['LBN','JOR'],
+  JOR: ['ISR','SYR','IRQ'],
+  IRQ: ['SYR','JOR','IRN','TUR'],
+  IRN: ['IRQ','TUR'],
+  // North/Central America
+  CAN: ['USA'],
+  USA: ['CAN','MEX','RUS'],
+  MEX: ['USA','GUA'],
+  GUA: ['MEX','HON','SLV'],
+  HON: ['GUA','SLV','NCA'],
+  SLV: ['GUA','HON'],
+  NCA: ['HON','CRC'],
+  CRC: ['NCA','PAN'],
+  PAN: ['CRC','COL'],
+  // South America
   ARG: ['CHI','BOL','PAR','BRA','URU'],
   BRA: ['VEN','GUY','SUR','COL','PER','BOL','PAR','ARG','URU'],
   URU: ['ARG','BRA'],
@@ -138,6 +184,9 @@ const BORDERS: Record<string, string[]> = {
   BOL: ['PER','CHI','ARG','PAR','BRA'],
   PAR: ['BOL','ARG','BRA'],
 }
+
+// UK nations share ISO 826 on the map — handle them as a group
+const UK_NATIONS = new Set(['ENG', 'SCO', 'WAL', 'NIR'])
 
 function routeIsValid(countries: string[]): boolean {
   for (let i = 0; i < countries.length - 1; i++) {
@@ -162,7 +211,11 @@ export default function AroundTheWorld() {
   const [completed,  setCompleted]  = useState<Step[]>([])
   const [failReason, setFailReason] = useState('')
   const [mode,       setMode]       = useState<'easy' | 'medium' | 'hard'>('easy')
+  const [revealed,   setRevealed]   = useState(false)
+  const [zoom,       setZoom]       = useState(1)
   const [proj,       setProj]       = useState<{ center: [number, number]; scale: number }>({ center: [0, 20], scale: 160 })
+
+  const lastContinentRef = useRef<string | null>(null)
 
   const [input,       setInput]       = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -209,20 +262,29 @@ export default function AroundTheWorld() {
       r.countries.every(c => (playersByNat[c]?.length ?? 0) > 0) && routeIsValid(r.countries)
     )
     if (!valid.length) return
-    const weights = valid.map(r => {
-      const min = Math.min(...r.countries.map(c => playersByNat[c]?.length ?? 0))
-      return min >= 10 ? 3 : min >= 3 ? 2 : 1
+
+    const ALL_CONTINENTS = ['europe', 'africa', 'n_america', 's_america', 'asia'] as const
+    const available = ALL_CONTINENTS.filter(c => c !== lastContinentRef.current && valid.some(r => r.continent === c))
+    if (!available.length) return
+    const continent = available[Math.floor(Math.random() * available.length)]
+    lastContinentRef.current = continent
+
+    const pool = valid.filter(r => r.continent === continent)
+    const weights = pool.map(r => {
+      const hasNiche = r.countries.some(c => (playersByNat[c]?.length ?? 0) < 5)
+      return hasNiche ? 1 : 10
     })
     const total = weights.reduce((a, b) => a + b, 0)
-    let rand = Math.random() * total, picked = valid[valid.length - 1]
-    for (let i = 0; i < valid.length; i++) { rand -= weights[i]; if (rand <= 0) { picked = valid[i]; break } }
+    let rand = Math.random() * total
+    let picked = pool[pool.length - 1]
+    for (let i = 0; i < pool.length; i++) { rand -= weights[i]; if (rand <= 0) { picked = pool[i]; break } }
 
     const s  = STAT_KEYS[Math.floor(Math.random() * STAT_KEYS.length)]
     const mp = maxPossible(picked, s)
     const t  = Math.max(picked.countries.length, Math.floor(mp * (0.38 + Math.random() * 0.30)))
 
     setRoute(picked); setStat(s); setTarget(t)
-    setStep(0); setCompleted([]); setFailReason('')
+    setStep(0); setCompleted([]); setFailReason(''); setRevealed(false); setZoom(1)
     setInput(''); setSuggestions([]); setSuggActive(-1)
     setProj(computeProjection(picked.countries))
     setPhase('playing')
@@ -270,12 +332,18 @@ export default function AroundTheWorld() {
   const diff         = runningTotal - target
   const pct          = target > 0 ? Math.round((runningTotal / target) * 100) : 0
 
-  // Normalise: TopoJSON zero-pads codes < 100 (e.g. "056" for Belgium),
-  // so convert to number then back to string to match our map keys.
+  // Normalise: TopoJSON zero-pads codes < 100 (e.g. "056" for Belgium)
   function norm(id: string | number) { return String(Number(id)) }
 
   function geoFill(id: string | number) {
-    const fifa = ISO_TO_FIFA[norm(id)]
+    const n = norm(id)
+    if (n === '826') {
+      if (currentCode && UK_NATIONS.has(currentCode)) return 'rgba(245,158,11,0.22)'
+      if ([...completedSet].some(c => UK_NATIONS.has(c))) return 'rgba(34,197,94,0.28)'
+      if ([...routeSet].some(c => UK_NATIONS.has(c)))    return 'rgba(59,130,246,0.14)'
+      return '#111f35'
+    }
+    const fifa = ISO_TO_FIFA[n]
     if (!fifa) return '#111f35'
     if (completedSet.has(fifa)) return 'rgba(34,197,94,0.28)'
     if (fifa === currentCode)   return 'rgba(245,158,11,0.22)'
@@ -283,7 +351,14 @@ export default function AroundTheWorld() {
     return '#111f35'
   }
   function geoStroke(id: string | number) {
-    const fifa = ISO_TO_FIFA[norm(id)]
+    const n = norm(id)
+    if (n === '826') {
+      if (currentCode && UK_NATIONS.has(currentCode)) return '#f59e0b'
+      if ([...completedSet].some(c => UK_NATIONS.has(c))) return '#22c55e'
+      if ([...routeSet].some(c => UK_NATIONS.has(c)))    return '#4a7fc0'
+      return '#1e2d4a'
+    }
+    const fifa = ISO_TO_FIFA[n]
     if (!fifa) return '#1e2d4a'
     if (completedSet.has(fifa)) return '#22c55e'
     if (fifa === currentCode)   return '#f59e0b'
@@ -291,7 +366,13 @@ export default function AroundTheWorld() {
     return '#1e2d4a'
   }
   function geoStrokeW(id: string | number) {
-    const fifa = ISO_TO_FIFA[norm(id)]
+    const n = norm(id)
+    if (n === '826') {
+      if (currentCode && UK_NATIONS.has(currentCode)) return 1.4
+      if ([...routeSet].some(c => UK_NATIONS.has(c))) return 0.8
+      return 0.3
+    }
+    const fifa = ISO_TO_FIFA[n]
     if (!fifa) return 0.3
     if (fifa === currentCode) return 1.4
     if (routeSet.has(fifa))   return 0.8
@@ -432,9 +513,10 @@ export default function AroundTheWorld() {
   }
 
   // ── PLAYING ────────────────────────────────────────────────────────
+  const showCountryName = mode === 'easy' || revealed
   const countryLabel = currentCode
-    ? (mode === 'easy' ? (COUNTRY_NAMES[currentCode] ?? currentCode) : '???')
-    : '' // medium + hard: no country name shown
+    ? (showCountryName ? (COUNTRY_NAMES[currentCode] ?? currentCode) : '???')
+    : ''
 
   return (
     <div style={{ ...page, display: 'flex', flexDirection: 'column' }}>
@@ -445,6 +527,12 @@ export default function AroundTheWorld() {
       <NavBar />
 
       <div style={WRAP}>
+
+        {/* ── Top actions ── */}
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '10px 0 4px' }}>
+          <button onClick={() => setPhase('setup')} style={{ padding: '5px 14px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Change Mode</button>
+          <button onClick={startGame} style={{ padding: '5px 14px', background: 'transparent', color: '#dc2626', border: '1px solid #7f1d1d', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Restart</button>
+        </div>
 
         {/* ── Banner ── */}
         <div style={{ padding: '12px 0 10px', borderBottom: '1px solid #1e2d4a' }}>
@@ -475,10 +563,15 @@ export default function AroundTheWorld() {
         </div>
 
         {/* ── Map ── */}
-        <div style={{ background: '#060e1c', borderRadius: 10, overflow: 'hidden', margin: '12px 0', border: '1px solid #1e2d4a' }}>
+        <div style={{ background: '#060e1c', borderRadius: 10, overflow: 'hidden', margin: '12px 0', border: '1px solid #1e2d4a', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {[{ label: '+', fn: () => setZoom(z => Math.min(z * 1.4, 8)) }, { label: '−', fn: () => setZoom(z => Math.max(z / 1.4, 0.2)) }].map(({ label, fn }) => (
+              <button key={label} onClick={fn} style={{ width: 28, height: 28, background: 'rgba(255,255,255,0.08)', border: '1px solid #2a3d5e', borderRadius: 6, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{label}</button>
+            ))}
+          </div>
           {mounted && (
             <ComposableMap
-              projectionConfig={{ scale: proj.scale, center: proj.center }}
+              projectionConfig={{ scale: proj.scale * zoom, center: proj.center }}
               style={{ width: '100%', height: 'auto', display: 'block' }}
             >
               <Geographies geography={GEO_URL}>
@@ -503,10 +596,18 @@ export default function AroundTheWorld() {
 
         {/* ── Input ── */}
         <div style={{ paddingBottom: 24 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#8899bb', marginBottom: 8 }}>
-            Name a PL player from{' '}
-            <span style={{ color: '#f59e0b', fontWeight: 900 }}>{countryLabel}</span>
-            {' — '}their {STAT_LABELS[stat].toLowerCase()} will be added to your score
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#8899bb' }}>
+              {mode === 'easy' || revealed
+                ? <>Name a PL player from <span style={{ color: '#f59e0b', fontWeight: 900 }}>{countryLabel}</span></>
+                : <>Name a PL player from the <span style={{ color: '#f59e0b', fontWeight: 900 }}>highlighted country</span></>
+              }
+            </div>
+            {mode !== 'easy' && !revealed && (
+              <button onClick={() => setRevealed(true)} style={{ flexShrink: 0, padding: '4px 12px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                Reveal countries
+              </button>
+            )}
           </div>
           <div style={{ position: 'relative' }}>
             <input
@@ -543,7 +644,7 @@ export default function AroundTheWorld() {
                   <span style={{ color: '#22c55e', fontWeight: 700 }}>{COUNTRY_NAMES[c.code] ?? c.code}</span>
                   <span style={{ color: '#4a5568', margin: '0 4px' }}>·</span>
                   <span style={{ color: '#c0cde0' }}>{c.player}</span>
-                  <span style={{ color: '#22c55e', fontWeight: 800, marginLeft: 6 }}>{c.val}</span>
+                  {mode !== 'hard' && <span style={{ color: '#22c55e', fontWeight: 800, marginLeft: 6 }}>{c.val}</span>}
                 </div>
               ))}
             </div>
