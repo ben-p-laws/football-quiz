@@ -18,6 +18,7 @@ export default function NavBar() {
     router.prefetch('/teammates')
     router.prefetch('/grid')
     router.prefetch('/football-golf')
+    router.prefetch('/around-the-world')
   }, [router])
 
   const links = [
@@ -30,6 +31,7 @@ export default function NavBar() {
     { label: 'Teammates',  href: '/teammates' },
     { label: 'Grid',       href: '/grid' },
     { label: 'Golf',       href: '/football-golf' },
+    { label: 'ATW',        href: '/around-the-world' },
   ]
 
   function navigate(href: string) {
