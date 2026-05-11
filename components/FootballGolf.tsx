@@ -1327,16 +1327,17 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
           if(!imageUrl) {
-            const hw = 12
-            const farY = yardToY(hole.hazard.end);   const farX = yardToX(hole.hazard.end)
-            const nyY  = yardToY(hole.hazard.start); const nyX  = yardToX(hole.hazard.start)
+            const hw  = 12
+            const cx  = yardToX((hole.hazard.start + hole.hazard.end) / 2)
+            const yt  = yardToY(hole.hazard.end)
+            const yb  = yardToY(hole.hazard.start)
             return (
               <g>
-                <line x1={farX-hw} y1={farY} x2={farX+hw} y2={farY} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={farX-hw-1} y={farY+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
+                <line x1={cx-hw} y1={yt} x2={cx+hw} y2={yt} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={cx-hw-1} y={yt+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
                 {distToNear > 0 && <>
-                  <line x1={nyX-hw} y1={nyY} x2={nyX+hw} y2={nyY} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                  <text x={nyX-hw-1} y={nyY+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>
+                  <line x1={cx-hw} y1={yb} x2={cx+hw} y2={yb} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                  <text x={cx-hw-1} y={yb+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>
                 </>}
               </g>
             )
