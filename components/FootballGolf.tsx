@@ -1197,6 +1197,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const bHalf   = imageUrl ? 14 : 8   // half-width of label box
   const bSingle = imageUrl ? 14 : 8   // height of single-line box
   const bDouble = imageUrl ? 22 : 13  // height of double-line box
+  const ballR   = imageUrl ? 5 : 3.2
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
@@ -1293,14 +1294,14 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
 
         {/* Ball trail */}
         {isAnimating&&(
-          <circle cx={finalBallX} cy={ballY+13} rx={3} ry={1.2} fill="rgba(255,255,255,0.15)"/>
+          <circle cx={finalBallX} cy={ballY+ballR*2.5} rx={ballR*0.6} ry={ballR*0.25} fill="rgba(255,255,255,0.15)"/>
         )}
 
         {/* Ball */}
-        <ellipse cx={finalBallX} cy={ballY+3} rx={5} ry={2} fill="rgba(0,0,0,0.3)"/>
-        <circle cx={finalBallX} cy={ballY} r={5} fill="white"/>
+        <ellipse cx={finalBallX} cy={ballY+ballR*0.6} rx={ballR} ry={ballR*0.4} fill="rgba(0,0,0,0.3)"/>
+        <circle cx={finalBallX} cy={ballY} r={ballR} fill="white"/>
         {isAnimating&&(
-          <circle cx={finalBallX} cy={ballY} r={7} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
+          <circle cx={finalBallX} cy={ballY} r={ballR*1.4} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
 
         {/* Distance labels — dark pill so they read on any background */}
