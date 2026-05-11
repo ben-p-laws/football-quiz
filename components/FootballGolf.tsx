@@ -1364,24 +1364,24 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToFar  = Math.round(b.end   - ballTeePosForLabels)
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
           const sideLeft = b.start % 20 < 10
+          const midPos   = yardToSVG((b.start + b.end) / 2, hole.distance, effectivePath)
           if(!imageUrl) {
             const hw = 12
-            const fy = yardToY(b.end);   const fX = yardToX(b.end)
-            const ny = yardToY(b.start); const nX = yardToX(b.start)
-            const ftx = sideLeft ? fX-hw-1 : fX+hw+1
-            const ntx = sideLeft ? nX-hw-1 : nX+hw+1
+            const ellipseRy = 3.5
+            const topY = midPos.y - ellipseRy
+            const botY = midPos.y + ellipseRy
+            const cx   = midPos.x
+            const tx   = sideLeft ? cx-hw-1 : cx+hw+1
             const anchor = sideLeft ? 'end' : 'start'
             return (
               <g key={i}>
-                <line x1={fX-hw} y1={fy} x2={fX+hw} y2={fy} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={ftx} y={fy+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
-                <line x1={nX-hw} y1={ny} x2={nX+hw} y2={ny} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={ntx} y={ny+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
+                <line x1={cx-hw} y1={topY} x2={cx+hw} y2={topY} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={tx} y={topY+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
+                <line x1={cx-hw} y1={botY} x2={cx+hw} y2={botY} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={tx} y={botY+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
               </g>
             )
           }
-          const midYards = (b.start + b.end) / 2
-          const midPos   = yardToSVG(midYards, hole.distance, effectivePath)
           const lx = Math.max(16, Math.min(84, midPos.x + (sideLeft ? -16 : 16)))
           return (
             <g key={i}>
