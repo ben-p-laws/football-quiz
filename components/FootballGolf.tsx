@@ -1326,15 +1326,16 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
           if(!imageUrl) {
-            const fy = yardToY(hole.hazard.end)
-            const ny = yardToY(hole.hazard.start)
+            const hw = 12
+            const farY = yardToY(hole.hazard.end);   const farX = yardToX(hole.hazard.end)
+            const nyY  = yardToY(hole.hazard.start); const nyX  = yardToX(hole.hazard.start)
             return (
               <g>
-                <line x1={0} y1={fy} x2={100} y2={fy} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={3} y={fy+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="start" fontWeight="bold">{distToFar}</text>
+                <line x1={farX-hw} y1={farY} x2={farX+hw} y2={farY} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={farX-hw-1} y={farY+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
                 {distToNear > 0 && <>
-                  <line x1={0} y1={ny} x2={100} y2={ny} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                  <text x={3} y={ny+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="start" fontWeight="bold">{distToNear}</text>
+                  <line x1={nyX-hw} y1={nyY} x2={nyX+hw} y2={nyY} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                  <text x={nyX-hw-1} y={nyY+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>
                 </>}
               </g>
             )
@@ -1364,16 +1365,18 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
           const sideLeft = b.start % 20 < 10
           if(!imageUrl) {
-            const fy = yardToY(b.end)
-            const ny = yardToY(b.start)
-            const tx = sideLeft ? 3 : 97
-            const anchor = sideLeft ? 'start' : 'end'
+            const hw = 12
+            const fy = yardToY(b.end);   const fX = yardToX(b.end)
+            const ny = yardToY(b.start); const nX = yardToX(b.start)
+            const ftx = sideLeft ? fX-hw-1 : fX+hw+1
+            const ntx = sideLeft ? nX-hw-1 : nX+hw+1
+            const anchor = sideLeft ? 'end' : 'start'
             return (
               <g key={i}>
-                <line x1={0} y1={fy} x2={100} y2={fy} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={tx} y={fy+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
-                <line x1={0} y1={ny} x2={100} y2={ny} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={tx} y={ny+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
+                <line x1={fX-hw} y1={fy} x2={fX+hw} y2={fy} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={ftx} y={fy+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
+                <line x1={nX-hw} y1={ny} x2={nX+hw} y2={ny} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
+                <text x={ntx} y={ny+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
               </g>
             )
           }
