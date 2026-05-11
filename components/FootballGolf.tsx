@@ -1556,10 +1556,9 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
             <div style={{fontSize:14,fontWeight:900}}>🎲 Random</div>
             <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>New layout each game</div>
           </button>
-          <button onClick={()=>setCourseMode('real')}
-            style={{background:courseMode==='real'?'rgba(74,222,128,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode==='real'?'#4ade80':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
+          <button disabled style={{background:'#1e2d4a',color:'rgba(255,255,255,0.25)',border:'2px solid transparent',borderRadius:10,padding:'12px 8px',cursor:'default',fontFamily:'inherit',textAlign:'center',opacity:0.5}}>
             <div style={{fontSize:14,fontWeight:900}}>🏌️ Real Course</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>Real Courses</div>
+            <div style={{fontSize:10,marginTop:2}}>Coming Soon</div>
           </button>
         </div>
       </div>
