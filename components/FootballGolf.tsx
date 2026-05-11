@@ -1208,7 +1208,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Slight dark scrim so labels stay readable */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" viewBox="0 0 100 260" preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
+      <svg width="100%" viewBox={imageUrl ? "0 0 100 260" : "0 -10 100 165"} preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="35" x2="0" y2="255" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
