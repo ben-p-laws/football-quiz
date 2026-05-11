@@ -983,8 +983,6 @@ export default function FootballGolf(){
             {/* Category — two side-by-side boxes, fixed height so layout never shifts */}
             {question&&(()=>{
               const filterText = makeFilterLabel(question)
-              const statFs  = Math.max(10, Math.min(15, 15 - Math.max(0, question.statLabel.length - 10) * 0.34))
-              const filterFs = Math.max(9,  Math.min(13, 13 - Math.max(0, filterText.length - 14) * 0.28))
               const boxStyle: React.CSSProperties = {
                 flex:1, background:'#1e2d4a', border:'1px solid rgba(255,255,255,0.12)',
                 borderRadius:10, padding:'5px 8px', height:68, display:'flex',
@@ -999,13 +997,13 @@ export default function FootballGolf(){
                   <div style={boxStyle}>
                     <div style={labelStyle}>Stat</div>
                     <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',width:'100%'}}>
-                      <div style={{fontSize:statFs,fontWeight:800,color:'white',lineHeight:1.2,textAlign:'center'}}>{question.statLabel}</div>
+                      <div style={{fontSize:11,fontWeight:800,color:'white',lineHeight:1.2,textAlign:'center'}}>{question.statLabel}</div>
                     </div>
                   </div>
                   <div style={boxStyle}>
                     <div style={labelStyle}>Filter</div>
                     <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',width:'100%'}}>
-                      <div style={{fontSize:filterFs,fontWeight:600,color:'white',lineHeight:1.2,textAlign:'center'}}>{filterText}</div>
+                      <div style={{fontSize:11,fontWeight:600,color:'white',lineHeight:1.2,textAlign:'center'}}>{filterText}</div>
                     </div>
                   </div>
                 </div>
