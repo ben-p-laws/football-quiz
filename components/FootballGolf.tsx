@@ -1334,10 +1334,10 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
             return (
               <g>
                 <line x1={cx-hw} y1={yt} x2={cx+hw} y2={yt} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={cx-hw-1} y={yt+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
+                <text x={cx-hw-1} y={yt+1.5} fontSize={labelFs*0.5} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
                 {distToNear > 0 && <>
                   <line x1={cx-hw} y1={yb} x2={cx+hw} y2={yb} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                  <text x={cx-hw-1} y={yb+1.5} fontSize={labelFs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>
+                  <text x={cx-hw-1} y={yb+1.5} fontSize={labelFs*0.5} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>
                 </>}
               </g>
             )
@@ -1378,9 +1378,9 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
             return (
               <g key={i}>
                 <line x1={cx-hw} y1={topY} x2={cx+hw} y2={topY} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={tx} y={topY+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
+                <text x={tx} y={topY+1.5} fontSize={labelFs*0.5} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
                 <line x1={cx-hw} y1={botY} x2={cx+hw} y2={botY} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={tx} y={botY+1.5} fontSize={labelFs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
+                <text x={tx} y={botY+1.5} fontSize={labelFs*0.5} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
               </g>
             )
           }
