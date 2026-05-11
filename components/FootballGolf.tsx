@@ -373,13 +373,13 @@ function generateHoles(count:3|6|9|18): Hole[] {
       let hazard: Hazard|null = null
       if (par===3) {
         const start = Math.round(distance*(0.60+Math.random()*0.12)/5)*5
-        hazard = {start, end:start+20}
+        hazard = {start, end:start+40}
       } else if (par===5) {
         const start = randBetween(36,46)*5
-        hazard = {start, end:start+30}
+        hazard = {start, end:start+40}
       } else {
         const fromHole = Math.round(randBetween(40,100)/5)*5
-        hazard = {start:distance-fromHole, end:distance-fromHole+20}
+        hazard = {start:distance-fromHole, end:distance-fromHole+40}
       }
       const path = pathPool[holes.length % pathPool.length]
       const bunkers = generateBunkers(distance, hazard, 1)
@@ -426,7 +426,7 @@ function generateBunkers(distance: number, hazard: Hazard|null, count: number): 
   for (let i = 0; i < count; i++) {
     for (let attempt = 0; attempt < 20; attempt++) {
       const start = Math.round(randBetween(minStart, maxStart) / 5) * 5
-      const end   = start + 10
+      const end   = start + 20
       if (hazard && start < hazard.end + 10 && end > hazard.start - 10) continue
       if (bunkers.some(b => start < b.end + 20 && end > b.start - 20)) continue
       bunkers.push({ start, end })
