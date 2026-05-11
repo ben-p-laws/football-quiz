@@ -1194,6 +1194,9 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const rot = imageRotation ?? 0
   const labelFs = imageUrl ? 8 : 4.5
   const iconFs  = imageUrl ? 6 : 4
+  const bHalf   = imageUrl ? 14 : 8   // half-width of label box
+  const bSingle = imageUrl ? 14 : 8   // height of single-line box
+  const bDouble = imageUrl ? 22 : 13  // height of double-line box
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
@@ -1310,13 +1313,13 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const lx = Math.max(16, Math.min(84, cx))
           if(distToNear <= 0) return (
             <g>
-              <rect x={lx-14} y={cy-8} width={28} height={14} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <rect x={lx-bHalf} y={cy-bSingle/2} width={bHalf*2} height={bSingle} rx={2} fill="rgba(0,0,0,0.72)"/>
               <text x={lx} y={cy+3} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
             </g>
           )
           return (
             <g>
-              <rect x={lx-14} y={cy-11} width={28} height={22} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <rect x={lx-bHalf} y={cy-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>
               <text x={lx} y={cy-2} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">💧 {distToNear}</tspan>
                 <tspan x={lx} dy="9">–{distToFar}yd</tspan>
@@ -1334,7 +1337,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const lx = Math.max(16, Math.min(84, midPos.x + offset))
           return (
             <g key={i}>
-              <rect x={lx-14} y={midPos.y-11} width={28} height={22} rx={2} fill="rgba(0,0,0,0.72)"/>
+              <rect x={lx-bHalf} y={midPos.y-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>
               <text x={lx} y={midPos.y-2} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">🏖️ {distToNear}</tspan>
                 <tspan x={lx} dy="9">–{distToFar}yd</tspan>
