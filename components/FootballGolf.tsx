@@ -1226,7 +1226,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         </defs>
 
         {/* Generated-course-only: rough background + fairway + bunker fills */}
-        {!imageUrl && <rect x={0} y={0} width={100} height={260} fill="#0f2e0f" opacity={0.6}/>}
+        {!imageUrl && <rect x={0} y={-10} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>}
         {!imageUrl && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
         {!imageUrl && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
