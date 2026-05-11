@@ -1192,6 +1192,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const fairwayD = pathToD(effectivePath.pts)
 
   const rot = imageRotation ?? 0
+  const labelFs = imageUrl ? 8 : 4.5
+  const iconFs  = imageUrl ? 6 : 4
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
@@ -1247,7 +1249,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
               <path d={waterPath} fill="none" stroke="#3b82f6" strokeWidth={0.8} opacity={0.5}/>
               <ellipse cx={cx} cy={(yt+yb)/2} rx={halfW*0.5} ry={halfH*0.25} fill="none" stroke="rgba(147,197,253,0.3)" strokeWidth={0.5}/>
             </>}
-            <text x={cx} y={(yt+yb)/2+1.5} fontSize={6} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
+            <text x={cx} y={(yt+yb)/2+1.5} fontSize={iconFs} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
           </>
         })()}
 
@@ -1257,7 +1259,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           return (
             <g opacity={0.85}>
               <line x1={mx-12} y1={my} x2={mx+12} y2={my} stroke="#f97316" strokeWidth={1.2} strokeDasharray="2.5,2" strokeLinecap="round"/>
-              <text x={mx+22} y={my+1.5} fontSize={6} fill="#f97316" fontWeight="bold" textAnchor="start">max</text>
+              <text x={mx+22} y={my+1.5} fontSize={iconFs} fill="#f97316" fontWeight="bold" textAnchor="start">max</text>
             </g>
           )
         })()}
@@ -1309,13 +1311,13 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           if(distToNear <= 0) return (
             <g>
               <rect x={lx-14} y={cy-8} width={28} height={14} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={cy+3} fontSize={8} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
+              <text x={lx} y={cy+3} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
             </g>
           )
           return (
             <g>
               <rect x={lx-14} y={cy-11} width={28} height={22} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={cy-2} fontSize={8} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
+              <text x={lx} y={cy-2} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">💧 {distToNear}</tspan>
                 <tspan x={lx} dy="9">–{distToFar}yd</tspan>
               </text>
@@ -1333,7 +1335,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           return (
             <g key={i}>
               <rect x={lx-14} y={midPos.y-11} width={28} height={22} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={midPos.y-2} fontSize={8} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
+              <text x={lx} y={midPos.y-2} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
                 <tspan x={lx} dy="0">🏖️ {distToNear}</tspan>
                 <tspan x={lx} dy="9">–{distToFar}yd</tspan>
               </text>
