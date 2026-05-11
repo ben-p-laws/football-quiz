@@ -91,6 +91,10 @@ function buildIsoToFifa(): Record<string, string> {
 }
 const ISO_TO_FIFA = buildIsoToFifa()
 
+function norm2(s: string) {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+}
+
 function statVal(p: ATWPlayer, s: StatKey): number {
   if (s === 'goals')        return p.goals
   if (s === 'goalsAssists') return p.goals + p.assists
@@ -235,7 +239,7 @@ export default function AroundTheWorld() {
   const playerByName = useMemo(() => {
     if (!players) return {} as Record<string, ATWPlayer>
     const m: Record<string, ATWPlayer> = {}
-    for (const p of players) m[p.name.toLowerCase()] = p
+    for (const p of players) m[norm2(p.name)] = p
     return m
   }, [players])
 
@@ -294,15 +298,15 @@ export default function AroundTheWorld() {
   function handleInput(val: string) {
     setInput(val); setSuggActive(-1)
     if (val.length < 2) { setSuggestions([]); return }
-    const lc = val.toLowerCase()
-    setSuggestions(players!.filter(p => p.name.toLowerCase().includes(lc)).slice(0, 8).map(p => p.name))
+    const lc = norm2(val)
+    setSuggestions(players!.filter(p => norm2(p.name).includes(lc)).slice(0, 8).map(p => p.name))
   }
 
   function submit(name: string) {
     if (!route) return
     const trimmed = name.trim()
     if (!trimmed) return
-    const p = playerByName[trimmed.toLowerCase()] ?? players!.find(pl => pl.name.toLowerCase() === trimmed.toLowerCase())
+    const p = playerByName[norm2(trimmed)] ?? players!.find(pl => norm2(pl.name) === norm2(trimmed))
     const currentCode = route.countries[step]
     if (!p) { setFailReason(`"${trimmed}" not found in the PL database`); setPhase('failed'); return }
     if (p.nat !== currentCode) {
