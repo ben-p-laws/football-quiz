@@ -1340,8 +1340,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
             <g>
               {imageUrl && <rect x={lx-bHalf} y={cy-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>}
               <text x={lx} y={cy-2} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
-                <tspan x={lx} dy="0">💧 {distToNear}</tspan>
-                <tspan x={lx} dy="9">–{distToFar}yd</tspan>
+                <tspan x={lx} dy="0">{distToFar}</tspan>
+                <tspan x={lx} dy="9">{distToNear}</tspan>
               </text>
             </g>
           )
@@ -1352,14 +1352,14 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToNear = Math.round(b.start - ballTeePosForLabels)
           const distToFar  = Math.round(b.end   - ballTeePosForLabels)
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
-          const offset = i % 2 === 0 ? -16 : 16
-          const lx = Math.max(16, Math.min(84, midPos.x + offset))
+          const sideLeft = b.start % 20 < 10
+          const lx = Math.max(16, Math.min(84, midPos.x + (sideLeft ? -16 : 16)))
           return (
             <g key={i}>
               {imageUrl && <rect x={lx-bHalf} y={midPos.y-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>}
               <text x={lx} y={midPos.y-2} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
-                <tspan x={lx} dy="0">🏖️ {distToNear}</tspan>
-                <tspan x={lx} dy="9">–{distToFar}yd</tspan>
+                <tspan x={lx} dy="0">{distToFar}</tspan>
+                <tspan x={lx} dy="9">{distToNear}</tspan>
               </text>
             </g>
           )
