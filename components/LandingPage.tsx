@@ -108,6 +108,72 @@ export default function LandingPage() {
 
       <div className="game-grid" style={s.grid}>
 
+        {/* ---- FOOTBALL GOLF (featured) ---- */}
+        <div style={s.card}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+          onClick={() => router.push('/football-golf')}>
+          <div style={s.cardHead}>
+            <div style={s.cardTitle}>Football Golf</div>
+            <div style={s.cardDesc}>Pick up to 3 players to set the distance · 3 to 18 holes</div>
+          </div>
+          <div style={{ ...s.preview, display: 'flex', gap: 10 }}>
+            {/* Left: game info */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 5, paddingTop: 2 }}>
+              <div style={{ fontSize: 13, fontWeight: 900, color: 'white' }}>Par 3 · 217 yds to pin</div>
+              <div style={{ display: 'flex', gap: 5 }}>
+                <div style={{ flex: 1, background: '#1e2d4a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '5px 7px' }}>
+                  <div style={{ fontSize: 7, color: '#6b7fa3', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 1 }}>Stat</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: 'white' }}>Goals</div>
+                </div>
+                <div style={{ flex: 1, background: '#1e2d4a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '5px 7px' }}>
+                  <div style={{ fontSize: 7, color: '#6b7fa3', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 1 }}>Filter</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>Dutch players</div>
+                </div>
+              </div>
+              {[
+                { name: 'Ruud Van Nistelrooy', locked: true },
+                { name: 'Dirk Kuyt',      locked: true },
+                { name: null,             locked: false },
+              ].map((p, i) => (
+                <div key={i} style={{ background: p.locked ? 'rgba(34,197,94,0.1)' : '#0a0f1e', border: `1px solid ${p.locked ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, borderRadius: 6, padding: '5px 7px', fontSize: 10, fontWeight: p.locked ? 700 : 400, color: p.locked ? '#22c55e' : '#4a5568' }}>
+                  {p.name ?? 'Pick a player'}
+                </div>
+              ))}
+            </div>
+            {/* Right: vertical hole — 40% card width, height driven by left content */}
+            <div style={{ width: '40%', flexShrink: 0, borderRadius: 10, overflow: 'hidden', alignSelf: 'stretch', position: 'relative', background: '#0f2e0f' }}>
+              <svg viewBox="0 0 55 120" preserveAspectRatio="xMidYMid meet" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'block' }}>
+                <defs>
+                  <linearGradient id="fw-vert" x1="0" y1="12" x2="0" y2="112" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stopColor="#1a4a1a"/>
+                    <stop offset="100%" stopColor="#2d6a2d"/>
+                  </linearGradient>
+                </defs>
+                <rect x={0} y={0} width={55} height={120} fill="#0f2e0f" opacity={0.6}/>
+                <path d="M 27,110 C 24,75 32,45 28,12" stroke="url(#fw-vert)" strokeWidth={20} fill="none" strokeLinecap="butt"/>
+                {/* Water hazard — close to green */}
+                <ellipse cx={28} cy={38} rx={9} ry={5} fill="#1d4ed8" opacity={0.85}/>
+                <ellipse cx={28} cy={38} rx={6} ry={3} fill="none" stroke="#3b82f6" strokeWidth={0.7} opacity={0.5}/>
+                <text x={28} y={40} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle">💧</text>
+                {/* Bunker — mid fairway */}
+                <ellipse cx={37} cy={72} rx={6} ry={3} fill="#c8a96e" opacity={0.85}/>
+                {/* Green */}
+                <circle cx={28} cy={13} r={10} fill="#16a34a"/>
+                <circle cx={28} cy={13} r={7} fill="#22c55e" opacity={0.6}/>
+                <circle cx={28} cy={13} r={2} fill="#0a0f1e"/>
+                {/* Flag */}
+                <line x1={28} y1={13} x2={28} y2={3} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
+                <polygon points="28,3 34,6 28,9" fill="#dc2626"/>
+                {/* Ball on tee */}
+                <ellipse cx={27} cy={111} rx={2.2} ry={0.7} fill="rgba(0,0,0,0.3)"/>
+                <circle cx={27} cy={109} r={2.5} fill="white"/>
+              </svg>
+            </div>
+          </div>
+          <div style={s.cta}><span style={s.ctaText}>Play Football Golf →</span></div>
+        </div>
+
         {/* ---- MINIMISE ---- */}
         <div style={s.card}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
@@ -132,31 +198,6 @@ export default function LandingPage() {
             </div>
           </div>
           <div style={s.cta}><span style={s.ctaText}>Play Minimise →</span></div>
-        </div>
-
-        {/* ---- BINGO ---- */}
-        <div style={s.card}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-          onClick={() => router.push('/bingo')}>
-          <div style={s.cardHead}>
-            <div style={s.cardTitle}>Bingo</div>
-            <div style={s.cardDesc}>Fill the achievement grid · easy, intermediate and hard modes</div>
-          </div>
-          <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gridAutoRows: '1fr', gap: 4, flex: 1 }}>
-              <BCell label="100+ PL Goals"     player="M. Salah"        state="green" />
-              <BCell label="3+ PL Titles"                               state="none" />
-              <BCell label="Never won PL"      player="T. Henry"        state="red" />
-              <BCell label="4+ PL Clubs"                                state="none" />
-              <BCell label="Missed 3+ Pens"    player="C. Ronaldo"      state="green" />
-              <BCell label="400+ PL Apps"                               state="none" />
-              <BCell label="20+ Goals Season"  player="H. Kane"         state="green" />
-              <BCell label="50+ Yellow Cards"                           state="none" />
-              <BCell label="50+ PL Assists"    player="F. Lampard"      state="green" />
-            </div>
-          </div>
-          <div style={s.cta}><span style={s.ctaText}>Play Bingo →</span></div>
         </div>
 
         {/* ---- STAT CLASH ---- */}
@@ -197,6 +238,28 @@ export default function LandingPage() {
       <div style={{ maxWidth: 1100, margin: '4px auto 0', padding: '0 20px 48px' }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 12 }}>More Games</div>
         <div className="small-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+
+          {/* ---- BINGO ---- */}
+          <div style={s.card}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+            onClick={() => router.push('/bingo')}>
+            <div style={{ padding: '10px 12px 8px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Bingo</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Fill the achievement grid</div>
+            </div>
+            <div style={{ padding: '0 10px 8px', flex: 1 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
+                <BCell label="100+ Goals"  player="Salah"    state="green" />
+                <BCell label="3+ Titles"                     state="none" />
+                <BCell label="Never won"   player="Henry"    state="red" />
+                <BCell label="4+ Clubs"                      state="none" />
+                <BCell label="3+ Pens miss" player="Ronaldo" state="green" />
+                <BCell label="400+ Apps"                     state="none" />
+              </div>
+            </div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Bingo →</span></div>
+          </div>
 
           {/* ---- TENABLE ---- */}
           <div style={s.card}
@@ -310,54 +373,6 @@ export default function LandingPage() {
               <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#4a5568', textAlign: 'center' as const }}>Unscramble the PL surname →</div>
             </div>
             <div style={s.ctaSm}><span style={s.ctaText}>Play Countdown →</span></div>
-          </div>
-
-          {/* ---- FOOTBALL GOLF ---- */}
-          <div style={s.card}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/football-golf')}>
-            <div style={{ padding: '10px 12px 6px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Football Golf</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Name players to hit the green · 3, 6, 9 or 18 holes</div>
-            </div>
-            {/* Info above hole */}
-            <div style={{ padding: '6px 12px 0', flex: 1 }}>
-              <div style={{ fontSize: 11, fontWeight: 900, color: 'white', marginBottom: 2 }}>125 yards to pin</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626' }}>Dutch PL Goals</div>
-              <div style={{ fontSize: 9, color: '#4a5568', marginTop: 1 }}>Pick up to 3 players</div>
-            </div>
-            {/* Horizontal hole SVG — bend bowing upward, tee left, green right */}
-            <svg viewBox="0 0 160 54" width="100%" style={{ display: 'block', marginTop: 4 }}>
-              {/* Rough background */}
-              <rect x={0} y={0} width={160} height={54} fill="#0c200c"/>
-              {/* Fairway — quadratic bezier bowing up */}
-              <defs>
-                <linearGradient id="lg-fw" x1="0" y1="0" x2="160" y2="0" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stopColor="#1a4a1a"/>
-                  <stop offset="100%" stopColor="#2d6a2d"/>
-                </linearGradient>
-              </defs>
-              <path d="M 12,38 Q 80,8 148,38" stroke="url(#lg-fw)" strokeWidth={20} fill="none" strokeLinecap="butt"/>
-              {/* Water hazard — roughly 60-80% along the hole */}
-              <ellipse cx={115} cy={32} rx={10} ry={5} fill="#1d4ed8" opacity={0.85}/>
-              <ellipse cx={115} cy={32} rx={7} ry={3} fill="none" stroke="#3b82f6" strokeWidth={0.7} opacity={0.5}/>
-              {/* Bunker */}
-              <ellipse cx={68} cy={20} rx={5} ry={2.5} fill="#c8a96e" opacity={0.85}/>
-              {/* Tee box */}
-              <rect x={8} y={34} width={4} height={12} rx={1.5} fill="#4ade80" opacity={0.9}/>
-              {/* Green — circle with hole cup */}
-              <circle cx={148} cy={38} r={9} fill="#16a34a"/>
-              <circle cx={148} cy={38} r={6.5} fill="#22c55e" opacity={0.6}/>
-              <circle cx={148} cy={38} r={1.5} fill="#0a0f1e"/>
-              {/* Flag */}
-              <line x1={148} y1={38} x2={148} y2={28} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
-              <polygon points="148,28 155,31 148,34" fill="#dc2626"/>
-              {/* Ball — at ~t=0.5 along bezier (midpoint bows to top) */}
-              <ellipse cx={80} cy={20} rx={2.5} ry={0.8} fill="rgba(0,0,0,0.3)"/>
-              <circle cx={80} cy={17.5} r={2.5} fill="white"/>
-            </svg>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Football Golf →</span></div>
           </div>
 
           {/* ---- COMING SOON ---- */}

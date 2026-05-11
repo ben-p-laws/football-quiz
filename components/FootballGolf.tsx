@@ -1327,18 +1327,14 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
           if(!imageUrl) {
-            const hw  = 12
             const cx  = yardToX((hole.hazard.start + hole.hazard.end) / 2)
             const yt  = yardToY(hole.hazard.end)
             const yb  = yardToY(hole.hazard.start)
+            const fs  = labelFs * 0.65
             return (
               <g>
-                <line x1={cx-hw} y1={yt} x2={cx+hw} y2={yt} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={cx-hw-1} y={yt+1.5} fontSize={labelFs*0.5} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
-                {distToNear > 0 && <>
-                  <line x1={cx-hw} y1={yb} x2={cx+hw} y2={yb} stroke="#93c5fd" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                  <text x={cx-hw-1} y={yb+1.5} fontSize={labelFs*0.5} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>
-                </>}
+                <text x={cx-13} y={yt+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
+                {distToNear > 0 && <text x={cx-13} y={yb+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>}
               </g>
             )
           }
@@ -1368,19 +1364,17 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const sideLeft = b.start % 20 < 10
           const midPos   = yardToSVG((b.start + b.end) / 2, hole.distance, effectivePath)
           if(!imageUrl) {
-            const hw = 12
             const ellipseRy = 3.5
             const topY = midPos.y - ellipseRy
             const botY = midPos.y + ellipseRy
             const cx   = midPos.x
-            const tx   = sideLeft ? cx-hw-1 : cx+hw+1
+            const tx   = sideLeft ? cx-13 : cx+13
             const anchor = sideLeft ? 'end' : 'start'
+            const fs   = labelFs * 0.65
             return (
               <g key={i}>
-                <line x1={cx-hw} y1={topY} x2={cx+hw} y2={topY} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={tx} y={topY+1.5} fontSize={labelFs*0.5} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
-                <line x1={cx-hw} y1={botY} x2={cx+hw} y2={botY} stroke="#fcd34d" strokeWidth={0.6} strokeDasharray="1.5 1" strokeOpacity={0.5}/>
-                <text x={tx} y={botY+1.5} fontSize={labelFs*0.5} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
+                <text x={tx} y={topY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
+                <text x={tx} y={botY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
               </g>
             )
           }
