@@ -7,7 +7,10 @@ import NavBar from './NavBar'
 const { ComposableMap, Geographies, Geography } = require('react-simple-maps')
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
-const ATW_ROUTE_ISO = new Set(['620', '724', '250', '276', '616']) // POR, ESP, FRA, GER, POL
+// ISO numeric codes for the demo route
+const ATW_COMPLETED = new Set(['620', '724'])       // POR, ESP — green
+const ATW_CURRENT   = '250'                          // FRA — yellow
+const ATW_UPCOMING  = new Set(['276', '616'])        // GER, POL — blue
 
 export default function LandingPage() {
   const router  = useRouter()
@@ -230,22 +233,28 @@ export default function LandingPage() {
               </div>
             </div>
             {/* Mini map */}
-            <div style={{ background: '#04101f', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2d4a', height: 148 }}>
+            <div style={{ background: '#04101f', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2d4a', height: 100 }}>
               {mounted && (
                 <ComposableMap
-                  projectionConfig={{ scale: 560, center: [5, 50] }}
+                  projectionConfig={{ scale: 1100, center: [5, 47] }}
                   style={{ width: '100%', height: '100%', display: 'block' }}
                 >
                   <Geographies geography={GEO_URL}>
                     {({ geographies }: { geographies: any[] }) =>
                       geographies.map((geo: any) => {
                         const n = String(Number(geo.id))
-                        const inRoute = ATW_ROUTE_ISO.has(n)
+                        const fill   = ATW_COMPLETED.has(n) ? 'rgba(34,197,94,0.32)'
+                                     : n === ATW_CURRENT    ? 'rgba(245,158,11,0.30)'
+                                     : ATW_UPCOMING.has(n)  ? 'rgba(59,130,246,0.22)'
+                                     : '#1a2d45'
+                        const stroke = ATW_COMPLETED.has(n) ? '#22c55e'
+                                     : n === ATW_CURRENT    ? '#f59e0b'
+                                     : ATW_UPCOMING.has(n)  ? '#5b8fd4'
+                                     : '#2e4a6a'
+                        const sw     = (ATW_COMPLETED.has(n) || n === ATW_CURRENT || ATW_UPCOMING.has(n)) ? 1.1 : 0.5
                         return (
                           <Geography key={geo.rsmKey} geography={geo}
-                            fill={inRoute ? 'rgba(59,130,246,0.22)' : '#1a2d45'}
-                            stroke={inRoute ? '#5b8fd4' : '#2e4a6a'}
-                            strokeWidth={inRoute ? 1.1 : 0.5}
+                            fill={fill} stroke={stroke} strokeWidth={sw}
                             style={{ default: { outline: 'none' }, hover: { outline: 'none' }, pressed: { outline: 'none' } }}
                           />
                         )
