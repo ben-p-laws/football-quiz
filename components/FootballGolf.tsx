@@ -983,7 +983,17 @@ export default function FootballGolf(){
         h2hMyRemainingRef.current=newRemaining
         if(h2hOppFinishedRef.current){
           const oppFinal=h2hOppHoleStrokesRef.current!
-          if(newStrokes+1>oppFinal){resolveH2HHole(newStrokes+1,oppFinal);return}
+          if(newStrokes+1>oppFinal){
+            const finishStrokes=newStrokes+1
+            h2hIFinishedRef.current=true
+            h2hMyHoleStrokes.current=finishStrokes
+            fetch('/api/golf-room',{method:'POST',headers:{'Content-Type':'application/json'},
+              body:JSON.stringify({action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
+                holeIdx,shotIdx:newStrokes,remainingAfter:0,pastPin:false,holedOut:true,
+                holeStrokes:finishStrokes,isGimme:false})})
+            resolveH2HHole(finishStrokes,oppFinal)
+            return
+          }
         } else {
           determineTurn(newRemaining,h2hOppRemainingRef.current??newRemaining,holeIdx)
         }
@@ -1019,7 +1029,17 @@ export default function FootballGolf(){
       h2hMyRemainingRef.current=newRemaining
       if(h2hOppFinishedRef.current){
         const oppFinal=h2hOppHoleStrokesRef.current!
-        if(newStrokes+1>oppFinal){resolveH2HHole(newStrokes+1,oppFinal);return}
+        if(newStrokes+1>oppFinal){
+          const finishStrokes=newStrokes+1
+          h2hIFinishedRef.current=true
+          h2hMyHoleStrokes.current=finishStrokes
+          fetch('/api/golf-room',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
+              holeIdx,shotIdx:newStrokes,remainingAfter:0,pastPin:false,holedOut:true,
+              holeStrokes:finishStrokes,isGimme:false})})
+          resolveH2HHole(finishStrokes,oppFinal)
+          return
+        }
       } else {
         determineTurn(newRemaining,h2hOppRemainingRef.current??newRemaining,holeIdx)
       }
@@ -1062,6 +1082,8 @@ export default function FootballGolf(){
     setHoleResult({...res,diff})
 
     if(h2hStep==='playing'){
+      setRemaining(0)
+      h2hMyRemainingRef.current=0
       h2hMyHoleStrokes.current=finalStrokes
       h2hIFinishedRef.current=true
       if(h2hOppFinishedRef.current){
@@ -1158,6 +1180,7 @@ export default function FootballGolf(){
   }
 
   function advanceH2HHole(){
+    stopH2HPoll()
     setH2HFinishHoleReady(false)
     setHoleResult(null)
     setShotResult(null)
