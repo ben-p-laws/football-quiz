@@ -6,7 +6,7 @@ export const contentType = 'image/png'
 
 const OTHER_GAMES = ['Bingo', 'Tenable', 'Stat Clash', 'Grid', 'Teammates', 'Countdown']
 
-const CARD_SIZE = 390
+const CARD_SIZE = 292
 
 export default function Image() {
   return new ImageResponse(
