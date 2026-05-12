@@ -288,7 +288,7 @@ function DailyEndPanel({ phase, pct, runningTotal, target, mode, playerName, set
                 <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
                 <span style={{ fontSize: 11, color: '#4a5568', marginRight: 4 }}>{e.mode}</span>
                 <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
-                <span style={{ fontSize: 12, fontWeight: 700, color: pctColor(e.pct) }}>{e.pct}%</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: pctColor(e.pct) }}>{Math.abs(e.pct - 100)}% away</span>
               </div>
             ))
           }
@@ -629,7 +629,7 @@ export default function AroundTheWorld() {
                       <span style={{ fontSize: 12, color: '#4a5568', width: 18 }}>{i + 1}.</span>
                       <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
                       <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: (() => { const d = Math.abs(e.pct - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' })() }}>{e.pct}%</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: (() => { const d = Math.abs(e.pct - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' })() }}>{Math.abs(e.pct - 100)}% away</span>
                     </div>
                   ))
                 }
@@ -707,7 +707,7 @@ export default function AroundTheWorld() {
               Total: <strong style={{ color: 'white' }}>{runningTotal}</strong> {STAT_LABELS[stat].toLowerCase()}&nbsp;·&nbsp;
               Target: <strong style={{ color: '#f59e0b' }}>{target}</strong>&nbsp;·&nbsp;
               <span style={{ color: (() => { const d = Math.abs(pct - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' })() }}>
-                {pct}% of target
+                {Math.abs(pct - 100)}% away
               </span>
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
