@@ -95,6 +95,34 @@ function norm2(s: string) {
   return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
 
+const FIFA_TO_FLAG: Record<string, string> = {
+  ENG: 'gb-eng', SCO: 'gb-sct', WAL: 'gb-wls', NIR: 'gb-nir', IRL: 'ie',
+  FRA: 'fr', ESP: 'es', POR: 'pt', GER: 'de', NED: 'nl',
+  BEL: 'be', DEN: 'dk', SWE: 'se', NOR: 'no', ITA: 'it',
+  SUI: 'ch', AUT: 'at', CZE: 'cz', GRE: 'gr', TUR: 'tr',
+  SRB: 'rs', CRO: 'hr', BUL: 'bg', POL: 'pl', SVK: 'sk',
+  FIN: 'fi', HUN: 'hu', ROU: 'ro', UKR: 'ua', ALB: 'al',
+  MNE: 'me', MKD: 'mk', SVN: 'si', BIH: 'ba',
+  MAR: 'ma', ALG: 'dz', TUN: 'tn', EGY: 'eg',
+  SEN: 'sn', GUI: 'gn', CIV: 'ci', GHA: 'gh',
+  TGO: 'tg', BEN: 'bj', NGA: 'ng', CMR: 'cm',
+  GAB: 'ga', COD: 'cd', ZIM: 'zw', ZAF: 'za',
+  MLI: 'ml', BFA: 'bf', MTN: 'mr', SLE: 'sl', LBR: 'lr', GAM: 'gm',
+  ARG: 'ar', BRA: 'br', URU: 'uy', COL: 'co',
+  VEN: 've', CHI: 'cl', ECU: 'ec', PER: 'pe', BOL: 'bo', PAR: 'py',
+  USA: 'us', CAN: 'ca', MEX: 'mx',
+  GUA: 'gt', HON: 'hn', SLV: 'sv', NCA: 'ni', CRC: 'cr', PAN: 'pa',
+  JPN: 'jp', KOR: 'kr', LBN: 'lb', ISR: 'il',
+  JOR: 'jo', IRQ: 'iq', IRN: 'ir', SYR: 'sy', RUS: 'ru',
+}
+function flagUrl(fifa: string) {
+  const c = FIFA_TO_FLAG[fifa]; return c ? `https://flagcdn.com/w80/${c}.png` : null
+}
+function flagImg(fifa: string, size = 20) {
+  const url = flagUrl(fifa)
+  return url ? <img src={url} width={size} style={{ borderRadius: 2, display: 'block', flexShrink: 0 }} alt="" /> : null
+}
+
 function statVal(p: ATWPlayer, s: StatKey): number {
   if (s === 'goals')        return p.goals
   if (s === 'goalsAssists') return p.goals + p.assists
@@ -105,6 +133,24 @@ function statVal(p: ATWPlayer, s: StatKey): number {
 
 type Step = { code: string; player: string; val: number }
 type Phase = 'setup' | 'playing' | 'won' | 'failed'
+type GameMode = 'lobby' | 'daily' | 'freeplay'
+
+type DailyConfig = {
+  date:    string
+  routeId: string
+  stat:    StatKey
+  mode:    'easy' | 'medium' | 'hard'
+  target:  number
+}
+
+type LeaderboardEntry = {
+  player_name: string
+  score:       number
+  target:      number
+  pct:         number
+  won:         boolean
+  mode:        string
+}
 
 // Adjacency: each country lists its valid neighbours (FIFA codes)
 // Used to validate routes and reject any with non-bordering consecutive pairs
@@ -202,10 +248,73 @@ function routeIsValid(countries: string[]): boolean {
 
 const WRAP = { maxWidth: 560, margin: '0 auto', width: '100%', padding: '0 20px', boxSizing: 'border-box' as const }
 
+function DailyEndPanel({ phase, pct, runningTotal, target, mode, playerName, setPlayerName, scoreSubmitted, onSubmit, leaderboard, onPlayMore }: {
+  phase: 'won' | 'failed'; pct: number; runningTotal: number; target: number; mode: string;
+  playerName: string; setPlayerName: (v: string) => void;
+  scoreSubmitted: boolean; onSubmit: () => void;
+  leaderboard: LeaderboardEntry[]; onPlayMore: () => void;
+}) {
+  const sorted = [...leaderboard].sort((a, b) => {
+    if (a.won !== b.won) return a.won ? -1 : 1
+    return Math.abs(a.pct - 100) - Math.abs(b.pct - 100)
+  })
+  const pctColor = (p: number) => { const d = Math.abs(p - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' }
+  return (
+    <div style={{ marginTop: 8 }}>
+      {!scoreSubmitted ? (
+        <div style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid #2a3d5e', borderRadius: 10, padding: '16px 20px', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#8899bb', marginBottom: 10 }}>
+            Submit your score to the leaderboard
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={playerName}
+              onChange={e => setPlayerName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && playerName.trim()) onSubmit() }}
+              placeholder="Your name…"
+              style={{ flex: 1, background: '#111827', border: '1px solid #2a3d5e', borderRadius: 6, padding: '8px 12px', color: 'white', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+            />
+            <button onClick={onSubmit} disabled={!playerName.trim()} style={{ padding: '8px 18px', background: playerName.trim() ? '#dc2626' : '#2a3d5e', color: 'white', border: 'none', borderRadius: 6, fontWeight: 800, fontSize: 13, cursor: playerName.trim() ? 'pointer' : 'default' }}>Submit</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Today&apos;s Leaderboard</div>
+          {sorted.length === 0
+            ? <p style={{ color: '#4a5568', fontSize: 13 }}>No scores yet.</p>
+            : sorted.map((e, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', marginBottom: 4, background: e.player_name === playerName ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${e.player_name === playerName ? '#7f1d1d' : '#1e2d4a'}`, borderRadius: 6 }}>
+                <span style={{ fontSize: 11, color: '#4a5568', width: 20 }}>{i + 1}.</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
+                <span style={{ fontSize: 11, color: '#4a5568', marginRight: 4 }}>{e.mode}</span>
+                <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: pctColor(e.pct) }}>{e.pct}%</span>
+              </div>
+            ))
+          }
+        </div>
+      )}
+      <button onClick={onPlayMore} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+        Play More Routes →
+      </button>
+    </div>
+  )
+}
+
 export default function AroundTheWorld() {
   const [mounted,    setMounted]    = useState(false)
   const [players,    setPlayers]    = useState<ATWPlayer[] | null>(null)
   const [loadErr,    setLoadErr]    = useState(false)
+
+  const [gameMode,       setGameMode]       = useState<GameMode>('lobby')
+  const [dailyConfig,    setDailyConfig]    = useState<DailyConfig | null>(null)
+  const [dailyLoading,   setDailyLoading]   = useState(false)
+  const [dailyErr,       setDailyErr]       = useState(false)
+  const [leaderboard,    setLeaderboard]    = useState<LeaderboardEntry[]>([])
+  const [alreadyPlayed,  setAlreadyPlayed]  = useState(false)
+  const [playerName,     setPlayerName]     = useState('')
+  const [scoreSubmitted, setScoreSubmitted] = useState(false)
+  const [showLobbyLb,    setShowLobbyLb]    = useState(false)
 
   const [phase,      setPhase]      = useState<Phase>('setup')
   const [route,      setRoute]      = useState<ATWRoute | null>(null)
@@ -235,6 +344,63 @@ export default function AroundTheWorld() {
       .then(d => setPlayers(d.players))
       .catch(() => setLoadErr(true))
   }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+    const today = new Date().toISOString().slice(0, 10)
+    if (localStorage.getItem(`atw_daily_${today}`)) setAlreadyPlayed(true)
+  }, [mounted])
+
+  async function startDailyGame() {
+    if (!players) return
+    setDailyLoading(true); setDailyErr(false)
+    try {
+      const res  = await fetch('/api/around-the-world/daily')
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setDailyConfig(data)
+      setLeaderboard(data.leaderboard ?? [])
+      const r = ROUTES.find(x => x.id === data.routeId)
+      if (!r) throw new Error('Route not found')
+      setRoute(r); setStat(data.stat); setTarget(data.target); setMode(data.mode)
+      setStep(0); setCompleted([]); setFailReason(''); setRevealed(false); setZoom(1)
+      setInput(''); setSuggestions([]); setSuggActive(-1)
+      setProj(computeProjection(r.countries))
+      setScoreSubmitted(false); setPlayerName('')
+      setGameMode('daily'); setPhase('playing')
+      setTimeout(() => inputRef.current?.focus(), 80)
+    } catch {
+      setDailyErr(true)
+    } finally {
+      setDailyLoading(false)
+    }
+  }
+
+  async function submitDailyScore(wonGame: boolean, total: number, tgt: number, p: number, md: string) {
+    if (!dailyConfig || !playerName.trim()) return
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      const res  = await fetch('/api/around-the-world/daily', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, player_name: playerName.trim(), score: total, target: tgt, pct: p, won: wonGame, mode: md }),
+      })
+      const data = await res.json()
+      setLeaderboard(data.leaderboard ?? [])
+    } catch { /* silent */ }
+    setScoreSubmitted(true)
+    localStorage.setItem(`atw_daily_${today}`, JSON.stringify({ won: wonGame, pct: p }))
+    setAlreadyPlayed(true)
+  }
+
+  async function viewDailyLeaderboard() {
+    setShowLobbyLb(true)
+    try {
+      const res  = await fetch('/api/around-the-world/daily')
+      const data = await res.json()
+      setLeaderboard(data.leaderboard ?? [])
+    } catch { /* silent */ }
+  }
 
   const playerByName = useMemo(() => {
     if (!players) return {} as Record<string, ATWPlayer>
@@ -342,45 +508,45 @@ export default function AroundTheWorld() {
   function geoFill(id: string | number) {
     const n = norm(id)
     if (n === '826') {
-      if (currentCode && UK_NATIONS.has(currentCode)) return 'rgba(245,158,11,0.22)'
-      if ([...completedSet].some(c => UK_NATIONS.has(c))) return 'rgba(34,197,94,0.28)'
-      if ([...routeSet].some(c => UK_NATIONS.has(c)))    return 'rgba(59,130,246,0.14)'
-      return '#111f35'
+      if (currentCode && UK_NATIONS.has(currentCode)) return 'rgba(245,158,11,0.30)'
+      if ([...completedSet].some(c => UK_NATIONS.has(c))) return 'rgba(34,197,94,0.32)'
+      if ([...routeSet].some(c => UK_NATIONS.has(c)))    return 'rgba(59,130,246,0.22)'
+      return '#1a2d45'
     }
     const fifa = ISO_TO_FIFA[n]
-    if (!fifa) return '#111f35'
-    if (completedSet.has(fifa)) return 'rgba(34,197,94,0.28)'
-    if (fifa === currentCode)   return 'rgba(245,158,11,0.22)'
-    if (routeSet.has(fifa))     return 'rgba(59,130,246,0.14)'
-    return '#111f35'
+    if (!fifa) return '#1a2d45'
+    if (completedSet.has(fifa)) return 'rgba(34,197,94,0.32)'
+    if (fifa === currentCode)   return 'rgba(245,158,11,0.30)'
+    if (routeSet.has(fifa))     return 'rgba(59,130,246,0.22)'
+    return '#1a2d45'
   }
   function geoStroke(id: string | number) {
     const n = norm(id)
     if (n === '826') {
       if (currentCode && UK_NATIONS.has(currentCode)) return '#f59e0b'
       if ([...completedSet].some(c => UK_NATIONS.has(c))) return '#22c55e'
-      if ([...routeSet].some(c => UK_NATIONS.has(c)))    return '#4a7fc0'
-      return '#1e2d4a'
+      if ([...routeSet].some(c => UK_NATIONS.has(c)))    return '#5b8fd4'
+      return '#3d5f82'
     }
     const fifa = ISO_TO_FIFA[n]
-    if (!fifa) return '#1e2d4a'
+    if (!fifa) return '#3d5f82'
     if (completedSet.has(fifa)) return '#22c55e'
     if (fifa === currentCode)   return '#f59e0b'
-    if (routeSet.has(fifa))     return '#4a7fc0'
-    return '#1e2d4a'
+    if (routeSet.has(fifa))     return '#5b8fd4'
+    return '#2e4a6a'
   }
   function geoStrokeW(id: string | number) {
     const n = norm(id)
     if (n === '826') {
-      if (currentCode && UK_NATIONS.has(currentCode)) return 1.4
-      if ([...routeSet].some(c => UK_NATIONS.has(c))) return 0.8
-      return 0.3
+      if (currentCode && UK_NATIONS.has(currentCode)) return 1.6
+      if ([...routeSet].some(c => UK_NATIONS.has(c))) return 1.1
+      return 0.5
     }
     const fifa = ISO_TO_FIFA[n]
-    if (!fifa) return 0.3
-    if (fifa === currentCode) return 1.4
-    if (routeSet.has(fifa))   return 0.8
-    return 0.3
+    if (!fifa) return 0.6
+    if (fifa === currentCode) return 1.6
+    if (routeSet.has(fifa))   return 1.1
+    return 0.6
   }
 
   function scoreLabel() {
@@ -393,6 +559,88 @@ export default function AroundTheWorld() {
   }
 
   const page = { background: '#0a0f1e', minHeight: '100vh', fontFamily: "'DM Sans', -apple-system, sans-serif" } as const
+
+  // ── LOBBY ──────────────────────────────────────────────────────────
+  if (gameMode === 'lobby') {
+    const today = mounted ? new Date().toISOString().slice(0, 10) : ''
+    const sortedLb = [...leaderboard].sort((a, b) => {
+      if (a.won !== b.won) return a.won ? -1 : 1
+      return Math.abs(a.pct - 100) - Math.abs(b.pct - 100)
+    })
+    return (
+      <div style={page}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');`}</style>
+        <NavBar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 24 }}>
+          <div style={{ textAlign: 'center', maxWidth: 500 }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>🌍</div>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: 'white', margin: '0 0 10px' }}>Around the World in 80 Goals</h1>
+            <p style={{ color: '#8899bb', marginBottom: 32, lineHeight: 1.6 }}>
+              Chain neighbouring countries by naming a PL player from each. Hit the target score to win.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', marginBottom: 24 }}>
+              {/* Daily Challenge */}
+              <button
+                disabled={dailyLoading || !players}
+                onClick={alreadyPlayed ? viewDailyLeaderboard : startDailyGame}
+                style={{
+                  width: 340, padding: '14px 22px', borderRadius: 10,
+                  border: `2px solid ${alreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
+                  background: alreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
+                  color: 'white', cursor: (dailyLoading || !players) ? 'default' : 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                }}>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>
+                  {alreadyPlayed ? '✓ Daily Challenge — Played' : '⚡ Daily Challenge'}
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>
+                  {alreadyPlayed ? `View today's leaderboard · ${today}` : dailyLoading ? 'Loading…' : `Today's seeded route · ${today}`}
+                </span>
+              </button>
+              {dailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: 0 }}>Failed to load daily challenge — try again</p>}
+
+              {/* Free Play */}
+              <button
+                disabled={!players}
+                onClick={() => { setGameMode('freeplay'); setPhase('setup') }}
+                style={{
+                  width: 340, padding: '14px 22px', borderRadius: 10,
+                  border: '2px solid #2a3d5e',
+                  background: 'transparent',
+                  color: '#c0cde0', cursor: !players ? 'default' : 'pointer',
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                }}>
+                <span style={{ fontSize: 15, fontWeight: 800 }}>Free Play</span>
+                <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>
+                  {loadErr ? 'Failed to load — refresh' : !players ? 'Loading data…' : 'Random routes · Choose your difficulty'}
+                </span>
+              </button>
+            </div>
+
+            {/* Leaderboard for today (shown after "already played" click) */}
+            {showLobbyLb && (
+              <div style={{ marginTop: 8, textAlign: 'left', maxWidth: 340, margin: '0 auto' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+                  Today&apos;s Leaderboard
+                </div>
+                {sortedLb.length === 0
+                  ? <p style={{ color: '#4a5568', fontSize: 13 }}>No scores yet today.</p>
+                  : sortedLb.map((e, i) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', marginBottom: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 6 }}>
+                      <span style={{ fontSize: 12, color: '#4a5568', width: 18 }}>{i + 1}.</span>
+                      <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
+                      <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: (() => { const d = Math.abs(e.pct - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' })() }}>{e.pct}%</span>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ── SETUP ──────────────────────────────────────────────────────────
   if (phase === 'setup') {
@@ -431,13 +679,16 @@ export default function AroundTheWorld() {
                 </button>
               ))}
             </div>
-            <button onClick={startGame} disabled={!players} style={{
-              padding: '14px 44px', background: players ? '#dc2626' : '#2a3d5e',
-              color: 'white', border: 'none', borderRadius: 10,
-              fontSize: 16, fontWeight: 800, cursor: players ? 'pointer' : 'default',
-            }}>
-              {loadErr ? 'Failed to load — refresh' : !players ? 'Loading data…' : 'Start Game'}
-            </button>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
+              <button onClick={() => setGameMode('lobby')} style={{ padding: '14px 20px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>← Lobby</button>
+              <button onClick={startGame} disabled={!players} style={{
+                padding: '14px 44px', background: players ? '#dc2626' : '#2a3d5e',
+                color: 'white', border: 'none', borderRadius: 10,
+                fontSize: 16, fontWeight: 800, cursor: players ? 'pointer' : 'default',
+              }}>
+                {loadErr ? 'Failed to load — refresh' : !players ? 'Loading data…' : 'Start Game'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -456,23 +707,36 @@ export default function AroundTheWorld() {
             <p style={{ color: '#8899bb', marginBottom: 24 }}>
               Total: <strong style={{ color: 'white' }}>{runningTotal}</strong> {STAT_LABELS[stat].toLowerCase()}&nbsp;·&nbsp;
               Target: <strong style={{ color: '#f59e0b' }}>{target}</strong>&nbsp;·&nbsp;
-              <span style={{ color: diff >= 0 ? '#22c55e' : '#ef4444' }}>
-                {diff >= 0 ? `+${diff}` : diff} ({pct}%)
+              <span style={{ color: (() => { const d = Math.abs(pct - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' })() }}>
+                {pct}% of target
               </span>
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
               {completed.map((c, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 8, padding: '8px 14px' }}>
-                  <span style={{ fontSize: 11, color: '#4a5568', width: 90, textAlign: 'right' as const }}>{COUNTRY_NAMES[c.code] ?? c.code}</span>
+                  {flagImg(c.code, 18)}
+                  <span style={{ fontSize: 11, color: '#8899bb', width: 80, textAlign: 'left' as const }}>{COUNTRY_NAMES[c.code] ?? c.code}</span>
                   <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'white', textAlign: 'left' as const }}>{c.player}</span>
                   <span style={{ fontSize: 14, fontWeight: 800, color: '#22c55e' }}>{c.val}</span>
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={startGame} style={{ padding: '12px 32px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Play Again</button>
-              <button onClick={() => setPhase('setup')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Change Mode</button>
-            </div>
+            {gameMode === 'daily' ? (
+              <DailyEndPanel
+                phase="won" pct={pct} runningTotal={runningTotal} target={target} mode={mode}
+                playerName={playerName} setPlayerName={setPlayerName}
+                scoreSubmitted={scoreSubmitted}
+                onSubmit={() => submitDailyScore(true, runningTotal, target, pct, mode)}
+                leaderboard={leaderboard}
+                onPlayMore={() => { setGameMode('freeplay'); setPhase('setup') }}
+              />
+            ) : (
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={startGame} style={{ padding: '12px 32px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Play Again</button>
+                <button onClick={() => setPhase('setup')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Change Mode</button>
+                <button onClick={() => setGameMode('lobby')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Lobby</button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -494,7 +758,8 @@ export default function AroundTheWorld() {
                 <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 4 }}>Progress before fail:</div>
                 {completed.map((c, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 6, padding: '6px 12px' }}>
-                    <span style={{ fontSize: 11, color: '#4a5568', width: 80, textAlign: 'right' as const }}>{COUNTRY_NAMES[c.code] ?? c.code}</span>
+                    {flagImg(c.code, 16)}
+                    <span style={{ fontSize: 11, color: '#8899bb', width: 72 }}>{COUNTRY_NAMES[c.code] ?? c.code}</span>
                     <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: 'white' }}>{c.player}</span>
                     <span style={{ fontSize: 13, fontWeight: 800, color: '#22c55e' }}>{c.val}</span>
                   </div>
@@ -506,10 +771,22 @@ export default function AroundTheWorld() {
                 Full route: {route.countries.map(c => COUNTRY_NAMES[c] ?? c).join(' → ')}
               </p>
             )}
-            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-              <button onClick={startGame} style={{ padding: '12px 32px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Try Again</button>
-              <button onClick={() => setPhase('setup')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Change Mode</button>
-            </div>
+            {gameMode === 'daily' ? (
+              <DailyEndPanel
+                phase="failed" pct={pct} runningTotal={runningTotal} target={target} mode={mode}
+                playerName={playerName} setPlayerName={setPlayerName}
+                scoreSubmitted={scoreSubmitted}
+                onSubmit={() => submitDailyScore(false, runningTotal, target, pct, mode)}
+                leaderboard={leaderboard}
+                onPlayMore={() => { setGameMode('freeplay'); setPhase('setup') }}
+              />
+            ) : (
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={startGame} style={{ padding: '12px 32px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Try Again</button>
+                <button onClick={() => setPhase('setup')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Change Mode</button>
+                <button onClick={() => setGameMode('lobby')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Lobby</button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -534,8 +811,14 @@ export default function AroundTheWorld() {
 
         {/* ── Top actions ── */}
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '10px 0 4px' }}>
-          <button onClick={() => setPhase('setup')} style={{ padding: '5px 14px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Change Mode</button>
-          <button onClick={startGame} style={{ padding: '5px 14px', background: 'transparent', color: '#dc2626', border: '1px solid #7f1d1d', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Restart</button>
+          {gameMode === 'daily' ? (
+            <button onClick={() => { setGameMode('lobby'); setPhase('setup') }} style={{ padding: '5px 14px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>← Lobby</button>
+          ) : (
+            <>
+              <button onClick={() => setPhase('setup')} style={{ padding: '5px 14px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Change Mode</button>
+              <button onClick={startGame} style={{ padding: '5px 14px', background: 'transparent', color: '#dc2626', border: '1px solid #7f1d1d', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Restart</button>
+            </>
+          )}
         </div>
 
         {/* ── Banner ── */}
@@ -567,7 +850,7 @@ export default function AroundTheWorld() {
         </div>
 
         {/* ── Map ── */}
-        <div style={{ background: '#060e1c', borderRadius: 10, overflow: 'hidden', margin: '12px 0', border: '1px solid #1e2d4a', position: 'relative' }}>
+        <div style={{ background: '#04101f', borderRadius: 10, overflow: 'hidden', margin: '12px 0', border: '1px solid #1e2d4a', position: 'relative' }}>
           <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {[{ label: '+', fn: () => setZoom(z => Math.min(z * 1.4, 8)) }, { label: '−', fn: () => setZoom(z => Math.max(z / 1.4, 0.2)) }].map(({ label, fn }) => (
               <button key={label} onClick={fn} style={{ width: 28, height: 28, background: 'rgba(255,255,255,0.08)', border: '1px solid #2a3d5e', borderRadius: 6, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{label}</button>
@@ -644,11 +927,12 @@ export default function AroundTheWorld() {
           {completed.length > 0 && (
             <div style={{ display: 'flex', gap: 5, marginTop: 10, flexWrap: 'wrap' as const }}>
               {completed.map((c, i) => (
-                <div key={i} style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 6, padding: '3px 8px', fontSize: 11 }}>
+                <div key={i} style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 6, padding: '3px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {flagImg(c.code, 14)}
                   <span style={{ color: '#22c55e', fontWeight: 700 }}>{COUNTRY_NAMES[c.code] ?? c.code}</span>
-                  <span style={{ color: '#4a5568', margin: '0 4px' }}>·</span>
+                  <span style={{ color: '#4a5568' }}>·</span>
                   <span style={{ color: '#c0cde0' }}>{c.player}</span>
-                  {mode !== 'hard' && <span style={{ color: '#22c55e', fontWeight: 800, marginLeft: 6 }}>{c.val}</span>}
+                  {mode !== 'hard' && <span style={{ color: '#22c55e', fontWeight: 800, marginLeft: 4 }}>{c.val}</span>}
                 </div>
               ))}
             </div>

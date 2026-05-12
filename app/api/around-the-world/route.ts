@@ -28,7 +28,7 @@ export type ATWPlayer = {
   yellowCards: number
 }
 
-const buildCache = unstable_cache(
+export const buildCache = unstable_cache(
   async () => {
     const all: any[] = []
     let offset = 0
