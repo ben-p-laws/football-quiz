@@ -493,6 +493,16 @@ type PlayerDataLocal = {
 
 function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/['''`]/g,'').toLowerCase()}
 
+type H2HStep = 'off'|'create'|'join'|'waiting-host'|'lobby'|'playing'
+
+function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):{remaining:number;pastPin:boolean}{
+  if(result.isOOB) return {remaining:result.waterDropRemaining??remaining,pastPin}
+  if(result.isHoled||result.isGimme) return {remaining:0,pastPin:false}
+  const overshoot=result.total-remaining
+  if(overshoot>0) return {remaining:overshoot,pastPin:!pastPin}
+  return {remaining:remaining-result.total,pastPin}
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function FootballGolf(){
@@ -541,6 +551,34 @@ export default function FootballGolf(){
   const [holeResult,setHoleResult]       = useState<{label:string;color:string;diff:number}|null>(null)
   const normalisedNames = useRef<string[]>([])
 
+  // ── H2H multiplayer state ───────────────────────────────────────────────────
+  const [h2hStep, setH2HStep] = useState<H2HStep>('off')
+  const [h2hRoomId, setH2HRoomId] = useState('')
+  const [h2hJoinInput, setH2HJoinInput] = useState('')
+  const [h2hPlayerName, setH2HPlayerName] = useState('')
+  const [h2hOppName, setH2HOppName] = useState('')
+  const [h2hWaiting, setH2HWaiting] = useState(false)
+  const [h2hWaitReason, setH2HWaitReason] = useState<'shot'|'hole'>('shot')
+  const [h2hOppRemaining, setH2HOppRemaining] = useState<number|null>(null)
+  const [h2hOppPastPin, setH2HOppPastPin] = useState(false)
+  const [h2hOppHoledOut, setH2HOppHoledOut] = useState(false)
+  const [matchScore, setMatchScore] = useState(0) // positive = current player ahead
+  const [h2hError, setH2HError] = useState('')
+  // Trigger state — lets useEffect run callbacks with fresh React state
+  const [h2hOppShotReady, setH2HOppShotReady] = useState<any>(null)
+  const [h2hOppFinishedShot, setH2HOppFinishedShot] = useState<any>(null)
+  // Refs (stable across renders, safe to use in setInterval)
+  const h2hPlayerId    = useRef('')
+  const h2hIsHost      = useRef(false)
+  const h2hOppId       = useRef('')
+  const h2hRoomIdRef   = useRef('')
+  const h2hRoomData    = useRef<{holes:Hole[];teeCategories:Category[]}>({holes:[],teeCategories:[]})
+  const h2hShotIdx     = useRef(0)
+  const h2hMyHoleStrokes = useRef(0)
+  const h2hOppHoleStrokesRef = useRef<number|null>(null)
+  const h2hPendingShot = useRef<{result:ShotResult;toPos:number}|null>(null)
+  const h2hPollRef     = useRef<ReturnType<typeof setInterval>|null>(null)
+
   useEffect(()=>{
     fetch('/api/football-golf?names=1').then(r=>r.json()).then(d=>{
       const names:string[]=d.playerNames||[]
@@ -573,6 +611,39 @@ export default function FootballGolf(){
   },[])
 
   useEffect(()=>()=>{ if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current) },[])
+
+  // Read ?room=XXX from URL → auto-show join screen
+  useEffect(()=>{
+    const params=new URLSearchParams(window.location.search)
+    const room=params.get('room')
+    if(room){ setH2HJoinInput(room.toUpperCase()); setH2HStep('join') }
+  },[])
+
+  // When opponent's shot arrives: reveal both simultaneously with fresh React state
+  useEffect(()=>{
+    if(!h2hOppShotReady||!h2hPendingShot.current) return
+    setH2HWaiting(false)
+    setH2HOppRemaining(h2hOppShotReady.remaining_after)
+    setH2HOppPastPin(h2hOppShotReady.past_pin)
+    const oppHoledOut=h2hOppShotReady.holed_out
+    if(oppHoledOut){
+      setH2HOppHoledOut(true)
+      h2hOppHoleStrokesRef.current=h2hOppShotReady.hole_strokes
+    }
+    const {result,toPos}=h2hPendingShot.current
+    const myHoledOut=result.isHoled||result.isGimme
+    h2hPendingShot.current=null
+    h2hShotIdx.current++
+    animateShot(ballPos,toPos,result)
+    setH2HOppShotReady(null)
+    // Match play: opp holed out but I didn't → hole ends after animation, opp wins
+    if(oppHoledOut&&!myHoledOut){
+      const myStrokesSoFar=strokes+1+(result.isOOB?1:0)
+      h2hMyHoleStrokes.current=myStrokesSoFar
+      setTimeout(()=>resolveH2HHole(myStrokesSoFar,h2hOppShotReady.hole_strokes),2500)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[h2hOppShotReady])
 
   const currentHole  = holes[holeIdx]
   const club         = remaining>0 ? getClub(remaining) : 'driver'
@@ -801,6 +872,31 @@ export default function FootballGolf(){
               ? currentHole.distance + Math.min(overshoot, 55)
               : Math.min(ballPos + total, currentHole.distance + 50))
 
+    // H2H: defer animation until opponent also submits
+    if(h2hStep==='playing'){
+      h2hPendingShot.current={result,toPos}
+      const penaltyStrokes=result.isOOB?1:0
+      const newStrokes=strokes+1+penaltyStrokes
+      const holedOut=result.isHoled||result.isGimme
+      const {remaining:ra,pastPin:pp}=calcNewBallState(result,remaining,pastPin)
+      h2hMyHoleStrokes.current=newStrokes+(holedOut&&result.isGimme?1:0)
+      setH2HWaiting(true)
+      setH2HWaitReason('shot')
+      fetch('/api/golf-room',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
+          holeIdx,shotIdx:h2hShotIdx.current,
+          remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
+          holeStrokes:holedOut?h2hMyHoleStrokes.current:null,
+        }),
+      }).then(r=>r.json()).then(d=>{
+        if(d.bothReady) setH2HOppShotReady(d.opponentShot)
+        else startH2HPoll({holeIdx,reason:'shot',shotIdx:h2hShotIdx.current})
+      }).catch(()=>startH2HPoll({holeIdx,reason:'shot',shotIdx:h2hShotIdx.current}))
+      return
+    }
+
     animateShot(ballPos, toPos, result)
   }
 
@@ -893,6 +989,19 @@ export default function FootballGolf(){
     const res=resultMap[diff]??{label:`+${diff}`,color:'#ef4444'}
     setHoleResult({...res,diff})
 
+    if(h2hStep==='playing'){
+      h2hMyHoleStrokes.current=finalStrokes
+      // Match play: hole ends as soon as one player holes out
+      if(h2hOppHoledOut){
+        // Both holed out this round — compare strokes
+        resolveH2HHole(finalStrokes,h2hOppHoleStrokesRef.current??finalStrokes)
+      }else{
+        // I holed out, opp hasn't — I win the hole immediately
+        resolveH2HHole(finalStrokes,finalStrokes+99)
+      }
+      return
+    }
+
     setTimeout(()=>{
       setHoleResult(null)
       if(holeIdx+1>=holes.length){
@@ -909,9 +1018,258 @@ export default function FootballGolf(){
     },3000)
   }
 
+  // ── H2H functions ───────────────────────────────────────────────────────────
+
+  function stopH2HPoll(){
+    if(h2hPollRef.current){clearInterval(h2hPollRef.current);h2hPollRef.current=null}
+  }
+
+  function startH2HPoll(opts:{holeIdx:number;reason:'shot'|'hole';shotIdx?:number}){
+    stopH2HPoll()
+    const {holeIdx:hi,reason,shotIdx:si}=opts
+    h2hPollRef.current=setInterval(async()=>{
+      const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
+      if(!d) return
+      const shots:any[]=d.shots||[]
+      if(reason==='shot'){
+        const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===si)
+        if(oppShot){stopH2HPoll();setH2HOppShotReady(oppShot)}
+      }else{
+        const oppDone=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.holed_out)
+        if(oppDone){stopH2HPoll();setH2HOppFinishedShot(oppDone)}
+      }
+    },1500)
+  }
+
+  function startLobbyPoll(){
+    stopH2HPoll()
+    h2hPollRef.current=setInterval(async()=>{
+      const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}`).then(r=>r.json()).catch(()=>null)
+      if(!d?.room) return
+      if(h2hIsHost.current&&d.room.guest_id&&d.room.guest_name){
+        stopH2HPoll()
+        setH2HOppName(d.room.guest_name)
+        h2hOppId.current=d.room.guest_id
+        setH2HStep('lobby')
+      }else if(!h2hIsHost.current&&d.room.status==='playing'){
+        stopH2HPoll()
+        startH2HGame()
+      }
+    },2000)
+  }
+
+  function resolveH2HHole(myStrokes:number,oppStrokes:number){
+    let delta=0
+    if(myStrokes<oppStrokes) delta=1
+    else if(myStrokes>oppStrokes) delta=-1
+    setMatchScore(prev=>prev+delta)
+    setTimeout(()=>{
+      setHoleResult(null)
+      setH2HOppHoledOut(false)
+      setH2HOppRemaining(null)
+      setH2HOppPastPin(false)
+      h2hOppHoleStrokesRef.current=null
+      if(holeIdx+1>=holes.length){
+        setPhase('done')
+        return
+      }
+      const nextIdx=holeIdx+1
+      setHoleIdx(nextIdx)
+      const dist=holes[nextIdx].distance
+      setRemaining(dist)
+      setPastPin(false)
+      setStrokes(0)
+      h2hShotIdx.current=0
+      h2hMyHoleStrokes.current=0
+      const teeCat=h2hRoomData.current.teeCategories[nextIdx]
+      setQuestion(teeCat??nextPickedCategory(dist))
+      resetInputs()
+    },3000)
+  }
+
+  async function createH2HRoom(){
+    if(!metaReady) return
+    const pid=h2hPlayerId.current||(()=>{
+      const stored=localStorage.getItem('golf_h2h_pid')
+      if(stored) return stored
+      const id=Math.random().toString(36).slice(2,12)
+      localStorage.setItem('golf_h2h_pid',id)
+      return id
+    })()
+    h2hPlayerId.current=pid
+    h2hIsHost.current=true
+    setH2HError('')
+    const hs=courseMode==='real'?buildCourse(tee,numHoles):generateHoles(numHoles)
+    // Pre-generate tee categories for all holes (same for both players)
+    const tmpUsed=new Set<string>()
+    const tmpRecentF:string[]=[]
+    const tmpRecentS:StatKey[]=[]
+    const ccPairs=top3CacheRef.current?metaContClubPairs.current:[]
+    const teeCats=hs.map(hole=>{
+      const cl=getClub(hole.distance)
+      const cat=pickCategory(hole.distance,cl,tmpUsed,tmpRecentF,tmpRecentS,metaNations.current,metaClubs.current,metaContinents.current,ccPairs,top3CacheRef.current)
+      tmpUsed.add(cat.label)
+      tmpRecentS.push(cat.key)
+      return cat
+    })
+    const res=await fetch('/api/golf-room',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'create',hostId:pid,hostName:h2hPlayerName||'Host',config:{courseMode,numHoles,tee},holes:hs,teeCategories:teeCats}),
+    }).then(r=>r.json())
+    if(res.error){setH2HError(res.error);return}
+    setH2HRoomId(res.roomId)
+    h2hRoomIdRef.current=res.roomId
+    h2hRoomData.current={holes:hs,teeCategories:teeCats}
+    setH2HStep('waiting-host')
+    startLobbyPoll()
+  }
+
+  async function joinH2HRoom(){
+    const code=(h2hJoinInput||'').toUpperCase().trim()
+    if(code.length<4){setH2HError('Enter a valid room code');return}
+    const pid=h2hPlayerId.current||(()=>{
+      const stored=localStorage.getItem('golf_h2h_pid')
+      if(stored) return stored
+      const id=Math.random().toString(36).slice(2,12)
+      localStorage.setItem('golf_h2h_pid',id)
+      return id
+    })()
+    h2hPlayerId.current=pid
+    h2hIsHost.current=false
+    setH2HError('')
+    const res=await fetch('/api/golf-room',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'join',roomId:code,guestId:pid,guestName:h2hPlayerName||'Guest'}),
+    }).then(r=>r.json())
+    if(res.error){setH2HError(res.error);return}
+    setH2HRoomId(code)
+    h2hRoomIdRef.current=code
+    setH2HOppName(res.room.host_name)
+    h2hOppId.current=res.room.host_id
+    h2hRoomData.current={holes:res.room.holes,teeCategories:res.room.tee_categories}
+    setH2HStep('lobby')
+    startLobbyPoll()
+  }
+
+  function startH2HGame(){
+    const rd=h2hRoomData.current
+    const hs=rd.holes
+    usedLabels.current=new Set()
+    recentFilters.current=[]
+    recentStats.current=[]
+    setHoles(hs)
+    setScores(new Array(hs.length).fill(null))
+    setHoleIdx(0)
+    setRemaining(hs[0].distance)
+    setStrokes(0)
+    setShotResult(null)
+    setPastPin(false)
+    h2hShotIdx.current=0
+    h2hMyHoleStrokes.current=0
+    setH2HOppRemaining(null)
+    setH2HOppPastPin(false)
+    setH2HOppHoledOut(false)
+    setMatchScore(0)
+    setQuestion(rd.teeCategories[0])
+    resetInputs()
+    if(h2hIsHost.current){
+      fetch('/api/golf-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start',roomId:h2hRoomIdRef.current})})
+    }
+    setH2HStep('playing')
+    setPhase('playing')
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
-  if(phase==='setup') return <><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} /></>
+  // H2H screens (take priority over setup)
+  const h2hScreenStyle:React.CSSProperties={minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,fontFamily:"'DM Sans',sans-serif",padding:'24px'}
+  const h2hInputStyle:React.CSSProperties={background:'#1e2d4a',border:'1px solid #2d3f5e',borderRadius:10,padding:'12px 16px',color:'white',fontSize:15,fontWeight:600,width:'100%',maxWidth:300,fontFamily:'inherit'}
+  const h2hBtnStyle:React.CSSProperties={background:'#dc2626',color:'white',border:'none',borderRadius:10,padding:'13px 36px',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}
+  const h2hSecBtnStyle:React.CSSProperties={...h2hBtnStyle,background:'#1e2d4a'}
+
+  if(h2hStep==='create'){
+    return(<><NavBar />
+      <div style={h2hScreenStyle}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:24,fontWeight:900,color:'white'}}>Challenge a Friend</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6}}>You've set up the course — enter your name to create a room</div>
+        </div>
+        <input style={h2hInputStyle} placeholder="Your name" value={h2hPlayerName} onChange={e=>setH2HPlayerName(e.target.value)} maxLength={20}/>
+        {h2hError&&<div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>{h2hError}</div>}
+        <div style={{display:'flex',gap:10}}>
+          <button style={h2hSecBtnStyle} onClick={()=>setH2HStep('off')}>← Back</button>
+          <button style={h2hBtnStyle} onClick={createH2HRoom} disabled={!metaReady}>{metaReady?'Create Room':'Loading…'}</button>
+        </div>
+      </div>
+    </>)
+  }
+
+  if(h2hStep==='join'){
+    return(<><NavBar />
+      <div style={h2hScreenStyle}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:24,fontWeight:900,color:'white'}}>Join Room</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6}}>Enter your name and the room code from your opponent</div>
+        </div>
+        <input style={h2hInputStyle} placeholder="Your name" value={h2hPlayerName} onChange={e=>setH2HPlayerName(e.target.value)} maxLength={20}/>
+        <input style={{...h2hInputStyle,textTransform:'uppercase',letterSpacing:'0.15em',fontSize:18,fontWeight:900,textAlign:'center'}} placeholder="ROOM CODE" value={h2hJoinInput} onChange={e=>setH2HJoinInput(e.target.value.toUpperCase())} maxLength={6}/>
+        {h2hError&&<div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>{h2hError}</div>}
+        <div style={{display:'flex',gap:10}}>
+          <button style={h2hSecBtnStyle} onClick={()=>setH2HStep('off')}>← Back</button>
+          <button style={h2hBtnStyle} onClick={joinH2HRoom}>Join →</button>
+        </div>
+      </div>
+    </>)
+  }
+
+  if(h2hStep==='waiting-host'){
+    const shareUrl=typeof window!=='undefined'?`${window.location.origin}${window.location.pathname}?room=${h2hRoomId}`:''
+    return(<><NavBar />
+      <div style={h2hScreenStyle}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Room Code</div>
+          <div style={{fontSize:52,fontWeight:900,color:'white',letterSpacing:'0.15em'}}>{h2hRoomId}</div>
+        </div>
+        <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'12px 16px',maxWidth:340,width:'100%'}}>
+          <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4}}>Share link</div>
+          <div style={{fontSize:11,color:'#6b7fa3',wordBreak:'break-all'}}>{shareUrl}</div>
+          <button onClick={()=>navigator.clipboard?.writeText(shareUrl)} style={{marginTop:8,background:'#1e2d4a',border:'none',borderRadius:6,padding:'6px 12px',color:'white',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>Copy link</button>
+        </div>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'pulse 1.5s ease-in-out infinite'}}/>
+          <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for opponent to join…</div>
+        </div>
+      </div>
+    </>)
+  }
+
+  if(h2hStep==='lobby'){
+    return(<><NavBar />
+      <div style={h2hScreenStyle}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:24,fontWeight:900,color:'white',marginBottom:4}}>Room {h2hRoomId}</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)'}}>Both players connected</div>
+        </div>
+        <div style={{display:'flex',gap:12}}>
+          {[{name:h2hPlayerName||'You',isYou:true},{name:h2hOppName||'Opponent',isYou:false}].map(({name,isYou})=>(
+            <div key={name} style={{background:'#111827',border:`1px solid ${isYou?'#22c55e':'#1e2d4a'}`,borderRadius:10,padding:'14px 20px',textAlign:'center',minWidth:120}}>
+              <div style={{fontSize:11,color:isYou?'#22c55e':'#6b7fa3',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:4}}>{isYou?'You':'Opponent'}</div>
+              <div style={{fontSize:16,fontWeight:800,color:'white'}}>{name}</div>
+            </div>
+          ))}
+        </div>
+        {h2hIsHost.current
+          ? <button style={h2hBtnStyle} onClick={startH2HGame}>Start Game →</button>
+          : <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b'}}/>
+              <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for host to start…</div>
+            </div>
+        }
+      </div>
+    </>)
+  }
+
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(!currentHole) return null
 
@@ -1004,6 +1362,17 @@ export default function FootballGolf(){
               )}
             </div>
 
+            {/* H2H match score */}
+            {h2hStep==='playing'&&(
+              <div style={{display:'flex',alignItems:'center',gap:8,padding:'2px 0'}}>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Match</div>
+                <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8',background:'#1e2d4a',borderRadius:6,padding:'2px 8px'}}>
+                  {matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`}
+                </div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>vs {h2hOppName||'Opp'}</div>
+              </div>
+            )}
+
             {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
             <div style={{flex:1,display:'flex',flexDirection:'column',gap:10,minHeight:0}}>
 
@@ -1057,6 +1426,16 @@ export default function FootballGolf(){
                   {Math.abs(Math.round(animBallPos - preAnimBallPos))}
                 </div>
                 <div style={{fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>yards</div>
+              </div>
+            ) : h2hWaiting ? (
+              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
+                <div style={{width:10,height:10,borderRadius:'50%',background:'#f59e0b',boxShadow:'0 0 12px #f59e0b88'}}/>
+                <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.6)',textAlign:'center'}}>
+                  {h2hWaitReason==='hole'?'Waiting for opponent to finish hole…':'Waiting for opponent…'}
+                </div>
+                {h2hWaitReason==='hole'&&h2hOppRemaining!==null&&(
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{h2hOppName||'Opp'} · {h2hOppRemaining} yds to go</div>
+                )}
               </div>
             ) : (
               <>
@@ -1112,6 +1491,9 @@ export default function FootballGolf(){
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
                 realTeePos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].teeFrac) : undefined}
                 realGreenPos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].greenFrac) : undefined}
+                oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
+                  ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
+                  : undefined}
               />
             </div>
           </div>
@@ -1199,9 +1581,9 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos}:{
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,oppBallPos}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number
-  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}
+  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; oppBallPos?:number
 }){
   // Remap the hole path so pts[0]=realTeePos and pts[last]=realGreenPos when calibrated
   const effectivePath = useMemo(()=>{
@@ -1340,7 +1722,16 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <circle cx={finalBallX} cy={ballY+ballR*2.5} rx={ballR*0.6} ry={ballR*0.25} fill="rgba(255,255,255,0.15)"/>
         )}
 
-        {/* Ball */}
+        {/* Opponent ball (red) */}
+        {oppBallPos!==undefined&&(()=>{
+          const {x:ox,y:oy}=yardToSVG(oppBallPos,hole.distance,effectivePath)
+          return(<>
+            <ellipse cx={ox} cy={oy+ballR*0.6} rx={ballR} ry={ballR*0.4} fill="rgba(0,0,0,0.3)"/>
+            <circle cx={ox} cy={oy} r={ballR} fill="#ef4444"/>
+          </>)
+        })()}
+
+        {/* Ball (white = you) */}
         <ellipse cx={finalBallX} cy={ballY+ballR*0.6} rx={ballR} ry={ballR*0.4} fill="rgba(0,0,0,0.3)"/>
         <circle cx={finalBallX} cy={ballY} r={ballR} fill="white"/>
         {isAnimating&&(
@@ -1601,12 +1992,13 @@ const REAL_COURSES = [
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart,onH2H,onJoin}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
-  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void
+  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void; onH2H:()=>void; onJoin:()=>void
 }){
+  const [mode,setMode] = useState<'solo'|'h2h'>('solo')
   const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
     {value:'Red',  label:'Easy',  sub:'Red tees',  color:'#dc2626', ring:'rgba(220,38,38,0.4)'},
     {value:'White',label:'Medium',sub:'White tees',color:'#9ca3af', ring:'rgba(156,163,175,0.4)'},
@@ -1620,6 +2012,15 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6,lineHeight:1.5}}>
           Name PL players to hit the green.<br/>Their combined stat = your shot distance.
         </div>
+      </div>
+
+      {/* Mode tabs */}
+      <div style={{width:'100%',maxWidth:300,background:'#111827',borderRadius:12,padding:4,display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
+        {([['solo','Single Player'],['h2h','Head to Head']] as const).map(([val,label])=>(
+          <button key={val} onClick={()=>setMode(val)} style={{background:mode===val?'#1e2d4a':'transparent',color:mode===val?'white':'rgba(255,255,255,0.4)',border:'none',borderRadius:9,padding:'10px 0',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Course mode toggle */}
@@ -1682,9 +2083,20 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       </div>
 
-      <button onClick={onStart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-        Tee Off →
-      </button>
+      {mode==='solo'
+        ? <button onClick={onStart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+            Tee Off →
+          </button>
+        : <div style={{display:'flex',alignItems:'center',gap:10,width:'100%',maxWidth:300}}>
+            <button onClick={onH2H} style={{flex:1,background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+              Create Room
+            </button>
+            <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>or</div>
+            <button onClick={onJoin} style={{flex:1,background:'#1e2d4a',color:'white',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+              Join Room
+            </button>
+          </div>
+      }
     </div>
   )
 }
