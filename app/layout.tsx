@@ -14,8 +14,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Top Bins",
-  description: "Premier League knowledge games",
+  title: "TopBins — Premier League knowledge games",
+  description: "Replayable football knowledge games for PL fans. Football Golf, Around the World, Stat Clash, Minimise, Bingo, Grid and more.",
+  metadataBase: new URL('https://www.topbinsfooty.com'),
+  openGraph: {
+    title: "TopBins — Premier League knowledge games",
+    description: "Replayable football knowledge games for PL fans. Football Golf, Around the World, Stat Clash, Minimise, Bingo, Grid and more.",
+    url: 'https://www.topbinsfooty.com',
+    siteName: 'TopBins',
+    locale: 'en_GB',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'TopBins — Premier League knowledge games',
+    description: 'Replayable football knowledge games for PL fans.',
+  },
 };
 
 export default function RootLayout({
