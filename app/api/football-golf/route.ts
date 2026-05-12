@@ -360,31 +360,49 @@ const buildSeasonCache = unstable_cache(
   async (season: string) => {
     const { data } = await getClient()
       .from('player_seasons')
-      .select('name_display,goals,assists,cards_yellow')
+      .select('name_display,games,goals,assists,cards_yellow,gk_clean_sheets')
       .eq('year_id', season)
-    const players: Record<string, { goals: number; assists: number; yellow_cards: number }> = {}
+    const players: Record<string, { goals: number; assists: number; yellow_cards: number; appearances: number; clean_sheets: number }> = {}
     for (const row of (data || [])) {
       const name = row.name_display as string
-      if (!players[name]) players[name] = { goals: 0, assists: 0, yellow_cards: 0 }
-      players[name].goals        += Number(row.goals)        || 0
-      players[name].assists      += Number(row.assists)      || 0
-      players[name].yellow_cards += Number(row.cards_yellow) || 0
+      if (!players[name]) players[name] = { goals: 0, assists: 0, yellow_cards: 0, appearances: 0, clean_sheets: 0 }
+      players[name].goals        += Number(row.goals)           || 0
+      players[name].assists      += Number(row.assists)         || 0
+      players[name].yellow_cards += Number(row.cards_yellow)    || 0
+      players[name].appearances  += Number(row.games)           || 0
+      players[name].clean_sheets += Number(row.gk_clean_sheets) || 0
     }
     return { players }
   },
-  ['golf-season'],
+  ['golf-season-v2'],
   { revalidate: 86400 }
 )
 
 // GET ?meta=1    → clubs, nations, continents, contClubPairs, top3Cache
+const buildSeasonsListCache = unstable_cache(
+  async () => {
+    const { data } = await getClient()
+      .from('player_seasons')
+      .select('year_id')
+    const seasons = [...new Set((data || []).map((r: any) => String(r.year_id)).filter(Boolean))].sort()
+    return { seasons }
+  },
+  ['golf-seasons-list-v1'],
+  { revalidate: 86400 }
+)
+
 // GET ?names=1   → player names only (small, fast — used for autocomplete)
 // GET ?data=1    → full stats for all players (used for shot calculation)
 // GET ?season=X  → per-player goals/assists/yellow_cards for one season (bad lie questions)
+// GET ?seasons=1 → list of all distinct season IDs
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   try {
     if (searchParams.get('meta') === '1') {
       return NextResponse.json(await buildMetaCache())
+    }
+    if (searchParams.get('seasons') === '1') {
+      return NextResponse.json(await buildSeasonsListCache())
     }
     const season = searchParams.get('season')
     if (season) {

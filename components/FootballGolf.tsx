@@ -236,6 +236,17 @@ function pickBadLieCategory(season: string): Category {
   return { key, label, statLabel, seasonFilter: season }
 }
 
+// Single-season question for green/short-wedge shots — all 6 stats supported
+const SEASON_STATS: StatKey[] = ['goals','goals_assists','assists','appearances','yellow_cards','clean_sheets']
+
+function pickSeasonCategory(season: string): Category {
+  const key = SEASON_STATS[Math.floor(Math.random() * SEASON_STATS.length)]
+  const [y1, y2] = season.split('-')
+  const statLabel = STAT_LABEL[key]
+  const label = `${statLabel} in ${y1.slice(2)}/${y2.slice(2)}`
+  return { key, label, statLabel, seasonFilter: season }
+}
+
 
 // ── Bunker questions ──────────────────────────────────────────────────────────
 
@@ -579,6 +590,21 @@ export default function FootballGolf(){
 
   function nextPickedCategory(dist: number): Category {
     const clubForDist = dist > 0 ? getClub(dist) : 'driver'
+    if (dist > 0 && dist < 50 && metaClubs.current.length) {
+      const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','yellow_cards']
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const stat = SHORT_STATS[Math.floor(Math.random() * SHORT_STATS.length)]
+        const club = metaClubs.current[Math.floor(Math.random() * metaClubs.current.length)]
+        const label = makeLabel(stat, { k:'club', name:club })
+        if (usedLabels.current.has(label)) continue
+        if (recentFilters.current.slice(-3).includes(club)) continue
+        usedLabels.current.add(label)
+        recentFilters.current = [...recentFilters.current.slice(-9), club]
+        recentStats.current   = [...recentStats.current.slice(-3), stat]
+        const { label: l, statLabel } = makeCategoryLabel(stat, { k:'club', name:club })
+        return { key:stat, label:l, statLabel, clubFilter:club }
+      }
+    }
     // Only include cont+club pairs when top3Cache is loaded — they require threshold enforcement
     const contClubPairs = top3CacheRef.current ? metaContClubPairs.current : []
     const cat = pickCategory(
@@ -677,8 +703,8 @@ export default function FootballGolf(){
       if(question.seasonFilter){
         const p=badLiePlayerData[name]
         if(p){
-          if(question.key==='goals')        value=p.goals
-          else if(question.key==='assists') value=p.assists
+          if(question.key==='goals')             value=p.goals
+          else if(question.key==='assists')      value=p.assists
           else if(question.key==='yellow_cards') value=p.yellow_cards
         }
       }else{
