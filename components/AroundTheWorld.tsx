@@ -601,18 +601,17 @@ export default function AroundTheWorld() {
 
               {/* Free Play */}
               <button
-                disabled={!players}
                 onClick={() => { setGameMode('freeplay'); setPhase('setup') }}
                 style={{
                   width: 340, padding: '14px 22px', borderRadius: 10,
                   border: '2px solid #2a3d5e',
                   background: 'transparent',
-                  color: '#c0cde0', cursor: !players ? 'default' : 'pointer',
+                  color: '#c0cde0', cursor: 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
                 }}>
                 <span style={{ fontSize: 15, fontWeight: 800 }}>Free Play</span>
                 <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>
-                  {loadErr ? 'Failed to load — refresh' : !players ? 'Loading data…' : 'Random routes · Choose your difficulty'}
+                  {loadErr ? 'Failed to load — refresh' : 'Random routes · Choose your difficulty'}
                 </span>
               </button>
             </div>
