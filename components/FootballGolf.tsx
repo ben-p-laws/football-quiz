@@ -642,11 +642,17 @@ export default function FootballGolf(){
     h2hShotIdx.current++
     animateShot(ballPos,toPos,result)
     setH2HOppShotReady(null)
-    // Match play: opp holed out but I didn't → I get one last-chance shot
-    if(oppHoledOut&&!myHoledOut){
+    // Match play: opp got a GIMME and I didn't hole out → I get one last-chance shot
+    // (exact hole-out = hole ends immediately, no last chance)
+    if(oppHoledOut&&!myHoledOut&&h2hOppShotReady.is_gimme){
       h2hLastChanceOppStrokes.current=h2hOppShotReady.hole_strokes
       h2hMyHoleStrokes.current=strokes+1+(result.isOOB?1:0)
       setH2HLastChance('pending')
+    } else if(oppHoledOut&&!myHoledOut){
+      // Opp holed exactly — I lose the hole immediately
+      const myStrokesSoFar=strokes+1+(result.isOOB?1:0)
+      h2hMyHoleStrokes.current=myStrokesSoFar
+      setTimeout(()=>resolveH2HHole(myStrokesSoFar+99,h2hOppShotReady.hole_strokes),2500)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[h2hOppShotReady])
@@ -903,7 +909,7 @@ export default function FootballGolf(){
           action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
           holeIdx,shotIdx:h2hShotIdx.current,
           remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
-          holeStrokes:totalStrokes,
+          holeStrokes:totalStrokes,isGimme:result.isGimme??false,
         }),
       })
       animateShot(ballPos,toPos,result)
@@ -927,6 +933,7 @@ export default function FootballGolf(){
           holeIdx,shotIdx:h2hShotIdx.current,
           remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
           holeStrokes:holedOut?h2hMyHoleStrokes.current:null,
+          isGimme:result.isGimme??false,
         }),
       }).then(r=>r.json()).then(d=>{
         if(d.bothReady) setH2HOppShotReady(d.opponentShot)

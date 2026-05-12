@@ -79,7 +79,7 @@ export async function POST(req: Request) {
 
   // ── Submit shot ───────────────────────────────────────────────────────────────
   if (body.action === 'shot') {
-    const { roomId, playerId, holeIdx, shotIdx, remainingAfter, pastPin, holedOut, holeStrokes } = body
+    const { roomId, playerId, holeIdx, shotIdx, remainingAfter, pastPin, holedOut, holeStrokes, isGimme } = body
 
     await db.from('golf_h2h_shots').upsert({
       room_id: roomId,
@@ -90,6 +90,7 @@ export async function POST(req: Request) {
       past_pin: pastPin ?? false,
       holed_out: holedOut ?? false,
       hole_strokes: holedOut ? (holeStrokes ?? null) : null,
+      is_gimme: holedOut ? (isGimme ?? false) : false,
     }, { onConflict: 'room_id,hole_idx,shot_idx,player_id' })
 
     const { data: room } = await db.from('golf_h2h_rooms').select('host_id,guest_id').eq('id', roomId).single()
