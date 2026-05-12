@@ -1,10 +1,18 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
 import NavBar from './NavBar'
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { ComposableMap, Geographies, Geography } = require('react-simple-maps')
+
+const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+const ATW_ROUTE_ISO = new Set(['620', '724', '250', '276', '616']) // POR, ESP, FRA, GER, POL
 
 export default function LandingPage() {
-  const router = useRouter()
+  const router  = useRouter()
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const s = {
     page: { background: '#0a0f1e', minHeight: '100vh', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" } as React.CSSProperties,
@@ -200,36 +208,55 @@ export default function LandingPage() {
           <div style={s.cta}><span style={s.ctaText}>Play Minimise →</span></div>
         </div>
 
-        {/* ---- STAT CLASH ---- */}
+        {/* ---- AROUND THE WORLD ---- */}
         <div style={s.card}
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-          onClick={() => router.push('/stat-clash')}>
+          onClick={() => router.push('/around-the-world')}>
           <div style={s.cardHead}>
-            <div style={s.cardTitle}>Stat Clash</div>
-            <div style={s.cardDesc}>Find the player closest to a random PL stat target</div>
+            <div style={s.cardTitle}>Around the World in 80 Goals</div>
+            <div style={s.cardDesc}>Chain neighbouring countries · name a PL player from each one</div>
           </div>
-          <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
-            <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '8px 10px', textAlign: 'center', marginBottom: 8 }}>
-              <div style={{ fontSize: 10, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target</div>
-              <div style={{ fontSize: 32, fontWeight: 800, color: '#e2e8f0', lineHeight: 1.1 }}>150</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>career PL goals</div>
+          <div style={s.preview}>
+            {/* Stat + Target */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <div style={{ flex: 1, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '7px 10px' }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 2 }}>Stat</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: 'white' }}>PL Goals</div>
+              </div>
+              <div style={{ flex: 1, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: 8, padding: '7px 10px' }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: '#a07830', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 2 }}>Target</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: '#f59e0b' }}>250</div>
+              </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, flex: 1 }}>
-              {[
-                { name: 'T. Henry', stat: '175', color: '#22c55e', border: 'rgba(34,197,94,0.4)', bg: 'rgba(34,197,94,0.08)' },
-                { name: 'Gerrard', stat: '120', color: '#ef4444', border: 'rgba(239,68,68,0.35)', bg: 'rgba(239,68,68,0.08)' },
-                { name: 'Your pick?', stat: '···', color: '#8899bb', border: '#4a5568', bg: '#0a0f1e' },
-              ].map((p, i) => (
-                <div key={i} style={{ background: p.bg, border: `1px solid ${p.border}`, borderRadius: 6, padding: '8px 6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: p.color, textAlign: 'center' }}>{p.name}</span>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: p.color, lineHeight: 1 }}>{p.stat}</span>
-                  {i < 2 && <span style={{ fontSize: 9, color: p.color, opacity: 0.7 }}>goals</span>}
-                </div>
-              ))}
+            {/* Mini map */}
+            <div style={{ background: '#04101f', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2d4a', height: 148 }}>
+              {mounted && (
+                <ComposableMap
+                  projectionConfig={{ scale: 560, center: [5, 50] }}
+                  style={{ width: '100%', height: '100%', display: 'block' }}
+                >
+                  <Geographies geography={GEO_URL}>
+                    {({ geographies }: { geographies: any[] }) =>
+                      geographies.map((geo: any) => {
+                        const n = String(Number(geo.id))
+                        const inRoute = ATW_ROUTE_ISO.has(n)
+                        return (
+                          <Geography key={geo.rsmKey} geography={geo}
+                            fill={inRoute ? 'rgba(59,130,246,0.22)' : '#1a2d45'}
+                            stroke={inRoute ? '#5b8fd4' : '#2e4a6a'}
+                            strokeWidth={inRoute ? 1.1 : 0.5}
+                            style={{ default: { outline: 'none' }, hover: { outline: 'none' }, pressed: { outline: 'none' } }}
+                          />
+                        )
+                      })
+                    }
+                  </Geographies>
+                </ComposableMap>
+              )}
             </div>
           </div>
-          <div style={s.cta}><span style={s.ctaText}>Play Stat Clash →</span></div>
+          <div style={s.cta}><span style={s.ctaText}>Play Around the World →</span></div>
         </div>
 
       </div>
@@ -259,6 +286,37 @@ export default function LandingPage() {
               </div>
             </div>
             <div style={s.ctaSm}><span style={s.ctaText}>Play Bingo →</span></div>
+          </div>
+
+          {/* ---- STAT CLASH ---- */}
+          <div style={s.card}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+            onClick={() => router.push('/stat-clash')}>
+            <div style={{ padding: '10px 12px 8px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Stat Clash</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player closest to a PL stat target</div>
+            </div>
+            <div style={{ padding: '0 10px 8px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 5 }}>
+              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '5px 8px', textAlign: 'center' as const }}>
+                <div style={{ fontSize: 8, color: '#8899bb', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Target</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#e2e8f0', lineHeight: 1.1 }}>150</div>
+                <div style={{ fontSize: 9, color: '#8899bb' }}>PL goals</div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
+                {[
+                  { name: 'T. Henry', stat: '175', color: '#22c55e', border: 'rgba(34,197,94,0.4)', bg: 'rgba(34,197,94,0.08)' },
+                  { name: 'Gerrard',  stat: '120', color: '#ef4444', border: 'rgba(239,68,68,0.35)', bg: 'rgba(239,68,68,0.08)' },
+                  { name: '?',        stat: '···', color: '#8899bb', border: '#4a5568', bg: '#0a0f1e' },
+                ].map((p, i) => (
+                  <div key={i} style={{ background: p.bg, border: `1px solid ${p.border}`, borderRadius: 5, padding: '5px 4px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
+                    <span style={{ fontSize: 9, fontWeight: 600, color: p.color, textAlign: 'center' as const }}>{p.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 800, color: p.color, lineHeight: 1 }}>{p.stat}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Stat Clash →</span></div>
           </div>
 
           {/* ---- TENABLE ---- */}
