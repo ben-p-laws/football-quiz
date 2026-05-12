@@ -558,30 +558,30 @@ export default function FootballGolf(){
   const [h2hPlayerName, setH2HPlayerName] = useState('')
   const [h2hOppName, setH2HOppName] = useState('')
   const [h2hWaiting, setH2HWaiting] = useState(false)
-  const [h2hWaitReason, setH2HWaitReason] = useState<'shot'|'hole'>('shot')
   const [h2hOppRemaining, setH2HOppRemaining] = useState<number|null>(null)
   const [h2hOppPastPin, setH2HOppPastPin] = useState(false)
   const [h2hOppHoledOut, setH2HOppHoledOut] = useState(false)
-  const [matchScore, setMatchScore] = useState(0) // positive = current player ahead
+  const [matchScore, setMatchScore] = useState(0)
   const [h2hError, setH2HError] = useState('')
   const [h2hFinishHoleReady, setH2HFinishHoleReady] = useState(false)
-  // 'pending' = opp holed this round, I didn't — I must process synced result first
-  // 'active'  = I now get my one last-chance shot
-  const [h2hLastChance, setH2HLastChance] = useState<'off'|'pending'|'active'>('off')
-  // Trigger state — lets useEffect run callbacks with fresh React state
-  const [h2hOppShotReady, setH2HOppShotReady] = useState<any>(null)
-  const [h2hOppFinishedShot, setH2HOppFinishedShot] = useState<any>(null)
-  const [h2hLastChanceOppShot, setH2HLastChanceOppShot] = useState<any>(null)
-  // Refs (stable across renders, safe to use in setInterval)
+  const [h2hIsMyTurn, setH2HIsMyTurn] = useState(true)
+  // Trigger states
+  const [h2hOppShotReady, setH2HOppShotReady] = useState<any>(null) // tee shot sync
+  const [h2hOppTurnShot, setH2HOppTurnShot] = useState<any>(null)   // non-tee opp shot
+  // Refs
   const h2hPlayerId    = useRef('')
   const h2hIsHost      = useRef(false)
   const h2hOppId       = useRef('')
   const h2hRoomIdRef   = useRef('')
   const h2hRoomData    = useRef<{holes:Hole[];teeCategories:Category[]}>({holes:[],teeCategories:[]})
-  const h2hShotIdx     = useRef(0)
   const h2hMyHoleStrokes = useRef(0)
   const h2hOppHoleStrokesRef = useRef<number|null>(null)
-  const h2hLastChanceOppStrokes = useRef<number|null>(null)
+  const h2hOppRemainingRef = useRef<number|null>(null)
+  const h2hOppPastPinRef = useRef(false)
+  const h2hOppShotIdxRef = useRef(-1)
+  const h2hIFinishedRef  = useRef(false)
+  const h2hOppFinishedRef = useRef(false)
+  const h2hMyRemainingRef = useRef(0)
   const h2hPendingShot = useRef<{result:ShotResult;toPos:number}|null>(null)
   const h2hPollRef     = useRef<ReturnType<typeof setInterval>|null>(null)
 
@@ -625,49 +625,57 @@ export default function FootballGolf(){
     if(room){ setH2HJoinInput(room.toUpperCase()); setH2HStep('join') }
   },[])
 
-  // When opponent's shot arrives: reveal both simultaneously with fresh React state
+  // Tee shot: both players submit then reveal simultaneously
   useEffect(()=>{
     if(!h2hOppShotReady||!h2hPendingShot.current) return
+    const oRem=h2hOppShotReady.remaining_after
+    const oPP=h2hOppShotReady.past_pin
+    const oHoledOut=h2hOppShotReady.holed_out
+    h2hOppRemainingRef.current=oHoledOut?0:oRem
+    h2hOppPastPinRef.current=oPP
+    h2hOppShotIdxRef.current=0
     setH2HWaiting(false)
-    setH2HOppRemaining(h2hOppShotReady.remaining_after)
-    setH2HOppPastPin(h2hOppShotReady.past_pin)
-    const oppHoledOut=h2hOppShotReady.holed_out
-    if(oppHoledOut){
-      setH2HOppHoledOut(true)
-      h2hOppHoleStrokesRef.current=h2hOppShotReady.hole_strokes
-    }
+    setH2HOppRemaining(oHoledOut?0:oRem)
+    setH2HOppPastPin(oPP)
+    if(oHoledOut){setH2HOppHoledOut(true);h2hOppHoleStrokesRef.current=h2hOppShotReady.hole_strokes;h2hOppFinishedRef.current=true}
     const {result,toPos}=h2hPendingShot.current
-    const myHoledOut=result.isHoled||result.isGimme
     h2hPendingShot.current=null
-    h2hShotIdx.current++
     animateShot(ballPos,toPos,result)
     setH2HOppShotReady(null)
-    // Match play: opp got a GIMME and I didn't hole out → I get one last-chance shot
-    // (exact hole-out = hole ends immediately, no last chance)
-    if(oppHoledOut&&!myHoledOut&&h2hOppShotReady.is_gimme){
-      h2hLastChanceOppStrokes.current=h2hOppShotReady.hole_strokes
-      h2hMyHoleStrokes.current=strokes+1+(result.isOOB?1:0)
-      setH2HLastChance('pending')
-    } else if(oppHoledOut&&!myHoledOut){
-      // Opp holed exactly — I lose the hole immediately
-      const myStrokesSoFar=strokes+1+(result.isOOB?1:0)
-      h2hMyHoleStrokes.current=myStrokesSoFar
-      setTimeout(()=>resolveH2HHole(myStrokesSoFar+99,h2hOppShotReady.hole_strokes),2500)
-    }
+    // Turn is determined in advanceFromResult after user clicks through the result
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[h2hOppShotReady])
 
-  // When A (who holed) receives B's last-chance shot result
+  // Non-tee opp shot arrives while we wait for their turn
   useEffect(()=>{
-    if(!h2hLastChanceOppShot) return
-    setH2HLastChanceOppShot(null)
+    if(!h2hOppTurnShot) return
+    setH2HOppTurnShot(null)
     setH2HWaiting(false)
-    const oppHoled=h2hLastChanceOppShot.holed_out
-    const oppStrokes=h2hLastChanceOppShot.hole_strokes
-    const myStrokes=h2hMyHoleStrokes.current
-    resolveH2HHole(myStrokes,oppHoled&&oppStrokes!=null?oppStrokes:myStrokes+99)
+    const oRem=h2hOppTurnShot.remaining_after
+    const oPP=h2hOppTurnShot.past_pin
+    const oHoledOut=h2hOppTurnShot.holed_out
+    h2hOppRemainingRef.current=oHoledOut?0:oRem
+    h2hOppPastPinRef.current=oPP
+    h2hOppShotIdxRef.current=h2hOppTurnShot.shot_idx
+    setH2HOppRemaining(oHoledOut?0:oRem)
+    setH2HOppPastPin(oPP)
+    if(oHoledOut){
+      setH2HOppHoledOut(true)
+      h2hOppHoleStrokesRef.current=h2hOppTurnShot.hole_strokes
+      h2hOppFinishedRef.current=true
+      if(h2hIFinishedRef.current){
+        resolveH2HHole(h2hMyHoleStrokes.current,h2hOppTurnShot.hole_strokes)
+      } else {
+        setH2HIsMyTurn(true) // opp finished, I keep playing
+      }
+    } else {
+      const myRem=h2hMyRemainingRef.current
+      if(myRem>oRem) setH2HIsMyTurn(true)
+      else if(myRem<oRem){setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(holeIdx)}
+      else{const mt=Math.random()<0.5;setH2HIsMyTurn(mt);if(!mt){setH2HWaiting(true);startOppPoll(holeIdx)}}
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[h2hLastChanceOppShot])
+  },[h2hOppTurnShot])
 
   const currentHole  = holes[holeIdx]
   const club         = remaining>0 ? getClub(remaining) : 'driver'
@@ -896,49 +904,47 @@ export default function FootballGolf(){
               ? currentHole.distance + Math.min(overshoot, 55)
               : Math.min(ballPos + total, currentHole.distance + 50))
 
-    // H2H: last-chance shot — solo, no waiting for opponent
-    if(h2hStep==='playing'&&h2hLastChance==='active'){
-      const penaltyStrokes=result.isOOB?1:0
-      const newStrokes=strokes+1+penaltyStrokes
-      const holedOut=result.isHoled||result.isGimme
-      const {remaining:ra,pastPin:pp}=calcNewBallState(result,remaining,pastPin)
-      const totalStrokes=newStrokes+(holedOut&&result.isGimme?1:0)
-      fetch('/api/golf-room',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
-          holeIdx,shotIdx:h2hShotIdx.current,
-          remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
-          holeStrokes:totalStrokes,isGimme:result.isGimme??false,
-        }),
-      })
-      animateShot(ballPos,toPos,result)
-      return
-    }
-
-    // H2H: defer animation until opponent also submits
-    if(h2hStep==='playing'){
+    // H2H tee shot: synchronized — both submit then reveal together
+    if(h2hStep==='playing'&&strokes===0){
       h2hPendingShot.current={result,toPos}
       const penaltyStrokes=result.isOOB?1:0
-      const newStrokes=strokes+1+penaltyStrokes
+      const newStrokes=1+penaltyStrokes
       const holedOut=result.isHoled||result.isGimme
       const {remaining:ra,pastPin:pp}=calcNewBallState(result,remaining,pastPin)
-      h2hMyHoleStrokes.current=newStrokes+(holedOut&&result.isGimme?1:0)
       setH2HWaiting(true)
-      setH2HWaitReason('shot')
       fetch('/api/golf-room',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
           action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
-          holeIdx,shotIdx:h2hShotIdx.current,
+          holeIdx,shotIdx:0,
           remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
-          holeStrokes:holedOut?h2hMyHoleStrokes.current:null,
+          holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
           isGimme:result.isGimme??false,
         }),
       }).then(r=>r.json()).then(d=>{
         if(d.bothReady) setH2HOppShotReady(d.opponentShot)
-        else startH2HPoll({holeIdx,reason:'shot',shotIdx:h2hShotIdx.current})
-      }).catch(()=>startH2HPoll({holeIdx,reason:'shot',shotIdx:h2hShotIdx.current}))
+        else startTeePoll(holeIdx)
+      }).catch(()=>startTeePoll(holeIdx))
+      return
+    }
+
+    // H2H non-tee shot: take immediately (turn-based, furthest from hole goes next)
+    if(h2hStep==='playing'){
+      const penaltyStrokes=result.isOOB?1:0
+      const newStrokes=strokes+1+penaltyStrokes
+      const holedOut=result.isHoled||result.isGimme
+      const {remaining:ra,pastPin:pp}=calcNewBallState(result,remaining,pastPin)
+      fetch('/api/golf-room',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
+          holeIdx,shotIdx:strokes,
+          remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
+          holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
+          isGimme:result.isGimme??false,
+        }),
+      })
+      animateShot(ballPos,toPos,result)
       return
     }
 
@@ -949,18 +955,6 @@ export default function FootballGolf(){
     if(!shotResult||!currentHole) return
     const penaltyStrokes = shotResult.isOOB ? 1 : 0
     const newStrokes=strokes+1+penaltyStrokes
-
-    // H2H last-chance 'active': this shot IS the last-chance — resolve immediately
-    if(h2hStep==='playing'&&h2hLastChance==='active'){
-      setH2HLastChance('off')
-      setShotResult(null)
-      setBunkerQ(null)
-      setBunkerLieResult(null)
-      const holedOut=shotResult.isHoled||shotResult.isGimme
-      const myTotal=holedOut?(shotResult.isGimme?newStrokes+1:newStrokes):newStrokes
-      resolveH2HHole(holedOut?myTotal:myTotal+99,h2hLastChanceOppStrokes.current!)
-      return
-    }
 
     const lieResult = bunkerLieResult
     setBunkerLieResult(null)
@@ -982,8 +976,15 @@ export default function FootballGolf(){
       resetInputs()
       oobDir.current = 0
       setArcOffset(0)
-      // Transition last-chance pending → active after processing OOB
-      if(h2hLastChance==='pending') setH2HLastChance('active')
+      if(h2hStep==='playing'){
+        h2hMyRemainingRef.current=newRemaining
+        if(h2hOppFinishedRef.current){
+          const oppFinal=h2hOppHoleStrokesRef.current!
+          if(newStrokes+1>oppFinal){resolveH2HHole(newStrokes+1,oppFinal);return}
+        } else {
+          determineTurn(newRemaining,h2hOppRemainingRef.current??newRemaining,holeIdx)
+        }
+      }
       return
     }
 
@@ -1011,8 +1012,15 @@ export default function FootballGolf(){
     setBunkerQ(null)
     setQuestion(nextCat(newRemaining))
     resetInputs()
-    // Transition last-chance pending → active after processing synced shot
-    if(h2hLastChance==='pending') setH2HLastChance('active')
+    if(h2hStep==='playing'){
+      h2hMyRemainingRef.current=newRemaining
+      if(h2hOppFinishedRef.current){
+        const oppFinal=h2hOppHoleStrokesRef.current!
+        if(newStrokes+1>oppFinal){resolveH2HHole(newStrokes+1,oppFinal);return}
+      } else {
+        determineTurn(newRemaining,h2hOppRemainingRef.current??newRemaining,holeIdx)
+      }
+    }
   }
 
   function answerBunkerQ(idx:number){
@@ -1052,14 +1060,12 @@ export default function FootballGolf(){
 
     if(h2hStep==='playing'){
       h2hMyHoleStrokes.current=finalStrokes
-      if(h2hOppHoledOut){
-        // Both holed out — compare strokes
+      h2hIFinishedRef.current=true
+      if(h2hOppFinishedRef.current){
         resolveH2HHole(finalStrokes,h2hOppHoleStrokesRef.current??finalStrokes)
       }else{
-        // I holed out, opp hasn't — wait for their last-chance shot
         setH2HWaiting(true)
-        setH2HWaitReason('shot')
-        startH2HPoll({holeIdx,reason:'lastchance',shotIdx:h2hShotIdx.current})
+        startOppPoll(holeIdx)
       }
       return
     }
@@ -1086,25 +1092,40 @@ export default function FootballGolf(){
     if(h2hPollRef.current){clearInterval(h2hPollRef.current);h2hPollRef.current=null}
   }
 
-  function startH2HPoll(opts:{holeIdx:number;reason:'shot'|'hole'|'lastchance';shotIdx?:number}){
+  function startTeePoll(hi:number){
     stopH2HPoll()
-    const {holeIdx:hi,reason,shotIdx:si}=opts
     h2hPollRef.current=setInterval(async()=>{
       const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
       if(!d) return
       const shots:any[]=d.shots||[]
-      if(reason==='shot'){
-        const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===si)
-        if(oppShot){stopH2HPoll();setH2HOppShotReady(oppShot)}
-      }else if(reason==='lastchance'){
-        // Wait for opponent's last-chance shot at the specific shot_idx
-        const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===si)
-        if(oppShot){stopH2HPoll();setH2HLastChanceOppShot(oppShot)}
-      }else{
-        const oppDone=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.holed_out)
-        if(oppDone){stopH2HPoll();setH2HOppFinishedShot(oppDone)}
-      }
+      const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===0)
+      if(oppShot){stopH2HPoll();setH2HOppShotReady(oppShot)}
     },1500)
+  }
+
+  function startOppPoll(hi:number){
+    stopH2HPoll()
+    const lastSeen=h2hOppShotIdxRef.current
+    h2hPollRef.current=setInterval(async()=>{
+      const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
+      if(!d) return
+      const shots:any[]=d.shots||[]
+      const newer=shots
+        .filter((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx>lastSeen)
+        .sort((a:any,b:any)=>b.shot_idx-a.shot_idx)
+      if(newer.length>0){stopH2HPoll();setH2HOppTurnShot(newer[0])}
+    },1500)
+  }
+
+  function determineTurn(myRem:number,oppRem:number,hi:number){
+    if(h2hOppFinishedRef.current){setH2HIsMyTurn(true);return}
+    if(myRem>oppRem) setH2HIsMyTurn(true)
+    else if(myRem<oppRem){setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(hi)}
+    else{
+      const mt=Math.random()<0.5
+      setH2HIsMyTurn(mt)
+      if(!mt){setH2HWaiting(true);startOppPoll(hi)}
+    }
   }
 
   function startLobbyPoll(){
@@ -1139,21 +1160,24 @@ export default function FootballGolf(){
     setShotResult(null)
     setBunkerQ(null)
     setBunkerLieResult(null)
-    setH2HLastChance('off')
     setH2HOppHoledOut(false)
     setH2HOppRemaining(null)
     setH2HOppPastPin(false)
+    setH2HIsMyTurn(true)
     h2hOppHoleStrokesRef.current=null
-    h2hLastChanceOppStrokes.current=null
+    h2hOppRemainingRef.current=null
+    h2hOppShotIdxRef.current=-1
+    h2hIFinishedRef.current=false
+    h2hOppFinishedRef.current=false
+    h2hMyHoleStrokes.current=0
     if(holeIdx+1>=holes.length){setPhase('done');return}
     const nextIdx=holeIdx+1
     setHoleIdx(nextIdx)
     const dist=holes[nextIdx].distance
     setRemaining(dist)
+    h2hMyRemainingRef.current=dist
     setPastPin(false)
     setStrokes(0)
-    h2hShotIdx.current=0
-    h2hMyHoleStrokes.current=0
     const teeCat=h2hRoomData.current.teeCategories[nextIdx]
     setQuestion(teeCat??nextPickedCategory(dist))
     resetInputs()
@@ -1236,8 +1260,13 @@ export default function FootballGolf(){
     setStrokes(0)
     setShotResult(null)
     setPastPin(false)
-    h2hShotIdx.current=0
     h2hMyHoleStrokes.current=0
+    h2hOppRemainingRef.current=null
+    h2hOppShotIdxRef.current=-1
+    h2hIFinishedRef.current=false
+    h2hOppFinishedRef.current=false
+    h2hMyRemainingRef.current=hs[0].distance
+    setH2HIsMyTurn(true)
     setH2HOppRemaining(null)
     setH2HOppPastPin(false)
     setH2HOppHoledOut(false)
@@ -1410,6 +1439,33 @@ export default function FootballGolf(){
         </div>
       )}
       <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
+        {/* H2H HUD */}
+        {h2hStep==='playing'&&currentHole&&(
+          <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0 6px',borderBottom:'1px solid #1e2d4a',marginBottom:4}}>
+            <div style={{flex:1,display:'flex',flexDirection:'column',gap:1}}>
+              <div style={{display:'flex',alignItems:'center',gap:5}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#3b82f6':'#fbbf24',flexShrink:0}}/>
+                <div style={{fontSize:12,fontWeight:h2hIsMyTurn?900:600,color:h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hPlayerName||'You'}</div>
+                {h2hIsMyTurn&&<div style={{fontSize:10,fontWeight:800,color:'#22c55e'}}>▶</div>}
+              </div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingLeft:13}}>{remaining} yds</div>
+            </div>
+            <div style={{textAlign:'center',flexShrink:0}}>
+              <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8'}}>
+                {matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`}
+              </div>
+              <div style={{fontSize:9,color:'rgba(255,255,255,0.2)',marginTop:1}}>Hole {holeIdx+1} · Par {currentHole.par}</div>
+            </div>
+            <div style={{flex:1,display:'flex',flexDirection:'column',gap:1,alignItems:'flex-end'}}>
+              <div style={{display:'flex',alignItems:'center',gap:5}}>
+                {!h2hIsMyTurn&&<div style={{fontSize:10,fontWeight:800,color:'#22c55e'}}>▶</div>}
+                <div style={{fontSize:12,fontWeight:!h2hIsMyTurn?900:600,color:!h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hOppName||'Opp'}</div>
+                <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#fbbf24':'#3b82f6',flexShrink:0}}/>
+              </div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingRight:13}}>{h2hOppRemaining!==null?`${h2hOppRemaining} yds`:'...'}</div>
+            </div>
+          </div>
+        )}
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)'}}>
 
           {/* Left panel */}
@@ -1446,17 +1502,6 @@ export default function FootballGolf(){
                 </div>
               )}
             </div>
-
-            {/* H2H match score */}
-            {h2hStep==='playing'&&(
-              <div style={{display:'flex',alignItems:'center',gap:8,padding:'2px 0'}}>
-                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.06em'}}>Match</div>
-                <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8',background:'#1e2d4a',borderRadius:6,padding:'2px 8px'}}>
-                  {matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`}
-                </div>
-                <div style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>vs {h2hOppName||'Opp'}</div>
-              </div>
-            )}
 
             {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
             <div style={{flex:1,display:'flex',flexDirection:'column',gap:10,minHeight:0}}>
@@ -1516,20 +1561,14 @@ export default function FootballGolf(){
               <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
                 <div style={{width:10,height:10,borderRadius:'50%',background:'#f59e0b',boxShadow:'0 0 12px #f59e0b88'}}/>
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.6)',textAlign:'center'}}>
-                  {h2hWaitReason==='hole'?'Waiting for opponent to finish hole…':'Waiting for opponent…'}
+                  {h2hIFinishedRef.current?'Waiting for opponent to finish…':`${h2hOppName||'Opp'} is taking their shot…`}
                 </div>
-                {h2hWaitReason==='hole'&&h2hOppRemaining!==null&&(
+                {h2hOppRemaining!==null&&(
                   <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{h2hOppName||'Opp'} · {h2hOppRemaining} yds to go</div>
                 )}
               </div>
             ) : (
               <>
-                {h2hLastChance==='active'&&(
-                  <div style={{background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.35)',borderRadius:8,padding:'8px 12px',textAlign:'center'}}>
-                    <div style={{fontSize:12,fontWeight:900,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.08em'}}>Last Chance!</div>
-                    <div style={{fontSize:11,color:'rgba(255,255,255,0.6)',marginTop:2}}>Hole out to match {h2hLastChanceOppStrokes.current} strokes &amp; halve</div>
-                  </div>
-                )}
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
                 {[0,1,2].map(idx=>(
                   <PlayerInputRow
@@ -1585,6 +1624,8 @@ export default function FootballGolf(){
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
+                myBallColor={h2hStep==='playing'?(h2hIsHost.current?'#3b82f6':'#fbbf24'):undefined}
+                oppBallColor={h2hStep==='playing'?(h2hIsHost.current?'#fbbf24':'#3b82f6'):undefined}
               />
             </div>
           </div>
@@ -1672,9 +1713,9 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,oppBallPos}:{
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,oppBallPos,myBallColor,oppBallColor}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number
-  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; oppBallPos?:number
+  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Remap the hole path so pts[0]=realTeePos and pts[last]=realGreenPos when calibrated
   const effectivePath = useMemo(()=>{
@@ -1813,18 +1854,18 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <circle cx={finalBallX} cy={ballY+ballR*2.5} rx={ballR*0.6} ry={ballR*0.25} fill="rgba(255,255,255,0.15)"/>
         )}
 
-        {/* Opponent ball (red) */}
+        {/* Opponent ball */}
         {oppBallPos!==undefined&&(()=>{
           const {x:ox,y:oy}=yardToSVG(oppBallPos,hole.distance,effectivePath)
           return(<>
             <ellipse cx={ox} cy={oy+ballR*0.6} rx={ballR} ry={ballR*0.4} fill="rgba(0,0,0,0.3)"/>
-            <circle cx={ox} cy={oy} r={ballR} fill="#ef4444"/>
+            <circle cx={ox} cy={oy} r={ballR} fill={oppBallColor??'#ef4444'}/>
           </>)
         })()}
 
-        {/* Ball (white = you) */}
+        {/* My ball */}
         <ellipse cx={finalBallX} cy={ballY+ballR*0.6} rx={ballR} ry={ballR*0.4} fill="rgba(0,0,0,0.3)"/>
-        <circle cx={finalBallX} cy={ballY} r={ballR} fill="white"/>
+        <circle cx={finalBallX} cy={ballY} r={ballR} fill={myBallColor??'white'}/>
         {isAnimating&&(
           <circle cx={finalBallX} cy={ballY} r={ballR*1.4} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
