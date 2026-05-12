@@ -38,7 +38,7 @@ const CONTINENT_MAP: Record<string, string> = {
   MWI:'Africa',MLI:'Africa',MTN:'Africa',MRI:'Africa',MAR:'Africa',MOZ:'Africa',
   NAM:'Africa',NIG:'Africa',NGA:'Africa',RWA:'Africa',STP:'Africa',SEN:'Africa',
   SLE:'Africa',SOM:'Africa',ZAF:'Africa',SSD:'Africa',SDN:'Africa',TAN:'Africa',
-  TGO:'Africa',TUN:'Africa',UGA:'Africa',ZAM:'Africa',ZIM:'Africa',BFA:'Africa',
+  TGO:'Africa',TOG:'Africa',TUN:'Africa',UGA:'Africa',ZAM:'Africa',ZIM:'Africa',BFA:'Africa',
   // Europe
   ALB:'Europe',AND:'Europe',ARM:'Europe',AUT:'Europe',AZE:'Europe',BLR:'Europe',
   BEL:'Europe',BIH:'Europe',BUL:'Europe',CRO:'Europe',CYP:'Europe',CZE:'Europe',
@@ -158,7 +158,7 @@ const buildCache = unstable_cache(
     const playerNames = Object.keys(players).sort()
     return { players, playerNames }
   },
-  ['football-golf-data-v2'],
+  ['football-golf-data-v3'],
   { revalidate: 86400 }
 )
 
@@ -352,7 +352,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, continents, contClubPairs, top3Cache }
   },
-  ['football-golf-meta-v8'],
+  ['football-golf-meta-v9'],
   { revalidate: 86400 }
 )
 

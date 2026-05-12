@@ -565,6 +565,7 @@ export default function FootballGolf(){
   const [h2hError, setH2HError] = useState('')
   const [h2hFinishHoleReady, setH2HFinishHoleReady] = useState(false)
   const [h2hIsMyTurn, setH2HIsMyTurn] = useState(true)
+  const [h2hOppShotCount, setH2HOppShotCount] = useState(0) // shots opp has taken this hole
   // Trigger states
   const [h2hOppShotReady, setH2HOppShotReady] = useState<any>(null) // tee shot sync
   const [h2hOppTurnShot, setH2HOppTurnShot] = useState<any>(null)   // non-tee opp shot
@@ -638,6 +639,7 @@ export default function FootballGolf(){
     setH2HOppRemaining(oHoledOut?0:oRem)
     setH2HOppPastPin(oPP)
     if(oHoledOut){setH2HOppHoledOut(true);h2hOppHoleStrokesRef.current=h2hOppShotReady.hole_strokes;h2hOppFinishedRef.current=true}
+    setH2HOppShotCount(1)
     const {result,toPos}=h2hPendingShot.current
     h2hPendingShot.current=null
     animateShot(ballPos,toPos,result)
@@ -657,6 +659,7 @@ export default function FootballGolf(){
     h2hOppRemainingRef.current=oHoledOut?0:oRem
     h2hOppPastPinRef.current=oPP
     h2hOppShotIdxRef.current=h2hOppTurnShot.shot_idx
+    setH2HOppShotCount(c=>c+1)
     setH2HOppRemaining(oHoledOut?0:oRem)
     setH2HOppPastPin(oPP)
     if(oHoledOut){
@@ -1164,6 +1167,7 @@ export default function FootballGolf(){
     setH2HOppRemaining(null)
     setH2HOppPastPin(false)
     setH2HIsMyTurn(true)
+    setH2HOppShotCount(0)
     h2hOppHoleStrokesRef.current=null
     h2hOppRemainingRef.current=null
     h2hOppShotIdxRef.current=-1
@@ -1267,6 +1271,7 @@ export default function FootballGolf(){
     h2hOppFinishedRef.current=false
     h2hMyRemainingRef.current=hs[0].distance
     setH2HIsMyTurn(true)
+    setH2HOppShotCount(0)
     setH2HOppRemaining(null)
     setH2HOppPastPin(false)
     setH2HOppHoledOut(false)
@@ -1448,7 +1453,7 @@ export default function FootballGolf(){
                 <div style={{fontSize:12,fontWeight:h2hIsMyTurn?900:600,color:h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hPlayerName||'You'}</div>
                 {h2hIsMyTurn&&<div style={{fontSize:10,fontWeight:800,color:'#22c55e'}}>▶</div>}
               </div>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingLeft:13}}>{remaining} yds</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingLeft:13}}>Sh {strokes+1} · {remaining} yds</div>
             </div>
             <div style={{textAlign:'center',flexShrink:0}}>
               <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8'}}>
@@ -1462,7 +1467,7 @@ export default function FootballGolf(){
                 <div style={{fontSize:12,fontWeight:!h2hIsMyTurn?900:600,color:!h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hOppName||'Opp'}</div>
                 <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#fbbf24':'#3b82f6',flexShrink:0}}/>
               </div>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingRight:13}}>{h2hOppRemaining!==null?`${h2hOppRemaining} yds`:'...'}</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingRight:13}}>Sh {h2hOppShotCount+1} · {h2hOppRemaining!==null?`${h2hOppRemaining} yds`:'...'}</div>
             </div>
           </div>
         )}
