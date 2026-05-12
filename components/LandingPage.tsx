@@ -220,23 +220,23 @@ export default function LandingPage() {
             <div style={s.cardTitle}>Around the World in 80 Goals</div>
             <div style={s.cardDesc}>Chain neighbouring countries · name a PL player from each one</div>
           </div>
-          <div style={s.preview}>
-            {/* Stat + Target */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-              <div style={{ flex: 1, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '7px 10px' }}>
-                <div style={{ fontSize: 8, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 2 }}>Stat</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: 'white' }}>PL Goals</div>
+          <div style={{ ...s.preview, display: 'flex', gap: 8 }}>
+            {/* Left: stat + target */}
+            <div style={{ width: '25%', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ flex: 1, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>Stat</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>PL Goals</div>
               </div>
-              <div style={{ flex: 1, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: 8, padding: '7px 10px' }}>
-                <div style={{ fontSize: 8, fontWeight: 700, color: '#a07830', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 2 }}>Target</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: '#f59e0b' }}>250</div>
+              <div style={{ flex: 1, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: '#a07830', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>Target</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>250</div>
               </div>
             </div>
-            {/* Mini map */}
-            <div style={{ background: '#04101f', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2d4a', height: 100 }}>
+            {/* Right: map */}
+            <div style={{ flex: 1, background: '#04101f', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2d4a' }}>
               {mounted && (
                 <ComposableMap
-                  projectionConfig={{ scale: 1100, center: [5, 47] }}
+                  projectionConfig={{ scale: 1400, center: [6, 46] }}
                   style={{ width: '100%', height: '100%', display: 'block' }}
                 >
                   <Geographies geography={GEO_URL}>
