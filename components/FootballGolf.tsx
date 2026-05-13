@@ -2495,7 +2495,7 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
   leaderboard:DailyEntry[]; playerName:string; distance:number; onBack:()=>void
 }){
   const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
-  const board = leaderboard.filter(e => e.is_oob || (e.distance_from_pin ?? 1) > 0)
+  const board = leaderboard
   const myEntry = board.find(e=>e.player_name===playerName)
   const myRank  = myEntry && !myEntry.is_oob
     ? board.filter(e=>!e.is_oob).findIndex(e=>e.player_name===playerName)+1
