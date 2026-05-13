@@ -401,7 +401,7 @@ function generateHoles(count:3|6|9|18): Hole[] {
       const isIsland = isIslandCandidate
       const path = isIsland ? RANDOM_PATHS[0] : pathPool[holes.length % pathPool.length]
       const bunkers = isIsland ? [] : generateBunkers(distance, hazard, 1)
-      const dropZoneYards = isIsland ? randBetween(60, 80) : undefined
+      const dropZoneYards = isIsland ? Math.round(distance * 0.34) : undefined
       if (isIsland) hazard = {start: 25, end: distance - 20}
       holes.push({number:holes.length+1, par, distance, hazard, bunkers, path, isIsland, dropZoneYards})
     }
