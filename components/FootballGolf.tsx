@@ -2495,9 +2495,10 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
   leaderboard:DailyEntry[]; playerName:string; distance:number; onBack:()=>void
 }){
   const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
-  const myEntry = leaderboard.find(e=>e.player_name===playerName)
+  const board = leaderboard.filter(e => e.is_oob || (e.distance_from_pin ?? 1) > 0)
+  const myEntry = board.find(e=>e.player_name===playerName)
   const myRank  = myEntry && !myEntry.is_oob
-    ? leaderboard.filter(e=>!e.is_oob).findIndex(e=>e.player_name===playerName)+1
+    ? board.filter(e=>!e.is_oob).findIndex(e=>e.player_name===playerName)+1
     : null
 
   return(
@@ -2543,10 +2544,10 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
       {/* Leaderboard */}
       <div style={{fontWeight:800,fontSize:13,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Leaderboard</div>
       <div style={{display:'flex',flexDirection:'column',gap:6}}>
-        {leaderboard.length===0 && <div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
-        {leaderboard.map((e,i)=>{
+        {board.length===0 && <div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
+        {board.map((e,i)=>{
           const isMe = e.player_name===playerName
-          const rank = !e.is_oob ? leaderboard.filter(x=>!x.is_oob).indexOf(e)+1 : null
+          const rank = !e.is_oob ? board.filter(x=>!x.is_oob).indexOf(e)+1 : null
           return(
             <div key={i} style={{background:isMe?'rgba(59,130,246,0.1)':'#111827',border:`1px solid ${isMe?'rgba(59,130,246,0.4)':'#1e2d4a'}`,borderRadius:10,padding:'11px 14px',display:'flex',alignItems:'center',gap:12}}>
               <div style={{width:28,fontSize:14,fontWeight:900,color:rank===1?'#fbbf24':rank===2?'#9ca3af':rank===3?'#cd7c2f':'rgba(255,255,255,0.3)',textAlign:'center'}}>

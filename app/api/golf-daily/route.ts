@@ -92,7 +92,7 @@ export async function GET(req: Request) {
     .eq('date', date)
     .order('distance_from_pin', { ascending: true, nullsFirst: false })
 
-  const onGreen = (entries ?? []).filter(e => !e.is_oob)
+  const onGreen = (entries ?? []).filter(e => !e.is_oob && (e.distance_from_pin ?? 1) > 0)
   const oob     = (entries ?? []).filter(e =>  e.is_oob)
   const leaderboard = [...onGreen, ...oob]
 
