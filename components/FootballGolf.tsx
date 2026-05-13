@@ -357,7 +357,7 @@ function pathEndAngle(path:HolePath): number {
 
 type Hazard  = { start:number; end:number }
 type Bunker  = { start:number; end:number }
-type Hole    = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; path:HolePath }
+type Hole    = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; path:HolePath; isIsland?:boolean; dropZoneYards?:number }
 type HoleDef = { number:number; par:number; yardages:Record<Tee,number>; path:HolePath; hazardFrac:{startFrac:number;endFrac:number}|null; bunkerCount:number }
 
 function randBetween(min:number,max:number){ return min+Math.floor(Math.random()*(max-min+1)) }
@@ -394,9 +394,12 @@ function generateHoles(count:3|6|9|18): Hole[] {
         const start = distance-fromHole
         hazard = {start, end:Math.min(start+40, distance-PIN_CLEAR)}
       }
-      const path = pathPool[holes.length % pathPool.length]
-      const bunkers = generateBunkers(distance, hazard, 1)
-      holes.push({number:holes.length+1, par, distance, hazard, bunkers, path})
+      const isIsland = par===3 && Math.random() < 1/3
+      const path = isIsland ? RANDOM_PATHS[0] : pathPool[holes.length % pathPool.length]
+      const bunkers = isIsland ? [] : generateBunkers(distance, hazard, 1)
+      const dropZoneYards = isIsland ? randBetween(60, 80) : undefined
+      if (isIsland) hazard = {start: 25, end: distance - 20}
+      holes.push({number:holes.length+1, par, distance, hazard, bunkers, path, isIsland, dropZoneYards})
     }
   }
   return holes
@@ -870,9 +873,14 @@ export default function FootballGolf(){
       const {start,end} = currentHole.hazard
       if(newPos>=start && newPos<=end){
         isOOB=true
-        const dropYards = start - 1  // just in front of the tee-side water edge
-        waterDropRemaining = currentHole.distance - dropYards
-        penaltyReason=`Water hazard! Drop at ${dropYards} yds from tee (+1 stroke)`
+        if(currentHole.isIsland && currentHole.dropZoneYards){
+          waterDropRemaining = currentHole.dropZoneYards
+          penaltyReason=`Water! Drop zone — ${currentHole.dropZoneYards} yds from pin (+1 stroke)`
+        } else {
+          const dropYards = start - 1
+          waterDropRemaining = currentHole.distance - dropYards
+          penaltyReason=`Water hazard! Drop at ${dropYards} yds from tee (+1 stroke)`
+        }
       }
     }
 
@@ -1813,16 +1821,57 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
 
         {/* Generated-course-only: rough background + fairway + bunker fills */}
         {!imageUrl && <rect x={0} y={-10} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>}
-        {!imageUrl && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
-        {!imageUrl && hole.bunkers.map((b,i)=>{
+        {!imageUrl && !hole.isIsland && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
+        {!imageUrl && !hole.isIsland && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
           const midPos   = yardToSVG(midYards,hole.distance,hole.path)
           const sideX    = b.start%20<10 ? midPos.x-9 : midPos.x+9
           return <ellipse key={i} cx={sideX} cy={midPos.y} rx={6} ry={3.5} fill="url(#sand)" opacity={0.85}/>
         })}
 
-        {/* Water hazard — blob only for generated, text label for both */}
-        {hole.hazard&&(()=>{
+        {/* Island green: rounded-rect water with wavy sides */}
+        {!imageUrl && hole.isIsland && (()=>{
+          const x1=18, x2=82
+          const yT=holePos.y-26, yB=teePos.y-8
+          const r=12   // large corner radius
+          const amp=2  // gentle wave amplitude on straight sections
+          const eL=x2-r-(x1+r)  // usable horizontal edge length
+          const eV=yB-r-(yT+r)  // usable vertical edge length
+
+          // Rounded rect with one S-wave per side (2 quadratic beziers) + arc corners
+          const pathD=[
+            `M ${x1+r},${yT}`,
+            `Q ${x1+r+eL*.25},${yT-amp} ${x1+r+eL*.5},${yT}`,
+            `Q ${x1+r+eL*.75},${yT+amp} ${x2-r},${yT}`,
+            `A ${r} ${r} 0 0 1 ${x2},${yT+r}`,
+            `Q ${x2+amp},${yT+r+eV*.25} ${x2},${yT+r+eV*.5}`,
+            `Q ${x2-amp},${yT+r+eV*.75} ${x2},${yB-r}`,
+            `A ${r} ${r} 0 0 1 ${x2-r},${yB}`,
+            `Q ${x2-r-eL*.25},${yB+amp} ${x2-r-eL*.5},${yB}`,
+            `Q ${x2-r-eL*.75},${yB-amp} ${x1+r},${yB}`,
+            `A ${r} ${r} 0 0 1 ${x1},${yB-r}`,
+            `Q ${x1-amp},${yB-r-eV*.25} ${x1},${yB-r-eV*.5}`,
+            `Q ${x1+amp},${yB-r-eV*.75} ${x1},${yT+r}`,
+            `A ${r} ${r} 0 0 1 ${x1+r},${yT} Z`,
+          ].join(' ')
+
+          const cx=50, cy=yT+(yB-yT)*0.72
+          const front=hole.distance-20, back=hole.distance+20
+
+          return (
+            <g>
+              <path d={pathD} fill="#1a3f8f" opacity={0.88}/>
+              <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth={0.7} opacity={0.45}/>
+              <text x={cx} y={cy-3.5} fontSize={5} fill="white" textAnchor="middle" fontWeight="900"
+                fontFamily="system-ui,sans-serif" opacity={0.95}>ISLAND GREEN</text>
+              <text x={cx} y={cy+5.5} fontSize={4.2} fill="rgba(255,255,255,0.8)" textAnchor="middle"
+                fontWeight="700" fontFamily="system-ui,sans-serif">Land between {front}–{back} yds</text>
+            </g>
+          )
+        })()}
+
+        {/* Water hazard — blob only for generated, text label for both (suppressed on island holes) */}
+        {hole.hazard&&!hole.isIsland&&(()=>{
           const yt=yardToY(hole.hazard.end)
           const yb=yardToY(hole.hazard.start)
           const cx=yardToX((hole.hazard.start+hole.hazard.end)/2)
@@ -1853,6 +1902,19 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
         })()}
 
+        {/* Island green drop zone */}
+        {!imageUrl && hole.isIsland && hole.dropZoneYards && (()=>{
+          const dzPos = yardToSVG(hole.distance - hole.dropZoneYards, hole.distance, effectivePath)
+          return (
+            <g>
+              <circle cx={dzPos.x} cy={dzPos.y} r={8} fill="#c8a96e" opacity={0.85}/>
+              <circle cx={dzPos.x} cy={dzPos.y} r={5.5} fill="#16a34a" opacity={0.9}/>
+              <text x={dzPos.x} y={dzPos.y+11.5} fontSize={3} fill="rgba(255,255,255,0.8)"
+                textAnchor="middle" fontWeight="700" fontFamily="system-ui,sans-serif">DROP ZONE</text>
+            </g>
+          )
+        })()}
+
         {/* Generated-course-only: tee box + big green circles */}
         {!imageUrl && (
           <g transform={`rotate(${endAngle}, ${teePos.x}, ${teePos.y})`}>
@@ -1860,6 +1922,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           </g>
         )}
         {!imageUrl && <>
+          {hole.isIsland && <circle cx={holePos.x} cy={holePos.y} r={17} fill="#c8a96e" opacity={0.7}/>}
           <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
           <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
         </>}
@@ -1899,7 +1962,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         )}
 
         {/* Distance labels — dark pill so they read on any background */}
-        {hole.hazard && displayBallPos <= hole.distance && (()=>{
+        {hole.hazard && !hole.isIsland && displayBallPos <= hole.distance && (()=>{
           const distToNear = Math.round(hole.hazard.start - ballTeePosForLabels)
           const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
