@@ -22,7 +22,6 @@ function seededRng(seed: number) {
 }
 
 function dateToSeed(date: string): number {
-  // YYYY-MM-DD → integer like 20260513
   return parseInt(date.replace(/-/g, ''), 10)
 }
 
@@ -79,12 +78,10 @@ function getDailyParams(date: string) {
   return { distance, category }
 }
 
-// GET ?date=YYYY-MM-DD  → { distance, category, leaderboard, alreadyPlayed }
-// GET ?date=YYYY-MM-DD&playerName=X → same + alreadyPlayed flag
+// GET ?date=YYYY-MM-DD → { distance, category, leaderboard }
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') ?? new Date().toISOString().slice(0, 10)
-  const playerName = searchParams.get('playerName') ?? null
 
   const { distance, category } = getDailyParams(date)
   const db = getClient()
@@ -95,32 +92,26 @@ export async function GET(req: Request) {
     .eq('date', date)
     .order('distance_from_pin', { ascending: true, nullsFirst: false })
 
-  // On-green entries sorted by distance asc, then OOB entries
   const onGreen = (entries ?? []).filter(e => !e.is_oob)
   const oob     = (entries ?? []).filter(e =>  e.is_oob)
   const leaderboard = [...onGreen, ...oob]
 
-  let alreadyPlayed = false
-  if (playerName) {
-    alreadyPlayed = (entries ?? []).some(e => e.player_name === playerName)
-  }
-
-  return NextResponse.json({ date, distance, category, leaderboard, alreadyPlayed })
+  return NextResponse.json({ date, distance, category, leaderboard })
 }
 
-// POST { date, playerName, distanceFromPin, isOob }
+// POST { date, playerName, deviceId, distanceFromPin, isOob }
 export async function POST(req: Request) {
-  const { date, playerName, distanceFromPin, isOob } = await req.json()
-  if (!date || !playerName) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+  const { date, playerName, deviceId, distanceFromPin, isOob } = await req.json()
+  if (!date || !playerName || !deviceId) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const db = getClient()
 
-  // Prevent duplicate submissions
+  // Device-based dedup — same device can't submit twice for same date
   const { data: existing } = await db
     .from('golf_daily_entries')
     .select('id')
     .eq('date', date)
-    .eq('player_name', playerName)
+    .eq('device_id', deviceId)
     .maybeSingle()
 
   if (existing) return NextResponse.json({ error: 'Already played today' }, { status: 409 })
@@ -128,13 +119,13 @@ export async function POST(req: Request) {
   const { error } = await db.from('golf_daily_entries').insert({
     date,
     player_name: playerName,
+    device_id: deviceId,
     distance_from_pin: isOob ? null : distanceFromPin,
     is_oob: isOob ?? false,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Return updated leaderboard
   const { data: entries } = await db
     .from('golf_daily_entries')
     .select('player_name, distance_from_pin, is_oob')
