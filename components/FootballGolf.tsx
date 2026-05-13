@@ -1864,8 +1864,10 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
               <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth={0.7} opacity={0.45}/>
               <text x={cx} y={cy-3.5} fontSize={5} fill="white" textAnchor="middle" fontWeight="900"
                 fontFamily="system-ui,sans-serif" opacity={0.95}>ISLAND GREEN</text>
-              <text x={cx} y={cy+5.5} fontSize={4.2} fill="rgba(255,255,255,0.8)" textAnchor="middle"
-                fontWeight="700" fontFamily="system-ui,sans-serif">Land between {front}–{back} yds</text>
+              <text x={cx} y={cy+5} fontSize={4.2} fill="rgba(255,255,255,0.8)" textAnchor="middle"
+                fontWeight="700" fontFamily="system-ui,sans-serif">Land between</text>
+              <text x={cx} y={cy+11} fontSize={4.2} fill="rgba(255,255,255,0.8)" textAnchor="middle"
+                fontWeight="700" fontFamily="system-ui,sans-serif">{front}–{back} yds</text>
             </g>
           )
         })()}
