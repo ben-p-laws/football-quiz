@@ -174,10 +174,11 @@ function pickCategory(
   continents: string[],
   contClubPairs: [string,string][],
   top3Cache: Record<string,number> | null,
+  minReach?: number,
 ): Category {
   const recentSet      = new Set(recentFilters)
   const recentStatsSet = new Set(recentStats)
-  const threshold = CLUB_THRESHOLD[club]
+  const threshold = Math.max(CLUB_THRESHOLD[club], minReach ?? 0)
   const stats = remaining > 150 ? LONG_STATS : SHORT_STATS
   // Prefer stats not recently used; fall back to full pool if all are recent
   const freshStats = stats.filter(s => !recentStatsSet.has(s))
@@ -380,7 +381,10 @@ function generateHoles(count:3|6|9|18): Hole[] {
   const pathPool = shuffle([...RANDOM_PATHS,...RANDOM_PATHS,...RANDOM_PATHS,...RANDOM_PATHS])
   for (let g = 0; g < groups; g++) {
     for (const par of shuffle([3,4,5])) {
-      const distance = par===3 ? randBetween(160,240) : par===4 ? randBetween(320,380) : randBetween(430,500)
+      const isIslandCandidate = par===3 && Math.random() < 1/3
+      const distance = par===3
+        ? (isIslandCandidate ? randBetween(120,170) : randBetween(160,240))
+        : par===4 ? randBetween(320,380) : randBetween(430,500)
       let hazard: Hazard|null = null
       const PIN_CLEAR = 20
       if (par===3) {
@@ -394,7 +398,7 @@ function generateHoles(count:3|6|9|18): Hole[] {
         const start = distance-fromHole
         hazard = {start, end:Math.min(start+40, distance-PIN_CLEAR)}
       }
-      const isIsland = par===3 && Math.random() < 1/3
+      const isIsland = isIslandCandidate
       const path = isIsland ? RANDOM_PATHS[0] : pathPool[holes.length % pathPool.length]
       const bunkers = isIsland ? [] : generateBunkers(distance, hazard, 1)
       const dropZoneYards = isIsland ? randBetween(60, 80) : undefined
@@ -697,7 +701,7 @@ export default function FootballGolf(){
     ? (pastPin ? currentHole.distance + remaining : currentHole.distance - remaining)
     : 0
 
-  function nextPickedCategory(dist: number): Category {
+  function nextPickedCategory(dist: number, minReach?: number): Category {
     const clubForDist = dist > 0 ? getClub(dist) : 'driver'
     if (dist > 0 && dist < 50 && metaClubs.current.length) {
       const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','yellow_cards']
@@ -721,6 +725,7 @@ export default function FootballGolf(){
       metaNations.current, metaClubs.current,
       metaContinents.current, contClubPairs,
       top3CacheRef.current,
+      minReach,
     )
     usedLabels.current.add(cat.label)
     const f = cat.natFilter || cat.clubFilter || cat.continentFilter
@@ -741,7 +746,7 @@ export default function FootballGolf(){
     setStrokes(0)
     setShotResult(null)
     setPastPin(false)
-    setQuestion(nextPickedCategory(hs[0].distance))
+    setQuestion(nextPickedCategory(hs[0].distance, hs[0].isIsland ? hs[0].distance - 20 : undefined))
     resetInputs()
     setPhase('playing')
   }
@@ -1114,7 +1119,7 @@ export default function FootballGolf(){
         setRemaining(dist)
         setPastPin(false)
         setStrokes(0)
-        setQuestion(nextPickedCategory(dist))
+        setQuestion(nextPickedCategory(dist, holes[nextIdx].isIsland ? holes[nextIdx].distance - 20 : undefined))
       }
     },3000)
   }
@@ -1214,7 +1219,7 @@ export default function FootballGolf(){
     setPastPin(false)
     setStrokes(0)
     const teeCat=h2hRoomData.current.teeCategories[nextIdx]
-    setQuestion(teeCat??nextPickedCategory(dist))
+    setQuestion(teeCat??nextPickedCategory(dist, holes[nextIdx]?.isIsland ? holes[nextIdx].distance - 20 : undefined))
     resetInputs()
   }
 
