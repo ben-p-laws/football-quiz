@@ -891,6 +891,13 @@ export default function FootballGolf(){
 
     const overshoot = total - remaining     // positive = went past hole (or back past on pastPin side)
 
+    // Island green: anything more than 20 yds past the pin splashes into water behind the green
+    if(!isOOB && currentHole.isIsland && currentHole.dropZoneYards && overshoot>20){
+      isOOB=true
+      waterDropRemaining = currentHole.dropZoneYards
+      penaltyReason=`Water! Drop zone — ${currentHole.dropZoneYards} yds from pin (+1 stroke)`
+    }
+
     // >50 yards past hole = OOB (pin is centre of green; green extends 20 yds each way, OOB is 30 yds beyond the back)
     if(!isOOB && overshoot>50){
       isOOB=true
