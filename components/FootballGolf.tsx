@@ -1651,6 +1651,7 @@ export default function FootballGolf(){
                 remaining={remaining}
                 onContinue={shotResult.isInBunker ? triggerBunkerQuestion : advanceFromResult}
                 isBunker={shotResult.isInBunker}
+                isDaily={dailyMode}
               />
             ) : isAnimating ? (
               <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4}}>
@@ -2207,8 +2208,8 @@ function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onCl
 
 // ── Shot result panel ──────────────────────────────────────────────────────────
 
-function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
-  result:ShotResult;club:ClubType;remaining:number;onContinue:()=>void;isBunker:boolean
+function ShotResultPanel({result,club,remaining,onContinue,isBunker,isDaily}:{
+  result:ShotResult;club:ClubType;remaining:number;onContinue:()=>void;isBunker:boolean;isDaily?:boolean
 }){
   const {total,breakdown,isOOB,isHoled,isGimme,penaltyReason,waterDropRemaining}=result
   const overshoot=total-remaining
@@ -2231,7 +2232,7 @@ function ShotResultPanel({result,club,remaining,onContinue,isBunker}:{
     : overshoot>0          ? `${overshoot} yds past the flag — playing from other side`
     : `${remaining-total} yds remaining`
 
-  const btnLabel = isWater?'Take Drop →':isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Finish Hole →':'Next Shot →'
+  const btnLabel = isDaily?'Finish Challenge →':isWater?'Take Drop →':isOOB?'Retake Shot →':isBunker?'Face the Bunker Question →':(isHoled||isGimme)?'Finish Hole →':'Next Shot →'
 
   return(
     <div style={{flex:1,background:'#1e2d4a',borderRadius:12,padding:'14px 16px',display:'flex',flexDirection:'column',gap:10}}>
@@ -2470,8 +2471,9 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
     : null
 
   return(
-    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <div style={{maxWidth:430,margin:'0 auto',display:'flex',flexDirection:'column'}}>
       <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:'0 0 16px 0'}}>← Back</button>
 
       <div style={{textAlign:'center',marginBottom:20}}>
@@ -2527,6 +2529,7 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
             </div>
           )
         })}
+      </div>
       </div>
     </div>
   )
