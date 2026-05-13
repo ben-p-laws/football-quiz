@@ -513,7 +513,7 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function FootballGolf(){
-  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'>('setup')
+  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'>('setup')
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('random')
   const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
@@ -557,6 +557,14 @@ export default function FootballGolf(){
   const [pastPin,setPastPin]             = useState(false)
   const [holeResult,setHoleResult]       = useState<{label:string;color:string;diff:number}|null>(null)
   const normalisedNames = useRef<string[]>([])
+
+  // ── Daily challenge state ───────────────────────────────────────────────────
+  type DailyEntry = { player_name:string; distance_from_pin:number|null; is_oob:boolean }
+  const [dailyMode, setDailyMode]     = useState(false)
+  const [dailyDate, setDailyDate]     = useState('')
+  const [dailyPlayerName, setDailyPlayerName] = useState('')
+  const [dailyLeaderboard, setDailyLeaderboard] = useState<DailyEntry[]>([])
+  const [dailyResult, setDailyResult] = useState<{distanceFromPin:number|null;isOob:boolean}|null>(null)
 
   // ── H2H multiplayer state ───────────────────────────────────────────────────
   const [h2hStep, setH2HStep] = useState<H2HStep>('off')
@@ -747,6 +755,36 @@ export default function FootballGolf(){
     setShotResult(null)
     setPastPin(false)
     setQuestion(nextPickedCategory(hs[0].distance, hs[0].isIsland ? hs[0].distance - 20 : undefined))
+    resetInputs()
+    setPhase('playing')
+  }
+
+  async function startDailyChallenge(playerName: string) {
+    const today = new Date().toISOString().slice(0,10)
+    const resp = await fetch(`/api/golf-daily?date=${today}&playerName=${encodeURIComponent(playerName)}`)
+    const data = await resp.json()
+    setDailyDate(today)
+    setDailyPlayerName(playerName)
+    setDailyLeaderboard(data.leaderboard ?? [])
+    if (data.alreadyPlayed) { setPhase('daily-done'); return }
+    const dist: number = data.distance
+    const dz = Math.round(dist * 0.34)
+    const hole: Hole = {
+      number:1, par:3, distance:dist,
+      hazard:{start:25, end:dist-20},
+      bunkers:[], path:RANDOM_PATHS[0],
+      isIsland:true, dropZoneYards:dz,
+    }
+    setHoles([hole])
+    setHoleIdx(0)
+    setScores([])
+    setRemaining(dist)
+    setStrokes(0)
+    setShotResult(null)
+    setPastPin(false)
+    setDailyResult(null)
+    setDailyMode(true)
+    setQuestion(data.category as Category)
     resetInputs()
     setPhase('playing')
   }
@@ -976,6 +1014,21 @@ export default function FootballGolf(){
 
   function advanceFromResult(){
     if(!shotResult||!currentHole) return
+
+    if(dailyMode){
+      const distFromPin = shotResult.isOOB ? null : Math.abs(remaining - shotResult.total)
+      const isOob = shotResult.isOOB
+      const res = {distanceFromPin: isOob ? null : Math.round(distFromPin!), isOob}
+      setDailyResult(res)
+      setShotResult(null)
+      fetch('/api/golf-daily',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({date:dailyDate,playerName:dailyPlayerName,distanceFromPin:res.distanceFromPin,isOob})
+      }).then(r=>r.json()).then(d=>{ if(d.leaderboard) setDailyLeaderboard(d.leaderboard) }).catch(()=>{})
+      setDailyMode(false)
+      setPhase('daily-done')
+      return
+    }
+
     const penaltyStrokes = shotResult.isOOB ? 1 : 0
     const newStrokes=strokes+1+penaltyStrokes
 
@@ -1418,8 +1471,10 @@ export default function FootballGolf(){
     </>)
   }
 
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
+  if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
+  if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
   if(!currentHole) return null
 
   // Keep ball at landing spot while result/bunker panel is open; only reset to actual pos after advancing
@@ -2240,11 +2295,11 @@ const REAL_COURSES = [
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart,onH2H,onJoin}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart,onH2H,onJoin,onDaily}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
-  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void; onH2H:()=>void; onJoin:()=>void
+  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
   const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
@@ -2261,6 +2316,16 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           Name PL players to hit the green.<br/>Their combined stat = your shot distance.
         </div>
       </div>
+
+      {/* Daily challenge card */}
+      <button onClick={onDaily} style={{width:'100%',maxWidth:300,background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:'2px solid #3b82f6',borderRadius:14,padding:'14px 18px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:14}}>
+        <div style={{fontSize:28,lineHeight:1}}>⛳</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:900,color:'white'}}>Daily Challenge</div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:2}}>Closest to the pin · new hole every day</div>
+        </div>
+        <div style={{fontSize:13,fontWeight:800,color:'#3b82f6'}}>→</div>
+      </button>
 
       {/* Mode tabs */}
       <div style={{width:'100%',maxWidth:300,background:'#111827',borderRadius:12,padding:4,display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
@@ -2345,6 +2410,124 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
             </button>
           </div>
       }
+    </div>
+  )
+}
+
+// ── Daily challenge screens ────────────────────────────────────────────────────
+
+function DailySetupScreen({onPlay,onBack}:{onPlay:(name:string)=>void;onBack:()=>void}){
+  const [name,setName] = useState('')
+  const [loading,setLoading] = useState(false)
+  const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
+  function submit(){
+    const n=name.trim()
+    if(!n) return
+    setLoading(true)
+    onPlay(n)
+  }
+  return(
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:32,marginBottom:8}}>⛳</div>
+        <div style={{fontSize:26,fontWeight:900,color:'white',letterSpacing:'-0.5px'}}>Daily Challenge</div>
+        <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6}}>{today}</div>
+      </div>
+      <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:14,padding:'16px 20px',width:'100%',maxWidth:320,textAlign:'center'}}>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:6,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em'}}>Today's Hole</div>
+        <div style={{fontSize:15,fontWeight:800,color:'white'}}>Par 3 · Island Green</div>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>One tee shot · closest to the pin wins</div>
+      </div>
+      <div style={{width:'100%',maxWidth:320}}>
+        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Your name</div>
+        <input
+          value={name} onChange={e=>setName(e.target.value)}
+          onKeyDown={e=>e.key==='Enter'&&submit()}
+          placeholder="Enter your name…"
+          style={{width:'100%',background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'13px 14px',fontSize:15,color:'white',fontFamily:'inherit',outline:'none'}}
+        />
+      </div>
+      <button onClick={submit} disabled={!name.trim()||loading}
+        style={{background:name.trim()&&!loading?'#3b82f6':'#1e2d4a',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:name.trim()&&!loading?'pointer':'default',fontFamily:'inherit',transition:'background 0.15s'}}>
+        {loading?'Loading…':'Tee Off →'}
+      </button>
+    </div>
+  )
+}
+
+type DailyEntry = { player_name:string; distance_from_pin:number|null; is_oob:boolean }
+
+function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
+  result:{distanceFromPin:number|null;isOob:boolean}|null
+  leaderboard:DailyEntry[]; playerName:string; distance:number; onBack:()=>void
+}){
+  const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
+  const myEntry = leaderboard.find(e=>e.player_name===playerName)
+  const myRank  = myEntry && !myEntry.is_oob
+    ? leaderboard.filter(e=>!e.is_oob).findIndex(e=>e.player_name===playerName)+1
+    : null
+
+  return(
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:'0 0 16px 0'}}>← Back</button>
+
+      <div style={{textAlign:'center',marginBottom:20}}>
+        <div style={{fontSize:24,fontWeight:900,color:'white'}}>⛳ Daily Challenge</div>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.35)',marginTop:4}}>{today}</div>
+      </div>
+
+      {/* My result card */}
+      {result && (
+        <div style={{background:'#111827',border:`2px solid ${result.isOob?'#ef4444':'#3b82f6'}`,borderRadius:14,padding:'18px 20px',marginBottom:20,textAlign:'center'}}>
+          {result.isOob ? (
+            <>
+              <div style={{fontSize:28,marginBottom:6}}>💧</div>
+              <div style={{fontSize:18,fontWeight:900,color:'#ef4444'}}>In the water</div>
+              <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:4}}>Better luck tomorrow</div>
+            </>
+          ) : (
+            <>
+              <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em'}}>Your result</div>
+              <div style={{fontSize:36,fontWeight:900,color:'#3b82f6'}}>{result.distanceFromPin} yds</div>
+              <div style={{fontSize:13,color:'rgba(255,255,255,0.5)',marginTop:4}}>from the pin</div>
+              {myRank && <div style={{marginTop:8,fontSize:13,fontWeight:800,color:'#22c55e'}}>#{myRank} on today's leaderboard</div>}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Already played banner (no fresh result) */}
+      {!result && (
+        <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:14,padding:'14px 20px',marginBottom:20,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.5)'}}>You've already played today — come back tomorrow!</div>
+          {myEntry && !myEntry.is_oob && <div style={{fontSize:22,fontWeight:900,color:'#3b82f6',marginTop:6}}>{myEntry.distance_from_pin} yds from the pin</div>}
+          {myEntry?.is_oob && <div style={{fontSize:22,fontWeight:900,color:'#ef4444',marginTop:6}}>💧 In the water</div>}
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      <div style={{fontWeight:800,fontSize:13,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Leaderboard</div>
+      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+        {leaderboard.length===0 && <div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
+        {leaderboard.map((e,i)=>{
+          const isMe = e.player_name===playerName
+          const rank = !e.is_oob ? leaderboard.filter(x=>!x.is_oob).indexOf(e)+1 : null
+          return(
+            <div key={i} style={{background:isMe?'rgba(59,130,246,0.1)':'#111827',border:`1px solid ${isMe?'rgba(59,130,246,0.4)':'#1e2d4a'}`,borderRadius:10,padding:'11px 14px',display:'flex',alignItems:'center',gap:12}}>
+              <div style={{width:28,fontSize:14,fontWeight:900,color:rank===1?'#fbbf24':rank===2?'#9ca3af':rank===3?'#cd7c2f':'rgba(255,255,255,0.3)',textAlign:'center'}}>
+                {e.is_oob ? '💧' : `#${rank}`}
+              </div>
+              <div style={{flex:1,fontSize:14,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.player_name}</div>
+              <div style={{fontSize:14,fontWeight:900,color:e.is_oob?'#ef4444':'#3b82f6'}}>
+                {e.is_oob ? 'OOB' : `${e.distance_from_pin} yds`}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
