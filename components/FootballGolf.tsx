@@ -1864,41 +1864,6 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
         </>}
 
-        {/* Sponsor boards — behind flag/ball/labels */}
-        {(()=>{
-          const bW  = imageUrl ? 23   : 14.5
-          const bH  = imageUrl ? 6    : 3.8
-          const aW  = imageUrl ? 3.2  : 2.0   // red accent stripe width
-          const fs  = imageUrl ? 4.6  : 2.9
-          const pH  = imageUrl ? 5.5  : 3.5   // post height
-          const pW  = imageUrl ? 0.45 : 0.3
-          const rx  = imageUrl ? 1.2  : 0.75
-
-          function Board({bx,by}:{bx:number;by:number}){
-            const clampX = Math.min(Math.max(bx, bW/2+1), 99-bW/2)
-            return (
-              <g>
-                <rect x={clampX-pW/2} y={by+bH/2} width={pW} height={pH} fill="rgba(160,160,160,0.5)"/>
-                <rect x={clampX-bW/2} y={by-bH/2} width={bW} height={bH} rx={rx} fill="white" opacity={0.92}/>
-                <rect x={clampX-bW/2} y={by-bH/2} width={aW} height={bH} rx={rx} fill="#dc2626" opacity={0.92}/>
-                <text x={clampX-bW/2+aW+((bW-aW)/2)} y={by+fs*0.37} fontSize={fs} fill="#111827" textAnchor="middle" fontWeight="800" fontFamily="system-ui,sans-serif">TopBinsFooty.com</text>
-              </g>
-            )
-          }
-
-          // Board 1: beside the green / flag
-          const g1X = holePos.x + bW * 0.75
-          const g1Y = holePos.y + (imageUrl ? 14 : 9)
-
-          // Board 2: mid-fairway, opposite side to board 1
-          const mid = yardToSVG(hole.distance * 0.52, hole.distance, effectivePath)
-          const side = mid.x > 50 ? -1 : 1
-          const g2X = mid.x + side * bW * 0.8
-          const g2Y = mid.y + (imageUrl ? 3 : 2)
-
-          return <><Board bx={g1X} by={g1Y}/><Board bx={g2X} by={g2Y}/></>
-        })()}
-
         {/* Flag — always shown so players know where the pin sits in the SVG */}
         <circle cx={holePos.x} cy={holePos.y} r={2.8} fill="#0a0f1e"/>
         <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-17} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
