@@ -1844,7 +1844,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Island green: rounded-rect water with wavy sides */}
         {!imageUrl && hole.isIsland && (()=>{
           const x1=18, x2=82
-          const yT=holePos.y-26, yB=teePos.y-8
+          const islandR = Math.round((20 / hole.distance) * 131)
+          const yT=holePos.y-(islandR+8), yB=teePos.y-8
           const r=12   // large corner radius
           const amp=2  // gentle wave amplitude on straight sections
           const eL=x2-r-(x1+r)  // usable horizontal edge length
@@ -1936,9 +1937,19 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           </g>
         )}
         {!imageUrl && <>
-          {hole.isIsland && <circle cx={holePos.x} cy={holePos.y} r={17} fill="#c8a96e" opacity={0.7}/>}
-          <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
-          <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
+          {hole.isIsland && (()=>{
+            // Scale green/shore radii so they visually match the 20-yd safe landing zone
+            const islandR = Math.round((20 / hole.distance) * 131)
+            return <>
+              <circle cx={holePos.x} cy={holePos.y} r={islandR + 2} fill="#c8a96e" opacity={0.7}/>
+              <circle cx={holePos.x} cy={holePos.y} r={Math.max(8, islandR - 3)} fill="#16a34a"/>
+              <circle cx={holePos.x} cy={holePos.y} r={Math.max(5, islandR - 6)} fill="#22c55e" opacity={0.6}/>
+            </>
+          })()}
+          {!hole.isIsland && <>
+            <circle cx={holePos.x} cy={holePos.y} r={11} fill="#16a34a"/>
+            <circle cx={holePos.x} cy={holePos.y} r={8} fill="#22c55e" opacity={0.6}/>
+          </>}
         </>}
 
         {/* Flag — always shown so players know where the pin sits in the SVG */}
