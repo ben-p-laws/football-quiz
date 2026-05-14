@@ -261,6 +261,10 @@ const BORDERS: Record<string, string[]> = {
 // UK nations share ISO 826 on the map — handle them as a group
 const UK_NATIONS = new Set(['ENG', 'SCO', 'WAL', 'NIR'])
 
+// Normalise variant FIFA codes used in player DB → our internal codes
+const NAT_NORM: Record<string, string> = { RSA: 'ZAF' }
+function normNat(nat: string) { return NAT_NORM[nat] ?? nat }
+
 function routeIsValid(countries: string[]): boolean {
   for (let i = 0; i < countries.length - 1; i++) {
     const a = countries[i], b = countries[i + 1]
@@ -482,8 +486,9 @@ export default function AroundTheWorld() {
     if (!players) return {} as Record<string, ATWPlayer[]>
     const m: Record<string, ATWPlayer[]> = {}
     for (const p of players) {
-      if (!m[p.nat]) m[p.nat] = []
-      m[p.nat].push(p)
+      const nat = normNat(p.nat)
+      if (!m[nat]) m[nat] = []
+      m[nat].push(p)
     }
     return m
   }, [players])
@@ -544,8 +549,8 @@ export default function AroundTheWorld() {
     const p = playerByName[norm2(trimmed)] ?? players!.find(pl => norm2(pl.name) === norm2(trimmed))
     const currentCode = route.countries[step]
     if (!p) { setFailReason(`"${trimmed}" not found in the PL database`); setPhase('failed'); return }
-    if (p.nat !== currentCode) {
-      const got  = COUNTRY_NAMES[p.nat]  ?? p.nat
+    if (normNat(p.nat) !== currentCode) {
+      const got  = COUNTRY_NAMES[normNat(p.nat)]  ?? p.nat
       const need = COUNTRY_NAMES[currentCode] ?? currentCode
       setFailReason(`${p.name} is from ${got} — you needed a player from ${need}`)
       setPhase('failed'); return
@@ -603,8 +608,8 @@ export default function AroundTheWorld() {
     if (!trimmed) return
     const p = playerByName[norm2(trimmed)] ?? players.find(pl => norm2(pl.name) === norm2(trimmed))
     if (!p) { setCntFail(`"${trimmed}" not found in the PL database`); setPhase('failed'); return }
-    if (p.nat !== cntSelected) {
-      const got  = COUNTRY_NAMES[p.nat]  ?? p.nat
+    if (normNat(p.nat) !== cntSelected) {
+      const got  = COUNTRY_NAMES[normNat(p.nat)]  ?? p.nat
       const need = COUNTRY_NAMES[cntSelected] ?? cntSelected
       setCntFail(`${p.name} is from ${got} — you needed a player from ${need}`); setPhase('failed'); return
     }
