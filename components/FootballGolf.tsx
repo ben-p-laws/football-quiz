@@ -533,6 +533,7 @@ export default function FootballGolf(){
   const metaContClubPairs = useRef<[string,string][]>([])
   const top3CacheRef     = useRef<Record<string,number>|null>(null)
   const [metaReady, setMetaReady] = useState(false)
+  const [showRules, setShowRules] = useState(false)
   const [playerInputs,setPlayerInputs]   = useState(['','',''])
   const [suggestions,setSuggestions]     = useState<string[][]>([[],[],[]])
   const [confirmedPlayers,setConfirmedPlayers] = useState<(string|null)[]>([null,null,null])
@@ -756,6 +757,7 @@ export default function FootballGolf(){
     setPastPin(false)
     setQuestion(nextPickedCategory(hs[0].distance, hs[0].isIsland ? hs[0].distance - 20 : undefined))
     resetInputs()
+    if (!localStorage.getItem('golf_rules_seen')) setShowRules(true)
     setPhase('playing')
   }
 
@@ -799,6 +801,7 @@ export default function FootballGolf(){
     setDailyMode(true)
     setQuestion(data.category as Category)
     resetInputs()
+    if (!localStorage.getItem('golf_rules_seen')) setShowRules(true)
     setPhase('playing')
   }
 
@@ -1519,6 +1522,30 @@ export default function FootballGolf(){
         .hole-result-pop { animation: holeResultIn 3s ease-in-out forwards; }
       `}</style>
       <NavBar />
+
+      {/* ── Rules overlay ── */}
+      {showRules && (
+        <div onClick={()=>{setShowRules(false);localStorage.setItem('golf_rules_seen','1')}} style={{position:'fixed',inset:0,zIndex:1200,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:16,padding:'24px 24px 20px',maxWidth:340,width:'100%',fontFamily:"'DM Sans',sans-serif"}}>
+            <div style={{fontSize:17,fontWeight:900,color:'white',marginBottom:16}}>How to play</div>
+            {([
+              ['👥','Pick up to 3 players per shot'],
+              ['⚽','Their combined stat = shot distance in yards'],
+              ['🏌️','Driver is capped at 300 yds — anything over is OOB'],
+              ['🎯','Land within 5 yards of the pin = auto gimme'],
+            ] as const).map(([icon,text],i)=>(
+              <div key={i} style={{display:'flex',alignItems:'flex-start',gap:12,marginBottom:12}}>
+                <div style={{fontSize:20,lineHeight:1.2,flexShrink:0}}>{icon}</div>
+                <div style={{fontSize:14,color:'rgba(255,255,255,0.75)',lineHeight:1.45}}>{text}</div>
+              </div>
+            ))}
+            <button onClick={()=>{setShowRules(false);localStorage.setItem('golf_rules_seen','1')}} style={{marginTop:4,width:'100%',background:'#dc2626',color:'white',border:'none',borderRadius:10,padding:'12px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+              Got it →
+            </button>
+          </div>
+        </div>
+      )}
+
       {holeResult && (
         <div style={{position:'fixed',inset:0,zIndex:999,pointerEvents:h2hFinishHoleReady?'auto':'none',background:h2hFinishHoleReady?'rgba(0,0,0,0.6)':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>
           <div className={h2hFinishHoleReady?undefined:'hole-result-pop'} style={{
@@ -1594,8 +1621,11 @@ export default function FootballGolf(){
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
                   Hole {currentHole.number} · Par {currentHole.par}
                 </div>
-                <div style={{fontSize:13,fontWeight:800,color:'white',background:'#1e2d4a',borderRadius:6,padding:'2px 8px'}}>
-                  Shot {strokes + 1}
+                <div style={{display:'flex',alignItems:'center',gap:6}}>
+                  <div style={{fontSize:13,fontWeight:800,color:'white',background:'#1e2d4a',borderRadius:6,padding:'2px 8px'}}>
+                    Shot {strokes + 1}
+                  </div>
+                  <button onClick={()=>setShowRules(true)} style={{width:24,height:24,borderRadius:'50%',background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:13,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',flexShrink:0}}>?</button>
                 </div>
               </div>
               <div style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1.1}}>
@@ -2328,10 +2358,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
       <div style={{textAlign:'center'}}>
         <div style={{fontSize:30,fontWeight:900,color:'white',letterSpacing:'-0.5px'}}>Football Golf</div>
-        <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6,lineHeight:1.5}}>
-          Name PL players to hit the green.<br/>Their combined stat = your shot distance.
-        </div>
       </div>
+
 
       {/* Daily challenge card */}
       {(()=>{
