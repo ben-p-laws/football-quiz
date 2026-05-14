@@ -5,15 +5,15 @@ import { useEffect, useState } from 'react'
 
 const LINKS = [
   { label: 'Games',                href: '/' },
-  { label: 'Bingo',                href: '/bingo' },
-  { label: 'Tenable',              href: '/tenables' },
-  { label: 'Stat Clash',           href: '/stat-clash' },
-  { label: 'Minimise',             href: '/minimise' },
-  { label: 'Countdown',            href: '/countdown' },
-  { label: 'Teammates',            href: '/teammates' },
-  { label: 'Grid',                 href: '/grid' },
   { label: 'Football Golf',        href: '/football-golf' },
+  { label: 'Minimise',             href: '/minimise' },
   { label: 'Around the World',     href: '/around-the-world' },
+  { label: 'Bingo',                href: '/bingo' },
+  { label: 'Stat Clash',           href: '/stat-clash' },
+  { label: 'Tenable',              href: '/tenables' },
+  { label: 'Grid',                 href: '/grid' },
+  { label: 'Teammates',            href: '/teammates' },
+  { label: 'Countdown',            href: '/countdown' },
 ]
 
 const LOGO = (
