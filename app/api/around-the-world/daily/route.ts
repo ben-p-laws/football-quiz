@@ -57,7 +57,8 @@ async function getDailyConfig(date: string) {
   const route = valid[Math.floor(rand() * valid.length)]
   const stat  = STAT_KEYS[Math.floor(rand() * STAT_KEYS.length)]
   const modes = ['easy', 'medium', 'hard'] as const
-  const mode  = modes[Math.floor(rand() * modes.length)]
+  const modeRoll = rand()  // always consume so target seed stays consistent
+  const mode  = date >= '2026-05-15' ? 'easy' : modes[Math.floor(modeRoll * modes.length)]
 
   const mp = route.countries.reduce((sum, code) => {
     const ps = playersByNat[code] ?? []
