@@ -175,6 +175,13 @@ type LeaderboardEntry = {
   mode:        string
 }
 
+type MineLbEntry = {
+  player_name: string
+  lives_lost:  number
+  won:         boolean
+  continent:   string
+}
+
 // Adjacency: each country lists its valid neighbours (FIFA codes)
 // Used to validate routes and reject any with non-bordering consecutive pairs
 const BORDERS: Record<string, string[]> = {
@@ -262,7 +269,7 @@ const BORDERS: Record<string, string[]> = {
 const UK_NATIONS = new Set(['ENG', 'SCO', 'WAL', 'NIR'])
 
 // Normalise variant FIFA codes used in player DB → our internal codes
-const NAT_NORM: Record<string, string> = { RSA: 'ZAF' }
+const NAT_NORM: Record<string, string> = { RSA: 'ZAF', TOG: 'TGO' }
 function normNat(nat: string) { return NAT_NORM[nat] ?? nat }
 
 function routeIsValid(countries: string[]): boolean {
@@ -308,8 +315,58 @@ const CONTINENT_PROJ: Record<string, { center: [number, number]; scale: number }
   europe:    { center: [10,  50],  scale: 1050 },
   africa:    { center: [20,   2],  scale: 360 },
   s_america: { center: [-58, -21], scale: 420 },
-  n_america: { center: [-90,  35], scale: 460 },  // top edge ~66°N — Arctic islands off-screen
-  asia:      { center: [90,  25],  scale: 300 },  // centre between Middle East & Japan/SEA
+  n_america: { center: [-90,  35], scale: 460 },
+  asia:      { center: [90,  25],  scale: 300 },
+}
+
+// ── Minefield constants ────────────────────────────────────────────
+type MineCategory =
+  | { kind: 'statThreshold'; stat: StatKey; threshold: number }
+  | { kind: 'playedFor';     team: string }
+  | { kind: 'scoredFor';     team: string }
+
+const MINE_STATS: StatKey[] = ['goals', 'goalsAssists', 'games', 'yellowCards']
+const MINE_THRESHOLDS: Record<StatKey, number[]> = {
+  goals:        [5, 10, 15, 20, 30, 50, 75, 100, 150],
+  goalsAssists: [10, 20, 30, 50, 75, 100, 150, 200],
+  games:        [50, 100, 150, 200, 250, 300],
+  yellowCards:  [5, 10, 20, 30, 50],
+}
+const MINE_TEAMS = [
+  'Arsenal','Chelsea','Liverpool','Manchester City','Manchester Utd',
+  'Tottenham','Everton','Aston Villa','Newcastle','West Ham',
+  'Leicester','Southampton','Leeds','Wolves','Crystal Palace',
+  'Fulham','Sunderland','Middlesbrough','Blackburn','Bolton',
+  'Burnley','Sheffield Utd','Stoke','Swansea','West Brom',
+  'Watford','Brighton','Bournemouth','Norwich','Wigan',
+  'Ipswich','Charlton','Portsmouth','Derby','Reading',
+]
+const TEAM_DISPLAY: Record<string, string> = {
+  'Manchester Utd': 'Manchester United',
+  'QPR':            'Queens Park Rangers',
+  'Sheffield Weds': 'Sheffield Wednesday',
+  'Brighton':       'Brighton & Hove Albion',
+  'West Brom':      'West Bromwich Albion',
+}
+function displayTeam(t: string) { return TEAM_DISPLAY[t] ?? t }
+
+function mineCategoryMatches(p: ATWPlayer, cat: MineCategory): boolean {
+  if (cat.kind === 'statThreshold') return statVal(p, cat.stat) >= cat.threshold
+  if (cat.kind === 'playedFor')     return p.teams.includes(cat.team)
+  if (cat.kind === 'scoredFor')     return (p.teamGoals[cat.team] ?? 0) >= 1
+  return false
+}
+function mineCategoryBannerLabel(cat: MineCategory): string {
+  if (cat.kind === 'statThreshold') return `${cat.threshold}+ ${STAT_LABELS[cat.stat]}`
+  if (cat.kind === 'playedFor')     return `Played for ${displayTeam(cat.team)}`
+  if (cat.kind === 'scoredFor')     return `Scored for ${displayTeam(cat.team)}`
+  return ''
+}
+function mineSummaryText(cat: MineCategory): string {
+  if (cat.kind === 'statThreshold') return `with a player who has ${cat.threshold}+ ${STAT_LABELS[cat.stat].toLowerCase()}`
+  if (cat.kind === 'playedFor')     return `with a player who has played for ${displayTeam(cat.team)}`
+  if (cat.kind === 'scoredFor')     return `with a player who has scored for ${displayTeam(cat.team)}`
+  return ''
 }
 
 function DailyEndPanel({ phase, pct, runningTotal, target, mode, playerName, setPlayerName, scoreSubmitted, onSubmit, leaderboard, onPlayMore }: {
@@ -365,6 +422,56 @@ function DailyEndPanel({ phase, pct, runningTotal, target, mode, playerName, set
   )
 }
 
+function MineDailyEndPanel({ won, livesLost, playerName, setPlayerName, scoreSubmitted, onSubmit, leaderboard, onPlayMore }: {
+  won: boolean; livesLost: number;
+  playerName: string; setPlayerName: (v: string) => void;
+  scoreSubmitted: boolean; onSubmit: () => void;
+  leaderboard: MineLbEntry[]; onPlayMore: () => void;
+}) {
+  const sorted = [...leaderboard].sort((a, b) => {
+    if (a.won !== b.won) return a.won ? -1 : 1
+    return a.lives_lost - b.lives_lost
+  })
+  const lifeColor = (l: number) => l === 0 ? '#4ade80' : l === 1 ? '#22c55e' : l === 2 ? '#eab308' : '#ef4444'
+  return (
+    <div style={{ marginTop: 8 }}>
+      {!scoreSubmitted ? (
+        <div style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid #2a3d5e', borderRadius: 10, padding: '16px 20px', marginBottom: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#8899bb', marginBottom: 10 }}>Submit your score to the leaderboard</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={playerName}
+              onChange={e => setPlayerName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && playerName.trim()) onSubmit() }}
+              placeholder="Your name…"
+              style={{ flex: 1, background: '#111827', border: '1px solid #2a3d5e', borderRadius: 6, padding: '8px 12px', color: 'white', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+            />
+            <button onClick={onSubmit} disabled={!playerName.trim()} style={{ padding: '8px 18px', background: playerName.trim() ? '#dc2626' : '#2a3d5e', color: 'white', border: 'none', borderRadius: 6, fontWeight: 800, fontSize: 13, cursor: playerName.trim() ? 'pointer' : 'default' }}>Submit</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Today&apos;s Leaderboard</div>
+          {sorted.length === 0
+            ? <p style={{ color: '#4a5568', fontSize: 13 }}>No scores yet.</p>
+            : sorted.map((e, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', marginBottom: 4, background: e.player_name === playerName ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${e.player_name === playerName ? '#7f1d1d' : '#1e2d4a'}`, borderRadius: 6 }}>
+                <span style={{ fontSize: 11, color: '#4a5568', width: 20 }}>{i + 1}.</span>
+                <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
+                <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: lifeColor(e.lives_lost) }}>
+                  {e.lives_lost === 0 ? 'Perfect' : `${e.lives_lost} mistake${e.lives_lost !== 1 ? 's' : ''}`}
+                </span>
+              </div>
+            ))
+          }
+        </div>
+      )}
+      <button onClick={onPlayMore} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Play More →</button>
+    </div>
+  )
+}
+
 export default function AroundTheWorld() {
   const [mounted,    setMounted]    = useState(false)
   const [players,    setPlayers]    = useState<ATWPlayer[] | null>(null)
@@ -389,6 +496,24 @@ export default function AroundTheWorld() {
   const [cntDailyScoreSubmitted,setCntDailyScoreSubmitted]= useState(false)
   const [showCntLobbyLb,        setShowCntLobbyLb]        = useState(false)
 
+  // Minefield state
+  const [mineContinent,         setMineContinent]         = useState('')
+  const [mineCategory,          setMineCategory]          = useState<MineCategory | null>(null)
+  const [mineTargets,           setMineTargets]           = useState<Set<string>>(new Set())
+  const [minePicked,            setMinePicked]            = useState<Record<string, { player: string; val: number | null; count: number }>>({})
+  const [mineWrong,             setMineWrong]             = useState<string[]>([])
+  const [mineLivesLost,         setMineLivesLost]         = useState(0)
+  const [minePending,           setMinePending]           = useState<string | null>(null)
+  const [mineAllCountries,      setMineAllCountries]      = useState<string[]>([])
+  // Minefield daily state
+  const [mineDailyLoading,      setMineDailyLoading]      = useState(false)
+  const [mineDailyErr,          setMineDailyErr]          = useState(false)
+  const [mineAlreadyPlayed,     setMineAlreadyPlayed]     = useState(false)
+  const [mineDailyLeaderboard,  setMineDailyLeaderboard]  = useState<MineLbEntry[]>([])
+  const [mineDailyPlayerName,   setMineDailyPlayerName]   = useState('')
+  const [mineDailyScoreSubmitted,setMineDailyScoreSubmitted] = useState(false)
+  const [showMineLobbyLb,       setShowMineLobbyLb]       = useState(false)
+
   const [phase,      setPhase]      = useState<Phase>('setup')
   const [route,      setRoute]      = useState<ATWRoute | null>(null)
   const [stat,       setStat]       = useState<StatKey>('goals')
@@ -402,7 +527,7 @@ export default function AroundTheWorld() {
   const [proj,       setProj]       = useState<{ center: [number, number]; scale: number }>({ center: [0, 20], scale: 160 })
 
   // Continent challenge state
-  const [challengeType,  setChallengeType]  = useState<'chain' | 'continent'>('chain')
+  const [challengeType,  setChallengeType]  = useState<'chain' | 'continent' | 'minefield'>('chain')
   const [cntContinent,   setCntContinent]   = useState('')
   const [cntCountries,   setCntCountries]   = useState<string[]>([])  // full continent pool
   const [cntNeeded,      setCntNeeded]      = useState(0)              // how many to fill
@@ -430,8 +555,9 @@ export default function AroundTheWorld() {
   useEffect(() => {
     if (!mounted) return
     const today = new Date().toISOString().slice(0, 10)
-    if (localStorage.getItem(`atw_daily_${today}`))      setAlreadyPlayed(true)
+    if (localStorage.getItem(`atw_daily_${today}`))       setAlreadyPlayed(true)
     if (localStorage.getItem(`atw_cont_daily_${today}`)) setCntAlreadyPlayed(true)
+    if (localStorage.getItem(`atw_mine_daily_${today}`)) setMineAlreadyPlayed(true)
   }, [mounted])
 
   async function startDailyGame() {
@@ -534,6 +660,125 @@ export default function AroundTheWorld() {
       const data = await res.json()
       setCntDailyLeaderboard(data.leaderboard ?? [])
     } catch { /* silent */ }
+  }
+
+  function startMinefield() {
+    if (!players) return
+    const continents = ['europe', 'africa', 's_america']
+    const continent  = continents[Math.floor(Math.random() * continents.length)]
+    const pool = CONTINENT_POOL[continent]
+    const valid: Array<{ cat: MineCategory; targets: string[] }> = []
+    // Stat threshold categories
+    for (const s of MINE_STATS) {
+      for (const t of MINE_THRESHOLDS[s]) {
+        const targets = pool.filter(code => (playersByNat[code] ?? []).some(p => statVal(p, s) >= t))
+        if (targets.length >= 4) valid.push({ cat: { kind: 'statThreshold', stat: s, threshold: t }, targets })
+      }
+    }
+    // Team categories
+    for (const team of MINE_TEAMS) {
+      const played = pool.filter(code => (playersByNat[code] ?? []).some(p => p.teams.includes(team)))
+      if (played.length >= 4) valid.push({ cat: { kind: 'playedFor', team }, targets: played })
+      const scored = pool.filter(code => (playersByNat[code] ?? []).some(p => (p.teamGoals[team] ?? 0) >= 1))
+      if (scored.length >= 4) valid.push({ cat: { kind: 'scoredFor', team }, targets: scored })
+    }
+    if (!valid.length) { startMinefield(); return }
+    const pick = valid[Math.floor(Math.random() * valid.length)]
+    setChallengeType('minefield')
+    setMineContinent(continent); setMineAllCountries(pool)
+    setMineCategory(pick.cat)
+    setMineTargets(new Set(pick.targets))
+    setMinePicked({}); setMineWrong([]); setMineLivesLost(0); setMinePending(null)
+    setZoom(1); setProj(CONTINENT_PROJ[continent])
+    setPhase('playing')
+  }
+
+  async function startMinefieldDailyGame() {
+    if (!players) return
+    setMineDailyLoading(true); setMineDailyErr(false)
+    try {
+      const res  = await fetch('/api/around-the-world/minefield-daily')
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setMineDailyLeaderboard(data.leaderboard ?? [])
+      setMineDailyPlayerName(''); setMineDailyScoreSubmitted(false)
+      const pool = CONTINENT_POOL[data.continent as keyof typeof CONTINENT_POOL] ?? []
+      const cat: MineCategory = data.category
+      const targets = pool.filter((code: string) => (playersByNat[code] ?? []).some((p: ATWPlayer) => mineCategoryMatches(p, cat)))
+      setChallengeType('minefield')
+      setMineContinent(data.continent); setMineAllCountries(pool)
+      setMineCategory(cat)
+      setMineTargets(new Set(targets))
+      setMinePicked({}); setMineWrong([]); setMineLivesLost(0); setMinePending(null)
+      setMode('easy')
+      setZoom(1); setProj(CONTINENT_PROJ[data.continent] ?? { center: [0, 20], scale: 160 })
+      setGameMode('daily'); setPhase('playing')
+    } catch { setMineDailyErr(true) }
+    finally { setMineDailyLoading(false) }
+  }
+
+  async function submitMinefieldDailyScore(wonGame: boolean, livesLost: number) {
+    if (!mineDailyPlayerName.trim()) return
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      const res = await fetch('/api/around-the-world/minefield-daily', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, player_name: mineDailyPlayerName.trim(), lives_lost: livesLost, won: wonGame, continent: mineContinent }),
+      })
+      const d = await res.json()
+      setMineDailyLeaderboard(d.leaderboard ?? [])
+    } catch { /* silent */ }
+    setMineDailyScoreSubmitted(true)
+    localStorage.setItem(`atw_mine_daily_${today}`, JSON.stringify({ won: wonGame, livesLost }))
+    setMineAlreadyPlayed(true)
+  }
+
+  async function viewMinefieldDailyLeaderboard() {
+    setShowMineLobbyLb(true)
+    try {
+      const res  = await fetch('/api/around-the-world/minefield-daily')
+      const data = await res.json()
+      setMineDailyLeaderboard(data.leaderboard ?? [])
+    } catch { /* silent */ }
+  }
+
+  function handleMineClick(geoId: string | number) {
+    if (phase !== 'playing' || challengeType !== 'minefield') return
+    const n = norm(geoId)
+    let fifa: string | null = null
+    if (n === '826') {
+      const ukInGame = ['ENG','SCO','WAL','NIR'].filter(c => mineAllCountries.includes(c) && !minePicked[c] && !mineWrong.includes(c))
+      fifa = ukInGame[0] ?? null
+    } else {
+      const f = ISO_TO_FIFA[n]
+      if (f && mineAllCountries.includes(f) && !minePicked[f] && !mineWrong.includes(f)) fifa = f
+    }
+    if (!fifa) return
+    setMinePending(fifa)
+  }
+
+  function confirmMinePick() {
+    if (!minePending || !mineCategory) return
+    const ps = (playersByNat[minePending] ?? []).filter(p => mineCategoryMatches(p, mineCategory))
+    if (ps.length > 0) {
+      const best = ps.reduce((a, b) => {
+        if (mineCategory.kind === 'scoredFor') return (b.teamGoals[mineCategory.team] ?? 0) > (a.teamGoals[mineCategory.team] ?? 0) ? b : a
+        if (mineCategory.kind === 'statThreshold') return statVal(b, mineCategory.stat) > statVal(a, mineCategory.stat) ? b : a
+        return a
+      })
+      const val = mineCategory.kind === 'statThreshold' ? statVal(best, mineCategory.stat)
+        : mineCategory.kind === 'scoredFor' ? (best.teamGoals[mineCategory.team] ?? 0)
+        : null
+      const newPicked = { ...minePicked, [minePending]: { player: best.name, val, count: ps.length } }
+      setMinePicked(newPicked); setMinePending(null)
+      if (Object.keys(newPicked).length >= mineTargets.size) setPhase('won')
+    } else {
+      const newWrong     = [...mineWrong, minePending]
+      const newLivesLost = mineLivesLost + 1
+      setMineWrong(newWrong); setMineLivesLost(newLivesLost); setMinePending(null)
+      if (newLivesLost >= 3) setPhase('failed')
+    }
   }
 
   const playerByName = useMemo(() => {
@@ -805,6 +1050,61 @@ export default function AroundTheWorld() {
     return fifa ? 'pointer' : 'default'
   }
 
+  function mineGeoFill(id: string | number) {
+    const n = norm(id)
+    if (n === '826') {
+      const ukInGame = ['ENG','SCO','WAL','NIR'].filter(c => mineAllCountries.includes(c))
+      if (!ukInGame.length) return '#1a2d45'
+      if (ukInGame.some(c => minePicked[c]))          return 'rgba(34,197,94,0.32)'
+      if (ukInGame.some(c => mineWrong.includes(c)))  return 'rgba(239,68,68,0.30)'
+      if (ukInGame.some(c => c === minePending))      return 'rgba(245,158,11,0.30)'
+      return 'rgba(59,130,246,0.18)'
+    }
+    const fifa = ISO_TO_FIFA[n] ?? null
+    if (!fifa || !mineAllCountries.includes(fifa)) return '#1a2d45'
+    if (minePicked[fifa])          return 'rgba(34,197,94,0.32)'
+    if (mineWrong.includes(fifa))  return 'rgba(239,68,68,0.30)'
+    if (fifa === minePending)      return 'rgba(245,158,11,0.30)'
+    return 'rgba(59,130,246,0.18)'
+  }
+  function mineGeoStroke(id: string | number) {
+    const n = norm(id)
+    if (n === '826') {
+      const ukInGame = ['ENG','SCO','WAL','NIR'].filter(c => mineAllCountries.includes(c))
+      if (!ukInGame.length) return '#2e4a6a'
+      if (ukInGame.some(c => minePicked[c]))          return '#22c55e'
+      if (ukInGame.some(c => mineWrong.includes(c)))  return '#ef4444'
+      if (ukInGame.some(c => c === minePending))      return '#f59e0b'
+      return '#5b8fd4'
+    }
+    const fifa = ISO_TO_FIFA[n] ?? null
+    if (!fifa || !mineAllCountries.includes(fifa)) return '#2e4a6a'
+    if (minePicked[fifa])          return '#22c55e'
+    if (mineWrong.includes(fifa))  return '#ef4444'
+    if (fifa === minePending)      return '#f59e0b'
+    return '#5b8fd4'
+  }
+  function mineGeoStrokeW(id: string | number) {
+    const n = norm(id)
+    const fifa = n === '826'
+      ? (['ENG','SCO','WAL','NIR'].find(c => mineAllCountries.includes(c)) ?? null)
+      : (ISO_TO_FIFA[n] ?? null)
+    if (!fifa || !mineAllCountries.includes(fifa)) return 0.5
+    if (fifa === minePending || minePicked[fifa] || mineWrong.includes(fifa)) return 1.6
+    return 1.0
+  }
+  function mineGeoCursor(id: string | number) {
+    const n = norm(id)
+    let fifa: string | null = null
+    if (n === '826') {
+      fifa = ['ENG','SCO','WAL','NIR'].find(c => mineAllCountries.includes(c) && !minePicked[c] && !mineWrong.includes(c)) ?? null
+    } else {
+      const f = ISO_TO_FIFA[n]
+      if (f && mineAllCountries.includes(f) && !minePicked[f] && !mineWrong.includes(f)) fifa = f
+    }
+    return fifa ? 'pointer' : 'default'
+  }
+
   function scoreLabel() {
     const d = Math.abs(pct - 100)
     if (d === 0)  return '🎯 Bullseye!'
@@ -846,6 +1146,59 @@ export default function AroundTheWorld() {
               <div style={{ fontSize: 40, marginBottom: 8 }}>🌍</div>
               <h1 style={{ fontSize: 26, fontWeight: 900, color: 'white', margin: '0 0 6px' }}>Around the World in 80 Goals</h1>
               <p style={{ color: '#8899bb', margin: 0, fontSize: 14, lineHeight: 1.5 }}>Name PL players from across the globe and hit the target score to win.</p>
+            </div>
+
+            {/* ── Card 0: Minefield ── */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>💣 Minefield</div>
+                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Find every country hitting a stat threshold · 3 lives</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  disabled={mineDailyLoading || !players}
+                  onClick={mineAlreadyPlayed ? viewMinefieldDailyLeaderboard : startMinefieldDailyGame}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: `2px solid ${mineAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
+                    background: mineAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
+                    color: 'white', cursor: (mineDailyLoading || !players) ? 'default' : 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>{mineAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>{mineAlreadyPlayed ? 'View leaderboard' : mineDailyLoading ? 'Loading…' : today}</span>
+                </button>
+                <button
+                  onClick={() => { setChallengeType('minefield'); setGameMode('freeplay'); setPhase('setup') }}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: '2px solid #2a3d5e', background: 'transparent',
+                    color: '#c0cde0', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
+                </button>
+              </div>
+              {mineDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
+              {showMineLobbyLb && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Today&apos;s Leaderboard</div>
+                  {[...mineDailyLeaderboard].sort((a, b) => { if (a.won !== b.won) return a.won ? -1 : 1; return a.lives_lost - b.lives_lost }).length === 0
+                    ? <p style={{ color: '#4a5568', fontSize: 13, margin: 0 }}>No scores yet today.</p>
+                    : [...mineDailyLeaderboard].sort((a, b) => { if (a.won !== b.won) return a.won ? -1 : 1; return a.lives_lost - b.lives_lost }).map((e, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', marginBottom: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 6 }}>
+                        <span style={{ fontSize: 12, color: '#4a5568', width: 18 }}>{i + 1}.</span>
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
+                        <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: e.lives_lost === 0 ? '#4ade80' : e.lives_lost <= 2 ? '#22c55e' : '#ef4444' }}>
+                          {e.lives_lost === 0 ? 'Perfect' : `${e.lives_lost} mistake${e.lives_lost !== 1 ? 's' : ''}`}
+                        </span>
+                      </div>
+                    ))
+                  }
+                </div>
+              )}
             </div>
 
             {/* ── Card 1: Continent Challenge ── */}
@@ -964,9 +1317,18 @@ export default function AroundTheWorld() {
           <div style={{ textAlign: 'center', maxWidth: 520 }}>
             <div style={{ fontSize: 48, marginBottom: 12 }}>{challengeType === 'continent' ? '🌍' : '🔗'}</div>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: 'white', margin: '0 0 10px' }}>
-              {challengeType === 'continent' ? 'Continent Challenge' : 'Complete the Chain'}
+              {challengeType === 'continent' ? 'Continent Challenge' : challengeType === 'minefield' ? '💣 Minefield' : 'Complete the Chain'}
             </h1>
-            {challengeType === 'continent' ? (
+            {challengeType === 'minefield' ? (
+              <>
+                <p style={{ color: '#8899bb', marginBottom: 8, lineHeight: 1.6 }}>
+                  A continent, stat, and threshold are revealed. Find every country on the map where a player has hit that stat. 3 wrong picks and the game is over.
+                </p>
+                <p style={{ color: '#4a5568', fontSize: 12, marginBottom: 28 }}>
+                  Easy: country name shown on hover · Hard: no name — click blind
+                </p>
+              </>
+            ) : challengeType === 'continent' ? (
               <>
                 <p style={{ color: '#8899bb', marginBottom: 8, lineHeight: 1.6 }}>
                   A continent, stat, and target are chosen at random. Click any countries from that continent, name a PL player from each, and fill the required number to win.
@@ -1006,7 +1368,7 @@ export default function AroundTheWorld() {
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
               <button onClick={() => setGameMode('lobby')} style={{ padding: '14px 20px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>← Lobby</button>
-              <button onClick={challengeType === 'continent' ? startContinent : startGame} disabled={!players} style={{
+              <button onClick={challengeType === 'continent' ? startContinent : challengeType === 'minefield' ? startMinefield : startGame} disabled={!players} style={{
                 padding: '14px 44px', background: players ? '#dc2626' : '#2a3d5e',
                 color: 'white', border: 'none', borderRadius: 10,
                 fontSize: 16, fontWeight: 800, cursor: players ? 'pointer' : 'default',
@@ -1014,6 +1376,133 @@ export default function AroundTheWorld() {
                 {loadErr ? 'Failed to load — refresh' : !players ? 'Loading data…' : 'Start Game'}
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── MINEFIELD WON ─────────────────────────────────────────────────
+  if (phase === 'won' && challengeType === 'minefield') {
+    const rating = mineLivesLost === 0 ? { emoji: '💎', label: 'Perfect — no mistakes!' }
+      : mineLivesLost === 1 ? { emoji: '⭐', label: 'Great — 1 mistake' }
+      : { emoji: '👍', label: 'Good — 2 mistakes' }
+    return (
+      <div style={page}>
+        <NavBar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 24 }}>
+          <div style={{ ...WRAP, textAlign: 'center' as const, maxWidth: 560 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>{rating.emoji}</div>
+            <h2 style={{ fontSize: 24, fontWeight: 900, color: 'white', margin: '0 0 4px' }}>{rating.label}</h2>
+            <p style={{ color: '#8899bb', marginBottom: 24 }}>
+              Found all <strong style={{ color: 'white' }}>{mineTargets.size}</strong> countries in {CONTINENT_NAMES[mineContinent]} {mineCategory ? mineSummaryText(mineCategory) : ''}
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 28 }}>
+              {Object.entries(minePicked).map(([code, { player, val, count }], i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.25)', borderRadius: 8, padding: '8px 14px' }}>
+                  {flagImg(code, 18)}
+                  <span style={{ fontSize: 11, color: '#8899bb', width: 80, textAlign: 'left' as const }}>{COUNTRY_NAMES[code] ?? code}</span>
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'white', textAlign: 'left' as const }}>{player}{val !== null ? ` (${val})` : ''}</span>
+                  {count > 1 && <span style={{ fontSize: 11, color: '#4a5568' }}>+{count - 1} more</span>}
+                </div>
+              ))}
+            </div>
+            {gameMode === 'daily' ? (
+              <MineDailyEndPanel
+                won={true} livesLost={mineLivesLost}
+                playerName={mineDailyPlayerName} setPlayerName={setMineDailyPlayerName}
+                scoreSubmitted={mineDailyScoreSubmitted}
+                onSubmit={() => submitMinefieldDailyScore(true, mineLivesLost)}
+                leaderboard={mineDailyLeaderboard}
+                onPlayMore={() => { setGameMode('lobby'); setPhase('setup') }}
+              />
+            ) : (
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={startMinefield} style={{ padding: '12px 32px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Play Again</button>
+                <button onClick={() => setPhase('setup')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Change Mode</button>
+                <button onClick={() => setGameMode('lobby')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Lobby</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── MINEFIELD FAILED ──────────────────────────────────────────────
+  if (phase === 'failed' && challengeType === 'minefield') {
+    const remaining = [...mineTargets].filter(c => !minePicked[c] && !mineWrong.includes(c))
+    return (
+      <div style={page}>
+        <NavBar />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 24 }}>
+          <div style={{ ...WRAP, textAlign: 'center' as const, maxWidth: 520 }}>
+            <div style={{ fontSize: 48, marginBottom: 8 }}>💣</div>
+            <h2 style={{ fontSize: 22, fontWeight: 900, color: 'white', margin: '0 0 8px' }}>Game Over</h2>
+            <p style={{ color: '#ef4444', marginBottom: 16, fontSize: 14 }}>3 wrong picks — you hit a mine</p>
+            <p style={{ color: '#8899bb', fontSize: 13, marginBottom: 20 }}>
+              Found <strong style={{ color: 'white' }}>{Object.keys(minePicked).length}</strong> of <strong style={{ color: 'white' }}>{mineTargets.size}</strong> countries in {CONTINENT_NAMES[mineContinent]} {mineCategory ? mineSummaryText(mineCategory) : ''}
+            </p>
+            {mineWrong.length > 0 && (
+              <div style={{ marginBottom: 16, textAlign: 'left' as const }}>
+                <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 6 }}>Wrong picks:</div>
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' as const }}>
+                  {mineWrong.map((c, i) => {
+                    const ps = playersByNat[c] ?? []
+                    const best = mineCategory?.kind === 'statThreshold' && ps.length
+                      ? ps.reduce((a, b) => statVal(b, mineCategory.stat) > statVal(a, mineCategory.stat) ? b : a)
+                      : null
+                    return (
+                      <div key={i} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '4px 10px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        {flagImg(c, 14)}
+                        <span style={{ color: '#ef4444', fontWeight: 700 }}>{COUNTRY_NAMES[c] ?? c}</span>
+                        {best && mineCategory?.kind === 'statThreshold' && <span style={{ color: '#4a5568' }}>· best: {best.name} ({statVal(best, mineCategory.stat)})</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {remaining.length > 0 && (
+              <div style={{ marginBottom: 24, textAlign: 'left' as const }}>
+                <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 6 }}>Countries you missed:</div>
+                <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' as const }}>
+                  {remaining.map((c, i) => {
+                    const cat = mineCategory
+                    const ps  = (playersByNat[c] ?? []).filter(p => cat ? mineCategoryMatches(p, cat) : false)
+                    const best = ps.length ? ps.reduce((a, b) => {
+                      if (cat?.kind === 'scoredFor') return (b.teamGoals[cat.team] ?? 0) > (a.teamGoals[cat.team] ?? 0) ? b : a
+                      if (cat?.kind === 'statThreshold') return statVal(b, cat.stat) > statVal(a, cat.stat) ? b : a
+                      return a
+                    }) : null
+                    const bestVal = best && cat?.kind === 'statThreshold' ? statVal(best, cat.stat)
+                      : best && cat?.kind === 'scoredFor' ? (best.teamGoals[cat.team] ?? 0) : null
+                    return (
+                      <div key={i} style={{ background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 6, padding: '4px 10px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                        {flagImg(c, 14)}
+                        <span style={{ color: '#5b8fd4', fontWeight: 700 }}>{COUNTRY_NAMES[c] ?? c}</span>
+                        {best && <span style={{ color: '#4a5568' }}>· {best.name}{bestVal !== null ? ` (${bestVal})` : ''}</span>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {gameMode === 'daily' ? (
+              <MineDailyEndPanel
+                won={false} livesLost={3}
+                playerName={mineDailyPlayerName} setPlayerName={setMineDailyPlayerName}
+                scoreSubmitted={mineDailyScoreSubmitted}
+                onSubmit={() => submitMinefieldDailyScore(false, 3)}
+                leaderboard={mineDailyLeaderboard}
+                onPlayMore={() => { setGameMode('lobby'); setPhase('setup') }}
+              />
+            ) : (
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+                <button onClick={startMinefield} style={{ padding: '12px 32px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 8, fontWeight: 800, fontSize: 14, cursor: 'pointer' }}>Play Again</button>
+                <button onClick={() => setGameMode('lobby')} style={{ padding: '12px 32px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Lobby</button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -1128,6 +1617,147 @@ export default function AroundTheWorld() {
               </div>
             )}
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── MINEFIELD PLAYING ─────────────────────────────────────────────
+  if (phase === 'playing' && challengeType === 'minefield') {
+    const foundCount   = Object.keys(minePicked).length
+    const totalTargets = mineTargets.size
+    const showMineName = mode === 'easy'
+    const hearts       = [0, 1, 2].map(i => i < (3 - mineLivesLost) ? '#ef4444' : '#374151')
+
+    return (
+      <div style={{ ...page, display: 'flex', flexDirection: 'column' }}>
+        <style>{`
+          @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');
+        `}</style>
+        <NavBar />
+        <div style={WRAP}>
+
+          {/* ── Top actions ── */}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '10px 0 4px' }}>
+            {gameMode !== 'daily' && <button onClick={() => setPhase('setup')} style={{ padding: '5px 14px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Change Mode</button>}
+            <button onClick={startMinefield} style={{ padding: '5px 14px', background: 'transparent', color: '#dc2626', border: '1px solid #7f1d1d', borderRadius: 6, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>Restart</button>
+          </div>
+
+          {/* ── Challenge summary ── */}
+          <div style={{ padding: '14px 0 10px' }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: 'white', lineHeight: 1.3 }}>
+              Find all <span style={{ color: '#f59e0b' }}>{totalTargets}</span> <span style={{ color: '#3b82f6' }}>{CONTINENT_NAMES[mineContinent]}</span> countries {mineCategory ? mineSummaryText(mineCategory) : ''}
+            </div>
+          </div>
+
+          {/* ── Banner ── */}
+          <div style={{ padding: '4px 0 10px', borderBottom: '1px solid #1e2d4a' }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+              <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid #1e2d4a', borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Found</div>
+                <div style={{ fontSize: 17, fontWeight: 900, color: '#8899bb', lineHeight: 1 }}>{foundCount}<span style={{ fontSize: 13, fontWeight: 500, color: '#4a5568' }}>/{totalTargets}</span></div>
+              </div>
+              <div style={{ flex: 2, background: 'rgba(167,139,250,0.08)', border: '1px solid rgba(167,139,250,0.22)', borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#6d5ca0', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Category</div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>{mineCategory ? mineCategoryBannerLabel(mineCategory) : ''}</div>
+              </div>
+              <div style={{ flex: 1, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)', borderRadius: 10, padding: '10px 14px' }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#7f1d1d', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Lives</div>
+                <div style={{ fontSize: 18, lineHeight: 1 }}>
+                  {hearts.map((c, i) => <span key={i} style={{ color: c, marginRight: 2 }}>♥</span>)}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Map ── */}
+          <div style={{ background: '#04101f', borderRadius: 10, overflow: 'hidden', margin: '12px 0 12px', border: '1px solid #1e2d4a', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {[{ label: '+', fn: () => setZoom(z => Math.min(z * 1.4, 8)) }, { label: '−', fn: () => setZoom(z => Math.max(z / 1.4, 0.2)) }].map(({ label, fn }) => (
+                <button key={label} onClick={fn} style={{ width: 28, height: 28, background: 'rgba(255,255,255,0.08)', border: '1px solid #2a3d5e', borderRadius: 6, color: 'white', fontSize: 16, fontWeight: 700, cursor: 'pointer', lineHeight: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{label}</button>
+              ))}
+            </div>
+            {mounted && (
+              <ComposableMap
+                projectionConfig={{ scale: proj.scale * zoom, center: proj.center }}
+                style={{ width: '100%', height: 'auto', display: 'block' }}
+              >
+                <Geographies geography={GEO_URL}>
+                  {({ geographies }: { geographies: any[] }) =>
+                    geographies
+                      .filter((geo: any) => !SKIP_GEOS.has(Number(geo.id)))
+                      .map((geo: any) => (
+                        <Geography
+                          key={geo.rsmKey}
+                          geography={geo}
+                          fill={mineGeoFill(geo.id)}
+                          stroke={mineGeoStroke(geo.id)}
+                          strokeWidth={mineGeoStrokeW(geo.id)}
+                          onClick={() => handleMineClick(geo.id)}
+                          style={{
+                            default: { outline: 'none', cursor: mineGeoCursor(geo.id) },
+                            hover:   { outline: 'none', cursor: mineGeoCursor(geo.id), opacity: 0.85 },
+                            pressed: { outline: 'none' },
+                          }}
+                        />
+                      ))
+                  }
+                </Geographies>
+              </ComposableMap>
+            )}
+          </div>
+
+          {/* ── Pending / instructions ── */}
+          <div style={{ paddingBottom: 24, minHeight: 80 }}>
+            {minePending ? (
+              <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: 10, padding: '14px 16px' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#8899bb', marginBottom: 10 }}>Confirm your pick:</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {flagImg(minePending, 24)}
+                    <span style={{ fontSize: 17, fontWeight: 900, color: 'white' }}>
+                      {showMineName ? (COUNTRY_NAMES[minePending] ?? minePending) : '???'}
+                    </span>
+                  </div>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+                    <button onClick={() => setMinePending(null)} style={{ padding: '8px 16px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 7, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>Cancel</button>
+                    <button onClick={confirmMinePick} style={{ padding: '8px 20px', background: '#dc2626', color: 'white', border: 'none', borderRadius: 7, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>Confirm Pick</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ fontSize: 13, color: '#4a5568', padding: '12px 0' }}>
+                Click a country on the map — confirm to lock in your pick
+              </div>
+            )}
+            {(Object.keys(minePicked).length > 0 || mineWrong.length > 0) && (
+              <div style={{ display: 'flex', gap: 5, marginTop: 10, flexWrap: 'wrap' as const }}>
+                {Object.entries(minePicked).map(([code, { player, val, count }], i) => (
+                  <div key={`ok-${i}`} style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 6, padding: '4px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                    {flagImg(code, 14)}
+                    <span style={{ color: '#22c55e', fontWeight: 700 }}>{COUNTRY_NAMES[code] ?? code}</span>
+                    <span style={{ color: '#4a5568' }}>·</span>
+                    <span style={{ color: '#c0cde0' }}>{player}{val !== null ? ` (${val})` : ''}</span>
+                    {count > 1 && <span style={{ color: '#4a5568', fontSize: 10 }}>+{count - 1}</span>}
+                  </div>
+                ))}
+                {mineWrong.map((code, i) => {
+                  const ps = playersByNat[code] ?? []
+                  const best = mineCategory?.kind === 'statThreshold' && ps.length
+                    ? ps.reduce((a, b) => statVal(b, mineCategory.stat) > statVal(a, mineCategory.stat) ? b : a)
+                    : null
+                  return (
+                    <div key={`wrong-${i}`} style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 6, padding: '4px 8px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 5 }}>
+                      {flagImg(code, 14)}
+                      <span style={{ color: '#ef4444', fontWeight: 700 }}>{COUNTRY_NAMES[code] ?? code}</span>
+                      {best && mineCategory?.kind === 'statThreshold' && <span style={{ color: '#4a5568' }}>· best: {best.name} ({statVal(best, mineCategory.stat)})</span>}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
     )

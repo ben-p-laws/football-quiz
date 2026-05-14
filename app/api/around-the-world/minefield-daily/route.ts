@@ -24,8 +24,7 @@ function mulberry32(seed: number) {
 }
 
 function dateToSeed(date: string): number {
-  // offset from chain daily seed so results differ
-  return parseInt(date.replace(/-/g, ''), 10) + 77777
+  return parseInt(date.replace(/-/g, ''), 10) + 99999
 }
 
 const NAT_NORM: Record<string, string> = { RSA: 'ZAF', TOG: 'TGO' }
@@ -39,18 +38,39 @@ function statVal(p: ATWPlayer, s: StatKey): number {
   return 0
 }
 
+type MineCategory =
+  | { kind: 'statThreshold'; stat: StatKey; threshold: number }
+  | { kind: 'playedFor';     team: string }
+  | { kind: 'scoredFor';     team: string }
+
+function categoryMatches(p: ATWPlayer, cat: MineCategory): boolean {
+  if (cat.kind === 'statThreshold') return statVal(p, cat.stat) >= cat.threshold
+  if (cat.kind === 'playedFor')     return p.teams.includes(cat.team)
+  if (cat.kind === 'scoredFor')     return (p.teamGoals[cat.team] ?? 0) >= 1
+  return false
+}
+
+const MINE_STATS: StatKey[] = ['goals', 'goalsAssists', 'games', 'yellowCards']
+const MINE_THRESHOLDS: Record<StatKey, number[]> = {
+  goals:        [5, 10, 15, 20, 30, 50, 75, 100, 150],
+  goalsAssists: [10, 20, 30, 50, 75, 100, 150, 200],
+  games:        [50, 100, 150, 200, 250, 300],
+  yellowCards:  [5, 10, 20, 30, 50],
+}
+const MINE_TEAMS = [
+  'Arsenal','Chelsea','Liverpool','Manchester City','Manchester Utd',
+  'Tottenham','Everton','Aston Villa','Newcastle','West Ham',
+  'Leicester','Southampton','Leeds','Wolves','Crystal Palace',
+  'Fulham','Sunderland','Middlesbrough','Blackburn','Bolton',
+  'Burnley','Sheffield Utd','Stoke','Swansea','West Brom',
+  'Watford','Brighton','Bournemouth','Norwich','Wigan',
+  'Ipswich','Charlton','Portsmouth','Derby','Reading',
+]
+
 const CONTINENTS = ['europe', 'africa', 's_america'] as const
 type Continent = typeof CONTINENTS[number]
 
-const CNT_STATS: StatKey[] = ['goals', 'goalsAssists', 'games']
-
-const CNT_RANGE: Record<Continent, [number, number]> = {
-  europe:    [5, 20],
-  africa:    [5, 13],
-  s_america: [5,  9],
-}
-
-const CNT_POOL: Record<Continent, string[]> = {
+const CONTINENT_POOL: Record<Continent, string[]> = {
   europe:    ['ENG','IRL','FRA','ESP','POR','GER','NED','BEL','DEN','SWE','NOR','ITA','SUI','AUT','CZE','GRE','TUR','SRB','CRO','BUL','POL','SVK','FIN','HUN','ROU','UKR','ALB','MNE','MKD','SVN','BIH','RUS','BLR','LTU','LVA','EST','MDA','ISL'],
   africa:    ['MAR','ALG','TUN','EGY','LBA','SEN','GUI','CIV','GHA','TGO','BEN','NGA','CMR','GAB','COD','COG','ZIM','ZAF','ZAM','ANG','MOZ','MLI','MTN','BFA','SLE','LBR','GAM','GNB','EQG','RWA','SDN','SSD','ETH','KEN','TAN','UGA','NAM','BOT','CHA','NIG','SOM','MWI','ERI','MAD','LES','SWZ','DJI'],
   s_america: ['ARG','BRA','URU','COL','VEN','CHI','ECU','PER','BOL','PAR','GUY','SUR'],
@@ -68,29 +88,38 @@ async function getDailyConfig(date: string) {
   }
 
   const continent = CONTINENTS[Math.floor(rand() * CONTINENTS.length)]
-  const stat      = CNT_STATS[Math.floor(rand() * CNT_STATS.length)]
-  const [minN, maxN] = CNT_RANGE[continent]
-  const nNeeded   = minN + Math.floor(rand() * (maxN - minN + 1))
+  const pool = CONTINENT_POOL[continent]
 
-  const withPlayers = CNT_POOL[continent].filter(code =>
-    (playersByNat[code] ?? []).some(p => statVal(p, stat) > 0)
-  )
-  const perCountryBest = withPlayers
-    .map(code => Math.max(0, ...(playersByNat[code] ?? []).filter(p => statVal(p, stat) > 0).map(p => statVal(p, stat))))
-    .sort((a, b) => b - a)
-  const maxP   = perCountryBest.slice(0, nNeeded).reduce((a, b) => a + b, 0)
-  const target = Math.max(nNeeded, Math.floor(maxP * (0.40 + rand() * 0.25)))
+  const valid: Array<{ category: MineCategory; nTargets: number }> = []
 
-  return { continent, stat, nNeeded, target }
+  for (const s of MINE_STATS) {
+    for (const t of MINE_THRESHOLDS[s]) {
+      const cat: MineCategory = { kind: 'statThreshold', stat: s, threshold: t }
+      const count = pool.filter(code => (playersByNat[code] ?? []).some(p => categoryMatches(p, cat))).length
+      if (count >= 4) valid.push({ category: cat, nTargets: count })
+    }
+  }
+  for (const team of MINE_TEAMS) {
+    const playedCat: MineCategory = { kind: 'playedFor', team }
+    const scoredCat: MineCategory = { kind: 'scoredFor', team }
+    const playedCount = pool.filter(code => (playersByNat[code] ?? []).some(p => categoryMatches(p, playedCat))).length
+    if (playedCount >= 4) valid.push({ category: playedCat, nTargets: playedCount })
+    const scoredCount = pool.filter(code => (playersByNat[code] ?? []).some(p => categoryMatches(p, scoredCat))).length
+    if (scoredCount >= 4) valid.push({ category: scoredCat, nTargets: scoredCount })
+  }
+
+  if (!valid.length) throw new Error('No valid minefield config')
+  const { category, nTargets } = valid[Math.floor(rand() * valid.length)]
+  return { continent, category, nTargets }
 }
 
 async function fetchLeaderboard(date: string) {
   const { data } = await getClient()
-    .from('atw_cnt_daily_scores')
-    .select('player_name, score, target, pct, won, continent')
+    .from('atw_mine_daily_scores')
+    .select('player_name, lives_lost, won, continent')
     .eq('date', date)
     .order('won', { ascending: false })
-    .order('pct', { ascending: false })
+    .order('lives_lost', { ascending: true })
     .limit(50)
   return data ?? []
 }
@@ -111,13 +140,13 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { date, player_name, score, target, pct, won, continent } = body
+    const { date, player_name, lives_lost, won, continent } = body
     if (!date || !player_name?.trim()) {
       return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
     }
     await getClient()
-      .from('atw_cnt_daily_scores')
-      .insert({ date, player_name: player_name.trim(), score, target, pct, won, continent })
+      .from('atw_mine_daily_scores')
+      .insert({ date, player_name: player_name.trim(), lives_lost, won, continent })
     const leaderboard = await fetchLeaderboard(date)
     return NextResponse.json({ success: true, leaderboard })
   } catch (e) {
