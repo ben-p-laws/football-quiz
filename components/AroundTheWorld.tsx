@@ -380,6 +380,15 @@ export default function AroundTheWorld() {
   const [scoreSubmitted, setScoreSubmitted] = useState(false)
   const [showLobbyLb,    setShowLobbyLb]    = useState(false)
 
+  // Continent daily state
+  const [cntDailyLoading,       setCntDailyLoading]       = useState(false)
+  const [cntDailyErr,           setCntDailyErr]           = useState(false)
+  const [cntAlreadyPlayed,      setCntAlreadyPlayed]      = useState(false)
+  const [cntDailyLeaderboard,   setCntDailyLeaderboard]   = useState<LeaderboardEntry[]>([])
+  const [cntDailyPlayerName,    setCntDailyPlayerName]    = useState('')
+  const [cntDailyScoreSubmitted,setCntDailyScoreSubmitted]= useState(false)
+  const [showCntLobbyLb,        setShowCntLobbyLb]        = useState(false)
+
   const [phase,      setPhase]      = useState<Phase>('setup')
   const [route,      setRoute]      = useState<ATWRoute | null>(null)
   const [stat,       setStat]       = useState<StatKey>('goals')
@@ -421,7 +430,8 @@ export default function AroundTheWorld() {
   useEffect(() => {
     if (!mounted) return
     const today = new Date().toISOString().slice(0, 10)
-    if (localStorage.getItem(`atw_daily_${today}`)) setAlreadyPlayed(true)
+    if (localStorage.getItem(`atw_daily_${today}`))      setAlreadyPlayed(true)
+    if (localStorage.getItem(`atw_cont_daily_${today}`)) setCntAlreadyPlayed(true)
   }, [mounted])
 
   async function startDailyGame() {
@@ -472,6 +482,57 @@ export default function AroundTheWorld() {
       const res  = await fetch('/api/around-the-world/daily')
       const data = await res.json()
       setLeaderboard(data.leaderboard ?? [])
+    } catch { /* silent */ }
+  }
+
+  async function startContinentDailyGame() {
+    if (!players) return
+    setCntDailyLoading(true); setCntDailyErr(false)
+    try {
+      const res  = await fetch('/api/around-the-world/continent-daily')
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setCntDailyLeaderboard(data.leaderboard ?? [])
+      setCntDailyPlayerName(''); setCntDailyScoreSubmitted(false)
+      const pool = CONTINENT_POOL[data.continent as keyof typeof CONTINENT_POOL] ?? []
+      setChallengeType('continent')
+      setCntContinent(data.continent); setCntCountries(pool); setCntNeeded(data.nNeeded)
+      setCntFilled({}); setCntSelected(null); setCntFail('')
+      setStat(data.stat); setTarget(data.target)
+      setZoom(1); setProj(CONTINENT_PROJ[data.continent] ?? { center: [0, 20], scale: 160 })
+      setInput(''); setSuggestions([]); setSuggActive(-1)
+      setGameMode('daily'); setPhase('playing')
+      setTimeout(() => inputRef.current?.focus(), 80)
+    } catch {
+      setCntDailyErr(true)
+    } finally {
+      setCntDailyLoading(false)
+    }
+  }
+
+  async function submitContinentDailyScore(wonGame: boolean, total: number, tgt: number, p: number) {
+    if (!cntDailyPlayerName.trim()) return
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      const res  = await fetch('/api/around-the-world/continent-daily', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, player_name: cntDailyPlayerName.trim(), score: total, target: tgt, pct: p, won: wonGame, continent: cntContinent }),
+      })
+      const d = await res.json()
+      setCntDailyLeaderboard(d.leaderboard ?? [])
+    } catch { /* silent */ }
+    setCntDailyScoreSubmitted(true)
+    localStorage.setItem(`atw_cont_daily_${today}`, JSON.stringify({ won: wonGame, pct: p }))
+    setCntAlreadyPlayed(true)
+  }
+
+  async function viewContinentDailyLeaderboard() {
+    setShowCntLobbyLb(true)
+    try {
+      const res  = await fetch('/api/around-the-world/continent-daily')
+      const data = await res.json()
+      setCntDailyLeaderboard(data.leaderboard ?? [])
     } catch { /* silent */ }
   }
 
@@ -762,88 +823,131 @@ export default function AroundTheWorld() {
       if (a.won !== b.won) return a.won ? -1 : 1
       return Math.abs(a.pct - 100) - Math.abs(b.pct - 100)
     })
+    const sortedCntLb = [...cntDailyLeaderboard].sort((a, b) => {
+      if (a.won !== b.won) return a.won ? -1 : 1
+      return Math.abs(a.pct - 100) - Math.abs(b.pct - 100)
+    })
+    const lbRow = (e: typeof leaderboard[0], i: number) => (
+      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', marginBottom: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 6 }}>
+        <span style={{ fontSize: 12, color: '#4a5568', width: 18 }}>{i + 1}.</span>
+        <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
+        <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: (() => { const d = Math.abs(e.pct - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' })() }}>{Math.abs(e.pct - 100)}% away</span>
+      </div>
+    )
     return (
       <div style={page}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');`}</style>
         <NavBar />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 24 }}>
-          <div style={{ textAlign: 'center', maxWidth: 500 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🌍</div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: 'white', margin: '0 0 10px' }}>Around the World in 80 Goals</h1>
-            <p style={{ color: '#8899bb', marginBottom: 32, lineHeight: 1.6 }}>
-              Chain neighbouring countries by naming a PL player from each. Hit the target score to win.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center', marginBottom: 24 }}>
-              {/* Daily Challenge */}
-              <button
-                disabled={dailyLoading || !players}
-                onClick={alreadyPlayed ? viewDailyLeaderboard : startDailyGame}
-                style={{
-                  width: 340, padding: '14px 22px', borderRadius: 10,
-                  border: `2px solid ${alreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
-                  background: alreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
-                  color: 'white', cursor: (dailyLoading || !players) ? 'default' : 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                }}>
-                <span style={{ fontSize: 15, fontWeight: 800 }}>
-                  {alreadyPlayed ? '✓ Daily Challenge — Played' : '⚡ Daily Challenge'}
-                </span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>
-                  {alreadyPlayed ? `View today's leaderboard · ${today}` : dailyLoading ? 'Loading…' : `Today's seeded route · ${today}`}
-                </span>
-              </button>
-              {dailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: 0 }}>Failed to load daily challenge — try again</p>}
+          <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-              {/* Complete the Chain */}
-              <button
-                onClick={() => { setChallengeType('chain'); setGameMode('freeplay'); setPhase('setup') }}
-                style={{
-                  width: 340, padding: '14px 22px', borderRadius: 10,
-                  border: '2px solid #2a3d5e', background: 'transparent',
-                  color: '#c0cde0', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                }}>
-                <span style={{ fontSize: 15, fontWeight: 800 }}>🔗 Complete the Chain</span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>
-                  {loadErr ? 'Failed to load — refresh' : 'Chain neighbouring countries · Hit the target'}
-                </span>
-              </button>
-
-              {/* Continent Challenge */}
-              <button
-                onClick={() => { setChallengeType('continent'); setGameMode('freeplay'); setPhase('setup') }}
-                style={{
-                  width: 340, padding: '14px 22px', borderRadius: 10,
-                  border: '2px solid #2a3d5e', background: 'transparent',
-                  color: '#c0cde0', cursor: 'pointer',
-                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                }}>
-                <span style={{ fontSize: 15, fontWeight: 800 }}>🌍 Continent Challenge</span>
-                <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>
-                  {loadErr ? 'Failed to load — refresh' : 'Pick players from across a continent · Hit the target'}
-                </span>
-              </button>
+            <div style={{ textAlign: 'center', marginBottom: 4 }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>🌍</div>
+              <h1 style={{ fontSize: 26, fontWeight: 900, color: 'white', margin: '0 0 6px' }}>Around the World in 80 Goals</h1>
+              <p style={{ color: '#8899bb', margin: 0, fontSize: 14, lineHeight: 1.5 }}>Name PL players from across the globe and hit the target score to win.</p>
             </div>
 
-            {/* Leaderboard for today (shown after "already played" click) */}
-            {showLobbyLb && (
-              <div style={{ marginTop: 8, textAlign: 'left', maxWidth: 340, margin: '0 auto' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
-                  Today&apos;s Leaderboard
-                </div>
-                {sortedLb.length === 0
-                  ? <p style={{ color: '#4a5568', fontSize: 13 }}>No scores yet today.</p>
-                  : sortedLb.map((e, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', marginBottom: 4, background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 6 }}>
-                      <span style={{ fontSize: 12, color: '#4a5568', width: 18 }}>{i + 1}.</span>
-                      <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: e.won ? 'white' : '#8899bb' }}>{e.player_name}</span>
-                      <span style={{ fontSize: 11, color: e.won ? '#22c55e' : '#ef4444' }}>{e.won ? '✓' : '✗'}</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, color: (() => { const d = Math.abs(e.pct - 100); return d <= 10 ? '#4ade80' : d <= 20 ? '#22c55e' : d <= 30 ? '#eab308' : d <= 40 ? '#f97316' : '#ef4444' })() }}>{Math.abs(e.pct - 100)}% away</span>
-                    </div>
-                  ))
-                }
+            {/* ── Card 1: Continent Challenge ── */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>🌍 Continent Challenge</div>
+                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Pick players from across a continent · Hit the target</div>
               </div>
-            )}
+              <div style={{ display: 'flex', gap: 10 }}>
+                {/* Continent Daily */}
+                <button
+                  disabled={cntDailyLoading || !players}
+                  onClick={cntAlreadyPlayed ? viewContinentDailyLeaderboard : startContinentDailyGame}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: `2px solid ${cntAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
+                    background: cntAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
+                    color: 'white', cursor: (cntDailyLoading || !players) ? 'default' : 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>
+                    {cntAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>
+                    {cntAlreadyPlayed ? `View leaderboard` : cntDailyLoading ? 'Loading…' : today}
+                  </span>
+                </button>
+                {/* Continent Free Play */}
+                <button
+                  onClick={() => { setChallengeType('continent'); setGameMode('freeplay'); setPhase('setup') }}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: '2px solid #2a3d5e', background: 'transparent',
+                    color: '#c0cde0', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
+                </button>
+              </div>
+              {cntDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
+              {showCntLobbyLb && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Today&apos;s Leaderboard</div>
+                  {sortedCntLb.length === 0
+                    ? <p style={{ color: '#4a5568', fontSize: 13, margin: 0 }}>No scores yet today.</p>
+                    : sortedCntLb.map(lbRow)
+                  }
+                </div>
+              )}
+            </div>
+
+            {/* ── Card 2: Complete the Chain ── */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>🔗 Complete the Chain</div>
+                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Chain neighbouring countries · Hit the target</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                {/* Chain Daily */}
+                <button
+                  disabled={dailyLoading || !players}
+                  onClick={alreadyPlayed ? viewDailyLeaderboard : startDailyGame}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: `2px solid ${alreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
+                    background: alreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
+                    color: 'white', cursor: (dailyLoading || !players) ? 'default' : 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>
+                    {alreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>
+                    {alreadyPlayed ? `View leaderboard` : dailyLoading ? 'Loading…' : today}
+                  </span>
+                </button>
+                {/* Chain Free Play */}
+                <button
+                  onClick={() => { setChallengeType('chain'); setGameMode('freeplay'); setPhase('setup') }}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: '2px solid #2a3d5e', background: 'transparent',
+                    color: '#c0cde0', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random route</span>
+                </button>
+              </div>
+              {dailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
+              {showLobbyLb && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Today&apos;s Leaderboard</div>
+                  {sortedLb.length === 0
+                    ? <p style={{ color: '#4a5568', fontSize: 13, margin: 0 }}>No scores yet today.</p>
+                    : sortedLb.map(lbRow)
+                  }
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
@@ -948,11 +1052,15 @@ export default function AroundTheWorld() {
             {gameMode === 'daily' ? (
               <DailyEndPanel
                 phase="won" pct={pctFinal} runningTotal={total} target={target} mode={mode}
-                playerName={playerName} setPlayerName={setPlayerName}
-                scoreSubmitted={scoreSubmitted}
-                onSubmit={() => submitDailyScore(true, total, target, pctFinal, mode)}
-                leaderboard={leaderboard}
-                onPlayMore={() => { setGameMode('freeplay'); setPhase('setup') }}
+                playerName={isChain ? playerName : cntDailyPlayerName}
+                setPlayerName={isChain ? setPlayerName : setCntDailyPlayerName}
+                scoreSubmitted={isChain ? scoreSubmitted : cntDailyScoreSubmitted}
+                onSubmit={isChain
+                  ? () => submitDailyScore(true, total, target, pctFinal, mode)
+                  : () => submitContinentDailyScore(true, total, target, pctFinal)
+                }
+                leaderboard={isChain ? leaderboard : cntDailyLeaderboard}
+                onPlayMore={() => { setGameMode('lobby'); setPhase('setup') }}
               />
             ) : (
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
@@ -1001,12 +1109,16 @@ export default function AroundTheWorld() {
             )}
             {gameMode === 'daily' ? (
               <DailyEndPanel
-                phase="failed" pct={pct} runningTotal={runningTotal} target={target} mode={mode}
-                playerName={playerName} setPlayerName={setPlayerName}
-                scoreSubmitted={scoreSubmitted}
-                onSubmit={() => submitDailyScore(false, runningTotal, target, pct, mode)}
-                leaderboard={leaderboard}
-                onPlayMore={() => { setGameMode('freeplay'); setPhase('setup') }}
+                phase="failed" pct={isChain ? pct : cntPct} runningTotal={isChain ? runningTotal : cntRunning} target={target} mode={mode}
+                playerName={isChain ? playerName : cntDailyPlayerName}
+                setPlayerName={isChain ? setPlayerName : setCntDailyPlayerName}
+                scoreSubmitted={isChain ? scoreSubmitted : cntDailyScoreSubmitted}
+                onSubmit={isChain
+                  ? () => submitDailyScore(false, runningTotal, target, pct, mode)
+                  : () => submitContinentDailyScore(false, cntRunning, target, cntPct)
+                }
+                leaderboard={isChain ? leaderboard : cntDailyLeaderboard}
+                onPlayMore={() => { setGameMode('lobby'); setPhase('setup') }}
               />
             ) : (
               <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
