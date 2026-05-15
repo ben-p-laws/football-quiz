@@ -2229,7 +2229,7 @@ function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onCl
           type="text"
           placeholder={idx===0?'Player 1 (required)':`Player ${idx+1} (optional)`}
           value={value} onChange={e=>onChange(e.target.value)} autoComplete="off"
-          style={{flex:1,background:confirmed?'rgba(34,197,94,0.12)':'#1e2d4a',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'9px 12px',fontSize:13,fontWeight:700,color:'white',fontFamily:'inherit'}}
+          style={{flex:1,background:confirmed?'rgba(34,197,94,0.12)':'#1e2d4a',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'9px 12px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
         />
         {(value||confirmed)&&(
           <button onClick={onClear} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>×</button>
@@ -2505,7 +2505,7 @@ function DailySetupScreen({onPlay,onBack}:{onPlay:(name:string)=>void;onBack:()=
           value={name} onChange={e=>setName(e.target.value)}
           onKeyDown={e=>e.key==='Enter'&&submit()}
           placeholder="Enter your name…"
-          style={{width:'100%',background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'13px 14px',fontSize:15,color:'white',fontFamily:'inherit',outline:'none'}}
+          style={{width:'100%',background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'13px 14px',fontSize:16,color:'white',fontFamily:'inherit',outline:'none'}}
         />
       </div>
       <button onClick={submit} disabled={!name.trim()||loading}
@@ -2678,7 +2678,7 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
             onKeyDown={e=>e.key==='Enter'&&saveScore()}
             placeholder="Your name"
             maxLength={20}
-            style={{flex:1,background:'#1e2d4a',border:'1.5px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'11px 14px',fontSize:14,fontWeight:700,color:'white',fontFamily:'inherit'}}
+            style={{flex:1,background:'#1e2d4a',border:'1.5px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'11px 14px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
           />
           <button onClick={saveScore} disabled={!name.trim()||saving}
             style={{background:name.trim()&&!saving?'#dc2626':'#1e2d4a',color:'white',border:'none',borderRadius:10,padding:'11px 18px',fontSize:14,fontWeight:800,cursor:name.trim()?'pointer':'default',fontFamily:'inherit',transition:'background 0.2s'}}>

@@ -447,7 +447,7 @@ export default function TeammatesPageClient() {
                   maxLength={30}
                   style={{
                     flex: 1, background: '#0a0f1e', border: '1px solid #2a3d5e', borderRadius: 8,
-                    padding: '10px 12px', color: 'white', fontSize: 13, outline: 'none',
+                    padding: '10px 12px', color: 'white', fontSize: 16, outline: 'none',
                   }}
                 />
                 <button

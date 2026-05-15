@@ -454,7 +454,7 @@ export default function BingoPageClient() {
         <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '16px 20px', marginBottom: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>Your name</div>
           <input
-            style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 15, color: 'white', outline: 'none', width: '100%', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 16, color: 'white', outline: 'none', width: '100%', fontFamily: 'inherit', boxSizing: 'border-box' }}
             placeholder="Enter your name" value={userName}
             onChange={e => setUserName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && saveUsername()} autoFocus />

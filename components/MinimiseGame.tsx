@@ -98,7 +98,7 @@ const s = {
     border: "1px solid #1e2d4a",
     borderRadius: 10,
     padding: "12px 16px",
-    fontSize: 15,
+    fontSize: 16,
     color: "white",
     outline: "none",
     width: "100%",
