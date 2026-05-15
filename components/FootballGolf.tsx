@@ -358,7 +358,7 @@ function pathEndAngle(path:HolePath): number {
 
 type Hazard  = { start:number; end:number }
 type Bunker  = { start:number; end:number }
-type Hole    = { number:number; par:number; distance:number; hazard:Hazard|null; bunkers:Bunker[]; path:HolePath; isIsland?:boolean; dropZoneYards?:number }
+type Hole    = { number:number; par:number; distance:number; hazards:Hazard[]; bunkers:Bunker[]; path:HolePath; isIsland?:boolean; dropZoneYards?:number }
 type HoleDef = { number:number; par:number; yardages:Record<Tee,number>; path:HolePath; hazardFrac:{startFrac:number;endFrac:number}|null; bunkerCount:number }
 
 function randBetween(min:number,max:number){ return min+Math.floor(Math.random()*(max-min+1)) }
@@ -400,10 +400,10 @@ function generateHoles(count:3|6|9|18): Hole[] {
       }
       const isIsland = isIslandCandidate
       const path = isIsland ? RANDOM_PATHS[0] : pathPool[holes.length % pathPool.length]
-      const bunkers = isIsland ? [] : generateBunkers(distance, hazard, 1)
+      const bunkers = isIsland ? [] : generateBunkers(distance, hazard ? [hazard] : [], 1)
       const dropZoneYards = isIsland ? Math.round(distance * 0.34) : undefined
-      if (isIsland) hazard = {start: 25, end: distance - 20}
-      holes.push({number:holes.length+1, par, distance, hazard, bunkers, path, isIsland, dropZoneYards})
+      const finalHazard = isIsland ? {start: 25, end: distance - 20} : hazard
+      holes.push({number:holes.length+1, par, distance, hazards: finalHazard ? [finalHazard] : [], bunkers, path, isIsland, dropZoneYards})
     }
   }
   return holes
@@ -416,37 +416,57 @@ function generateHoles(count:3|6|9|18): Hole[] {
 // For real-course mode these are remapped to HOLE_POSITIONS tee/green;
 // the intermediate control points define the fairway bend shape.
 const PEBBLE_BEACH: HoleDef[] = [
-  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:59.8,y:228.6},{x:37.6,y:104.0},{x:46,y:156.0},{x:70.8,y:26.3}]},   hazardFrac:null,                          bunkerCount:2 },
-  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:57.5,y:243.8},{x:50.7,y:116.6},{x:47.9,y:168.6},{x:32.4,y:40.5}]}, hazardFrac:null,                          bunkerCount:2 },
-  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:67.7,y:191.1},{x:58.4,y:104.0},{x:59.7,y:143.4},{x:54.1,y:47.0}]}, hazardFrac:null,                          bunkerCount:3 },
-  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:40,y:221.2},{x:49.7,y:130.8},{x:50.8,y:168.6},{x:73.3,y:66.7}]},   hazardFrac:{startFrac:0.45,endFrac:0.85}, bunkerCount:2 },
-  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:55.2,y:226.3},{x:48.8,y:116.6},{x:50,y:168.6},{x:56.1,y:64.1}]},   hazardFrac:{startFrac:0.35,endFrac:0.80}, bunkerCount:2 },
-  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:42.4,y:243.8},{x:43.1,y:104.0},{x:60.2,y:168.6},{x:33.4,y:17.2}]},  hazardFrac:{startFrac:0.40,endFrac:0.80}, bunkerCount:2 },
-  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:35.8,y:203.4},{x:56,y:116.6},{x:39.6,y:156.0},{x:73.9,y:56.1}]},   hazardFrac:{startFrac:0.35,endFrac:0.78}, bunkerCount:2 },
-  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:60.5,y:216.7},{x:24.8,y:104.0},{x:46.2,y:156.0},{x:20,y:50.4}]},   hazardFrac:{startFrac:0.74,endFrac:0.90}, bunkerCount:2 },
-  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:40,y:218.4},{x:37.9,y:104.0},{x:42.2,y:156.0},{x:58.2,y:37.0}]},   hazardFrac:{startFrac:0.65,endFrac:0.80}, bunkerCount:2 },
-  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:34.6,y:229.1},{x:33.1,y:104.0},{x:38.4,y:156.0},{x:33.8,y:33.7}]}, hazardFrac:{startFrac:0.70,endFrac:0.85}, bunkerCount:2 },
-  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:57.6,y:231.5},{x:45.4,y:104.0},{x:49,y:156.0},{x:32.9,y:36.6}]},   hazardFrac:null,                          bunkerCount:2 },
-  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:25.8,y:168.6},{x:41.6,y:104.0},{x:43.5,y:130.8},{x:42.8,y:64.9}]}, hazardFrac:null,                          bunkerCount:2 },
-  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:60.5,y:241.3},{x:50.7,y:116.6},{x:44.5,y:168.6},{x:68.6,y:40.3}]}, hazardFrac:null,                          bunkerCount:3 },
-  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:44.8,y:218.7},{x:43.2,y:104.0},{x:40.4,y:156.0},{x:49.5,y:38.8}]}, hazardFrac:null,                          bunkerCount:3 },
-  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:29.5,y:236.2},{x:43.2,y:104.0},{x:53.1,y:168.6},{x:33.3,y:26.9}]}, hazardFrac:null,                          bunkerCount:2 },
-  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:45.7,y:208.5},{x:44.1,y:116.6},{x:60.8,y:156.0},{x:56.3,y:60.8}]}, hazardFrac:null,                          bunkerCount:2 },
-  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:70,y:235.9},{x:55.3,y:143.4},{x:54.1,y:182.8},{x:44.1,y:84.8}]},  hazardFrac:{startFrac:0.62,endFrac:0.84}, bunkerCount:2 },
-  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:70.3,y:208.6},{x:70,y:130.8},{x:67.7,y:168.6},{x:47.7,y:81.0}]},  hazardFrac:{startFrac:0.52,endFrac:0.67}, bunkerCount:3 },
+  { number:1,  par:4, yardages:{Blue:378,White:337,Red:310}, path:{pts:[{x:59.8,y:228.6},{x:37.6,y:104.0},{x:46,y:156.0},{x:70.8,y:26.3}]},   hazardFrac:null, bunkerCount:2 },
+  { number:2,  par:5, yardages:{Blue:509,White:458,Red:358}, path:{pts:[{x:57.5,y:243.8},{x:50.7,y:116.6},{x:47.9,y:168.6},{x:32.4,y:40.5}]}, hazardFrac:null, bunkerCount:2 },
+  { number:3,  par:4, yardages:{Blue:397,White:340,Red:285}, path:{pts:[{x:67.7,y:191.1},{x:58.4,y:104.0},{x:59.7,y:143.4},{x:54.1,y:47.0}]}, hazardFrac:null, bunkerCount:3 },
+  { number:4,  par:4, yardages:{Blue:333,White:295,Red:197}, path:{pts:[{x:40,y:221.2},{x:49.7,y:130.8},{x:50.8,y:168.6},{x:73.3,y:66.7}]},   hazardFrac:null, bunkerCount:2 },
+  { number:5,  par:3, yardages:{Blue:189,White:134,Red:111}, path:{pts:[{x:55.2,y:226.3},{x:48.8,y:116.6},{x:50,y:168.6},{x:56.1,y:64.1}]},   hazardFrac:null, bunkerCount:2 },
+  { number:6,  par:5, yardages:{Blue:498,White:465,Red:420}, path:{pts:[{x:42.4,y:243.8},{x:43.1,y:104.0},{x:60.2,y:168.6},{x:33.4,y:17.2}]}, hazardFrac:null, bunkerCount:2 },
+  { number:7,  par:3, yardages:{Blue:107,White:94, Red:87},  path:{pts:[{x:35.8,y:203.4},{x:56,y:116.6},{x:39.6,y:156.0},{x:73.9,y:56.1}]},   hazardFrac:null, bunkerCount:2 },
+  { number:8,  par:4, yardages:{Blue:416,White:364,Red:349}, path:{pts:[{x:60.5,y:216.7},{x:24.8,y:104.0},{x:46.2,y:156.0},{x:20,y:50.4}]},   hazardFrac:null, bunkerCount:2 },
+  { number:9,  par:4, yardages:{Blue:483,White:436,Red:350}, path:{pts:[{x:40,y:218.4},{x:37.9,y:104.0},{x:42.2,y:156.0},{x:58.2,y:37.0}]},   hazardFrac:null, bunkerCount:2 },
+  { number:10, par:4, yardages:{Blue:444,White:408,Red:338}, path:{pts:[{x:34.6,y:229.1},{x:33.1,y:104.0},{x:38.4,y:156.0},{x:33.8,y:33.7}]}, hazardFrac:null, bunkerCount:2 },
+  { number:11, par:4, yardages:{Blue:370,White:338,Red:298}, path:{pts:[{x:57.6,y:231.5},{x:45.4,y:104.0},{x:49,y:156.0},{x:32.9,y:36.6}]},   hazardFrac:null, bunkerCount:2 },
+  { number:12, par:3, yardages:{Blue:202,White:176,Red:126}, path:{pts:[{x:25.8,y:168.6},{x:41.6,y:104.0},{x:43.5,y:130.8},{x:42.8,y:64.9}]}, hazardFrac:null, bunkerCount:2 },
+  { number:13, par:4, yardages:{Blue:401,White:370,Red:295}, path:{pts:[{x:60.5,y:241.3},{x:50.7,y:116.6},{x:44.5,y:168.6},{x:68.6,y:40.3}]}, hazardFrac:null, bunkerCount:3 },
+  { number:14, par:5, yardages:{Blue:559,White:490,Red:446}, path:{pts:[{x:44.8,y:218.7},{x:43.2,y:104.0},{x:40.4,y:156.0},{x:49.5,y:38.8}]}, hazardFrac:null, bunkerCount:3 },
+  { number:15, par:4, yardages:{Blue:393,White:338,Red:247}, path:{pts:[{x:29.5,y:236.2},{x:43.2,y:104.0},{x:53.1,y:168.6},{x:33.3,y:26.9}]}, hazardFrac:null, bunkerCount:2 },
+  { number:16, par:4, yardages:{Blue:400,White:368,Red:312}, path:{pts:[{x:45.7,y:208.5},{x:44.1,y:116.6},{x:60.8,y:156.0},{x:56.3,y:60.8}]}, hazardFrac:null, bunkerCount:2 },
+  { number:17, par:3, yardages:{Blue:182,White:166,Red:142}, path:{pts:[{x:70,y:235.9},{x:55.3,y:143.4},{x:54.1,y:182.8},{x:44.1,y:84.8}]},  hazardFrac:null, bunkerCount:2 },
+  { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:70.3,y:208.6},{x:70,y:130.8},{x:67.7,y:168.6},{x:47.7,y:81.0}]},  hazardFrac:null, bunkerCount:3 },
 ]
 
-function generateBunkers(distance: number, hazard: Hazard|null, count: number): Bunker[] {
+// Manually calibrated hazards/bunkers for real course mode (yards from tee, Blue distances)
+// Populated via /golf-calibrate tool
+const REAL_COURSE_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
+   2: {hazards:[{start:412,end:438}]},
+   3: {hazards:[{start:187,end:197}], bunkers:[{start:78,end:135}]},
+   4: {hazards:[{start:110,end:127}]},
+   6: {hazards:[{start:289,end:332}]},
+   7: {hazards:[{start:73,end:87}]},
+   8: {hazards:[{start:175,end:293}], bunkers:[{start:298,end:316}]},
+  10: {bunkers:[{start:127,end:152}]},
+  11: {hazards:[{start:241,end:274},{start:291,end:323}]},
+  12: {hazards:[{start:81,end:98},{start:143,end:180}]},
+  13: {bunkers:[{start:136,end:155}]},
+  14: {hazards:[{start:116,end:164}]},
+  15: {hazards:[{start:208,end:232}]},
+  16: {hazards:[{start:109,end:139},{start:200,end:215},{start:301,end:348}], bunkers:[{start:97,end:108}]},
+  17: {hazards:[{start:133,end:145}], bunkers:[{start:147,end:169}]},
+  18: {hazards:[{start:381,end:413},{start:492,end:516}]},
+}
+
+function generateBunkers(distance: number, hazards: Hazard[], count: number): Bunker[] {
   const bunkers: Bunker[] = []
   const HOLE_RANGE  = 100
   const minStart    = distance - HOLE_RANGE
-  const maxStart    = distance - 40  // end = start+20, so end ≤ distance-20
+  const maxStart    = distance - 40
   if (minStart >= maxStart) return bunkers
   for (let i = 0; i < count; i++) {
     for (let attempt = 0; attempt < 20; attempt++) {
       const start = Math.round(randBetween(minStart, maxStart) / 5) * 5
       const end   = start + 20
-      if (hazard && start < hazard.end + 10 && end > hazard.start - 10) continue
+      if (hazards.some(h => start < h.end + 10 && end > h.start - 10)) continue
       if (bunkers.some(b => start < b.end + 20 && end > b.start - 20)) continue
       bunkers.push({ start, end })
       break
@@ -455,18 +475,14 @@ function generateBunkers(distance: number, hazard: Hazard|null, count: number): 
   return bunkers
 }
 
-function buildCourse(tee: Tee, count: number): Hole[] {
-  return PEBBLE_BEACH.slice(0, count).map(def => {
-    const distance = def.yardages[tee]
-    let hazard: Hazard | null = null
-    if (def.hazardFrac) {
-      hazard = {
-        start: Math.round(distance * def.hazardFrac.startFrac / 5) * 5,
-        end:   Math.round(distance * def.hazardFrac.endFrac   / 5) * 5,
-      }
-    }
-    const bunkers = generateBunkers(distance, hazard, def.bunkerCount)
-    return { number: def.number, par: def.par, distance, hazard, bunkers, path: def.path }
+function buildCourse(tee: Tee, count: number, start = 1): Hole[] {
+  return Array.from({length: count}, (_, i) => {
+    const def = PEBBLE_BEACH[((start - 1 + i) % 18)]
+    const distance = def.yardages['Blue']
+    const realHaz = REAL_COURSE_HAZARDS[def.number]
+    const hazards = realHaz?.hazards ?? []
+    const bunkers = realHaz?.bunkers ?? []
+    return { number: def.number, par: def.par, distance, hazards, bunkers, path: def.path }
   })
 }
 
@@ -514,10 +530,11 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 
 export default function FootballGolf(){
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'>('setup')
-  const [courseMode,setCourseMode]       = useState<'random'|'real'>('random')
+  const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
   const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
   const [tee,setTee]                     = useState<Tee>('White')
+  const [startHole,setStartHole]         = useState(1)
   const [holes,setHoles]                 = useState<Hole[]>([])
   const [holeIdx,setHoleIdx]             = useState(0)
   const [remaining,setRemaining]         = useState(0)
@@ -744,7 +761,7 @@ export default function FootballGolf(){
   }
 
   function startGame(){
-    const hs = courseMode === 'real' ? buildCourse(tee, numHoles) : generateHoles(numHoles)
+    const hs = courseMode === 'real' ? buildCourse(tee, numHoles, startHole) : generateHoles(numHoles)
     usedLabels.current    = new Set()
     recentFilters.current = []
     recentStats.current   = []
@@ -786,7 +803,7 @@ export default function FootballGolf(){
     const dz = Math.round(dist * 0.34)
     const hole: Hole = {
       number:1, par:3, distance:dist,
-      hazard:{start:25, end:dist-20},
+      hazards:[{start:25, end:dist-20}],
       bunkers:[], path:RANDOM_PATHS[0],
       isIsland:true, dropZoneYards:dz,
     }
@@ -926,17 +943,17 @@ export default function FootballGolf(){
 
     // Water hazard — only on approach (not when going back from past the pin)
     let waterDropRemaining: number|undefined
-    if(!isOOB && !pastPin && currentHole.hazard){
+    if(!isOOB && !pastPin && currentHole.hazards.length){
       const approachPos = currentHole.distance - remaining
       const newPos = approachPos + total
-      const {start,end} = currentHole.hazard
-      if(newPos>=start && newPos<=end){
+      const hit = currentHole.hazards.find(h => newPos>=h.start && newPos<=h.end)
+      if(hit){
         isOOB=true
         if(currentHole.isIsland && currentHole.dropZoneYards){
           waterDropRemaining = currentHole.dropZoneYards
           penaltyReason=`Water! Drop zone — ${currentHole.dropZoneYards} yds from pin (+1 stroke)`
         } else {
-          const dropYards = start - 1
+          const dropYards = hit.start - 1
           waterDropRemaining = currentHole.distance - dropYards
           penaltyReason=`Water hazard! Drop at ${dropYards} yds from tee (+1 stroke)`
         }
@@ -1313,7 +1330,7 @@ export default function FootballGolf(){
     h2hPlayerId.current=pid
     h2hIsHost.current=true
     setH2HError('')
-    const hs=courseMode==='real'?buildCourse(tee,numHoles):generateHoles(numHoles)
+    const hs=courseMode==='real'?buildCourse(tee,numHoles,startHole):generateHoles(numHoles)
     // Pre-generate tee categories for all holes (same for both players)
     const tmpUsed=new Set<string>()
     const tmpRecentF:string[]=[]
@@ -1489,7 +1506,7 @@ export default function FootballGolf(){
     </>)
   }
 
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -1766,10 +1783,11 @@ export default function FootballGolf(){
                 isAnimating={isAnimating}
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
-                imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : undefined}
+                imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png` : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
                 realTeePos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].teeFrac) : undefined}
                 realGreenPos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].greenFrac) : undefined}
+                realWaypoints={courseMode==='real' ? (HOLE_POSITIONS[currentHole.number].waypointFracs ?? []).map(fracToSVG) : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
@@ -1862,26 +1880,17 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,oppBallPos,myBallColor,oppBallColor}:{
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number
-  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
+  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
-  // Remap the hole path so pts[0]=realTeePos and pts[last]=realGreenPos when calibrated
+  // Real course: build path directly from calibrated tee → waypoints → green
+  // Generated course: use PEBBLE_BEACH path as-is
   const effectivePath = useMemo(()=>{
     if(!realTeePos||!realGreenPos) return hole.path
-    const pts=hole.path.pts
-    const oldTee=pts[0], oldGreen=pts[pts.length-1]
-    const oldSpanY=oldGreen.y-oldTee.y
-    const newPts=pts.map((p,i)=>{
-      if(i===0) return realTeePos
-      if(i===pts.length-1) return realGreenPos
-      const t=oldSpanY!==0?(p.y-oldTee.y)/oldSpanY:i/(pts.length-1)
-      const oldCx=oldTee.x+t*(oldGreen.x-oldTee.x)
-      const newCx=realTeePos.x+t*(realGreenPos.x-realTeePos.x)
-      return {x:newCx+(p.x-oldCx), y:realTeePos.y+t*(realGreenPos.y-realTeePos.y)}
-    })
-    return {pts:newPts}
-  },[hole.path,realTeePos,realGreenPos])
+    const pts = [realTeePos, ...(realWaypoints ?? []), realGreenPos]
+    return {pts}
+  },[hole.path,realTeePos,realGreenPos,realWaypoints])
 
   // displayBallPos is yards-from-tee; past-pin if > hole.distance
   const ballTeePosForLabels = Math.min(displayBallPos, hole.distance)
@@ -1935,6 +1944,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Generated-course-only: rough background + fairway + bunker fills */}
         {!imageUrl && <rect x={0} y={-10} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>}
         {!imageUrl && !hole.isIsland && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
+        {/* Real course: faint path line so ball trajectory is visible */}
+        {imageUrl && <path d={fairwayD} stroke="rgba(255,255,255,0.25)" strokeWidth={2} fill="none" strokeLinecap="round" strokeDasharray="4 4"/>}
         {!imageUrl && !hole.isIsland && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
           const midPos   = yardToSVG(midYards,hole.distance,hole.path)
@@ -1986,30 +1997,30 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
         })()}
 
-        {/* Water hazard — blob only for generated, text label for both (suppressed on island holes) */}
-        {hole.hazard&&!hole.isIsland&&(()=>{
-          const yt=yardToY(hole.hazard.end)
-          const yb=yardToY(hole.hazard.start)
-          const cx=yardToX((hole.hazard.start+hole.hazard.end)/2)
+        {/* Water hazards — blob only for generated, emoji label for both (suppressed on island holes) */}
+        {!hole.isIsland && hole.hazards.map((hz, hi) => {
+          const yt=yardToY(hz.end)
+          const yb=yardToY(hz.start)
+          const cx=yardToX((hz.start+hz.end)/2)
           const halfH=(yb-yt)/2
           const halfW=10
           const waterPath=`M ${cx},${yt}
             C ${cx+halfW+3},${yt+2} ${cx+halfW+4},${yb-halfH*0.3} ${cx+halfW},${yb}
             C ${cx+halfW-3},${yb+2} ${cx-halfW+3},${yb+2} ${cx-halfW},${yb}
             C ${cx-halfW-4},${yb-halfH*0.3} ${cx-halfW-3},${yt+2} ${cx},${yt} Z`
-          return <>
+          return <g key={hi}>
             {!imageUrl && <>
               <path d={waterPath} fill="#1d4ed8" opacity={0.85}/>
               <path d={waterPath} fill="none" stroke="#3b82f6" strokeWidth={0.8} opacity={0.5}/>
               <ellipse cx={cx} cy={(yt+yb)/2} rx={halfW*0.5} ry={halfH*0.25} fill="none" stroke="rgba(147,197,253,0.3)" strokeWidth={0.5}/>
             </>}
             <text x={cx} y={(yt+yb)/2+1.5} fontSize={iconFs} fill="rgba(255,255,255,0.7)" textAnchor="middle" fontWeight="bold">💧</text>
-          </>
-        })()}
+          </g>
+        })}
 
         {/* Max range indicator */}
         {maxRangePos !== undefined && maxRangePos < hole.distance && (()=>{
-          const {x:mx,y:my} = yardToSVG(maxRangePos, hole.distance, hole.path)
+          const {x:mx,y:my} = yardToSVG(maxRangePos, hole.distance, effectivePath)
           return (
             <g opacity={0.85}>
               <line x1={mx-12} y1={my} x2={mx+12} y2={my} stroke="#f97316" strokeWidth={1.2} strokeDasharray="2.5,2" strokeLinecap="round"/>
@@ -2087,71 +2098,38 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <circle cx={finalBallX} cy={ballY} r={ballR*1.4} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
 
-        {/* Distance labels — dark pill so they read on any background */}
-        {hole.hazard && !hole.isIsland && displayBallPos <= hole.distance && (()=>{
-          const distToNear = Math.round(hole.hazard.start - ballTeePosForLabels)
-          const distToFar  = Math.round(hole.hazard.end   - ballTeePosForLabels)
+        {/* Distance labels per hazard */}
+        {!hole.isIsland && displayBallPos <= hole.distance && hole.hazards.map((hz, hi) => {
+          const distToNear = Math.round(hz.start - ballTeePosForLabels)
+          const distToFar  = Math.round(hz.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
-          if(!imageUrl) {
-            const cx  = yardToX((hole.hazard.start + hole.hazard.end) / 2)
-            const yt  = yardToY(hole.hazard.end)
-            const yb  = yardToY(hole.hazard.start)
-            const fs  = labelFs * 0.65
-            return (
-              <g>
-                <text x={cx-13} y={yt+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
-                {distToNear > 0 && <text x={cx-13} y={yb+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>}
-              </g>
-            )
-          }
-          const cx = yardToX((hole.hazard.start + hole.hazard.end) / 2)
-          const cy = yardToY((hole.hazard.start + hole.hazard.end) / 2)
-          const lx = Math.max(16, Math.min(84, cx))
-          if(distToNear <= 0) return (
-            <g>
-              <rect x={lx-bHalf} y={cy-bSingle/2} width={bHalf*2} height={bSingle} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={cy+3} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">💧 In water</text>
-            </g>
-          )
+          const cx = yardToX((hz.start + hz.end) / 2)
+          const yt = yardToY(hz.end)
+          const yb = yardToY(hz.start)
+          const fs = labelFs * 0.65
           return (
-            <g>
-              <rect x={lx-bHalf} y={cy-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={cy-2} fontSize={labelFs} fill="#93c5fd" textAnchor="middle" fontWeight="bold">
-                <tspan x={lx} dy="0">{distToFar}</tspan>
-                <tspan x={lx} dy="9">{distToNear}</tspan>
-              </text>
+            <g key={hi}>
+              <text x={cx-6} y={yt+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
+              {distToNear > 0 && <text x={cx-6} y={yb+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>}
             </g>
           )
-        })()}
+        })}
         {displayBallPos <= hole.distance && hole.bunkers.map((b,i)=>{
           const distToNear = Math.round(b.start - ballTeePosForLabels)
           const distToFar  = Math.round(b.end   - ballTeePosForLabels)
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
           const sideLeft = b.start % 20 < 10
           const midPos   = yardToSVG((b.start + b.end) / 2, hole.distance, effectivePath)
-          if(!imageUrl) {
-            const ellipseRy = 3.5
-            const topY = midPos.y - ellipseRy
-            const botY = midPos.y + ellipseRy
-            const cx   = midPos.x
-            const tx   = sideLeft ? cx-13 : cx+13
-            const anchor = sideLeft ? 'end' : 'start'
-            const fs   = labelFs * 0.65
-            return (
-              <g key={i}>
-                <text x={tx} y={topY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
-                <text x={tx} y={botY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
-              </g>
-            )
-          }
-          const lx = Math.max(16, Math.min(84, midPos.x + (sideLeft ? -16 : 16)))
+          const ellipseRy = 3.5
+          const topY = midPos.y - ellipseRy
+          const botY = midPos.y + ellipseRy
+          const tx   = sideLeft ? midPos.x-6 : midPos.x+6
+          const anchor = sideLeft ? 'end' : 'start'
+          const fs   = labelFs * 0.65
           return (
             <g key={i}>
-              <rect x={lx-bHalf} y={midPos.y-bDouble/2} width={bHalf*2} height={bDouble} rx={2} fill="rgba(0,0,0,0.72)"/>
-              <text x={lx} y={midPos.y-2} fontSize={labelFs} fill="#fcd34d" textAnchor="middle" fontWeight="bold">
-                <tspan x={lx} dy="0">{distToFar}</tspan>
-                <tspan x={lx} dy="9">{distToNear}</tspan>
-              </text>
+              <text x={tx} y={topY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
+              <text x={tx} y={botY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
             </g>
           )
         })}
@@ -2308,25 +2286,25 @@ const PEBBLE_PHOTO_ROTATIONS: Record<number, number> = {}
 
 // Tee and green positions per hole as [xFrac, yFrac] (0–1) of the aerial image.
 // Derived by image analysis (brightness-cluster detection on pre-rotated 600×1560 portraits).
-const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]}> = {
-  1:  {teeFrac:[0.48,0.86], greenFrac:[0.47,0.17]},
-  2:  {teeFrac:[0.44,0.84], greenFrac:[0.43,0.12]},
-  3:  {teeFrac:[0.24,0.88], greenFrac:[0.37,0.19]},
-  4:  {teeFrac:[0.36,0.88], greenFrac:[0.33,0.22]},
-  5:  {teeFrac:[0.27,0.89], greenFrac:[0.38,0.16]},
-  6:  {teeFrac:[0.38,0.90], greenFrac:[0.28,0.08]},
-  7:  {teeFrac:[0.38,0.73], greenFrac:[0.42,0.25]},
-  8:  {teeFrac:[0.43,0.86], greenFrac:[0.28,0.13]},
-  9:  {teeFrac:[0.26,0.87], greenFrac:[0.28,0.11]},
- 10:  {teeFrac:[0.33,0.86], greenFrac:[0.25,0.14]},
- 11:  {teeFrac:[0.52,0.87], greenFrac:[0.43,0.11]},
- 12:  {teeFrac:[0.38,0.80], greenFrac:[0.37,0.22]},
- 13:  {teeFrac:[0.46,0.87], greenFrac:[0.42,0.12]},
- 14:  {teeFrac:[0.58,0.92], greenFrac:[0.45,0.12]},
- 15:  {teeFrac:[0.40,0.86], greenFrac:[0.38,0.12]},
- 16:  {teeFrac:[0.37,0.88], greenFrac:[0.28,0.09]},
- 17:  {teeFrac:[0.44,0.76], greenFrac:[0.44,0.21]},
- 18:  {teeFrac:[0.35,0.83], greenFrac:[0.35,0.09]},
+const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
+  1:  {teeFrac:[0.76,0.839],  greenFrac:[0.541,0.169], waypointFracs:[[0.272,0.466]]},
+  2:  {teeFrac:[0.605,0.841], greenFrac:[0.459,0.148], waypointFracs:[[0.518,0.529],[0.537,0.352]]},
+  3:  {teeFrac:[0.258,0.808], greenFrac:[0.327,0.192], waypointFracs:[[0.765,0.552],[0.432,0.311]]},
+  4:  {teeFrac:[0.546,0.797], greenFrac:[0.523,0.189], waypointFracs:[[0.518,0.417],[0.521,0.271]]},
+  5:  {teeFrac:[0.416,0.809], greenFrac:[0.525,0.259], waypointFracs:[[0.393,0.518],[0.452,0.328]]},
+  6:  {teeFrac:[0.603,0.854], greenFrac:[0.489,0.108], waypointFracs:[[0.502,0.495],[0.42,0.241]]},
+  7:  {teeFrac:[0.511,0.693], greenFrac:[0.552,0.339], waypointFracs:[[0.539,0.525],[0.557,0.421]]},
+  8:  {teeFrac:[0.698,0.81],  greenFrac:[0.539,0.196], waypointFracs:[[0.457,0.467],[0.484,0.245]]},
+  9:  {teeFrac:[0.525,0.787], greenFrac:[0.539,0.201], waypointFracs:[[0.425,0.491],[0.502,0.341]]},
+ 10:  {teeFrac:[0.552,0.856], greenFrac:[0.598,0.172], waypointFracs:[[0.461,0.461],[0.525,0.258]]},
+ 11:  {teeFrac:[0.461,0.834], greenFrac:[0.571,0.176], waypointFracs:[[0.484,0.379],[0.548,0.196]]},
+ 12:  {teeFrac:[0.507,0.79],  greenFrac:[0.521,0.211], waypointFracs:[[0.511,0.37],[0.511,0.293]]},
+ 13:  {teeFrac:[0.548,0.893], greenFrac:[0.47,0.161],  waypointFracs:[[0.484,0.437],[0.457,0.273]]},
+ 14:  {teeFrac:[0.621,0.797], greenFrac:[0.676,0.195], waypointFracs:[[0.347,0.457],[0.534,0.28]]},
+ 15:  {teeFrac:[0.461,0.816], greenFrac:[0.516,0.149], waypointFracs:[[0.507,0.445],[0.502,0.207]]},
+ 16:  {teeFrac:[0.735,0.806], greenFrac:[0.648,0.182], waypointFracs:[[0.521,0.475],[0.584,0.304]]},
+ 17:  {teeFrac:[0.589,0.844], greenFrac:[0.434,0.285], waypointFracs:[[0.525,0.567],[0.47,0.39]]},
+ 18:  {teeFrac:[0.299,0.829], greenFrac:[0.377,0.157], waypointFracs:[[0.724,0.573],[0.614,0.266]]},
 }
 function fracToSVG(frac:[number,number]):{x:number;y:number}{
   return {x:frac[0]*100, y:frac[1]*260}
@@ -2341,11 +2319,13 @@ const REAL_COURSES = [
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,onStart,onH2H,onJoin,onDaily}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
-  tee:Tee; setTee:(t:Tee)=>void; onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void
+  tee:Tee; setTee:(t:Tee)=>void
+  startHole:number; setStartHole:(n:number)=>void
+  onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
   const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
@@ -2390,14 +2370,15 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       <div style={{width:'100%',maxWidth:300}}>
         <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Course Type</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+          <button onClick={()=>setCourseMode('real')}
+            style={{background:courseMode==='real'?'rgba(220,38,38,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode==='real'?'#dc2626':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
+            <div style={{fontSize:14,fontWeight:900}}>🏌️ Real Course</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>Pebble Beach</div>
+          </button>
           <button onClick={()=>setCourseMode('random')}
             style={{background:courseMode==='random'?'rgba(220,38,38,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode==='random'?'#dc2626':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
             <div style={{fontSize:14,fontWeight:900}}>🎲 Random</div>
             <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>New layout each game</div>
-          </button>
-          <button disabled style={{background:'#1e2d4a',color:'rgba(255,255,255,0.25)',border:'2px solid transparent',borderRadius:10,padding:'12px 8px',cursor:'default',fontFamily:'inherit',textAlign:'center',opacity:0.5}}>
-            <div style={{fontSize:14,fontWeight:900}}>🏌️ Real Course</div>
-            <div style={{fontSize:10,marginTop:2}}>Coming Soon</div>
           </button>
         </div>
       </div>
@@ -2418,18 +2399,18 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       )}
 
-      {/* Tee selector — real courses only */}
+      {/* Hole selector — real courses only */}
       {courseMode==='real'&&(
         <div style={{width:'100%',maxWidth:300}}>
-          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Select Tee</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
-            {TEE_OPTIONS.map(({value,label,sub,color,ring})=>(
-              <button key={value} onClick={()=>setTee(value)}
-                style={{background:tee===value?`${color}22`:'#1e2d4a',color:'white',border:`2px solid ${tee===value?color:'transparent'}`,borderRadius:10,padding:'12px 4px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',boxShadow:tee===value?`0 0 12px ${ring}`:'none'}}>
-                <div style={{fontSize:14,fontWeight:900,color:tee===value?color:'white'}}>{label}</div>
-                <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:2}}>{sub}</div>
-              </button>
-            ))}
+          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Start Hole</div>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16}}>
+            <button onClick={()=>setStartHole(startHole===1?18:startHole-1)}
+              style={{background:'#1e2d4a',color:'white',border:'none',borderRadius:8,width:40,height:40,fontSize:20,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>‹</button>
+            <div style={{fontSize:32,fontWeight:900,color:'white',minWidth:48,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
+              {String(startHole).padStart(2,'0')}
+            </div>
+            <button onClick={()=>setStartHole(startHole===18?1:startHole+1)}
+              style={{background:'#1e2d4a',color:'white',border:'none',borderRadius:8,width:40,height:40,fontSize:20,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>›</button>
           </div>
         </div>
       )}
