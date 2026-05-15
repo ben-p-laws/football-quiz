@@ -108,8 +108,8 @@ type Quiz = {
 // ── Styles ────────────────────────────────────────────────────────────────────
 const s = {
   page:   { minHeight: '100vh', background: '#0a0f1e', fontFamily: "'DM Sans', -apple-system, sans-serif", paddingBottom: 60 } as React.CSSProperties,
-  select: { width: '100%', background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '11px 16px', fontSize: 14, fontWeight: 600, color: 'white', cursor: 'pointer', outline: 'none' } as React.CSSProperties,
-  input:  { background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 15, color: 'white', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties,
+  select: { width: '100%', background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '11px 16px', fontSize: 16, fontWeight: 600, color: 'white', cursor: 'pointer', outline: 'none' } as React.CSSProperties,
+  input:  { background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 10, padding: '12px 16px', fontSize: 16, color: 'white', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' } as React.CSSProperties,
   modePill: (active: boolean) => ({
     background: active ? 'rgba(220,38,38,0.15)' : '#1e2d4a',
     border: `1px solid ${active ? 'rgba(220,38,38,0.5)' : '#2a3d5e'}`,

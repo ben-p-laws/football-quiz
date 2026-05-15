@@ -187,7 +187,7 @@ const s = {
   page:  { background: '#0a0f1e', minHeight: '100vh', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
   card:  { background: '#111827', border: '1px solid #1e2d4a', borderRadius: '12px', padding: '16px' } as React.CSSProperties,
   hdr:   { background: '#1e2d4a', border: '1px solid #2a3d5e', borderRadius: '8px', textAlign: 'center' as const, fontSize: '11px', fontWeight: 700, color: '#f97316', textTransform: 'uppercase' as const, letterSpacing: '0.04em', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  input: { width: '100%', background: '#0a0f1e', border: '1px solid #2a3d5e', borderRadius: '8px', padding: '10px 14px', fontSize: '14px', color: 'white', outline: 'none', boxSizing: 'border-box' as const },
+  input: { width: '100%', background: '#0a0f1e', border: '1px solid #2a3d5e', borderRadius: '8px', padding: '10px 14px', fontSize: '16px', color: 'white', outline: 'none', boxSizing: 'border-box' as const },
   pill:  (on: boolean, col = '#f97316') => ({ padding: '6px 18px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', border: `1px solid ${on ? col : '#2a3d5e'}`, background: on ? col : 'transparent', color: on ? 'white' : '#8899bb' } as React.CSSProperties),
 }
 

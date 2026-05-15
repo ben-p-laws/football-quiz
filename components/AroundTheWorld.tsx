@@ -393,7 +393,7 @@ function DailyEndPanel({ phase, pct, runningTotal, target, mode, playerName, set
               onChange={e => setPlayerName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && playerName.trim()) onSubmit() }}
               placeholder="Your name…"
-              style={{ flex: 1, background: '#111827', border: '1px solid #2a3d5e', borderRadius: 6, padding: '8px 12px', color: 'white', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+              style={{ flex: 1, background: '#111827', border: '1px solid #2a3d5e', borderRadius: 6, padding: '8px 12px', color: 'white', fontSize: 16, outline: 'none', fontFamily: 'inherit' }}
             />
             <button onClick={onSubmit} disabled={!playerName.trim()} style={{ padding: '8px 18px', background: playerName.trim() ? '#dc2626' : '#2a3d5e', color: 'white', border: 'none', borderRadius: 6, fontWeight: 800, fontSize: 13, cursor: playerName.trim() ? 'pointer' : 'default' }}>Submit</button>
           </div>
@@ -444,7 +444,7 @@ function MineDailyEndPanel({ won, livesLost, playerName, setPlayerName, scoreSub
               onChange={e => setPlayerName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter' && playerName.trim()) onSubmit() }}
               placeholder="Your name…"
-              style={{ flex: 1, background: '#111827', border: '1px solid #2a3d5e', borderRadius: 6, padding: '8px 12px', color: 'white', fontSize: 14, outline: 'none', fontFamily: 'inherit' }}
+              style={{ flex: 1, background: '#111827', border: '1px solid #2a3d5e', borderRadius: 6, padding: '8px 12px', color: 'white', fontSize: 16, outline: 'none', fontFamily: 'inherit' }}
             />
             <button onClick={onSubmit} disabled={!playerName.trim()} style={{ padding: '8px 18px', background: playerName.trim() ? '#dc2626' : '#2a3d5e', color: 'white', border: 'none', borderRadius: 6, fontWeight: 800, fontSize: 13, cursor: playerName.trim() ? 'pointer' : 'default' }}>Submit</button>
           </div>
@@ -1891,7 +1891,7 @@ export default function AroundTheWorld() {
                   border: `1px solid ${cntSelected ? '#2a3d5e' : '#151f30'}`,
                   borderRadius: 8, padding: '10px 14px',
                   color: cntSelected ? 'white' : '#2a3d5e',
-                  fontSize: 15, outline: 'none', fontFamily: 'inherit',
+                  fontSize: 16, outline: 'none', fontFamily: 'inherit',
                   cursor: cntSelected ? 'text' : 'default',
                 }}
               />
@@ -2043,7 +2043,7 @@ export default function AroundTheWorld() {
                 width: '100%', boxSizing: 'border-box' as const,
                 background: '#111827', border: '1px solid #2a3d5e',
                 borderRadius: 8, padding: '10px 14px',
-                color: 'white', fontSize: 15, outline: 'none', fontFamily: 'inherit',
+                color: 'white', fontSize: 16, outline: 'none', fontFamily: 'inherit',
               }}
             />
             {suggestions.length > 0 && (

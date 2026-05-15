@@ -609,7 +609,7 @@ export default function TeammatesPageClient() {
                 autoComplete="off"
                 style={{
                   width: '100%', background: '#111827', border: '1px solid #1e2d4a',
-                  borderRadius: 8, padding: '11px 14px', color: 'white', fontSize: 14,
+                  borderRadius: 8, padding: '11px 14px', color: 'white', fontSize: 16,
                   outline: 'none', boxSizing: 'border-box',
                 }}
               />

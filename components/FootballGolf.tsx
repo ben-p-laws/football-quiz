@@ -1403,7 +1403,7 @@ export default function FootballGolf(){
 
   // H2H screens (take priority over setup)
   const h2hScreenStyle:React.CSSProperties={minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,fontFamily:"'DM Sans',sans-serif",padding:'24px'}
-  const h2hInputStyle:React.CSSProperties={background:'#1e2d4a',border:'1px solid #2d3f5e',borderRadius:10,padding:'12px 16px',color:'white',fontSize:15,fontWeight:600,width:'100%',maxWidth:300,fontFamily:'inherit'}
+  const h2hInputStyle:React.CSSProperties={background:'#1e2d4a',border:'1px solid #2d3f5e',borderRadius:10,padding:'12px 16px',color:'white',fontSize:16,fontWeight:600,width:'100%',maxWidth:300,fontFamily:'inherit'}
   const h2hBtnStyle:React.CSSProperties={background:'#dc2626',color:'white',border:'none',borderRadius:10,padding:'13px 36px',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}
   const h2hSecBtnStyle:React.CSSProperties={...h2hBtnStyle,background:'#1e2d4a'}
 
