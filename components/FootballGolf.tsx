@@ -2328,115 +2328,110 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
-  const TEE_OPTIONS: {value:Tee;label:string;sub:string;color:string;ring:string}[] = [
-    {value:'Red',  label:'Easy',  sub:'Red tees',  color:'#dc2626', ring:'rgba(220,38,38,0.4)'},
-    {value:'White',label:'Medium',sub:'White tees',color:'#9ca3af', ring:'rgba(156,163,175,0.4)'},
-    {value:'Blue', label:'Hard',  sub:'Blue tees', color:'#3b82f6', ring:'rgba(59,130,246,0.4)'},
-  ]
+  const today = new Date().toISOString().slice(0,10)
+  const dailyPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
+  const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
   return(
-    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+    <div style={{height:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'12px 20px',overflow:'hidden'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
-      <div style={{textAlign:'center'}}>
-        <div style={{fontSize:30,fontWeight:900,color:'white',letterSpacing:'-0.5px'}}>Football Golf</div>
-      </div>
 
+      {/* Title */}
+      <div style={{fontSize:24,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:2}}>Football Golf</div>
 
-      {/* Daily challenge card */}
-      {(()=>{
-        const today = new Date().toISOString().slice(0,10)
-        const played = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
-        return(
-          <button onClick={onDaily} style={{width:'100%',maxWidth:300,background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`2px solid ${played?'#22c55e':'#3b82f6'}`,borderRadius:14,padding:'14px 18px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:14}}>
-            <div style={{fontSize:28,lineHeight:1}}>⛳</div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:14,fontWeight:900,color:'white'}}>Daily Challenge</div>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:2}}>{played?'Played today · view leaderboard':'Closest to the pin · new hole every day'}</div>
-            </div>
-            <div style={{fontSize:13,fontWeight:800,color:played?'#22c55e':'#3b82f6'}}>{played?'✓':'→'}</div>
-          </button>
-        )
-      })()}
+      {/* Daily challenge */}
+      <button onClick={onDaily} style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 14px',cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:12}}>
+        <div style={{fontSize:22,lineHeight:1}}>⛳</div>
+        <div style={{flex:1,textAlign:'left'}}>
+          <div style={{fontSize:13,fontWeight:900,color:'white'}}>Daily Challenge</div>
+          <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:1}}>{dailyPlayed?'Played today · view leaderboard':'Closest to the pin · new hole every day'}</div>
+        </div>
+        <div style={{fontSize:12,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓':'→'}</div>
+      </button>
 
-      {/* Mode tabs */}
-      <div style={{width:'100%',maxWidth:300,background:'#111827',borderRadius:12,padding:4,display:'grid',gridTemplateColumns:'1fr 1fr',gap:4}}>
-        {([['solo','Single Player'],['h2h','Head to Head']] as const).map(([val,label])=>(
-          <button key={val} onClick={()=>setMode(val)} style={{background:mode===val?'#1e2d4a':'transparent',color:mode===val?'white':'rgba(255,255,255,0.4)',border:'none',borderRadius:9,padding:'10px 0',fontSize:13,fontWeight:800,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
+      {/* Solo / H2H */}
+      <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:10,padding:3,display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
+        {([['solo','Solo'],['h2h','Head to Head']] as const).map(([val,label])=>(
+          <button key={val} onClick={()=>setMode(val)} style={{background:mode===val?'rgba(34,197,94,0.15)':'transparent',color:mode===val?'#22c55e':'rgba(255,255,255,0.35)',border:`1.5px solid ${mode===val?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'8px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
             {label}
           </button>
         ))}
       </div>
 
-      {/* Course mode toggle */}
-      <div style={{width:'100%',maxWidth:300}}>
-        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Course Type</div>
+      {/* Course type toggle */}
+      <div style={{width:'100%',maxWidth:320}}>
+        <div style={lbl}>Course Type</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
           <button onClick={()=>setCourseMode('real')}
-            style={{background:courseMode==='real'?'rgba(220,38,38,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode==='real'?'#dc2626':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
-            <div style={{fontSize:14,fontWeight:900}}>🏌️ Real Course</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>Pebble Beach</div>
+            style={{background:courseMode==='real'?'rgba(34,197,94,0.1)':'#111827',color:'white',border:`2px solid ${courseMode==='real'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
+            <div style={{fontSize:13,fontWeight:900}}>🏌️ Real Course</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>Play a real course</div>
           </button>
           <button onClick={()=>setCourseMode('random')}
-            style={{background:courseMode==='random'?'rgba(220,38,38,0.15)':'#1e2d4a',color:'white',border:`2px solid ${courseMode==='random'?'#dc2626':'transparent'}`,borderRadius:10,padding:'12px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
-            <div style={{fontSize:14,fontWeight:900}}>🎲 Random</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginTop:2}}>New layout each game</div>
+            style={{background:courseMode==='random'?'rgba(34,197,94,0.1)':'#111827',color:'white',border:`2px solid ${courseMode==='random'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
+            <div style={{fontSize:13,fontWeight:900}}>🎲 Random</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>New layout each game</div>
           </button>
         </div>
       </div>
 
-      {/* Real course dropdown */}
+      {/* Real course options: course selector + start hole side by side */}
       {courseMode==='real'&&(
-        <div style={{width:'100%',maxWidth:300}}>
-          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Select Course</div>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {REAL_COURSES.map(({id,name,available})=>(
-              <button key={id} onClick={()=>available&&setSelectedCourse(id)} disabled={!available}
-                style={{background:selectedCourse===id?'rgba(74,222,128,0.1)':'#1e2d4a',color:available?'white':'rgba(255,255,255,0.3)',border:`2px solid ${selectedCourse===id?'#4ade80':'transparent'}`,borderRadius:10,padding:'11px 14px',cursor:available?'pointer':'default',fontFamily:'inherit',transition:'all 0.15s',textAlign:'left',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                <span style={{fontSize:13,fontWeight:700}}>{name}</span>
-                {!available&&<span style={{fontSize:10,color:'rgba(255,255,255,0.25)',fontWeight:700}}>Coming Soon</span>}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Hole selector — real courses only */}
-      {courseMode==='real'&&(
-        <div style={{width:'100%',maxWidth:300}}>
-          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>Start Hole</div>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16}}>
-            <button onClick={()=>setStartHole(startHole===1?18:startHole-1)}
-              style={{background:'#1e2d4a',color:'white',border:'none',borderRadius:8,width:40,height:40,fontSize:20,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>‹</button>
-            <div style={{fontSize:32,fontWeight:900,color:'white',minWidth:48,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
-              {String(startHole).padStart(2,'0')}
+        <div style={{width:'100%',maxWidth:320,display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'end'}}>
+          {/* Course selector */}
+          <div>
+            <div style={lbl}>Course</div>
+            <div style={{position:'relative'}}>
+            <select value={selectedCourse} onChange={e=>setSelectedCourse(e.target.value)}
+              style={{width:'100%',background:'#111827',color:'white',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'10px 36px 10px 12px',fontSize:13,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
+              {REAL_COURSES.filter(c=>c.available).map(c=>(
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+              {REAL_COURSES.filter(c=>!c.available).map(c=>(
+                <option key={c.id} value={c.id} disabled>{c.name} (soon)</option>
+              ))}
+            </select>
+            <div style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,0.4)',fontSize:10,lineHeight:1}}>▼</div>
             </div>
-            <button onClick={()=>setStartHole(startHole===18?1:startHole+1)}
-              style={{background:'#1e2d4a',color:'white',border:'none',borderRadius:8,width:40,height:40,fontSize:20,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>›</button>
+          </div>
+          {/* Start hole stepper */}
+          <div>
+            <div style={lbl}>Start Hole</div>
+            <div style={{display:'flex',alignItems:'center',gap:4,background:'#111827',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'6px 8px'}}>
+              <button onClick={()=>setStartHole(startHole===1?18:startHole-1)}
+                style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>‹</button>
+              <div style={{fontSize:18,fontWeight:900,color:'white',width:28,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
+                {String(startHole).padStart(2,'0')}
+              </div>
+              <button onClick={()=>setStartHole(startHole===18?1:startHole+1)}
+                style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>›</button>
+            </div>
           </div>
         </div>
       )}
 
       {/* Holes */}
-      <div style={{width:'100%',maxWidth:300}}>
-        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10,textAlign:'center'}}>How many holes?</div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+      <div style={{width:'100%',maxWidth:320}}>
+        <div style={lbl}>Holes</div>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
           {([3,6,9,18] as const).map(n=>(
-            <button key={n} onClick={()=>setNumHoles(n)} style={{background:numHoles===n?'#dc2626':'#1e2d4a',color:'white',border:'none',borderRadius:10,padding:'16px 0',fontSize:20,fontWeight:900,cursor:'pointer',fontFamily:'inherit',transition:'background 0.15s'}}>
+            <button key={n} onClick={()=>setNumHoles(n)} style={{background:numHoles===n?'rgba(34,197,94,0.1)':'#111827',color:numHoles===n?'#22c55e':'white',border:`2px solid ${numHoles===n?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'12px 0',fontSize:18,fontWeight:900,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
               {n}
             </button>
           ))}
         </div>
       </div>
 
+      {/* CTA */}
       {mode==='solo'
-        ? <button onClick={onStart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+        ? <button onClick={onStart} style={{width:'100%',maxWidth:320,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginTop:2}}>
             Tee Off →
           </button>
-        : <div style={{display:'flex',alignItems:'center',gap:10,width:'100%',maxWidth:300}}>
-            <button onClick={onH2H} style={{flex:1,background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+        : <div style={{display:'flex',alignItems:'center',gap:8,width:'100%',maxWidth:320,marginTop:2}}>
+            <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
               Create Room
             </button>
-            <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>or</div>
-            <button onClick={onJoin} style={{flex:1,background:'#1e2d4a',color:'white',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
+            <button onClick={onJoin} style={{flex:1,background:'#111827',color:'white',border:'2px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
               Join Room
             </button>
           </div>
