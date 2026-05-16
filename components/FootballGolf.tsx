@@ -1523,12 +1523,19 @@ export default function FootballGolf(){
         input::placeholder { color:rgba(255,255,255,0.3); }
         input:focus { outline:none; }
         @keyframes clubSwing {
-          0%   { transform: rotate(-50deg); }
-          35%  { transform: rotate(25deg); }
-          60%  { transform: rotate(-8deg); }
-          100% { transform: rotate(-8deg); }
+          0%   { transform: rotate(52deg); }
+          40%  { transform: rotate(0deg); }
+          58%  { transform: rotate(-58deg); }
+          100% { transform: rotate(-52deg); }
         }
-        .club-swing { animation: clubSwing 0.5s ease-out forwards; transform-origin: 0 0; }
+        .club-swing { animation: clubSwing 0.65s cubic-bezier(0.15,0,0.35,1) forwards; transform-origin: 0 0; }
+        @keyframes impactFlash {
+          0%,37% { opacity:0; transform:scale(0); }
+          44%    { opacity:1; transform:scale(1); }
+          68%    { opacity:0; transform:scale(2.2); }
+          100%   { opacity:0; }
+        }
+        .impact-flash { animation: impactFlash 0.65s ease-out forwards; transform-origin: center; }
         @keyframes holeResultIn {
           0%   { opacity:0; transform:translate(-50%,-50%) scale(0.5); }
           15%  { opacity:1; transform:translate(-50%,-50%) scale(1.12); }
@@ -1912,7 +1919,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const bHalf   = imageUrl ? 14 : 8   // half-width of label box
   const bSingle = imageUrl ? 14 : 8   // height of single-line box
   const bDouble = imageUrl ? 22 : 13  // height of double-line box
-  const ballR   = imageUrl ? 5 : 3.2
+  const ballR   = imageUrl ? 3.5 : 3.2
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
@@ -2070,10 +2077,17 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         <polygon points={`${holePos.x},${holePos.y-17} ${holePos.x+11},${holePos.y-13} ${holePos.x},${holePos.y-8}`} fill="#dc2626"/>
 
 
-        {/* Swing animation */}
+        {/* Swing animation — grip to the right, shaft sweeps from tee-side through ball toward hole */}
         {isAnimating&&(
-          <g transform={`translate(${swingX+5},${swingY+2})`}>
-            <line className="club-swing" x1={0} y1={0} x2={11} y2={-22} stroke="rgba(255,220,100,0.9)" strokeWidth={1.5} strokeLinecap="round"/>
+          <g transform={`translate(${swingX-10},${swingY})`}>
+            <g className="club-swing">
+              {/* Shaft pointing right toward ball */}
+              <line x1={0} y1={0} x2={10} y2={0} stroke="rgba(200,210,220,0.9)" strokeWidth={1} strokeLinecap="round"/>
+              {/* Club head — perpendicular at shaft end, one side only (face toward hole = -y) */}
+              <line x1={10} y1={-3} x2={10} y2={1} stroke="rgba(200,210,220,0.9)" strokeWidth={2} strokeLinecap="round"/>
+            </g>
+            {/* Impact flash at ball position */}
+            <circle className="impact-flash" cx={10} cy={0} r={3} fill="rgba(255,255,255,0.65)"/>
           </g>
         )}
 
