@@ -609,7 +609,7 @@ export default function FootballGolf(){
   const [h2hOppShotReady, setH2HOppShotReady] = useState<any>(null) // tee shot sync
   const [h2hOppTurnShot, setH2HOppTurnShot] = useState<any>(null)   // non-tee opp shot
   const [h2hWaitPhraseIdx, setH2HWaitPhraseIdx] = useState(0)
-  const [h2hOppPlayerNames, setH2HOppPlayerNames] = useState<string[]|null>(null)
+  const [h2hOppPlayerNames, setH2HOppPlayerNames] = useState<{name:string;value:number}[]|null>(null)
   const [showOppGuesses, setShowOppGuesses] = useState(false)
   const [h2hOppLastQuestion, setH2HOppLastQuestion] = useState<string|null>(null)
   // Refs
@@ -663,6 +663,15 @@ export default function FootballGolf(){
   useEffect(()=>()=>{ if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current) },[])
 
   useEffect(()=>{ strokesRef.current=strokes },[strokes])
+
+  // Broadcast current question to opponent as soon as it's set (before submission)
+  useEffect(()=>{
+    if(h2hStep!=='playing'||!question||h2hWaiting||!h2hRoomIdRef.current||!h2hPlayerId.current) return
+    void fetch('/api/golf-room',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'previewQuestion',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,questionLabel:question.label}),
+    }).then(()=>{},()=>{})
+  },[question,h2hStep,h2hWaiting])
 
   useEffect(()=>{
     if(!h2hWaiting){setH2HWaitPhraseIdx(0);return}
@@ -1052,7 +1061,7 @@ export default function FootballGolf(){
           remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
           holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
           isGimme:result.isGimme??false,
-          playerNames:named,
+          playerNames:breakdown,
           questionLabel:question?.label,
         }),
       }).then(r=>r.json()).then(d=>{
@@ -1080,7 +1089,7 @@ export default function FootballGolf(){
           remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
           holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
           isGimme:result.isGimme??false,
-          playerNames:named,
+          playerNames:breakdown,
           questionLabel:question?.label,
         }),
       })
@@ -1286,7 +1295,13 @@ export default function FootballGolf(){
     stopH2HPoll()
     const lastSeen=h2hOppShotIdxRef.current
     h2hPollRef.current=setInterval(async()=>{
-      const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
+      const [d,roomD]=await Promise.all([
+        fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null),
+        fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}`).then(r=>r.json()).catch(()=>null),
+      ])
+      // Update opp's current question from room config even before they submit
+      const previewQ=roomD?.room?.config?.[`currentQ_${h2hOppId.current}`]
+      if(previewQ) setH2HOppLastQuestion(previewQ)
       if(!d) return
       const shots:any[]=d.shots||[]
       const newer=shots
@@ -1723,10 +1738,18 @@ export default function FootballGolf(){
               </button>
               {showOppGuesses&&(
                 <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'none',borderRadius:'0 0 7px 7px',padding:'6px 10px 8px'}}>
+                  {h2hOppLastQuestion&&<div style={{fontSize:10,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>{h2hOppLastQuestion}</div>}
                   {h2hOppPlayerNames&&h2hOppPlayerNames.length>0?(
-                    h2hOppPlayerNames.map(n=>(
-                      <div key={n} style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.85)',paddingTop:2}}>{n}</div>
-                    ))
+                    h2hOppPlayerNames.map(p=>{
+                      const name=typeof p==='string'?p:(p as any).name
+                      const val=typeof p==='string'?null:(p as any).value
+                      return(
+                        <div key={name} style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:3}}>
+                          <span style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.85)'}}>{name}</span>
+                          {val!==null&&<span style={{fontSize:13,fontWeight:800,color:'#f59e0b',marginLeft:8}}>{val}</span>}
+                        </div>
+                      )
+                    })
                   ):(
                     <div style={{fontSize:12,color:'rgba(255,255,255,0.3)'}}>Not available yet</div>
                   )}

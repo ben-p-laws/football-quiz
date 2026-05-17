@@ -115,5 +115,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ bothReady: !!oppShot, opponentShot: oppShot || null })
   }
 
+  // ── Question preview (broadcast current question before shot is submitted) ──────
+  if (body.action === 'previewQuestion') {
+    const { roomId, playerId, questionLabel } = body
+    const { data: room } = await db.from('golf_h2h_rooms').select('config').eq('id', roomId).single()
+    const newConfig = { ...(room?.config || {}), [`currentQ_${playerId}`]: questionLabel }
+    await db.from('golf_h2h_rooms').update({ config: newConfig }).eq('id', roomId)
+    return NextResponse.json({ ok: true })
+  }
+
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }
