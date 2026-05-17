@@ -2048,7 +2048,7 @@ export default function FootballGolf(){
                 isAnimating={isAnimating}
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
-                imageUrl={courseMode==='real' ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
+                imageUrl={courseMode==='real' ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
                 realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac) : undefined}
                 realGreenPos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac) : undefined}
@@ -2180,7 +2180,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const ballR   = imageUrl ? 3.5 : 3.2
 
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative'}}>
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative',background:imageUrl?'#0a0f1e':undefined}}>
 
       {/* Real course photo — images are pre-rotated to 600×1560 portrait, display fills naturally */}
       {imageUrl && (
