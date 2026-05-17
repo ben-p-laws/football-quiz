@@ -462,39 +462,44 @@ const AUGUSTA_HOLES: HoleDef[] = [
   { number:18, par:4, yardages:{Blue:465,White:423,Red:377}, path:{pts:[{x:50,y:230},{x:55,y:156},{x:45,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
 ]
 
-// Water hazards: Rae's Creek (holes 11,12,13), pond on 3/4, 15, 16
 const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
-  3:  { hazards:[{start:195,end:290}] },
-  4:  { hazards:[{start:200,end:240}] },
-  11: { hazards:[{start:470,end:505}] },
-  12: { hazards:[{start:0,end:155}] },
-  13: { hazards:[{start:215,end:265}] },
-  15: { hazards:[{start:480,end:530}] },
-  16: { hazards:[{start:0,end:170}] },
+   1: {bunkers:[{start:215,end:258}]},
+   4: {bunkers:[{start:214,end:230}]},
+   5: {bunkers:[{start:252,end:271},{start:277,end:292}]},
+   6: {bunkers:[{start:144,end:165}]},
+   7: {bunkers:[{start:416,end:434}]},
+   8: {bunkers:[{start:173,end:213}]},
+  10: {bunkers:[{start:371,end:424}]},
+  12: {hazards:[{start:107,end:136}], bunkers:[{start:140,end:146}]},
+  13: {hazards:[{start:481,end:491}]},
+  15: {hazards:[{start:451,end:496}]},
+  16: {hazards:[{start:32,end:124}]},
+  17: {bunkers:[{start:414,end:425}]},
+  18: {bunkers:[{start:415,end:440}]},
 }
 
 // Tee/green positions as [xFrac, yFrac] in portrait images (tee-bottom, green-top).
 // Images were rotated from landscape: CCW for tee-left holes, CW for holes 6, 7, 13.
 // y-fracs kept inward (0.20–0.85) so flag/ball clear the SVG slice clip on all screen sizes.
 const AUGUSTA_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
-  1:  {teeFrac:[0.55,0.85], greenFrac:[0.18,0.20], waypointFracs:[[0.42,0.55]]},
-  2:  {teeFrac:[0.43,0.85], greenFrac:[0.39,0.20], waypointFracs:[[0.43,0.50]]},
-  3:  {teeFrac:[0.50,0.85], greenFrac:[0.36,0.20], waypointFracs:[[0.48,0.55]]},
-  4:  {teeFrac:[0.36,0.85], greenFrac:[0.40,0.20]},
-  5:  {teeFrac:[0.46,0.85], greenFrac:[0.34,0.20], waypointFracs:[[0.43,0.52]]},
-  6:  {teeFrac:[0.45,0.85], greenFrac:[0.25,0.20]},
-  7:  {teeFrac:[0.55,0.85], greenFrac:[0.22,0.20], waypointFracs:[[0.42,0.47]]},
-  8:  {teeFrac:[0.50,0.85], greenFrac:[0.33,0.20], waypointFracs:[[0.47,0.60],[0.38,0.32]]},
-  9:  {teeFrac:[0.50,0.85], greenFrac:[0.27,0.20], waypointFracs:[[0.46,0.52]]},
-  10: {teeFrac:[0.44,0.85], greenFrac:[0.55,0.20], waypointFracs:[[0.42,0.56]]},
-  11: {teeFrac:[0.43,0.85], greenFrac:[0.38,0.20], waypointFracs:[[0.42,0.55]]},
-  12: {teeFrac:[0.55,0.85], greenFrac:[0.47,0.20]},
-  13: {teeFrac:[0.65,0.85], greenFrac:[0.26,0.20], waypointFracs:[[0.45,0.55]]},
-  14: {teeFrac:[0.50,0.85], greenFrac:[0.45,0.20], waypointFracs:[[0.47,0.53]]},
-  15: {teeFrac:[0.47,0.85], greenFrac:[0.33,0.20], waypointFracs:[[0.46,0.60],[0.40,0.32]]},
-  16: {teeFrac:[0.48,0.85], greenFrac:[0.42,0.20]},
-  17: {teeFrac:[0.50,0.85], greenFrac:[0.38,0.20], waypointFracs:[[0.46,0.53]]},
-  18: {teeFrac:[0.48,0.85], greenFrac:[0.40,0.20], waypointFracs:[[0.44,0.55]]},
+   1: {teeFrac:[0.482,0.902], greenFrac:[0.575,0.144], waypointFracs:[[0.43,0.445],[0.466,0.311]]},
+   2: {teeFrac:[0.215,0.924], greenFrac:[0.449,0.107], waypointFracs:[[0.961,0.324]]},
+   3: {teeFrac:[0.562,0.917], greenFrac:[0.635,0.122], waypointFracs:[[0.506,0.296]]},
+   4: {teeFrac:[0.506,0.847], greenFrac:[0.523,0.168]},
+   5: {teeFrac:[0.426,0.895], greenFrac:[0.358,0.132], waypointFracs:[[0.705,0.414]]},
+   6: {teeFrac:[0.484,0.87],  greenFrac:[0.448,0.178]},
+   7: {teeFrac:[0.479,0.9],   greenFrac:[0.527,0.108], waypointFracs:[[0.497,0.611],[0.521,0.262]]},
+   8: {teeFrac:[0.618,0.917], greenFrac:[0.492,0.107], waypointFracs:[[0.574,0.447],[0.602,0.195]]},
+   9: {teeFrac:[0.28,0.907],  greenFrac:[0.369,0.093], waypointFracs:[[0.916,0.402]]},
+  10: {teeFrac:[0.289,0.907], greenFrac:[0.339,0.106], waypointFracs:[[0.634,0.46]]},
+  11: {teeFrac:[0.565,0.92],  greenFrac:[0.531,0.146], waypointFracs:[[0.452,0.357],[0.492,0.249]]},
+  12: {teeFrac:[0.513,0.854], greenFrac:[0.487,0.257], waypointFracs:[[0.498,0.474]]},
+  13: {teeFrac:[0.176,0.92],  greenFrac:[0.357,0.135], waypointFracs:[[0.969,0.621],[0.923,0.394]]},
+  14: {teeFrac:[0.306,0.918], greenFrac:[0.406,0.128], waypointFracs:[[0.718,0.525]]},
+  15: {teeFrac:[0.52,0.931],  greenFrac:[0.514,0.114], waypointFracs:[[0.537,0.548],[0.514,0.238]]},
+  16: {teeFrac:[0.419,0.855], greenFrac:[0.509,0.173], waypointFracs:[[0.462,0.494],[0.487,0.327]]},
+  17: {teeFrac:[0.389,0.918], greenFrac:[0.446,0.09],  waypointFracs:[[0.56,0.496]]},
+  18: {teeFrac:[0.696,0.915], greenFrac:[0.627,0.095], waypointFracs:[[0.116,0.421]]},
 }
 
 // Manually calibrated hazards/bunkers for real course mode (yards from tee, Blue distances)
@@ -2187,7 +2192,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         <img src={imageUrl} alt="" style={{
           position:'absolute', inset:0,
           width:'100%', height:'100%',
-          objectFit:'cover', objectPosition:'center',
+          objectFit:'contain', objectPosition:'center',
           ...(rot ? {transform:`rotate(${rot}deg)`} : {}),
         }}/>
       )}

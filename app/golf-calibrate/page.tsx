@@ -18,9 +18,9 @@ type HoleCalib = {
 
 const EMPTY_CALIB = (): HoleCalib => ({ tee: null, green: null, waypoints: [], hazards: [], bunkers: [] })
 
-// ── Saved HOLE_POSITIONS (pre-populate path) ──────────────────────────────────
+// ── Saved positions per course ────────────────────────────────────────────────
 
-const SAVED_POSITIONS: Record<number, { teeFrac: FracPt; greenFrac: FracPt; waypointFracs?: FracPt[] }> = {
+const SAVED_POSITIONS_PEBBLE: Record<number, { teeFrac: FracPt; greenFrac: FracPt; waypointFracs?: FracPt[] }> = {
   1:  {teeFrac:[0.76,0.839],  greenFrac:[0.541,0.169], waypointFracs:[[0.272,0.466]]},
   2:  {teeFrac:[0.605,0.841], greenFrac:[0.459,0.148], waypointFracs:[[0.518,0.529],[0.537,0.352]]},
   3:  {teeFrac:[0.258,0.808], greenFrac:[0.327,0.192], waypointFracs:[[0.765,0.552],[0.432,0.311]]},
@@ -41,10 +41,53 @@ const SAVED_POSITIONS: Record<number, { teeFrac: FracPt; greenFrac: FracPt; wayp
  18:  {teeFrac:[0.299,0.829], greenFrac:[0.377,0.157], waypointFracs:[[0.724,0.573],[0.614,0.266]]},
 }
 
+const SAVED_POSITIONS_AUGUSTA: Record<number, { teeFrac: FracPt; greenFrac: FracPt; waypointFracs?: FracPt[] }> = {
+  1:  {teeFrac:[0.55,0.85], greenFrac:[0.18,0.20], waypointFracs:[[0.42,0.55]]},
+  2:  {teeFrac:[0.43,0.85], greenFrac:[0.39,0.20], waypointFracs:[[0.43,0.50]]},
+  3:  {teeFrac:[0.50,0.85], greenFrac:[0.36,0.20], waypointFracs:[[0.48,0.55]]},
+  4:  {teeFrac:[0.36,0.85], greenFrac:[0.40,0.20]},
+  5:  {teeFrac:[0.46,0.85], greenFrac:[0.34,0.20], waypointFracs:[[0.43,0.52]]},
+  6:  {teeFrac:[0.45,0.85], greenFrac:[0.25,0.20]},
+  7:  {teeFrac:[0.55,0.85], greenFrac:[0.22,0.20], waypointFracs:[[0.42,0.47]]},
+  8:  {teeFrac:[0.50,0.85], greenFrac:[0.33,0.20], waypointFracs:[[0.47,0.60],[0.38,0.32]]},
+  9:  {teeFrac:[0.50,0.85], greenFrac:[0.27,0.20], waypointFracs:[[0.46,0.52]]},
+ 10:  {teeFrac:[0.44,0.85], greenFrac:[0.55,0.20], waypointFracs:[[0.42,0.56]]},
+ 11:  {teeFrac:[0.43,0.85], greenFrac:[0.38,0.20], waypointFracs:[[0.42,0.55]]},
+ 12:  {teeFrac:[0.55,0.85], greenFrac:[0.47,0.20]},
+ 13:  {teeFrac:[0.65,0.85], greenFrac:[0.26,0.20], waypointFracs:[[0.45,0.55]]},
+ 14:  {teeFrac:[0.50,0.85], greenFrac:[0.45,0.20], waypointFracs:[[0.47,0.53]]},
+ 15:  {teeFrac:[0.47,0.85], greenFrac:[0.33,0.20], waypointFracs:[[0.46,0.60],[0.40,0.32]]},
+ 16:  {teeFrac:[0.48,0.85], greenFrac:[0.42,0.20]},
+ 17:  {teeFrac:[0.50,0.85], greenFrac:[0.38,0.20], waypointFracs:[[0.46,0.53]]},
+ 18:  {teeFrac:[0.48,0.85], greenFrac:[0.40,0.20], waypointFracs:[[0.44,0.55]]},
+}
+
 // Blue tee distances (yards)
-const HOLE_DISTANCES: Record<number, number> = {
+const HOLE_DISTANCES_PEBBLE: Record<number, number> = {
   1:378,2:509,3:397,4:333,5:189,6:498,7:107,8:416,9:483,
   10:444,11:370,12:202,13:401,14:559,15:393,16:400,17:182,18:541,
+}
+const HOLE_DISTANCES_AUGUSTA: Record<number, number> = {
+  1:455,2:575,3:350,4:240,5:495,6:180,7:450,8:570,9:460,
+  10:495,11:505,12:155,13:510,14:440,15:530,16:170,17:440,18:465,
+}
+
+type CourseId = 'pebble-beach' | 'augusta'
+
+function getSavedPositions(course: CourseId) {
+  return course === 'augusta' ? SAVED_POSITIONS_AUGUSTA : SAVED_POSITIONS_PEBBLE
+}
+function getDistances(course: CourseId) {
+  return course === 'augusta' ? HOLE_DISTANCES_AUGUSTA : HOLE_DISTANCES_PEBBLE
+}
+function getImageUrl(course: CourseId, hole: number) {
+  const n = String(hole).padStart(2, '0')
+  return course === 'augusta' ? `/holes/augusta/hole_${n}.png` : `/holes/hole_${n}.png`
+}
+function getVarNames(course: CourseId) {
+  return course === 'augusta'
+    ? { positions: 'AUGUSTA_POSITIONS', hazards: 'AUGUSTA_HAZARDS' }
+    : { positions: 'HOLE_POSITIONS', hazards: 'REAL_COURSE_HAZARDS' }
 }
 
 // ── Bezier helpers ────────────────────────────────────────────────────────────
@@ -59,7 +102,7 @@ function bezierAt(t: number, pts: Pt[]): Pt {
   }
 }
 
-function buildPathPts(pos: typeof SAVED_POSITIONS[number], imgW: number, imgH: number): Pt[] {
+function buildPathPts(pos: typeof SAVED_POSITIONS_PEBBLE[number], imgW: number, imgH: number): Pt[] {
   const fracs: FracPt[] = [pos.teeFrac, ...(pos.waypointFracs ?? []), pos.greenFrac]
   return fracs.map(([x, y]) => ({ x: x * imgW, y: y * imgH }))
 }
@@ -106,21 +149,33 @@ const MODE_COLORS: Record<Mode, string> = {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function GolfCalibratePage() {
+  const [course, setCourse] = useState<CourseId>('pebble-beach')
   const [hole, setHole] = useState(1)
-  const [mode, setMode] = useState<Mode>('hazard')
-  const [calib, setCalib] = useState<Record<number, HoleCalib>>(() => {
-    const init: Record<number, HoleCalib> = {}
-    for (let h = 1; h <= 18; h++) {
-      const s = SAVED_POSITIONS[h]
-      init[h] = s
-        ? { tee: s.teeFrac, green: s.greenFrac, waypoints: s.waypointFracs ?? [], hazards: [], bunkers: [] }
-        : EMPTY_CALIB()
+  const [mode, setMode] = useState<Mode>('tee')
+  const [calibByCourse, setCalibByCourse] = useState<Record<CourseId, Record<number, HoleCalib>>>(() => {
+    const makeCalib = (saved: typeof SAVED_POSITIONS_PEBBLE) => {
+      const init: Record<number, HoleCalib> = {}
+      for (let h = 1; h <= 18; h++) {
+        const s = saved[h]
+        init[h] = s
+          ? { tee: s.teeFrac, green: s.greenFrac, waypoints: s.waypointFracs ?? [], hazards: [], bunkers: [] }
+          : EMPTY_CALIB()
+      }
+      return init
     }
-    return init
+    return {
+      'pebble-beach': makeCalib(SAVED_POSITIONS_PEBBLE),
+      'augusta': makeCalib(SAVED_POSITIONS_AUGUSTA),
+    }
   })
-  const [pendingStart, setPendingStart] = useState<number | null>(null) // yards for first click of hazard/bunker
+  const [pendingStart, setPendingStart] = useState<number | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 })
+
+  const calib = calibByCourse[course]
+  const setCalib = (updater: (prev: Record<number, HoleCalib>) => Record<number, HoleCalib>) => {
+    setCalibByCourse(p => ({ ...p, [course]: updater(p[course]) }))
+  }
 
   useEffect(() => {
     const update = () => {
@@ -130,12 +185,14 @@ export default function GolfCalibratePage() {
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
-  }, [hole])
+  }, [hole, course])
 
   const current = calib[hole] ?? EMPTY_CALIB()
-  const pos = SAVED_POSITIONS[hole]
+  const savedPositions = getSavedPositions(course)
+  const pos = calib[hole]?.tee ? { teeFrac: calib[hole].tee!, greenFrac: calib[hole].green!, waypointFracs: calib[hole].waypoints } : savedPositions[hole]
   const pathPts = pos && imgSize.w > 0 ? buildPathPts(pos, imgSize.w, imgSize.h) : null
-  const distance = HOLE_DISTANCES[hole] ?? 400
+  const distance = getDistances(course)[hole] ?? 400
+  const varNames = getVarNames(course)
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const img = imgRef.current
@@ -193,7 +250,7 @@ export default function GolfCalibratePage() {
       const wf = c.waypoints.length ? `, waypointFracs:[${c.waypoints.map(w => `[${w[0]},${w[1]}]`).join(',')}]` : ''
       lines.push(` ${String(h).padStart(2)}: {teeFrac:${tf}, greenFrac:${gf}${wf}},`)
     }
-    return `const HOLE_POSITIONS = {\n${lines.join('\n')}\n}`
+    return `const ${varNames.positions} = {\n${lines.join('\n')}\n}`
   }
 
   const outputHazardsJS = () => {
@@ -207,7 +264,7 @@ export default function GolfCalibratePage() {
       lines.push(` ${String(h).padStart(2)}: {${parts.join(', ')}},`)
     }
     return lines.length
-      ? `const REAL_COURSE_HAZARDS = {\n${lines.join('\n')}\n}`
+      ? `const ${varNames.hazards} = {\n${lines.join('\n')}\n}`
       : '// No hazards calibrated yet'
   }
 
@@ -241,6 +298,17 @@ export default function GolfCalibratePage() {
       {/* Header */}
       <div style={{ background: '#111827', borderBottom: '1px solid #1e2d4a', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 15, fontWeight: 900 }}>⛳ Golf Calibrate</div>
+
+        {/* Course toggle */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['pebble-beach', 'augusta'] as CourseId[]).map(c => (
+            <button key={c} onClick={() => { setCourse(c); setHole(1); setPendingStart(null) }}
+              style={{ ...btnS, width: 'auto', background: course === c ? '#22c55e' : '#1e2d4a', color: course === c ? '#0a0f1e' : 'white', fontSize: 11 }}>
+              {c === 'pebble-beach' ? 'Pebble Beach' : 'Augusta'}
+            </button>
+          ))}
+        </div>
+
         <div style={{ fontSize: 11, color: '#8899bb' }}>{calibrated}/18 positions · {withHazards}/18 hazards</div>
 
         {/* Hole stepper */}
@@ -286,7 +354,7 @@ export default function GolfCalibratePage() {
           <div onClick={handleClick} style={{ position: 'relative', cursor: 'crosshair', display: 'inline-block', maxHeight: 'calc(100vh - 100px)' }}>
             <img
               ref={imgRef}
-              src={`/holes/hole_${String(hole).padStart(2, '0')}.png`}
+              src={getImageUrl(course, hole)}
               alt={`Hole ${hole}`}
               onLoad={onImgLoad}
               style={{ display: 'block', maxHeight: 'calc(100vh - 100px)', maxWidth: '100%', userSelect: 'none' }}
