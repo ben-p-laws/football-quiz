@@ -201,6 +201,11 @@ function pickCategory(
       if (!isClubStat && (f.k==='club' || f.k==='cc')) return false
       const fs = filterStr(f)
       if (fs && recentSet.has(fs)) return false
+      // Block nat filters whose continent was recently used (prevents e.g. NGA→SEN back-to-back)
+      if (f.k==='nat') {
+        const cont = CONTINENT_MEMBERS[f.code]
+        if (cont && recentSet.has(cont)) return false
+      }
       if (top3Cache) {
         const sum = top3Cache[cacheKeyFor(stat, f)] ?? 0
         if (sum < threshold) return false
@@ -539,6 +544,7 @@ export default function FootballGolf(){
   const [holeIdx,setHoleIdx]             = useState(0)
   const [remaining,setRemaining]         = useState(0)
   const [strokes,setStrokes]             = useState(0)
+  const strokesRef                       = useRef(0)
   const [scores,setScores]               = useState<(number|null)[]>([])
   const [question,setQuestion]           = useState<Category|null>(null)
   const usedLabels    = useRef<Set<string>>(new Set())
@@ -602,6 +608,9 @@ export default function FootballGolf(){
   // Trigger states
   const [h2hOppShotReady, setH2HOppShotReady] = useState<any>(null) // tee shot sync
   const [h2hOppTurnShot, setH2HOppTurnShot] = useState<any>(null)   // non-tee opp shot
+  const [h2hWaitPhraseIdx, setH2HWaitPhraseIdx] = useState(0)
+  const [h2hOppPlayerNames, setH2HOppPlayerNames] = useState<string[]|null>(null)
+  const [showOppGuesses, setShowOppGuesses] = useState(false)
   // Refs
   const h2hPlayerId    = useRef('')
   const h2hIsHost      = useRef(false)
@@ -651,6 +660,14 @@ export default function FootballGolf(){
   },[])
 
   useEffect(()=>()=>{ if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current) },[])
+
+  useEffect(()=>{ strokesRef.current=strokes },[strokes])
+
+  useEffect(()=>{
+    if(!h2hWaiting){setH2HWaitPhraseIdx(0);return}
+    const id=setInterval(()=>setH2HWaitPhraseIdx(i=>(i+1)%5),2200)
+    return ()=>clearInterval(id)
+  },[h2hWaiting])
 
   // Read ?room=XXX from URL → auto-show join screen
   useEffect(()=>{
@@ -702,7 +719,20 @@ export default function FootballGolf(){
       if(h2hIFinishedRef.current){
         resolveH2HHole(h2hMyHoleStrokes.current,h2hOppTurnShot.hole_strokes)
       } else {
-        setH2HIsMyTurn(true) // opp finished, I keep playing
+        const oppFinal=h2hOppTurnShot.hole_strokes
+        if(strokesRef.current>=oppFinal){
+          // Already taken as many shots as opp's total — can't tie or beat them, auto-concede
+          const finishStrokes=strokesRef.current+1
+          h2hIFinishedRef.current=true
+          h2hMyHoleStrokes.current=finishStrokes
+          fetch('/api/golf-room',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
+              holeIdx,shotIdx:strokesRef.current,remainingAfter:0,pastPin:false,holedOut:true,
+              holeStrokes:finishStrokes,isGimme:false})})
+          resolveH2HHole(finishStrokes,oppFinal)
+        } else {
+          setH2HIsMyTurn(true) // opp finished, I keep playing
+        }
       }
     } else {
       const myRem=h2hMyRemainingRef.current
@@ -754,8 +784,14 @@ export default function FootballGolf(){
       minReach,
     )
     usedLabels.current.add(cat.label)
-    const f = cat.natFilter || cat.clubFilter || cat.continentFilter
-    if (f) recentFilters.current = [...recentFilters.current.slice(-9), f]
+    if (cat.natFilter) {
+      const cont = CONTINENT_MEMBERS[cat.natFilter]
+      const extras = cont ? [cat.natFilter, cont] : [cat.natFilter]
+      recentFilters.current = [...recentFilters.current.slice(-(10 - extras.length)), ...extras]
+    } else {
+      const f = cat.clubFilter || cat.continentFilter
+      if (f) recentFilters.current = [...recentFilters.current.slice(-9), f]
+    }
     recentStats.current = [...recentStats.current.slice(-3), cat.key]
     return cat
   }
@@ -1006,6 +1042,7 @@ export default function FootballGolf(){
       const holedOut=result.isHoled||result.isGimme
       const {remaining:ra,pastPin:pp}=calcNewBallState(result,remaining,pastPin)
       setH2HWaiting(true)
+      setShowOppGuesses(false)
       fetch('/api/golf-room',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
@@ -1014,10 +1051,13 @@ export default function FootballGolf(){
           remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
           holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
           isGimme:result.isGimme??false,
+          playerNames:named,
         }),
       }).then(r=>r.json()).then(d=>{
-        if(d.bothReady) setH2HOppShotReady(d.opponentShot)
-        else startTeePoll(holeIdx)
+        if(d.bothReady){
+          if(d.opponentShot?.player_names) setH2HOppPlayerNames(d.opponentShot.player_names)
+          setH2HOppShotReady(d.opponentShot)
+        } else startTeePoll(holeIdx)
       }).catch(()=>startTeePoll(holeIdx))
       return
     }
@@ -1028,6 +1068,7 @@ export default function FootballGolf(){
       const newStrokes=strokes+1+penaltyStrokes
       const holedOut=result.isHoled||result.isGimme
       const {remaining:ra,pastPin:pp}=calcNewBallState(result,remaining,pastPin)
+      setShowOppGuesses(false)
       fetch('/api/golf-room',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
@@ -1036,6 +1077,7 @@ export default function FootballGolf(){
           remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
           holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
           isGimme:result.isGimme??false,
+          playerNames:named,
         }),
       })
       animateShot(ballPos,toPos,result)
@@ -1232,7 +1274,7 @@ export default function FootballGolf(){
       if(!d) return
       const shots:any[]=d.shots||[]
       const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===0)
-      if(oppShot){stopH2HPoll();setH2HOppShotReady(oppShot)}
+      if(oppShot){stopH2HPoll();if(oppShot.player_names) setH2HOppPlayerNames(oppShot.player_names);setH2HOppShotReady(oppShot)}
     },1500)
   }
 
@@ -1246,7 +1288,7 @@ export default function FootballGolf(){
       const newer=shots
         .filter((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx>lastSeen)
         .sort((a:any,b:any)=>b.shot_idx-a.shot_idx)
-      if(newer.length>0){stopH2HPoll();setH2HOppTurnShot(newer[0])}
+      if(newer.length>0){stopH2HPoll();if(newer[0].player_names) setH2HOppPlayerNames(newer[0].player_names);setH2HOppTurnShot(newer[0])}
     },1500)
   }
 
@@ -1299,6 +1341,8 @@ export default function FootballGolf(){
     setH2HOppPastPin(false)
     setH2HIsMyTurn(true)
     setH2HOppShotCount(0)
+    setH2HOppPlayerNames(null)
+    setShowOppGuesses(false)
     h2hOppHoleStrokesRef.current=null
     h2hOppRemainingRef.current=null
     h2hOppShotIdxRef.current=-1
@@ -1314,7 +1358,16 @@ export default function FootballGolf(){
     setPastPin(false)
     setStrokes(0)
     const teeCat=h2hRoomData.current.teeCategories[nextIdx]
-    setQuestion(teeCat??nextPickedCategory(dist, holes[nextIdx]?.isIsland ? holes[nextIdx].distance - 20 : undefined))
+    if(teeCat){
+      usedLabels.current.add(teeCat.label)
+      const tf=teeCat.natFilter||teeCat.clubFilter||teeCat.continentFilter
+      if(teeCat.natFilter){const cont=CONTINENT_MEMBERS[teeCat.natFilter];const extras=cont?[teeCat.natFilter,cont]:[teeCat.natFilter];recentFilters.current=[...recentFilters.current.slice(-(10-extras.length)),...extras]}
+      else if(tf) recentFilters.current=[...recentFilters.current.slice(-9),tf]
+      recentStats.current=[...recentStats.current.slice(-3),teeCat.key]
+      setQuestion(teeCat)
+    }else{
+      setQuestion(nextPickedCategory(dist, holes[nextIdx]?.isIsland ? holes[nextIdx].distance - 20 : undefined))
+    }
     resetInputs()
   }
 
@@ -1341,6 +1394,15 @@ export default function FootballGolf(){
       const cat=pickCategory(hole.distance,cl,tmpUsed,tmpRecentF,tmpRecentS,metaNations.current,metaClubs.current,metaContinents.current,ccPairs,top3CacheRef.current)
       tmpUsed.add(cat.label)
       tmpRecentS.push(cat.key)
+      if (cat.natFilter) {
+        const cont = CONTINENT_MEMBERS[cat.natFilter]
+        tmpRecentF.push(cat.natFilter)
+        if (cont) tmpRecentF.push(cont)
+      } else if (cat.clubFilter && !cat.continentFilter) {
+        tmpRecentF.push(cat.clubFilter)
+      } else if (cat.continentFilter) {
+        tmpRecentF.push(cat.continentFilter)
+      }
       return cat
     })
     const res=await fetch('/api/golf-room',{
@@ -1407,7 +1469,15 @@ export default function FootballGolf(){
     setH2HOppPastPin(false)
     setH2HOppHoledOut(false)
     setMatchScore(0)
-    setQuestion(rd.teeCategories[0])
+    const firstTeeCat=rd.teeCategories[0]
+    usedLabels.current.add(firstTeeCat.label)
+    const firstTeeF=firstTeeCat.natFilter||firstTeeCat.clubFilter||firstTeeCat.continentFilter
+    if(firstTeeF){
+      if(firstTeeCat.natFilter){const cont=CONTINENT_MEMBERS[firstTeeCat.natFilter];recentFilters.current=cont?[firstTeeCat.natFilter,cont]:[firstTeeCat.natFilter]}
+      else recentFilters.current=[firstTeeF]
+    }
+    recentStats.current=[firstTeeCat.key]
+    setQuestion(firstTeeCat)
     resetInputs()
     if(h2hIsHost.current){
       fetch('/api/golf-room',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'start',roomId:h2hRoomIdRef.current})})
@@ -1631,7 +1701,9 @@ export default function FootballGolf(){
                 <div style={{fontSize:12,fontWeight:!h2hIsMyTurn?900:600,color:!h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hOppName||'Opp'}</div>
                 <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#fbbf24':'#3b82f6',flexShrink:0}}/>
               </div>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingRight:13}}>Sh {h2hOppShotCount+1} · {h2hOppRemaining!==null?`${h2hOppRemaining} yds`:'...'}</div>
+              <div style={{fontSize:13,fontWeight:800,color:!h2hIsMyTurn?'#fbbf24':'rgba(255,255,255,0.55)',paddingRight:13}}>
+                Sh {h2hOppShotCount+1} · {h2hOppRemaining!==null?`${h2hOppRemaining} yds`:'—'}
+              </div>
             </div>
           </div>
         )}
@@ -1714,14 +1786,34 @@ export default function FootballGolf(){
             ) : bunkerQ ? (
               <BunkerPanel bq={bunkerQ} onAnswer={answerBunkerQ} />
             ) : shotResult ? (
-              <ShotResultPanel
-                result={shotResult}
-                club={club}
-                remaining={remaining}
-                onContinue={shotResult.isInBunker ? triggerBunkerQuestion : advanceFromResult}
-                isBunker={shotResult.isInBunker}
-                isDaily={dailyMode}
-              />
+              <>
+                <ShotResultPanel
+                  result={shotResult}
+                  club={club}
+                  remaining={remaining}
+                  onContinue={shotResult.isInBunker ? triggerBunkerQuestion : advanceFromResult}
+                  isBunker={shotResult.isInBunker}
+                  isDaily={dailyMode}
+                />
+                {h2hStep==='playing'&&h2hOppPlayerNames&&h2hOppPlayerNames.length>0&&(
+                  <div style={{background:'#1e2d4a',borderRadius:10,overflow:'hidden'}}>
+                    <button
+                      onClick={()=>setShowOppGuesses(v=>!v)}
+                      style={{width:'100%',padding:'8px 12px',background:'none',border:'none',color:'rgba(255,255,255,0.55)',fontSize:12,fontWeight:700,cursor:'pointer',textAlign:'left',fontFamily:'inherit',display:'flex',justifyContent:'space-between',alignItems:'center'}}
+                    >
+                      <span>👀 {h2hOppName||'Opp'}'s picks</span>
+                      <span style={{fontSize:10}}>{showOppGuesses?'▲':'▼'}</span>
+                    </button>
+                    {showOppGuesses&&(
+                      <div style={{padding:'4px 12px 10px',display:'flex',flexDirection:'column',gap:3}}>
+                        {h2hOppPlayerNames.map(n=>(
+                          <div key={n} style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>{n}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             ) : isAnimating ? (
               <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4}}>
                 <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.1em'}}>Distance</div>
@@ -1731,13 +1823,49 @@ export default function FootballGolf(){
                 <div style={{fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>yards</div>
               </div>
             ) : h2hWaiting ? (
-              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
-                <div style={{width:10,height:10,borderRadius:'50%',background:'#f59e0b',boxShadow:'0 0 12px #f59e0b88'}}/>
-                <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.6)',textAlign:'center'}}>
-                  {h2hIFinishedRef.current?'Waiting for opponent to finish…':`${h2hOppName||'Opp'} is taking their shot…`}
-                </div>
+              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
+                {/* Golfer swing animation */}
+                <svg viewBox="0 0 60 80" width="44" height="58" style={{opacity:0.85}}>
+                  <style>{`@keyframes gSwing{0%{transform-origin:30px 28px;transform:rotate(-20deg)}50%{transform-origin:30px 28px;transform:rotate(25deg)}100%{transform-origin:30px 28px;transform:rotate(-20deg)}}`}</style>
+                  {/* Head */}
+                  <circle cx="30" cy="10" r="7" fill="rgba(255,255,255,0.75)"/>
+                  {/* Body */}
+                  <line x1="30" y1="17" x2="30" y2="46" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
+                  {/* Legs */}
+                  <line x1="30" y1="46" x2="18" y2="66" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
+                  <line x1="30" y1="46" x2="42" y2="66" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
+                  {/* Arms + club — animated */}
+                  <g style={{animation:'gSwing 1.4s ease-in-out infinite'}}>
+                    <line x1="30" y1="28" x2="8" y2="38" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
+                    <line x1="30" y1="28" x2="50" y2="22" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
+                    <line x1="8" y1="38" x2="4" y2="56" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+                  </g>
+                  {/* Ball on ground */}
+                  <circle cx="5" cy="68" r="3" fill="white" opacity="0.6"/>
+                </svg>
+                {/* Rotating phrase */}
+                {(()=>{
+                  const oppN=h2hOppName||'Opp'
+                  const phrases=h2hIFinishedRef.current
+                    ?[`Waiting for ${oppN} to finish…`,`${oppN} still on the course…`,`Come on ${oppN}…`,'Hole not over yet…',`${oppN} taking their time…`]
+                    :[`${oppN} lining up the shot…`,`${oppN} checking the yardage…`,`${oppN} taking their stance…`,`Ball in flight…`,`${oppN} eyeing the fairway…`]
+                  return(
+                    <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.7)',textAlign:'center',minHeight:20}}>
+                      {phrases[h2hWaitPhraseIdx%phrases.length]}
+                    </div>
+                  )
+                })()}
+                {/* Opp distance */}
                 {h2hOppRemaining!==null&&(
-                  <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{h2hOppName||'Opp'} · {h2hOppRemaining} yds to go</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{h2hOppRemaining} yds to go</div>
+                )}
+                {/* Show shared tee question while waiting on tee */}
+                {strokes===0&&question&&(
+                  <div style={{marginTop:4,background:'rgba(255,255,255,0.06)',borderRadius:8,padding:'6px 10px',textAlign:'center',maxWidth:200}}>
+                    <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>Their question too</div>
+                    <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.6)'}}>{question.statLabel}</div>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.4)'}}>{makeFilterLabel(question)}</div>
+                  </div>
                 )}
               </div>
             ) : (

@@ -79,9 +79,9 @@ export async function POST(req: Request) {
 
   // ── Submit shot ───────────────────────────────────────────────────────────────
   if (body.action === 'shot') {
-    const { roomId, playerId, holeIdx, shotIdx, remainingAfter, pastPin, holedOut, holeStrokes, isGimme } = body
+    const { roomId, playerId, holeIdx, shotIdx, remainingAfter, pastPin, holedOut, holeStrokes, isGimme, playerNames } = body
 
-    await db.from('golf_h2h_shots').upsert({
+    const shotRow: Record<string, unknown> = {
       room_id: roomId,
       hole_idx: holeIdx,
       shot_idx: shotIdx,
@@ -91,7 +91,10 @@ export async function POST(req: Request) {
       holed_out: holedOut ?? false,
       hole_strokes: holedOut ? (holeStrokes ?? null) : null,
       is_gimme: holedOut ? (isGimme ?? false) : false,
-    }, { onConflict: 'room_id,hole_idx,shot_idx,player_id' })
+    }
+    if (playerNames) shotRow.player_names = playerNames
+
+    await db.from('golf_h2h_shots').upsert(shotRow, { onConflict: 'room_id,hole_idx,shot_idx,player_id' })
 
     const { data: room } = await db.from('golf_h2h_rooms').select('host_id,guest_id').eq('id', roomId).single()
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 })
