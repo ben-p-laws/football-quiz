@@ -2292,10 +2292,15 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Max range indicator */}
         {maxRangePos !== undefined && maxRangePos < hole.distance && (()=>{
           const {x:mx,y:my} = yardToSVG(maxRangePos, hole.distance, effectivePath)
+          const pw = imageUrl ? 20 : 13; const ph = imageUrl ? 6.5 : 4.5
+          const rightSpace = 100 - mx; const leftSpace = mx
+          const px = rightSpace >= leftSpace ? mx + 14 : mx - pw - 14
+          const py = my - ph/2
           return (
-            <g opacity={0.85}>
+            <g opacity={0.9}>
               <line x1={mx-12} y1={my} x2={mx+12} y2={my} stroke="#f97316" strokeWidth={1.2} strokeDasharray="2.5,2" strokeLinecap="round"/>
-              <text x={mx+22} y={my+1.5} fontSize={iconFs} fill="#f97316" fontWeight="bold" textAnchor="start">max</text>
+              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(120,50,0,0.85)" stroke="#f97316" strokeWidth={0.6}/>
+              <text x={px+pw/2} y={py+ph*0.73} fontSize={labelFs*0.65} fill="#fed7aa" textAnchor="middle" fontWeight="bold">max</text>
             </g>
           )
         })()}
