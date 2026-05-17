@@ -332,6 +332,54 @@ const BUNKER_QUESTIONS: BunkerQ[] = [
     opts:["Arsenal","Tottenham Hotspur","Manchester City","Chelsea"], a:0 },
 ]
 
+// Seasons available for per-season bunker Qs (goalsSince[Y] - goalsSince[Y+1])
+const BUNKER_SEASON_YEARS = [2009,2010,2011,2012,2013,2014,2015,2016,2017]
+
+function generateDBBunkerQ(playerData: Record<string, PlayerDataLocal>): BunkerQ | null {
+  const eligible = Object.entries(playerData).filter(([, p]) => p.games >= 250 || p.goals >= 60)
+  if (eligible.length === 0) return null
+
+  // Shuffle eligible players and try until we find a good question
+  const shuffledPlayers = [...eligible].sort(() => Math.random() - 0.5)
+  for (const [name, p] of shuffledPlayers.slice(0, 30)) {
+    const shuffledYears = [...BUNKER_SEASON_YEARS].sort(() => Math.random() - 0.5)
+    for (const y of shuffledYears) {
+      const goalsInSeason = (p.goalsSince?.[y] ?? 0) - (p.goalsSince?.[y + 1] ?? 0)
+      const gaInSeason    = (p.gaSince?.[y]    ?? 0) - (p.gaSince?.[y + 1]    ?? 0)
+      if (goalsInSeason < 0 || gaInSeason < 0) continue
+      // Use G+A if goals alone is too low to make an interesting question
+      const useGA = goalsInSeason < 3 && gaInSeason >= 4
+      const answer = useGA ? gaInSeason : goalsInSeason
+      if (answer < 1) continue
+      const sl = `${String(y).slice(2)}/${String(y + 1).slice(2)}`
+      const statWord = useGA ? 'goal contributions (G+A)' : 'PL goals'
+      const q = `How many ${statWord} did ${name} have in ${sl}?`
+      const opts = makeBunkerOpts(answer)
+      const aIdx = opts.indexOf(String(answer))
+      if (aIdx === -1) continue
+      return { q, opts, a: aIdx }
+    }
+  }
+  return null
+}
+
+function makeBunkerOpts(correct: number): string[] {
+  const spread = correct <= 4 ? 2 : correct <= 12 ? 3 : 5
+  const deltas = [-spread * 2, -spread, spread, spread * 2].sort(() => Math.random() - 0.5)
+  const wrongs = new Set<number>()
+  for (const d of deltas) {
+    const v = correct + d
+    if (v >= 0 && v !== correct) wrongs.add(v)
+    if (wrongs.size >= 3) break
+  }
+  // Pad if needed
+  for (let i = 1; wrongs.size < 3; i++) {
+    if (!wrongs.has(correct + i) && correct + i !== correct) wrongs.add(correct + i)
+    if (wrongs.size < 3 && correct - i >= 0 && !wrongs.has(correct - i)) wrongs.add(correct - i)
+  }
+  return [correct, ...Array.from(wrongs).slice(0, 3)].sort((a, b) => a - b).map(String)
+}
+
 // ── Hole shapes ────────────────────────────────────────────────────────────────
 
 type Tee = 'Blue'|'White'|'Red'
@@ -1323,8 +1371,8 @@ export default function FootballGolf(){
   }
 
   function triggerBunkerQuestion(){
-    // Pick a random bunker question not recently seen
-    const q=BUNKER_QUESTIONS[Math.floor(Math.random()*BUNKER_QUESTIONS.length)]
+    const dbQ = Object.keys(playerData).length > 0 ? generateDBBunkerQ(playerData) : null
+    const q = dbQ ?? BUNKER_QUESTIONS[Math.floor(Math.random() * BUNKER_QUESTIONS.length)]
     setBunkerQ(q)
   }
 
