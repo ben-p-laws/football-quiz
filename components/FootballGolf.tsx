@@ -1825,23 +1825,55 @@ export default function FootballGolf(){
             ) : h2hWaiting ? (
               <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
                 {/* Golfer swing animation */}
-                <svg viewBox="0 0 60 80" width="44" height="58" style={{opacity:0.85}}>
-                  <style>{`@keyframes gSwing{0%{transform-origin:30px 28px;transform:rotate(-20deg)}50%{transform-origin:30px 28px;transform:rotate(25deg)}100%{transform-origin:30px 28px;transform:rotate(-20deg)}}`}</style>
-                  {/* Head */}
-                  <circle cx="30" cy="10" r="7" fill="rgba(255,255,255,0.75)"/>
-                  {/* Body */}
-                  <line x1="30" y1="17" x2="30" y2="46" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
-                  {/* Legs */}
-                  <line x1="30" y1="46" x2="18" y2="66" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
-                  <line x1="30" y1="46" x2="42" y2="66" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
-                  {/* Arms + club — animated */}
-                  <g style={{animation:'gSwing 1.4s ease-in-out infinite'}}>
-                    <line x1="30" y1="28" x2="8" y2="38" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
-                    <line x1="30" y1="28" x2="50" y2="22" stroke="rgba(255,255,255,0.75)" strokeWidth="3" strokeLinecap="round"/>
-                    <line x1="8" y1="38" x2="4" y2="56" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/>
+                <svg viewBox="0 0 80 100" width="56" height="70" style={{opacity:0.9}}>
+                  <style>{`
+                    @keyframes gSwing{
+                      0%  {transform:rotate(-35deg)}
+                      40% {transform:rotate(-35deg)}
+                      70% {transform:rotate(55deg)}
+                      85% {transform:rotate(50deg)}
+                      100%{transform:rotate(-35deg)}
+                    }
+                    @keyframes gSwingBody{
+                      0%  {transform:rotate(0deg)}
+                      40% {transform:rotate(-5deg)}
+                      70% {transform:rotate(8deg)}
+                      100%{transform:rotate(0deg)}
+                    }
+                  `}</style>
+                  {/* Shadow */}
+                  <ellipse cx="38" cy="96" rx="18" ry="4" fill="rgba(0,0,0,0.3)"/>
+                  {/* Body group with subtle rotation */}
+                  <g style={{transformOrigin:'38px 60px',animation:'gSwingBody 1.6s ease-in-out infinite'}}>
+                    {/* Hat */}
+                    <rect x="26" y="6" width="22" height="5" rx="2" fill="#e2e8f0"/>
+                    <rect x="22" y="10" width="28" height="4" rx="1" fill="#e2e8f0"/>
+                    {/* Head */}
+                    <ellipse cx="37" cy="20" rx="9" ry="10" fill="#f5d0a9"/>
+                    {/* Neck */}
+                    <rect x="34" y="29" width="6" height="5" fill="#f5d0a9"/>
+                    {/* Shirt / torso */}
+                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="#3b82f6"/>
+                    {/* Trousers */}
+                    <path d="M26,57 L22,90 L33,90 L37,70 L41,90 L52,90 L48,57 Z" fill="#1e3a5f"/>
+                    {/* Shoes */}
+                    <ellipse cx="26" cy="91" rx="8" ry="4" fill="#1e293b"/>
+                    <ellipse cx="48" cy="91" rx="8" ry="4" fill="#1e293b"/>
+                    {/* Left arm (static, tucked) */}
+                    <path d="M27,36 Q18,48 20,56" stroke="#f5d0a9" strokeWidth="5" fill="none" strokeLinecap="round"/>
+                    {/* Glove */}
+                    <circle cx="20" cy="57" r="4" fill="#e2e8f0"/>
+                    {/* Right arm + club — swings */}
+                    <g style={{transformOrigin:'47px 38px',animation:'gSwing 1.6s ease-in-out infinite'}}>
+                      <path d="M47,36 Q54,44 52,54" stroke="#f5d0a9" strokeWidth="5" fill="none" strokeLinecap="round"/>
+                      {/* Club shaft */}
+                      <line x1="52" y1="55" x2="18" y2="88" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"/>
+                      {/* Club head */}
+                      <rect x="10" y="84" width="12" height="7" rx="2" fill="#64748b"/>
+                    </g>
                   </g>
-                  {/* Ball on ground */}
-                  <circle cx="5" cy="68" r="3" fill="white" opacity="0.6"/>
+                  {/* Ball */}
+                  <circle cx="14" cy="90" r="4" fill="white"/>
                 </svg>
                 {/* Rotating phrase */}
                 {(()=>{
