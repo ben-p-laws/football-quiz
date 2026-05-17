@@ -131,7 +131,7 @@ export default function LandingPage() {
           <div style={{ ...s.preview, display: 'flex', gap: 10 }}>
             {/* Left: game info */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 5, paddingTop: 2 }}>
-              <div style={{ fontSize: 13, fontWeight: 900, color: 'white' }}>Par 3 · 217 yds to pin</div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: 'white' }}>Par 4 · 337 yds to pin</div>
               <div style={{ display: 'flex', gap: 5 }}>
                 <div style={{ flex: 1, background: '#1e2d4a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '5px 7px' }}>
                   <div style={{ fontSize: 7, color: '#6b7fa3', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 1 }}>Stat</div>
@@ -152,34 +152,10 @@ export default function LandingPage() {
                 </div>
               ))}
             </div>
-            {/* Right: vertical hole — 40% card width, height driven by left content */}
-            <div style={{ width: '40%', flexShrink: 0, borderRadius: 10, overflow: 'hidden', alignSelf: 'stretch', position: 'relative', background: '#0f2e0f' }}>
-              <svg viewBox="0 0 55 120" preserveAspectRatio="xMidYMid meet" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'block' }}>
-                <defs>
-                  <linearGradient id="fw-vert" x1="0" y1="12" x2="0" y2="112" gradientUnits="userSpaceOnUse">
-                    <stop offset="0%" stopColor="#1a4a1a"/>
-                    <stop offset="100%" stopColor="#2d6a2d"/>
-                  </linearGradient>
-                </defs>
-                <rect x={0} y={0} width={55} height={120} fill="#0f2e0f" opacity={0.6}/>
-                <path d="M 27,110 C 24,75 32,45 28,12" stroke="url(#fw-vert)" strokeWidth={20} fill="none" strokeLinecap="butt"/>
-                {/* Water hazard — close to green */}
-                <ellipse cx={28} cy={38} rx={9} ry={5} fill="#1d4ed8" opacity={0.85}/>
-                <ellipse cx={28} cy={38} rx={6} ry={3} fill="none" stroke="#3b82f6" strokeWidth={0.7} opacity={0.5}/>
-                <text x={28} y={40} fontSize={4} fill="rgba(255,255,255,0.7)" textAnchor="middle">💧</text>
-                {/* Bunker — mid fairway */}
-                <ellipse cx={37} cy={72} rx={6} ry={3} fill="#c8a96e" opacity={0.85}/>
-                {/* Green */}
-                <circle cx={28} cy={13} r={10} fill="#16a34a"/>
-                <circle cx={28} cy={13} r={7} fill="#22c55e" opacity={0.6}/>
-                <circle cx={28} cy={13} r={2} fill="#0a0f1e"/>
-                {/* Flag */}
-                <line x1={28} y1={13} x2={28} y2={3} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
-                <polygon points="28,3 34,6 28,9" fill="#dc2626"/>
-                {/* Ball on tee */}
-                <ellipse cx={27} cy={111} rx={2.2} ry={0.7} fill="rgba(0,0,0,0.3)"/>
-                <circle cx={27} cy={109} r={2.5} fill="white"/>
-              </svg>
+            {/* Right: real hole image — cropped to fit card, showing green + fairway */}
+            <div style={{ width: '40%', flexShrink: 0, borderRadius: 10, overflow: 'hidden', alignSelf: 'stretch', position: 'relative' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/holes/hole_01.png" alt="Hole 1 preview" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block', transform: 'scale(1.18)', transformOrigin: 'center center' }} />
             </div>
           </div>
           <div style={s.cta}><span style={s.ctaText}>Play Football Golf →</span></div>
