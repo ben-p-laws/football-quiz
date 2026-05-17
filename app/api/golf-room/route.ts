@@ -95,9 +95,9 @@ export async function POST(req: Request) {
 
     // Store player names separately — fire-and-forget, safe to fail if column not yet migrated
     if (playerNames) {
-      db.from('golf_h2h_shots').update({ player_names: playerNames })
+      void db.from('golf_h2h_shots').update({ player_names: playerNames })
         .eq('room_id', roomId).eq('hole_idx', holeIdx).eq('shot_idx', shotIdx).eq('player_id', playerId)
-        .then(() => {}).catch(() => {})
+        .then(() => {}, () => {})
     }
 
     const { data: room } = await db.from('golf_h2h_rooms').select('host_id,guest_id').eq('id', roomId).single()
