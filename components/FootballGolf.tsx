@@ -2055,9 +2055,10 @@ export default function FootballGolf(){
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
-                realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac) : undefined}
-                realGreenPos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac) : undefined}
-                realWaypoints={courseMode==='real' ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(fracToSVG) : undefined}
+                realYScale={courseMode==='real' ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : 260) : undefined}
+                realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:260) : undefined}
+                realGreenPos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:260) : undefined}
+                realWaypoints={courseMode==='real' ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:260)) : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
@@ -2150,8 +2151,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; realYScale?:number
   realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Real course: build path directly from calibrated tee → waypoints → green
@@ -2199,7 +2200,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Minimal scrim — just enough to keep labels readable without darkening bunkers */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.05)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" height="100%" viewBox={imageUrl ? "0 0 100 260" : "0 -10 100 165"} preserveAspectRatio={imageUrl ? "xMidYMid meet" : "xMidYMid slice"} style={{display:'block',flex:1,position:'relative'}}>
+      <svg width="100%" height="100%" viewBox={imageUrl ? `0 0 100 ${realYScale??260}` : "0 -10 100 165"} preserveAspectRatio={imageUrl ? "xMidYMid meet" : "xMidYMid slice"} style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="35" x2="0" y2="255" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -2583,8 +2584,17 @@ const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number
  17:  {teeFrac:[0.589,0.844], greenFrac:[0.434,0.285], waypointFracs:[[0.525,0.567],[0.47,0.39]]},
  18:  {teeFrac:[0.299,0.829], greenFrac:[0.377,0.157], waypointFracs:[[0.724,0.573],[0.614,0.266]]},
 }
-function fracToSVG(frac:[number,number]):{x:number;y:number}{
-  return {x:frac[0]*100, y:frac[1]*260}
+// Augusta images have varying heights — yScale = 100/(w/h) so viewBox always 100 wide
+const AUGUSTA_YSCALE: Record<number, number> = {
+   1:100/(300/920),  2:100/(300/726),  3:100/(300/759),  4:100/(300/728),
+   5:100/(300/797),  6:100/(300/639),  7:100/(300/1054), 8:100/(300/975),
+   9:100/(300/787), 10:100/(300/805), 11:100/(300/1002),12:100/(300/660),
+  13:100/(300/627), 14:100/(300/849), 15:100/(300/1009),16:100/(300/636),
+  17:100/(300/1012),18:100/(300/815),
+}
+
+function fracToSVG(frac:[number,number], yScale=260):{x:number;y:number}{
+  return {x:frac[0]*100, y:frac[1]*yScale}
 }
 
 // ── Setup screen ───────────────────────────────────────────────────────────────
