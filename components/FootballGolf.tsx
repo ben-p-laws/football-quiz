@@ -2376,19 +2376,20 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           <circle cx={finalBallX} cy={ballY} r={ballR*1.4} fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth={0.8}/>
         )}
 
-        {/* Distance labels per hazard */}
+        {/* Distance labels per hazard — pill style */}
         {!hole.isIsland && displayBallPos <= hole.distance && hole.hazards.map((hz, hi) => {
           const distToNear = Math.round(hz.start - ballTeePosForLabels)
           const distToFar  = Math.round(hz.end   - ballTeePosForLabels)
           if(distToFar <= 0) return null
-          const cx = yardToX((hz.start + hz.end) / 2)
-          const yt = yardToY(hz.end)
-          const yb = yardToY(hz.start)
-          const fs = labelFs * 0.65
+          const mid = yardToSVG((hz.start + hz.end) / 2, hole.distance, effectivePath)
+          const rangeText = distToNear > 0 ? `${distToNear}–${distToFar}` : `–${distToFar}`
+          const fs = labelFs * 0.68
+          const pw = imageUrl ? 32 : 20; const ph = imageUrl ? 7.5 : 5
+          const px = mid.x - pw - 6; const py = mid.y - ph/2
           return (
             <g key={hi}>
-              <text x={cx-6} y={yt+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToFar}</text>
-              {distToNear > 0 && <text x={cx-6} y={yb+1.5} fontSize={fs} fill="#93c5fd" textAnchor="end" fontWeight="bold">{distToNear}</text>}
+              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(23,50,110,0.82)" stroke="#60a5fa" strokeWidth={0.6}/>
+              <text x={px+pw/2} y={py+ph*0.73} fontSize={fs} fill="#bfdbfe" textAnchor="middle" fontWeight="bold">🌊 {rangeText}</text>
             </g>
           )
         })}
@@ -2396,18 +2397,15 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const distToNear = Math.round(b.start - ballTeePosForLabels)
           const distToFar  = Math.round(b.end   - ballTeePosForLabels)
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
-          const sideLeft = b.start % 20 < 10
-          const midPos   = yardToSVG((b.start + b.end) / 2, hole.distance, effectivePath)
-          const ellipseRy = 3.5
-          const topY = midPos.y - ellipseRy
-          const botY = midPos.y + ellipseRy
-          const tx   = sideLeft ? midPos.x-6 : midPos.x+6
-          const anchor = sideLeft ? 'end' : 'start'
-          const fs   = labelFs * 0.65
+          const mid = yardToSVG((b.start + b.end) / 2, hole.distance, effectivePath)
+          const rangeText = `${distToNear}–${distToFar}`
+          const fs = labelFs * 0.68
+          const pw = imageUrl ? 32 : 20; const ph = imageUrl ? 7.5 : 5
+          const px = mid.x + 6; const py = mid.y - ph/2
           return (
             <g key={i}>
-              <text x={tx} y={topY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToFar}</text>
-              <text x={tx} y={botY+1.5} fontSize={fs} fill="#fcd34d" textAnchor={anchor} fontWeight="bold">{distToNear}</text>
+              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(80,50,5,0.82)" stroke="#fbbf24" strokeWidth={0.6}/>
+              <text x={px+pw/2} y={py+ph*0.73} fontSize={fs} fill="#fde68a" textAnchor="middle" fontWeight="bold">🏖️ {rangeText}</text>
             </g>
           )
         })}
