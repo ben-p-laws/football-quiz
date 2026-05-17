@@ -2383,15 +2383,15 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {/* Max range indicator */}
         {maxRangePos !== undefined && maxRangePos < hole.distance && (()=>{
           const {x:mx,y:my} = yardToSVG(maxRangePos, hole.distance, effectivePath)
-          const pw = imageUrl ? 20 : 13; const ph = imageUrl ? 6.5 : 4.5
+          const pw = imageUrl ? 28 : 13; const ph = imageUrl ? 9 : 4.5
           const rightSpace = 100 - mx; const leftSpace = mx
-          const px = rightSpace >= leftSpace ? mx + 14 : mx - pw - 14
+          const px = rightSpace >= leftSpace ? mx + 16 : mx - pw - 16
           const py = my - ph/2
           return (
-            <g opacity={0.9}>
-              <line x1={mx-12} y1={my} x2={mx+12} y2={my} stroke="#f97316" strokeWidth={1.2} strokeDasharray="2.5,2" strokeLinecap="round"/>
-              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(120,50,0,0.85)" stroke="#f97316" strokeWidth={0.6}/>
-              <text x={px+pw/2} y={py+ph*0.73} fontSize={labelFs*0.65} fill="#fed7aa" textAnchor="middle" fontWeight="bold">max</text>
+            <g opacity={0.95}>
+              <line x1={mx-16} y1={my} x2={mx+16} y2={my} stroke="#f97316" strokeWidth={2} strokeDasharray="3,2" strokeLinecap="round"/>
+              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(120,50,0,0.92)" stroke="#f97316" strokeWidth={0.9}/>
+              <text x={px+pw/2} y={py+ph*0.73} fontSize={labelFs*0.88} fill="#fed7aa" textAnchor="middle" fontWeight="bold">max</text>
             </g>
           )
         })()}
@@ -2479,12 +2479,12 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           if(distToFar <= 0) return null
           const mid = yardToSVG((hz.start + hz.end) / 2, hole.distance, effectivePath)
           const rangeText = distToNear > 0 ? `${distToNear}–${distToFar}` : `–${distToFar}`
-          const fs = labelFs * 0.68
-          const pw = imageUrl ? 32 : 20; const ph = imageUrl ? 7.5 : 5
+          const fs = labelFs * 0.85
+          const pw = imageUrl ? 40 : 20; const ph = imageUrl ? 10 : 5
           const px = mid.x - pw - 6; const py = mid.y - ph/2
           return (
             <g key={hi}>
-              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(23,50,110,0.82)" stroke="#60a5fa" strokeWidth={0.6}/>
+              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(23,50,110,0.88)" stroke="#60a5fa" strokeWidth={0.9}/>
               <text x={px+pw/2} y={py+ph*0.73} fontSize={fs} fill="#bfdbfe" textAnchor="middle" fontWeight="bold">🌊 {rangeText}</text>
             </g>
           )
@@ -2495,13 +2495,13 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           if(distToFar <= 0 || ballTeePosForLabels >= b.start) return null
           const mid = yardToSVG((b.start + b.end) / 2, hole.distance, effectivePath)
           const rangeText = `${distToNear}–${distToFar}`
-          const fs = labelFs * 0.68
-          const pw = imageUrl ? 32 : 20; const ph = imageUrl ? 7.5 : 5
+          const fs = labelFs * 0.85
+          const pw = imageUrl ? 40 : 20; const ph = imageUrl ? 10 : 5
           const px = mid.x + 6; const py = mid.y - ph/2
           return (
             <g key={i}>
-              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(80,50,5,0.82)" stroke="#fbbf24" strokeWidth={0.6}/>
-              <text x={px+pw/2} y={py+ph*0.73} fontSize={fs} fill="#fde68a" textAnchor="middle" fontWeight="bold">🏖️ {rangeText}</text>
+              <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(210,170,80,0.92)" stroke="#92600a" strokeWidth={0.9}/>
+              <text x={px+pw/2} y={py+ph*0.73} fontSize={fs} fill="#3a2000" textAnchor="middle" fontWeight="bold">🏖️ {rangeText}</text>
             </g>
           )
         })}
