@@ -65,7 +65,7 @@ export default function NavBar() {
   return (
     <>
       {/* ── Top bar ── */}
-      <nav style={{ background: '#0a0f1e', borderBottom: '1px solid #1e2d4a', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 100 }}>
+      <nav style={{ background: '#0a0f1e', borderBottom: '1px solid #1e2d4a', padding: '0 24px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100 }}>
         <div onClick={() => navigate('/')} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
           {LOGO}
           <span style={{ fontSize: 20, fontWeight: 800, color: 'white', letterSpacing: '-0.5px' }}>
@@ -97,6 +97,9 @@ export default function NavBar() {
         )}
       </nav>
 
+      {/* Spacer so page content starts below fixed nav */}
+      <div style={{ height: 56, flexShrink: 0 }} />
+
       {/* ── Desktop sidebar ── */}
       <aside className="tb-sidebar" style={{ position: 'fixed', top: 56, left: 0, width: 180, height: 'calc(100vh - 56px)', background: '#0a0f1e', borderRight: '1px solid #1e2d4a', overflowY: 'auto', zIndex: 90, paddingTop: 8 }}>
         {LINKS.map(({ label, href }) => (
@@ -111,9 +114,13 @@ export default function NavBar() {
         .tb-burger { display: none; }
         .tb-sidebar { display: block; }
         .tb-sidebar-link:hover { color: white !important; background: rgba(255,255,255,0.04) !important; }
+        @media (min-width: 901px) {
+          body { padding-left: 180px; }
+        }
         @media (max-width: 900px) {
           .tb-sidebar { display: none !important; }
           .tb-burger  { display: flex !important; }
+          body { padding-left: 0; }
         }
       `}</style>
     </>
