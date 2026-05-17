@@ -748,7 +748,7 @@ export default function FootballGolf(){
       const myRem=h2hMyRemainingRef.current
       if(myRem>oRem) setH2HIsMyTurn(true)
       else if(myRem<oRem){setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(holeIdx)}
-      else{const mt=Math.random()<0.5;setH2HIsMyTurn(mt);if(!mt){setH2HWaiting(true);startOppPoll(holeIdx)}}
+      else{const myTurn=h2hIsHost.current;setH2HIsMyTurn(myTurn);if(!myTurn){setH2HWaiting(true);startOppPoll(holeIdx)}}
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[h2hOppTurnShot])
@@ -1280,14 +1280,27 @@ export default function FootballGolf(){
     if(h2hPollRef.current){clearInterval(h2hPollRef.current);h2hPollRef.current=null}
   }
 
+  function mergeOppShot(s:any){
+    if(!s?.player_names) return
+    const shotNum=s.shot_idx+1
+    const q=s.question_label||'—'
+    setH2HOppShots(prev=>{
+      const e={shot:shotNum,question:q,picks:s.player_names}
+      const i=prev.findIndex(x=>x.shot===shotNum)
+      return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)
+    })
+  }
+
   function startTeePoll(hi:number){
     stopH2HPoll()
     h2hPollRef.current=setInterval(async()=>{
       const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
       if(!d) return
       const shots:any[]=d.shots||[]
+      // Backfill picks for any opp shots already in DB
+      shots.filter((s:any)=>s.player_id===h2hOppId.current&&s.player_names).forEach(mergeOppShot)
       const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===0)
-      if(oppShot){stopH2HPoll();if(oppShot.player_names){const q=oppShot.question_label||'—';setH2HOppShots(prev=>{const e={shot:1,question:q,picks:oppShot.player_names};const i=prev.findIndex(s=>s.shot===1);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}if(oppShot.question_label) setH2HOppLastQuestion(oppShot.question_label);setH2HOppShotReady(oppShot)}
+      if(oppShot){stopH2HPoll();if(oppShot.question_label) setH2HOppLastQuestion(oppShot.question_label);setH2HOppShotReady(oppShot)}
     },1500)
   }
 
@@ -1304,10 +1317,12 @@ export default function FootballGolf(){
       if(previewQ) setH2HOppLastQuestion(previewQ)
       if(!d) return
       const shots:any[]=d.shots||[]
+      // Backfill picks for ALL opp shots (catches race-condition misses and simultaneous-shot gaps)
+      shots.filter((s:any)=>s.player_id===h2hOppId.current&&s.player_names).forEach(mergeOppShot)
       const newer=shots
         .filter((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx>lastSeen)
         .sort((a:any,b:any)=>b.shot_idx-a.shot_idx)
-      if(newer.length>0){stopH2HPoll();if(newer[0].player_names){const shotNum=newer[0].shot_idx+1;const q=newer[0].question_label||'—';setH2HOppShots(prev=>{const e={shot:shotNum,question:q,picks:newer[0].player_names};const i=prev.findIndex(s=>s.shot===shotNum);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}if(newer[0].question_label) setH2HOppLastQuestion(newer[0].question_label);setH2HOppTurnShot(newer[0])}
+      if(newer.length>0){stopH2HPoll();if(newer[0].question_label) setH2HOppLastQuestion(newer[0].question_label);setH2HOppTurnShot(newer[0])}
     },1500)
   }
 
@@ -1316,9 +1331,10 @@ export default function FootballGolf(){
     if(myRem>oppRem) setH2HIsMyTurn(true)
     else if(myRem<oppRem){setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(hi)}
     else{
-      const mt=Math.random()<0.5
-      setH2HIsMyTurn(mt)
-      if(!mt){setH2HWaiting(true);startOppPoll(hi)}
+      // Tied: host always goes first — same decision on both devices, no random divergence
+      const myTurn=h2hIsHost.current
+      setH2HIsMyTurn(myTurn)
+      if(!myTurn){setH2HWaiting(true);startOppPoll(hi)}
     }
   }
 
