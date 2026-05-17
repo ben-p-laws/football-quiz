@@ -611,6 +611,7 @@ export default function FootballGolf(){
   const [h2hWaitPhraseIdx, setH2HWaitPhraseIdx] = useState(0)
   const [h2hOppPlayerNames, setH2HOppPlayerNames] = useState<string[]|null>(null)
   const [showOppGuesses, setShowOppGuesses] = useState(false)
+  const [h2hOppLastQuestion, setH2HOppLastQuestion] = useState<string|null>(null)
   // Refs
   const h2hPlayerId    = useRef('')
   const h2hIsHost      = useRef(false)
@@ -1052,10 +1053,12 @@ export default function FootballGolf(){
           holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
           isGimme:result.isGimme??false,
           playerNames:named,
+          questionLabel:question?.label,
         }),
       }).then(r=>r.json()).then(d=>{
         if(d.bothReady){
           if(d.opponentShot?.player_names) setH2HOppPlayerNames(d.opponentShot.player_names)
+          if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
           setH2HOppShotReady(d.opponentShot)
         } else startTeePoll(holeIdx)
       }).catch(()=>startTeePoll(holeIdx))
@@ -1078,6 +1081,7 @@ export default function FootballGolf(){
           holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
           isGimme:result.isGimme??false,
           playerNames:named,
+          questionLabel:question?.label,
         }),
       })
       animateShot(ballPos,toPos,result)
@@ -1274,7 +1278,7 @@ export default function FootballGolf(){
       if(!d) return
       const shots:any[]=d.shots||[]
       const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===0)
-      if(oppShot){stopH2HPoll();if(oppShot.player_names) setH2HOppPlayerNames(oppShot.player_names);setH2HOppShotReady(oppShot)}
+      if(oppShot){stopH2HPoll();if(oppShot.player_names) setH2HOppPlayerNames(oppShot.player_names);if(oppShot.question_label) setH2HOppLastQuestion(oppShot.question_label);setH2HOppShotReady(oppShot)}
     },1500)
   }
 
@@ -1288,7 +1292,7 @@ export default function FootballGolf(){
       const newer=shots
         .filter((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx>lastSeen)
         .sort((a:any,b:any)=>b.shot_idx-a.shot_idx)
-      if(newer.length>0){stopH2HPoll();if(newer[0].player_names) setH2HOppPlayerNames(newer[0].player_names);setH2HOppTurnShot(newer[0])}
+      if(newer.length>0){stopH2HPoll();if(newer[0].player_names) setH2HOppPlayerNames(newer[0].player_names);if(newer[0].question_label) setH2HOppLastQuestion(newer[0].question_label);setH2HOppTurnShot(newer[0])}
     },1500)
   }
 
@@ -1343,6 +1347,7 @@ export default function FootballGolf(){
     setH2HOppShotCount(0)
     setH2HOppPlayerNames(null)
     setShowOppGuesses(false)
+    setH2HOppLastQuestion(null)
     h2hOppHoleStrokesRef.current=null
     h2hOppRemainingRef.current=null
     h2hOppShotIdxRef.current=-1
@@ -1795,21 +1800,17 @@ export default function FootballGolf(){
                   isBunker={shotResult.isInBunker}
                   isDaily={dailyMode}
                 />
-                {h2hStep==='playing'&&h2hOppPlayerNames&&h2hOppPlayerNames.length>0&&(
-                  <div style={{background:'#1e2d4a',borderRadius:10,overflow:'hidden'}}>
-                    <button
-                      onClick={()=>setShowOppGuesses(v=>!v)}
-                      style={{width:'100%',padding:'8px 12px',background:'none',border:'none',color:'rgba(255,255,255,0.55)',fontSize:12,fontWeight:700,cursor:'pointer',textAlign:'left',fontFamily:'inherit',display:'flex',justifyContent:'space-between',alignItems:'center'}}
-                    >
-                      <span>👀 {h2hOppName||'Opp'}'s picks</span>
-                      <span style={{fontSize:10}}>{showOppGuesses?'▲':'▼'}</span>
-                    </button>
-                    {showOppGuesses&&(
-                      <div style={{padding:'4px 12px 10px',display:'flex',flexDirection:'column',gap:3}}>
+                {h2hStep==='playing'&&(
+                  <div style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'8px 12px'}}>
+                    <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>👀 {h2hOppName||'Opp'}'s picks</div>
+                    {h2hOppPlayerNames&&h2hOppPlayerNames.length>0?(
+                      <div style={{display:'flex',flexDirection:'column',gap:3}}>
                         {h2hOppPlayerNames.map(n=>(
-                          <div key={n} style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>{n}</div>
+                          <div key={n} style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.85)'}}>{n}</div>
                         ))}
                       </div>
+                    ):(
+                      <div style={{fontSize:12,color:'rgba(255,255,255,0.3)'}}>Not available yet</div>
                     )}
                   </div>
                 )}
@@ -1852,8 +1853,18 @@ export default function FootballGolf(){
                     <ellipse cx="37" cy="20" rx="9" ry="10" fill="#f5d0a9"/>
                     {/* Neck */}
                     <rect x="34" y="29" width="6" height="5" fill="#f5d0a9"/>
-                    {/* Shirt / torso */}
-                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="#3b82f6"/>
+                    {/* Shirt / torso — red & white stripes */}
+                    <defs>
+                      <pattern id="jersey" x="0" y="0" width="8" height="1" patternUnits="userSpaceOnUse" patternTransform="rotate(90)">
+                        <rect width="4" height="1" fill="#dc2626"/>
+                        <rect x="4" width="4" height="1" fill="white"/>
+                      </pattern>
+                      <clipPath id="torsoClip">
+                        <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z"/>
+                      </clipPath>
+                    </defs>
+                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="url(#jersey)" clipPath="url(#torsoClip)"/>
+                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
                     {/* Trousers */}
                     <path d="M26,57 L22,90 L33,90 L37,70 L41,90 L52,90 L48,57 Z" fill="#1e3a5f"/>
                     {/* Shoes */}
@@ -1891,14 +1902,21 @@ export default function FootballGolf(){
                 {h2hOppRemaining!==null&&(
                   <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{h2hOppRemaining} yds to go</div>
                 )}
-                {/* Show shared tee question while waiting on tee */}
-                {strokes===0&&question&&(
-                  <div style={{marginTop:4,background:'rgba(255,255,255,0.06)',borderRadius:8,padding:'6px 10px',textAlign:'center',maxWidth:200}}>
-                    <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>Their question too</div>
-                    <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.6)'}}>{question.statLabel}</div>
-                    <div style={{fontSize:10,color:'rgba(255,255,255,0.4)'}}>{makeFilterLabel(question)}</div>
-                  </div>
-                )}
+                {/* Opponent's question card */}
+                {(()=>{
+                  // Tee shot: shared question is known. Non-tee: use opp's last submitted question_label
+                  const showQ = strokes===0 ? question?.label : h2hOppLastQuestion
+                  if(!showQ) return null
+                  const isShared = strokes===0
+                  return(
+                    <div style={{marginTop:4,background:'rgba(255,255,255,0.06)',borderRadius:8,padding:'6px 10px',textAlign:'center',maxWidth:220}}>
+                      <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>
+                        {isShared?'Their question too':'Their question'}
+                      </div>
+                      <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.7)',lineHeight:1.3}}>{showQ}</div>
+                    </div>
+                  )
+                })()}
               </div>
             ) : (
               <>

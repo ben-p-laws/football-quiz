@@ -79,7 +79,7 @@ export async function POST(req: Request) {
 
   // ── Submit shot ───────────────────────────────────────────────────────────────
   if (body.action === 'shot') {
-    const { roomId, playerId, holeIdx, shotIdx, remainingAfter, pastPin, holedOut, holeStrokes, isGimme, playerNames } = body
+    const { roomId, playerId, holeIdx, shotIdx, remainingAfter, pastPin, holedOut, holeStrokes, isGimme, playerNames, questionLabel } = body
 
     await db.from('golf_h2h_shots').upsert({
       room_id: roomId,
@@ -93,9 +93,12 @@ export async function POST(req: Request) {
       is_gimme: holedOut ? (isGimme ?? false) : false,
     }, { onConflict: 'room_id,hole_idx,shot_idx,player_id' })
 
-    // Store player names separately — fire-and-forget, safe to fail if column not yet migrated
-    if (playerNames) {
-      void db.from('golf_h2h_shots').update({ player_names: playerNames })
+    // Store extra fields separately — fire-and-forget, safe to fail if columns not yet migrated
+    const extras: Record<string, unknown> = {}
+    if (playerNames) extras.player_names = playerNames
+    if (questionLabel) extras.question_label = questionLabel
+    if (Object.keys(extras).length > 0) {
+      void db.from('golf_h2h_shots').update(extras)
         .eq('room_id', roomId).eq('hole_idx', holeIdx).eq('shot_idx', shotIdx).eq('player_id', playerId)
         .then(() => {}, () => {})
     }
