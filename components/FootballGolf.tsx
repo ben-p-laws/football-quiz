@@ -2194,7 +2194,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Minimal scrim — just enough to keep labels readable without darkening bunkers */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.05)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" viewBox={imageUrl ? "0 0 100 260" : "0 -10 100 165"} preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
+      {/* For real-course images, widen the viewBox so slice clips width not height — prevents flag/ball from being cut off on wide cards */}
+      <svg width="100%" viewBox={imageUrl ? "-20 0 140 260" : "0 -10 100 165"} preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="35" x2="0" y2="255" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
