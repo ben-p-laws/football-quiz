@@ -475,26 +475,26 @@ const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; b
 
 // Tee/green positions as [xFrac, yFrac] in portrait images (tee-bottom, green-top).
 // Images were rotated from landscape: CCW for tee-left holes, CW for holes 6, 7, 13.
-// CCW transform: new = (old_fy, 1-old_fx). CW transform: new = (1-old_fy, old_fx).
+// y-fracs kept inward (0.20–0.85) so flag/ball clear the SVG slice clip on all screen sizes.
 const AUGUSTA_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
-  1:  {teeFrac:[0.55,0.92], greenFrac:[0.18,0.12], waypointFracs:[[0.42,0.55]]},
-  2:  {teeFrac:[0.43,0.94], greenFrac:[0.39,0.10], waypointFracs:[[0.43,0.50]]},
-  3:  {teeFrac:[0.50,0.93], greenFrac:[0.36,0.13], waypointFracs:[[0.48,0.55]]},
-  4:  {teeFrac:[0.36,0.93], greenFrac:[0.40,0.13]},
-  5:  {teeFrac:[0.46,0.93], greenFrac:[0.34,0.12], waypointFracs:[[0.43,0.52]]},
-  6:  {teeFrac:[0.55,0.87], greenFrac:[0.75,0.11]},
-  7:  {teeFrac:[0.45,0.88], greenFrac:[0.78,0.11], waypointFracs:[[0.58,0.53]]},
-  8:  {teeFrac:[0.50,0.93], greenFrac:[0.33,0.12], waypointFracs:[[0.47,0.60],[0.38,0.32]]},
-  9:  {teeFrac:[0.50,0.93], greenFrac:[0.27,0.12], waypointFracs:[[0.46,0.52]]},
-  10: {teeFrac:[0.44,0.93], greenFrac:[0.55,0.12], waypointFracs:[[0.42,0.56]]},
-  11: {teeFrac:[0.43,0.93], greenFrac:[0.38,0.12], waypointFracs:[[0.42,0.55]]},
-  12: {teeFrac:[0.55,0.93], greenFrac:[0.47,0.12]},
-  13: {teeFrac:[0.35,0.88], greenFrac:[0.74,0.12], waypointFracs:[[0.30,0.58],[0.52,0.22]]},
-  14: {teeFrac:[0.50,0.93], greenFrac:[0.45,0.12], waypointFracs:[[0.47,0.53]]},
-  15: {teeFrac:[0.47,0.93], greenFrac:[0.33,0.12], waypointFracs:[[0.46,0.60],[0.40,0.32]]},
-  16: {teeFrac:[0.48,0.93], greenFrac:[0.42,0.12]},
-  17: {teeFrac:[0.50,0.93], greenFrac:[0.38,0.12], waypointFracs:[[0.46,0.53]]},
-  18: {teeFrac:[0.48,0.93], greenFrac:[0.40,0.12], waypointFracs:[[0.44,0.55]]},
+  1:  {teeFrac:[0.55,0.85], greenFrac:[0.18,0.20], waypointFracs:[[0.42,0.55]]},
+  2:  {teeFrac:[0.43,0.85], greenFrac:[0.39,0.20], waypointFracs:[[0.43,0.50]]},
+  3:  {teeFrac:[0.50,0.85], greenFrac:[0.36,0.20], waypointFracs:[[0.48,0.55]]},
+  4:  {teeFrac:[0.36,0.85], greenFrac:[0.40,0.20]},
+  5:  {teeFrac:[0.46,0.85], greenFrac:[0.34,0.20], waypointFracs:[[0.43,0.52]]},
+  6:  {teeFrac:[0.45,0.85], greenFrac:[0.25,0.20]},
+  7:  {teeFrac:[0.55,0.85], greenFrac:[0.22,0.20], waypointFracs:[[0.42,0.47]]},
+  8:  {teeFrac:[0.50,0.85], greenFrac:[0.33,0.20], waypointFracs:[[0.47,0.60],[0.38,0.32]]},
+  9:  {teeFrac:[0.50,0.85], greenFrac:[0.27,0.20], waypointFracs:[[0.46,0.52]]},
+  10: {teeFrac:[0.44,0.85], greenFrac:[0.55,0.20], waypointFracs:[[0.42,0.56]]},
+  11: {teeFrac:[0.43,0.85], greenFrac:[0.38,0.20], waypointFracs:[[0.42,0.55]]},
+  12: {teeFrac:[0.55,0.85], greenFrac:[0.47,0.20]},
+  13: {teeFrac:[0.65,0.85], greenFrac:[0.26,0.20], waypointFracs:[[0.45,0.55]]},
+  14: {teeFrac:[0.50,0.85], greenFrac:[0.45,0.20], waypointFracs:[[0.47,0.53]]},
+  15: {teeFrac:[0.47,0.85], greenFrac:[0.33,0.20], waypointFracs:[[0.46,0.60],[0.40,0.32]]},
+  16: {teeFrac:[0.48,0.85], greenFrac:[0.42,0.20]},
+  17: {teeFrac:[0.50,0.85], greenFrac:[0.38,0.20], waypointFracs:[[0.46,0.53]]},
+  18: {teeFrac:[0.48,0.85], greenFrac:[0.40,0.20], waypointFracs:[[0.44,0.55]]},
 }
 
 // Manually calibrated hazards/bunkers for real course mode (yards from tee, Blue distances)
@@ -2191,8 +2191,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           ...(rot ? {transform:`rotate(${rot}deg)`} : {}),
         }}/>
       )}
-      {/* Slight dark scrim so labels stay readable */}
-      {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.18)',pointerEvents:'none'}}/>}
+      {/* Minimal scrim — just enough to keep labels readable without darkening bunkers */}
+      {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.05)',pointerEvents:'none'}}/>}
 
       <svg width="100%" viewBox={imageUrl ? "0 0 100 260" : "0 -10 100 165"} preserveAspectRatio="xMidYMid slice" style={{display:'block',flex:1,position:'relative'}}>
         <defs>
