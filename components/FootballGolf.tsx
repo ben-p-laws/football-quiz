@@ -74,22 +74,40 @@ const CONTINENT_LABELS: Record<string, string> = {
   'S. America':'S. American','N. America':'N. American','Oceania':'Oceanian',
 }
 
+type SinceYear = 2008|2009|2010|2011|2012|2013|2014|2015|2016|2017|2018
+type BeforeYear = 2010|2011|2012|2013|2014|2015|2016|2017|2018|2019
 type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals'|
-               'yellow_cards'|'clean_sheets'|'goals_2010'|'ga_2010'|'goals_2015'|'ga_2015'
+               'yellow_cards'|'clean_sheets'|
+               `goals_since_${SinceYear}`|`ga_since_${SinceYear}`|
+               `goals_before_${BeforeYear}`|`ga_before_${BeforeYear}`
 type Category = { key: StatKey; label: string; statLabel: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string }
 type ClubType = 'driver'|'iron'|'wedge'|'putter'
 
-// Driver/iron: stats where all-time top-3 easily hits 150+
-const LONG_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','goals_2010','ga_2010','goals_2015','ga_2015']
-// Wedge/putter: all stats including niche ones
-const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','goals_2010','ga_2010','goals_2015','ga_2015','clean_sheets']
+const SINCE_YEARS = [2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018]
+const BEFORE_YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019]
+const SINCE_KEYS: StatKey[] = SINCE_YEARS.flatMap(y => [`goals_since_${y}` as StatKey, `ga_since_${y}` as StatKey])
+const BEFORE_KEYS: StatKey[] = BEFORE_YEARS.flatMap(y => [`goals_before_${y}` as StatKey, `ga_before_${y}` as StatKey])
 
-const STAT_LABEL: Record<StatKey, string> = {
-  goals:'Goals', assists:'Assists', goals_assists:'Goals + Assists',
-  appearances:'Appearances', apps_minus_goals:'Appearances − Goals',
-  yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
-  goals_2010:'Goals (since 10/11)', ga_2010:'Goals + Assists (since 10/11)',
-  goals_2015:'Goals (since 15/16)', ga_2015:'Goals + Assists (since 15/16)',
+const BASE_LONG: StatKey[]  = ['goals','assists','goals_assists','appearances','apps_minus_goals']
+const BASE_SHORT: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets']
+// kept for fallback path only
+const LONG_STATS: StatKey[]  = [...BASE_LONG,  ...SINCE_KEYS, ...BEFORE_KEYS]
+const SHORT_STATS: StatKey[] = [...BASE_SHORT, ...SINCE_KEYS, ...BEFORE_KEYS]
+
+function seasonLabel(y: number): string { return `${String(y).slice(2)}/${String(y+1).slice(2)}` }
+function getStatLabel(key: StatKey): string {
+  const base: Record<string, string> = {
+    goals:'Goals', assists:'Assists', goals_assists:'Goals + Assists',
+    appearances:'Appearances', apps_minus_goals:'Appearances − Goals',
+    yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
+  }
+  if (base[key as string]) return base[key as string]
+  const k = key as string
+  const sinceM = k.match(/^(goals|ga)_since_(\d+)$/)
+  if (sinceM) return `${sinceM[1]==='ga'?'Goals + Assists':'Goals'} (since ${seasonLabel(parseInt(sinceM[2]))})`
+  const beforeM = k.match(/^(goals|ga)_before_(\d+)$/)
+  if (beforeM) return `${beforeM[1]==='ga'?'Goals + Assists':'Goals'} (before ${seasonLabel(parseInt(beforeM[2]))})`
+  return k
 }
 
 // Stats that support per-club and continent+club queries (2010/2015 stats do not)
@@ -136,7 +154,7 @@ function filterStr(f: FilterSpec): string {
 }
 
 function makeLabel(stat: StatKey, f: FilterSpec): string {
-  const sl = STAT_LABEL[stat]
+  const sl = getStatLabel(stat)
   if (f.k==='all')  return `All-time PL ${sl}`
   if (f.k==='nat')  return `${f.label} PL ${sl}`
   if (f.k==='club') return `PL ${sl} for ${f.name}`
@@ -145,7 +163,7 @@ function makeLabel(stat: StatKey, f: FilterSpec): string {
 }
 
 function makeCategoryLabel(stat: StatKey, f: FilterSpec): { label: string; statLabel: string } {
-  return { label: makeLabel(stat, f), statLabel: STAT_LABEL[stat] }
+  return { label: makeLabel(stat, f), statLabel: getStatLabel(stat) }
 }
 
 function makeFilterLabel(cat: Category): string {
@@ -179,10 +197,21 @@ function pickCategory(
   const recentSet      = new Set(recentFilters)
   const recentStatsSet = new Set(recentStats)
   const threshold = Math.max(CLUB_THRESHOLD[club], minReach ?? 0)
-  const stats = remaining > 150 ? LONG_STATS : SHORT_STATS
-  // Prefer stats not recently used; fall back to full pool if all are recent
-  const freshStats = stats.filter(s => !recentStatsSet.has(s))
-  const statPool = freshStats.length > 0 ? freshStats : stats
+
+  // top3Cache not yet loaded — use only safe all-time base stats with no filter
+  if (!top3Cache) {
+    const safePool = CLUB_STATS.filter(s => !recentStatsSet.has(s))
+    const stat = (safePool.length > 0 ? safePool : CLUB_STATS)[Math.floor(Math.random() * Math.max(safePool.length, CLUB_STATS.length))]
+    const sl = getStatLabel(stat)
+    usedLabels.add(`All-time PL ${sl}`)
+    return { key: stat, label: `All-time PL ${sl}`, statLabel: sl }
+  }
+
+  const isLong = remaining > 150
+  const basePool     = isLong ? BASE_LONG  : BASE_SHORT
+  const temporalPool = isLong ? [...SINCE_KEYS, ...BEFORE_KEYS] : [...SINCE_KEYS, ...BEFORE_KEYS]
+  const freshBase     = basePool.filter(s => !recentStatsSet.has(s))
+  const freshTemporal = temporalPool.filter(s => !recentStatsSet.has(s))
 
   // Build full filter pool
   const allFilters: FilterSpec[] = [
@@ -194,7 +223,12 @@ function pickCategory(
   ]
 
   for (let attempt = 0; attempt < 120; attempt++) {
-    const stat = statPool[Math.floor(Math.random() * statPool.length)]
+    // 60% base stats (support club/nat filters), 40% temporal (since/before)
+    const useTemporal = freshTemporal.length > 0 && Math.random() < 0.4
+    const pool = useTemporal
+      ? (freshTemporal.length > 0 ? freshTemporal : temporalPool)
+      : (freshBase.length > 0 ? freshBase : basePool)
+    const stat = pool[Math.floor(Math.random() * pool.length)]
     const isClubStat = CLUB_STATS.includes(stat)
 
     const valid = allFilters.filter(f => {
@@ -225,9 +259,10 @@ function pickCategory(
     return cat
   }
 
-  // Fallback
-  const stat = stats[Math.floor(Math.random() * stats.length)]
-  const sl = STAT_LABEL[stat]
+  // Fallback — base stat only, no filter
+  const fbPool = freshBase.length > 0 ? freshBase : basePool
+  const stat = fbPool[Math.floor(Math.random() * fbPool.length)]
+  const sl = getStatLabel(stat)
   return { key:stat, label:`All-time PL ${sl}`, statLabel:sl }
 }
 
@@ -248,7 +283,7 @@ const SEASON_STATS: StatKey[] = ['goals','goals_assists','assists','appearances'
 function pickSeasonCategory(season: string): Category {
   const key = SEASON_STATS[Math.floor(Math.random() * SEASON_STATS.length)]
   const [y1, y2] = season.split('-')
-  const statLabel = STAT_LABEL[key]
+  const statLabel = getStatLabel(key)
   const label = `${statLabel} in ${y1.slice(2)}/${y2.slice(2)}`
   return { key, label, statLabel, seasonFilter: season }
 }
@@ -577,7 +612,8 @@ type ShotResult={
 
 type PlayerDataLocal = {
   goals:number; assists:number; games:number; yellow_cards:number; clean_sheets:number; nationality:string
-  goals2010:number; ga2010:number; goals2015:number; ga2015:number
+  goalsSince:Record<number,number>; gaSince:Record<number,number>
+  goalsBefore:Record<number,number>; gaBefore:Record<number,number>
   clubGoals:Record<string,number>; clubAssists:Record<string,number>; clubGames:Record<string,number>
   clubYellowCards:Record<string,number>; clubCleanSheets:Record<string,number>
 }
@@ -1023,10 +1059,17 @@ export default function FootballGolf(){
           else if(question.key==='apps_minus_goals') value=Math.max(0,p.games-p.goals)
           else if(question.key==='yellow_cards')  value=p.yellow_cards
           else if(question.key==='clean_sheets')  value=p.clean_sheets
-          else if(question.key==='goals_2010')    value=p.goals2010??0
-          else if(question.key==='ga_2010')       value=p.ga2010??0
-          else if(question.key==='goals_2015')    value=p.goals2015??0
-          else if(question.key==='ga_2015')       value=p.ga2015??0
+          else {
+            const qk = question.key as string
+            const sgm = qk.match(/^goals_since_(\d+)$/)
+            if (sgm) value = p.goalsSince?.[parseInt(sgm[1])] ?? 0
+            const sgam = qk.match(/^ga_since_(\d+)$/)
+            if (sgam) value = p.gaSince?.[parseInt(sgam[1])] ?? 0
+            const bgm = qk.match(/^goals_before_(\d+)$/)
+            if (bgm) value = p.goalsBefore?.[parseInt(bgm[1])] ?? 0
+            const bgam = qk.match(/^ga_before_(\d+)$/)
+            if (bgam) value = p.gaBefore?.[parseInt(bgam[1])] ?? 0
+          }
         }
       }
       breakdown.push({name,value})

@@ -85,11 +85,14 @@ type PlayerData = {
   clubGames: Record<string, number>
   clubYellowCards: Record<string, number>
   clubCleanSheets: Record<string, number>
-  goals2010: number
-  ga2010: number
-  goals2015: number
-  ga2015: number
+  goalsSince: Record<number, number>
+  gaSince: Record<number, number>
+  goalsBefore: Record<number, number>
+  gaBefore: Record<number, number>
 }
+
+const SINCE_YEARS = [2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018]
+const BEFORE_YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019]
 
 const buildCache = unstable_cache(
   async () => {
@@ -116,7 +119,7 @@ const buildCache = unstable_cache(
         players[name] = {
           goals: 0, assists: 0, games: 0, yellow_cards: 0, clean_sheets: 0, nationality: '',
           clubGoals: {}, clubAssists: {}, clubGames: {}, clubYellowCards: {}, clubCleanSheets: {},
-          goals2010: 0, ga2010: 0, goals2015: 0, ga2015: 0,
+          goalsSince: {}, gaSince: {}, goalsBefore: {}, gaBefore: {},
         }
         natFreq[name] = {}
       }
@@ -131,8 +134,13 @@ const buildCache = unstable_cache(
       p.clean_sheets += Number(row.gk_clean_sheets) || 0
 
       const yr = String(row.year_id || '')
-      if (yr >= '2010-2011') { p.goals2010 += go; p.ga2010 += go + a }
-      if (yr >= '2015-2016') { p.goals2015 += go; p.ga2015 += go + a }
+      const startYear = parseInt(yr.slice(0, 4)) || 0
+      for (const y of SINCE_YEARS) {
+        if (startYear >= y) { p.goalsSince[y] = (p.goalsSince[y]||0) + go; p.gaSince[y] = (p.gaSince[y]||0) + go + a }
+      }
+      for (const y of BEFORE_YEARS) {
+        if (startYear < y) { p.goalsBefore[y] = (p.goalsBefore[y]||0) + go; p.gaBefore[y] = (p.gaBefore[y]||0) + go + a }
+      }
 
       if (row.nationality) {
         const nat = fmtNat(row.nationality as string)
@@ -158,13 +166,22 @@ const buildCache = unstable_cache(
     const playerNames = Object.keys(players).sort()
     return { players, playerNames }
   },
-  ['football-golf-data-v3'],
+  ['football-golf-data-v4'],
   { revalidate: 86400 }
 )
 
-const ALL_STAT_KEYS = ['goals','assists','goals_assists','appearances','apps_minus_goals',
-  'yellow_cards','clean_sheets','goals_2010','ga_2010','goals_2015','ga_2015'] as const
-type StatKey = typeof ALL_STAT_KEYS[number]
+type SinceYear = 2008|2009|2010|2011|2012|2013|2014|2015|2016|2017|2018
+type BeforeYear = 2010|2011|2012|2013|2014|2015|2016|2017|2018|2019
+type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals'|
+               'yellow_cards'|'clean_sheets'|
+               `goals_since_${SinceYear}`|`ga_since_${SinceYear}`|
+               `goals_before_${BeforeYear}`|`ga_before_${BeforeYear}`
+
+const ALL_STAT_KEYS: StatKey[] = [
+  'goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets',
+  ...SINCE_YEARS.flatMap(y => [`goals_since_${y}` as StatKey, `ga_since_${y}` as StatKey]),
+  ...BEFORE_YEARS.flatMap(y => [`goals_before_${y}` as StatKey, `ga_before_${y}` as StatKey]),
+]
 
 // stats that support per-club queries
 const CLUB_STAT_KEYS: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets']
@@ -180,10 +197,15 @@ function pStatValue(p: PlayerData, key: StatKey, cf?: string): number {
   if (key==='apps_minus_goals') return Math.max(0, g - go)
   if (key==='yellow_cards')     return cf ? (p.clubYellowCards[cf] || 0) : p.yellow_cards
   if (key==='clean_sheets')     return cf ? (p.clubCleanSheets[cf] || 0) : p.clean_sheets
-  if (key==='goals_2010')       return p.goals2010
-  if (key==='ga_2010')          return p.ga2010
-  if (key==='goals_2015')       return p.goals2015
-  if (key==='ga_2015')          return p.ga2015
+  const k = key as string
+  const sinceGoalsM = k.match(/^goals_since_(\d+)$/)
+  if (sinceGoalsM) return p.goalsSince[parseInt(sinceGoalsM[1])] ?? 0
+  const sinceGaM = k.match(/^ga_since_(\d+)$/)
+  if (sinceGaM) return p.gaSince[parseInt(sinceGaM[1])] ?? 0
+  const beforeGoalsM = k.match(/^goals_before_(\d+)$/)
+  if (beforeGoalsM) return p.goalsBefore[parseInt(beforeGoalsM[1])] ?? 0
+  const beforeGaM = k.match(/^ga_before_(\d+)$/)
+  if (beforeGaM) return p.gaBefore[parseInt(beforeGaM[1])] ?? 0
   return 0
 }
 
@@ -220,7 +242,7 @@ const buildMetaCache = unstable_cache(
         byName[name] = {
           goals: 0, assists: 0, games: 0, yellow_cards: 0, clean_sheets: 0, nationality: '',
           clubGoals: {}, clubAssists: {}, clubGames: {}, clubYellowCards: {}, clubCleanSheets: {},
-          goals2010: 0, ga2010: 0, goals2015: 0, ga2015: 0,
+          goalsSince: {}, gaSince: {}, goalsBefore: {}, gaBefore: {},
         }
         natFreq[name] = {}
       }
@@ -235,8 +257,13 @@ const buildMetaCache = unstable_cache(
       p.clean_sheets += Number(row.gk_clean_sheets) || 0
 
       const yr = String(row.year_id || '')
-      if (yr >= '2010-2011') { p.goals2010 += go; p.ga2010 += go + a }
-      if (yr >= '2015-2016') { p.goals2015 += go; p.ga2015 += go + a }
+      const startYear = parseInt(yr.slice(0, 4)) || 0
+      for (const y of SINCE_YEARS) {
+        if (startYear >= y) { p.goalsSince[y] = (p.goalsSince[y]||0) + go; p.gaSince[y] = (p.gaSince[y]||0) + go + a }
+      }
+      for (const y of BEFORE_YEARS) {
+        if (startYear < y) { p.goalsBefore[y] = (p.goalsBefore[y]||0) + go; p.gaBefore[y] = (p.gaBefore[y]||0) + go + a }
+      }
 
       if (row.nationality) {
         const nat = fmtNat(row.nationality as string)
@@ -352,7 +379,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, continents, contClubPairs, top3Cache }
   },
-  ['football-golf-meta-v9'],
+  ['football-golf-meta-v10'],
   { revalidate: 86400 }
 )
 
