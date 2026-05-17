@@ -473,27 +473,28 @@ const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; b
   16: { hazards:[{start:0,end:170}] },
 }
 
-// Calibrated tee/green positions from aerial images (landscape, mostly tee-left/green-right)
-// H6, H7 are reversed (tee-right/green-left); H13 is a U-shape dogleg
+// Tee/green positions as [xFrac, yFrac] in portrait images (tee-bottom, green-top).
+// Images were rotated from landscape: CCW for tee-left holes, CW for holes 6, 7, 13.
+// CCW transform: new = (old_fy, 1-old_fx). CW transform: new = (1-old_fy, old_fx).
 const AUGUSTA_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
-  1:  {teeFrac:[0.08,0.55], greenFrac:[0.88,0.18], waypointFracs:[[0.45,0.42]]},
-  2:  {teeFrac:[0.06,0.43], greenFrac:[0.90,0.39], waypointFracs:[[0.50,0.43]]},
-  3:  {teeFrac:[0.07,0.50], greenFrac:[0.87,0.36], waypointFracs:[[0.45,0.48]]},
-  4:  {teeFrac:[0.07,0.36], greenFrac:[0.87,0.40]},
-  5:  {teeFrac:[0.07,0.46], greenFrac:[0.88,0.34], waypointFracs:[[0.48,0.43]]},
-  6:  {teeFrac:[0.87,0.45], greenFrac:[0.11,0.25]},
-  7:  {teeFrac:[0.88,0.55], greenFrac:[0.11,0.22], waypointFracs:[[0.53,0.42]]},
-  8:  {teeFrac:[0.07,0.50], greenFrac:[0.88,0.33], waypointFracs:[[0.40,0.47],[0.68,0.38]]},
-  9:  {teeFrac:[0.07,0.50], greenFrac:[0.88,0.27], waypointFracs:[[0.48,0.46]]},
-  10: {teeFrac:[0.07,0.44], greenFrac:[0.88,0.55], waypointFracs:[[0.44,0.42]]},
-  11: {teeFrac:[0.07,0.43], greenFrac:[0.88,0.38], waypointFracs:[[0.45,0.42]]},
-  12: {teeFrac:[0.07,0.55], greenFrac:[0.88,0.47]},
-  13: {teeFrac:[0.88,0.65], greenFrac:[0.12,0.26], waypointFracs:[[0.58,0.70],[0.22,0.48]]},
-  14: {teeFrac:[0.07,0.50], greenFrac:[0.88,0.45], waypointFracs:[[0.47,0.47]]},
-  15: {teeFrac:[0.07,0.47], greenFrac:[0.88,0.33], waypointFracs:[[0.40,0.46],[0.68,0.40]]},
-  16: {teeFrac:[0.07,0.48], greenFrac:[0.88,0.42]},
-  17: {teeFrac:[0.07,0.50], greenFrac:[0.88,0.38], waypointFracs:[[0.47,0.46]]},
-  18: {teeFrac:[0.07,0.48], greenFrac:[0.88,0.40], waypointFracs:[[0.45,0.44]]},
+  1:  {teeFrac:[0.55,0.92], greenFrac:[0.18,0.12], waypointFracs:[[0.42,0.55]]},
+  2:  {teeFrac:[0.43,0.94], greenFrac:[0.39,0.10], waypointFracs:[[0.43,0.50]]},
+  3:  {teeFrac:[0.50,0.93], greenFrac:[0.36,0.13], waypointFracs:[[0.48,0.55]]},
+  4:  {teeFrac:[0.36,0.93], greenFrac:[0.40,0.13]},
+  5:  {teeFrac:[0.46,0.93], greenFrac:[0.34,0.12], waypointFracs:[[0.43,0.52]]},
+  6:  {teeFrac:[0.55,0.87], greenFrac:[0.75,0.11]},
+  7:  {teeFrac:[0.45,0.88], greenFrac:[0.78,0.11], waypointFracs:[[0.58,0.53]]},
+  8:  {teeFrac:[0.50,0.93], greenFrac:[0.33,0.12], waypointFracs:[[0.47,0.60],[0.38,0.32]]},
+  9:  {teeFrac:[0.50,0.93], greenFrac:[0.27,0.12], waypointFracs:[[0.46,0.52]]},
+  10: {teeFrac:[0.44,0.93], greenFrac:[0.55,0.12], waypointFracs:[[0.42,0.56]]},
+  11: {teeFrac:[0.43,0.93], greenFrac:[0.38,0.12], waypointFracs:[[0.42,0.55]]},
+  12: {teeFrac:[0.55,0.93], greenFrac:[0.47,0.12]},
+  13: {teeFrac:[0.35,0.88], greenFrac:[0.74,0.12], waypointFracs:[[0.30,0.58],[0.52,0.22]]},
+  14: {teeFrac:[0.50,0.93], greenFrac:[0.45,0.12], waypointFracs:[[0.47,0.53]]},
+  15: {teeFrac:[0.47,0.93], greenFrac:[0.33,0.12], waypointFracs:[[0.46,0.60],[0.40,0.32]]},
+  16: {teeFrac:[0.48,0.93], greenFrac:[0.42,0.12]},
+  17: {teeFrac:[0.50,0.93], greenFrac:[0.38,0.12], waypointFracs:[[0.46,0.53]]},
+  18: {teeFrac:[0.48,0.93], greenFrac:[0.40,0.12], waypointFracs:[[0.44,0.55]]},
 }
 
 // Manually calibrated hazards/bunkers for real course mode (yards from tee, Blue distances)
