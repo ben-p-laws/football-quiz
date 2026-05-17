@@ -319,6 +319,45 @@ const CONTINENT_PROJ: Record<string, { center: [number, number]; scale: number }
   asia:      { center: [90,  25],  scale: 300 },
 }
 
+// ── Ranking / Higher-or-Lower constants ──────────────────────────────
+const RANK_STAT_POOL: { spec: string; label: string }[] = [
+  { spec: 'goals',        label: 'PL Goals' },
+  { spec: 'goalsAssists', label: 'PL Goals + Assists' },
+  { spec: 'games',        label: 'PL Appearances' },
+  { spec: 'assists',      label: 'PL Assists' },
+  { spec: 'yellowCards',  label: 'Yellow Cards' },
+  { spec: 'redCards',     label: 'Red Cards' },
+  { spec: 'goals_Arsenal',         label: 'Goals for Arsenal' },
+  { spec: 'goals_Chelsea',         label: 'Goals for Chelsea' },
+  { spec: 'goals_Liverpool',       label: 'Goals for Liverpool' },
+  { spec: 'goals_Manchester City', label: 'Goals for Man City' },
+  { spec: 'goals_Manchester Utd',  label: 'Goals for Man Utd' },
+  { spec: 'goals_Tottenham',       label: 'Goals for Spurs' },
+  { spec: 'goals_Everton',         label: 'Goals for Everton' },
+  { spec: 'games_Arsenal',         label: 'Apps for Arsenal' },
+  { spec: 'games_Liverpool',       label: 'Apps for Liverpool' },
+  { spec: 'games_Manchester City', label: 'Apps for Man City' },
+  { spec: 'games_Manchester Utd',  label: 'Apps for Man Utd' },
+]
+
+function rankStatVal(p: ATWPlayer, spec: string): number {
+  if (spec === 'goals')        return p.goals
+  if (spec === 'goalsAssists') return p.goals + p.assists
+  if (spec === 'games')        return p.games
+  if (spec === 'assists')      return p.assists
+  if (spec === 'yellowCards')  return p.yellowCards
+  if (spec === 'redCards')     return p.redCards ?? 0
+  if (spec.startsWith('goals_')) return p.teamGoals[spec.slice(6)] ?? 0
+  if (spec.startsWith('games_')) return p.teamGames?.[spec.slice(6)] ?? 0
+  return 0
+}
+
+function countryRankTotal(playersByNat: Record<string, ATWPlayer[]>, code: string, spec: string): number {
+  return (playersByNat[code] ?? []).reduce((s, p) => s + rankStatVal(p, spec), 0)
+}
+
+const RANK_CONTINENTS = ['europe', 'africa', 's_america', 'n_america', 'asia']
+
 // ── Minefield constants ────────────────────────────────────────────
 type MineCategory =
   | { kind: 'statThreshold'; stat: StatKey; threshold: number }
@@ -527,7 +566,7 @@ export default function AroundTheWorld() {
   const [proj,       setProj]       = useState<{ center: [number, number]; scale: number }>({ center: [0, 20], scale: 160 })
 
   // Continent challenge state
-  const [challengeType,  setChallengeType]  = useState<'chain' | 'continent' | 'minefield'>('chain')
+  const [challengeType,  setChallengeType]  = useState<'chain' | 'continent' | 'minefield' | 'ranking' | 'higherLower'>('chain')
   const [cntContinent,   setCntContinent]   = useState('')
   const [cntCountries,   setCntCountries]   = useState<string[]>([])  // full continent pool
   const [cntNeeded,      setCntNeeded]      = useState(0)              // how many to fill
@@ -536,6 +575,42 @@ export default function AroundTheWorld() {
   const [cntFail,        setCntFail]        = useState('')
 
   const lastContinentRef = useRef<string | null>(null)
+
+  // Kings of the Continent state
+  const [rankContinent,       setRankContinent]       = useState('')
+  const [rankStatSpec,        setRankStatSpec]         = useState('')
+  const [rankStatLabel,       setRankStatLabel]        = useState('')
+  const [rankTargets,         setRankTargets]          = useState<{code:string;total:number}[]>([])
+  const [rankAllCountries,    setRankAllCountries]     = useState<string[]>([])
+  const [rankPicks,           setRankPicks]            = useState<string[]>([])
+  const [rankPending,         setRankPending]          = useState<string|null>(null)
+  const [rankMode,            setRankMode]             = useState<'easy'|'hard'>('easy')
+  const [rankPhase,           setRankPhase]            = useState<'playing'|'done'>('playing')
+  const [rankAlreadyPlayed,   setRankAlreadyPlayed]    = useState(false)
+  const [rankDailyLoading,    setRankDailyLoading]     = useState(false)
+  const [rankDailyErr,        setRankDailyErr]         = useState(false)
+  const [rankDailyLb,         setRankDailyLb]          = useState<{player_name:string;score:number;max_score:number}[]>([])
+  const [rankDailyName,       setRankDailyName]        = useState('')
+  const [rankDailySubmitted,  setRankDailySubmitted]   = useState(false)
+  const [showRankLobbyLb,     setShowRankLobbyLb]      = useState(false)
+
+  // Higher or Lower state
+  const [hlContinent,         setHlContinent]          = useState('')
+  const [hlStatSpec,          setHlStatSpec]           = useState('')
+  const [hlStatLabel,         setHlStatLabel]          = useState('')
+  const [hlSequence,          setHlSequence]           = useState<{code:string;total:number}[]>([])
+  const [hlCurrentIdx,        setHlCurrentIdx]         = useState(0)
+  const [hlStreak,            setHlStreak]             = useState(0)
+  const [hlMode,              setHlMode]               = useState<'easy'|'hard'>('easy')
+  const [hlPhase,             setHlPhase]              = useState<'playing'|'done'>('playing')
+  const [hlLastCorrect,       setHlLastCorrect]        = useState<boolean|null>(null)
+  const [hlAlreadyPlayed,     setHlAlreadyPlayed]      = useState(false)
+  const [hlDailyLoading,      setHlDailyLoading]       = useState(false)
+  const [hlDailyErr,          setHlDailyErr]           = useState(false)
+  const [hlDailyLb,           setHlDailyLb]            = useState<{player_name:string;streak:number}[]>([])
+  const [hlDailyName,         setHlDailyName]          = useState('')
+  const [hlDailySubmitted,    setHlDailySubmitted]     = useState(false)
+  const [showHlLobbyLb,       setShowHlLobbyLb]        = useState(false)
 
   const [input,       setInput]       = useState('')
   const [suggestions, setSuggestions] = useState<string[]>([])
@@ -558,6 +633,8 @@ export default function AroundTheWorld() {
     if (localStorage.getItem(`atw_daily_${today}`))       setAlreadyPlayed(true)
     if (localStorage.getItem(`atw_cont_daily_${today}`)) setCntAlreadyPlayed(true)
     if (localStorage.getItem(`atw_mine_daily_${today}`)) setMineAlreadyPlayed(true)
+    if (localStorage.getItem(`atw_rank_daily_${today}`)) setRankAlreadyPlayed(true)
+    if (localStorage.getItem(`atw_hl_daily_${today}`))   setHlAlreadyPlayed(true)
   }, [mounted])
 
   async function startDailyGame() {
@@ -693,6 +770,157 @@ export default function AroundTheWorld() {
     setMinePicked({}); setMineWrong([]); setMineLivesLost(0); setMinePending(null)
     setZoom(1); setProj(CONTINENT_PROJ[continent])
     setPhase('playing')
+  }
+
+  function startRanking() {
+    if (!players) return
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const continent = RANK_CONTINENTS[Math.floor(Math.random() * RANK_CONTINENTS.length)]
+      const specEntry = RANK_STAT_POOL[Math.floor(Math.random() * RANK_STAT_POOL.length)]
+      const pool = CONTINENT_POOL[continent] ?? []
+      const totals = pool
+        .map(code => ({ code, total: countryRankTotal(playersByNat, code, specEntry.spec) }))
+        .filter(x => x.total > 0)
+        .sort((a, b) => b.total - a.total)
+      if (totals.length < 5) continue
+      const targets = totals.slice(0, Math.min(10, totals.length))
+      setRankContinent(continent); setRankStatSpec(specEntry.spec); setRankStatLabel(specEntry.label)
+      setRankTargets(targets); setRankAllCountries(pool)
+      setRankPicks([]); setRankPending(null); setRankPhase('playing')
+      setChallengeType('ranking'); setZoom(1); setProj(CONTINENT_PROJ[continent] ?? { center: [0, 20], scale: 160 })
+      setPhase('playing')
+      return
+    }
+  }
+
+  function pickRankCountry(code: string) {
+    if (rankPicks.includes(code) || rankPicks.length >= rankTargets.length) return
+    if (rankMode === 'easy') { setRankPending(code) }
+    else { confirmRankPick(code) }
+  }
+
+  function confirmRankPick(code: string) {
+    const newPicks = [...rankPicks, code]
+    setRankPicks(newPicks); setRankPending(null)
+    if (newPicks.length >= rankTargets.length) setRankPhase('done')
+  }
+
+  function startHigherLower() {
+    if (!players) return
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const continent = RANK_CONTINENTS[Math.floor(Math.random() * RANK_CONTINENTS.length)]
+      const specEntry = RANK_STAT_POOL[Math.floor(Math.random() * RANK_STAT_POOL.length)]
+      const pool = CONTINENT_POOL[continent] ?? []
+      const qualifying = pool
+        .map(code => ({ code, total: countryRankTotal(playersByNat, code, specEntry.spec) }))
+        .filter(x => x.total > 0)
+      if (qualifying.length < 3) continue
+      const shuffled = [...qualifying].sort(() => Math.random() - 0.5)
+      setHlContinent(continent); setHlStatSpec(specEntry.spec); setHlStatLabel(specEntry.label)
+      setHlSequence(shuffled); setHlCurrentIdx(0); setHlStreak(0)
+      setHlPhase('playing'); setHlLastCorrect(null)
+      setChallengeType('higherLower'); setZoom(1); setProj(CONTINENT_PROJ[continent] ?? { center: [0, 20], scale: 160 })
+      setPhase('playing')
+      return
+    }
+  }
+
+  function guessHL(guess: 'higher' | 'lower') {
+    const current = hlSequence[hlCurrentIdx]
+    const next = hlSequence[hlCurrentIdx + 1]
+    if (!current || !next) return
+    const nextIsHigher = next.total >= current.total
+    const correct = (guess === 'higher') === nextIsHigher
+    setHlLastCorrect(correct)
+    if (correct) {
+      const newStreak = hlStreak + 1
+      setHlStreak(newStreak)
+      if (hlCurrentIdx + 2 >= hlSequence.length) { setHlPhase('done') }
+      else { setHlCurrentIdx(hlCurrentIdx + 1) }
+    } else {
+      setHlPhase('done')
+    }
+  }
+
+  async function startRankingDailyGame() {
+    if (!players) return
+    setRankDailyLoading(true); setRankDailyErr(false)
+    try {
+      const res = await fetch('/api/around-the-world/ranking-daily')
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setRankDailyLb(data.leaderboard ?? [])
+      setRankDailyName(''); setRankDailySubmitted(false)
+      const pool = CONTINENT_POOL[data.continent] ?? []
+      setRankContinent(data.continent); setRankStatSpec(data.statSpec); setRankStatLabel(data.statLabel)
+      setRankTargets(data.targets); setRankAllCountries(pool)
+      setRankPicks([]); setRankPending(null); setRankPhase('playing')
+      setRankMode(data.mode ?? 'easy')
+      setChallengeType('ranking'); setZoom(1); setProj(CONTINENT_PROJ[data.continent] ?? { center: [0, 20], scale: 160 })
+      setGameMode('daily'); setPhase('playing')
+    } catch { setRankDailyErr(true) }
+    finally { setRankDailyLoading(false) }
+  }
+
+  async function submitRankingDailyScore(score: number, maxScore: number) {
+    if (!rankDailyName.trim()) return
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      const res = await fetch('/api/around-the-world/ranking-daily', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, player_name: rankDailyName.trim(), score, max_score: maxScore, continent: rankContinent, stat_spec: rankStatSpec }),
+      })
+      const d = await res.json()
+      setRankDailyLb(d.leaderboard ?? [])
+    } catch { /* silent */ }
+    setRankDailySubmitted(true)
+    localStorage.setItem(`atw_rank_daily_${today}`, '1')
+    setRankAlreadyPlayed(true)
+  }
+
+  async function viewRankLobbyLeaderboard() {
+    setShowRankLobbyLb(true)
+    try { const res = await fetch('/api/around-the-world/ranking-daily'); const d = await res.json(); setRankDailyLb(d.leaderboard ?? []) } catch { /* silent */ }
+  }
+
+  async function startHlDailyGame() {
+    if (!players) return
+    setHlDailyLoading(true); setHlDailyErr(false)
+    try {
+      const res = await fetch('/api/around-the-world/higher-lower-daily')
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setHlDailyLb(data.leaderboard ?? [])
+      setHlDailyName(''); setHlDailySubmitted(false)
+      setHlContinent(data.continent); setHlStatSpec(data.statSpec); setHlStatLabel(data.statLabel)
+      setHlSequence(data.sequence); setHlCurrentIdx(0); setHlStreak(0)
+      setHlPhase('playing'); setHlLastCorrect(null)
+      setHlMode(data.mode ?? 'easy')
+      setChallengeType('higherLower'); setZoom(1); setProj(CONTINENT_PROJ[data.continent] ?? { center: [0, 20], scale: 160 })
+      setGameMode('daily'); setPhase('playing')
+    } catch { setHlDailyErr(true) }
+    finally { setHlDailyLoading(false) }
+  }
+
+  async function submitHlDailyScore(streak: number) {
+    if (!hlDailyName.trim()) return
+    const today = new Date().toISOString().slice(0, 10)
+    try {
+      const res = await fetch('/api/around-the-world/higher-lower-daily', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: today, player_name: hlDailyName.trim(), streak, continent: hlContinent, stat_spec: hlStatSpec }),
+      })
+      const d = await res.json()
+      setHlDailyLb(d.leaderboard ?? [])
+    } catch { /* silent */ }
+    setHlDailySubmitted(true)
+    localStorage.setItem(`atw_hl_daily_${today}`, '1')
+    setHlAlreadyPlayed(true)
+  }
+
+  async function viewHlLobbyLeaderboard() {
+    setShowHlLobbyLb(true)
+    try { const res = await fetch('/api/around-the-world/higher-lower-daily'); const d = await res.json(); setHlDailyLb(d.leaderboard ?? []) } catch { /* silent */ }
   }
 
   async function startMinefieldDailyGame() {
@@ -1303,6 +1531,100 @@ export default function AroundTheWorld() {
               )}
             </div>
 
+            {/* ── Card 3: Kings of the Continent ── */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>👑 Kings of the Continent</div>
+                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Rank countries on a continent by their PL stat — top 10 in order</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  disabled={rankDailyLoading || !players}
+                  onClick={rankAlreadyPlayed ? viewRankLobbyLeaderboard : startRankingDailyGame}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: `2px solid ${rankAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
+                    background: rankAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
+                    color: 'white', cursor: (rankDailyLoading || !players) ? 'default' : 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>{rankAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>{rankAlreadyPlayed ? 'View leaderboard' : rankDailyLoading ? 'Loading…' : today}</span>
+                </button>
+                <button
+                  onClick={() => { setChallengeType('ranking'); setGameMode('freeplay'); setPhase('setup') }}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: '2px solid #2a3d5e', background: 'transparent',
+                    color: '#c0cde0', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
+                </button>
+              </div>
+              {rankDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
+              {showRankLobbyLb && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Today&apos;s Leaderboard</div>
+                  {rankDailyLb.sort((a,b)=>b.score-a.score).map((e,i)=>(
+                    <div key={i} style={{display:'flex',gap:8,padding:'6px 10px',marginBottom:4,background:'rgba(255,255,255,0.03)',border:'1px solid #1e2d4a',borderRadius:6}}>
+                      <span style={{fontSize:12,color:'#4a5568',width:18}}>{i+1}.</span>
+                      <span style={{flex:1,fontSize:13,fontWeight:700,color:'white'}}>{e.player_name}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:'#f59e0b'}}>{e.score}/{e.max_score}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* ── Card 4: Higher or Lower ── */}
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>📈 Higher or Lower</div>
+                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>A country&apos;s PL stat is shown — guess if the next country is higher or lower</div>
+              </div>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  disabled={hlDailyLoading || !players}
+                  onClick={hlAlreadyPlayed ? viewHlLobbyLeaderboard : startHlDailyGame}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: `2px solid ${hlAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
+                    background: hlAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
+                    color: 'white', cursor: (hlDailyLoading || !players) ? 'default' : 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>{hlAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>{hlAlreadyPlayed ? 'View leaderboard' : hlDailyLoading ? 'Loading…' : today}</span>
+                </button>
+                <button
+                  onClick={() => { setChallengeType('higherLower'); setGameMode('freeplay'); setPhase('setup') }}
+                  style={{
+                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    border: '2px solid #2a3d5e', background: 'transparent',
+                    color: '#c0cde0', cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
+                  }}>
+                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
+                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
+                </button>
+              </div>
+              {hlDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
+              {showHlLobbyLb && (
+                <div style={{ marginTop: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Today&apos;s Leaderboard</div>
+                  {hlDailyLb.sort((a,b)=>b.streak-a.streak).map((e,i)=>(
+                    <div key={i} style={{display:'flex',gap:8,padding:'6px 10px',marginBottom:4,background:'rgba(255,255,255,0.03)',border:'1px solid #1e2d4a',borderRadius:6}}>
+                      <span style={{fontSize:12,color:'#4a5568',width:18}}>{i+1}.</span>
+                      <span style={{flex:1,fontSize:13,fontWeight:700,color:'white'}}>{e.player_name}</span>
+                      <span style={{fontSize:12,fontWeight:700,color:'#22c55e'}}>🔥 {e.streak}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
           </div>
         </div>
       </div>
@@ -1317,9 +1639,9 @@ export default function AroundTheWorld() {
         <NavBar />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 24 }}>
           <div style={{ textAlign: 'center', maxWidth: 520 }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>{challengeType === 'continent' ? '🌍' : '🔗'}</div>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>{challengeType === 'continent' ? '🌍' : challengeType === 'ranking' ? '👑' : challengeType === 'higherLower' ? '📈' : '🔗'}</div>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: 'white', margin: '0 0 10px' }}>
-              {challengeType === 'continent' ? 'Continent Challenge' : challengeType === 'minefield' ? '💣 Minefield' : 'Complete the Chain'}
+              {challengeType === 'continent' ? 'Continent Challenge' : challengeType === 'minefield' ? '💣 Minefield' : challengeType === 'ranking' ? 'Kings of the Continent' : challengeType === 'higherLower' ? 'Higher or Lower' : 'Complete the Chain'}
             </h1>
             {challengeType === 'minefield' ? (
               <>
@@ -1339,6 +1661,24 @@ export default function AroundTheWorld() {
                   Wrong nationality = game over · Player must have at least 1 for the stat
                 </p>
               </>
+            ) : challengeType === 'ranking' ? (
+              <>
+                <p style={{ color: '#8899bb', marginBottom: 8, lineHeight: 1.6 }}>
+                  A continent and stat are chosen at random. Rank the top countries by their total PL stat — click them in order from highest to lowest. 10 points for correct position, 5 for correct country.
+                </p>
+                <p style={{ color: '#4a5568', fontSize: 12, marginBottom: 28 }}>
+                  Easy: Country names shown on map · Hard: No country names — geography knowledge required
+                </p>
+              </>
+            ) : challengeType === 'higherLower' ? (
+              <>
+                <p style={{ color: '#8899bb', marginBottom: 8, lineHeight: 1.6 }}>
+                  A stat and continent are chosen. You&apos;ll see one country&apos;s total — guess whether the next country&apos;s total is Higher or Lower. How long can you streak?
+                </p>
+                <p style={{ color: '#4a5568', fontSize: 12, marginBottom: 28 }}>
+                  Easy: Country names shown on map · Hard: No country names — geography knowledge required
+                </p>
+              </>
             ) : (
               <>
                 <p style={{ color: '#8899bb', marginBottom: 8, lineHeight: 1.6 }}>
@@ -1350,11 +1690,14 @@ export default function AroundTheWorld() {
               </>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', marginBottom: 28 }}>
-              {([
-                { m: 'easy',   label: 'Easy',   sub: 'Country names shown · running total visible' },
-                { m: 'medium', label: 'Medium', sub: 'No country names · running total visible' },
-                { m: 'hard',   label: 'Hard',   sub: 'No country names · score revealed at end' },
-              ] as const).map(({ m, label, sub }) => (
+              {(challengeType === 'ranking' || challengeType === 'higherLower' ? [
+                { m: 'easy' as const, label: 'Easy',   sub: 'Country names shown on map' },
+                { m: 'hard' as const, label: 'Hard',   sub: 'No country names — geography knowledge required' },
+              ] : [
+                { m: 'easy' as const,   label: 'Easy',   sub: 'Country names shown · running total visible' },
+                { m: 'medium' as const, label: 'Medium', sub: 'No country names · running total visible' },
+                { m: 'hard' as const,   label: 'Hard',   sub: 'No country names · score revealed at end' },
+              ]).map(({ m, label, sub }) => (
                 <button key={m} onClick={() => setMode(m)} style={{
                   padding: '10px 22px', borderRadius: 8, width: 320,
                   border: `2px solid ${mode === m ? '#dc2626' : '#2a3d5e'}`,
@@ -1370,11 +1713,20 @@ export default function AroundTheWorld() {
             </div>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
               <button onClick={() => setGameMode('lobby')} style={{ padding: '14px 20px', background: 'transparent', color: '#8899bb', border: '1px solid #2a3d5e', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>← Lobby</button>
-              <button onClick={challengeType === 'continent' ? startContinent : challengeType === 'minefield' ? startMinefield : startGame} disabled={!players} style={{
-                padding: '14px 44px', background: players ? '#dc2626' : '#2a3d5e',
-                color: 'white', border: 'none', borderRadius: 10,
-                fontSize: 16, fontWeight: 800, cursor: players ? 'pointer' : 'default',
-              }}>
+              <button
+                onClick={
+                  challengeType === 'continent' ? startContinent :
+                  challengeType === 'minefield' ? startMinefield :
+                  challengeType === 'ranking'   ? startRanking :
+                  challengeType === 'higherLower' ? startHigherLower :
+                  startGame
+                }
+                disabled={!players}
+                style={{
+                  padding: '14px 44px', background: players ? '#dc2626' : '#2a3d5e',
+                  color: 'white', border: 'none', borderRadius: 10,
+                  fontSize: 16, fontWeight: 800, cursor: players ? 'pointer' : 'default',
+                }}>
                 {loadErr ? 'Failed to load — refresh' : !players ? 'Loading data…' : 'Start Game'}
               </button>
             </div>
@@ -1923,6 +2275,368 @@ export default function AroundTheWorld() {
             )}
           </div>
 
+        </div>
+      </div>
+    )
+  }
+
+  // ── RANKING PLAYING ───────────────────────────────────────────────
+  if (challengeType === 'ranking' && phase === 'playing') {
+    const mapCountries = rankAllCountries
+
+    return (
+      <div style={page}>
+        <NavBar />
+        <div style={WRAP}>
+          {/* Top bar */}
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end',padding:'10px 0 4px'}}>
+            <button onClick={()=>{setGameMode('lobby');setPhase('setup')}} style={{padding:'5px 14px',background:'transparent',color:'#8899bb',border:'1px solid #2a3d5e',borderRadius:6,fontWeight:600,fontSize:12,cursor:'pointer'}}>← Lobby</button>
+            {gameMode!=='daily'&&<button onClick={startRanking} style={{padding:'5px 14px',background:'transparent',color:'#dc2626',border:'1px solid #7f1d1d',borderRadius:6,fontWeight:600,fontSize:12,cursor:'pointer'}}>Restart</button>}
+          </div>
+          {/* Banner */}
+          <div style={{padding:'12px 0 10px',borderBottom:'1px solid #1e2d4a',marginBottom:12}}>
+            <div style={{display:'flex',gap:10}}>
+              <div style={{flex:1,background:'rgba(59,130,246,0.10)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:10,padding:'10px 14px'}}>
+                <div style={{fontSize:9,fontWeight:700,color:'#4a6fa0',textTransform:'uppercase' as const,letterSpacing:'0.1em',marginBottom:4}}>Stat</div>
+                <div style={{fontSize:15,fontWeight:900,color:'white'}}>{rankStatLabel}</div>
+              </div>
+              <div style={{flex:1,background:'rgba(245,158,11,0.10)',border:'1px solid rgba(245,158,11,0.30)',borderRadius:10,padding:'10px 14px'}}>
+                <div style={{fontSize:9,fontWeight:700,color:'#a07830',textTransform:'uppercase' as const,letterSpacing:'0.1em',marginBottom:4}}>Pick</div>
+                <div style={{fontSize:15,fontWeight:900,color:'#f59e0b'}}>{rankPicks.length}/{rankTargets.length}</div>
+              </div>
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid #1e2d4a',borderRadius:10,padding:'10px 14px',minWidth:70}}>
+                <div style={{fontSize:9,fontWeight:700,color:'#4a5568',textTransform:'uppercase' as const,letterSpacing:'0.1em',marginBottom:4}}>Continent</div>
+                <div style={{fontSize:12,fontWeight:800,color:'#8899bb'}}>{CONTINENT_NAMES[rankContinent]}</div>
+              </div>
+            </div>
+          </div>
+          {/* Instruction */}
+          <p style={{color:'#8899bb',fontSize:13,margin:'0 0 10px'}}>
+            Click countries in order from <strong style={{color:'white'}}>highest to lowest</strong> {rankStatLabel}. Rank {rankTargets.length} countries.
+          </p>
+          {/* Picks so far */}
+          {rankPicks.length > 0 && (
+            <div style={{display:'flex',gap:5,flexWrap:'wrap' as const,marginBottom:10}}>
+              {rankPicks.map((code, i) => (
+                <div key={code} style={{display:'flex',alignItems:'center',gap:5,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:6,padding:'3px 8px',fontSize:11}}>
+                  <span style={{color:'#f59e0b',fontWeight:800}}>#{i+1}</span>
+                  {flagImg(code, 14)}
+                  {rankMode==='easy' && <span style={{color:'white',fontWeight:700}}>{COUNTRY_NAMES[code]??code}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Pending confirmation (easy mode) */}
+          {rankPending && (
+            <div style={{background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.4)',borderRadius:10,padding:'14px 16px',marginBottom:12,display:'flex',alignItems:'center',gap:12}}>
+              {flagImg(rankPending, 24)}
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:800,color:'white'}}>{COUNTRY_NAMES[rankPending]??rankPending}</div>
+                <div style={{fontSize:12,color:'#8899bb'}}>Pick as #{rankPicks.length+1}?</div>
+              </div>
+              <button onClick={()=>confirmRankPick(rankPending)} style={{padding:'8px 18px',background:'#f59e0b',color:'#0a0f1e',border:'none',borderRadius:8,fontWeight:800,fontSize:13,cursor:'pointer'}}>Confirm</button>
+              <button onClick={()=>setRankPending(null)} style={{padding:'8px 14px',background:'transparent',color:'#8899bb',border:'1px solid #2a3d5e',borderRadius:8,fontWeight:600,fontSize:13,cursor:'pointer'}}>Cancel</button>
+            </div>
+          )}
+          {/* Map */}
+          <div style={{background:'#04101f',borderRadius:10,overflow:'hidden',margin:'8px 0',border:'1px solid #1e2d4a',position:'relative'}}>
+            <div style={{position:'absolute',top:8,right:8,zIndex:10,display:'flex',flexDirection:'column',gap:4}}>
+              {[{label:'+',fn:()=>setZoom(z=>Math.min(z*1.4,8))},{label:'−',fn:()=>setZoom(z=>Math.max(z/1.4,0.2))}].map(({label,fn})=>(
+                <button key={label} onClick={fn} style={{width:28,height:28,background:'rgba(255,255,255,0.08)',border:'1px solid #2a3d5e',borderRadius:6,color:'white',fontSize:16,fontWeight:700,cursor:'pointer',lineHeight:1,display:'flex',alignItems:'center',justifyContent:'center'}}>{label}</button>
+              ))}
+            </div>
+            {mounted && (
+              <ComposableMap projectionConfig={{scale:proj.scale*zoom,center:proj.center}} style={{width:'100%',height:'auto',display:'block'}}>
+                <Geographies geography={GEO_URL}>
+                  {({geographies}: any) => geographies.filter((g: any)=>!SKIP_GEOS.has(Number(g.id))).map((geo: any) => {
+                    const geoN = String(geo.id)
+                    let fifa: string|null = null
+                    if (geoN==='826') fifa = ['ENG','SCO','WAL','NIR'].find(c=>mapCountries.includes(c)) ?? null
+                    else fifa = ISO_TO_FIFA[geoN] ?? null
+                    const inContinent = fifa ? mapCountries.includes(fifa) : false
+                    const isPicked = fifa ? rankPicks.includes(fifa) : false
+                    const isPending = fifa === rankPending
+                    const clickable = inContinent && !isPicked && !isPending && rankPicks.length < rankTargets.length
+                    const fill = !inContinent ? '#1a2d45'
+                      : isPicked ? 'rgba(34,197,94,0.30)'
+                      : isPending ? 'rgba(245,158,11,0.40)'
+                      : 'rgba(59,130,246,0.22)'
+                    const stroke = !inContinent ? '#2e4a6a'
+                      : isPicked ? '#22c55e'
+                      : isPending ? '#f59e0b'
+                      : '#5b8fd4'
+                    return (
+                      <Geography key={geo.rsmKey} geography={geo}
+                        onClick={()=>{ if(fifa && clickable) pickRankCountry(fifa) }}
+                        style={{default:{fill,stroke,strokeWidth:inContinent?1.1:0.5,outline:'none'},hover:{fill:clickable?'rgba(245,158,11,0.30)':fill,outline:'none',cursor:clickable?'pointer':'default'},pressed:{outline:'none'}}}
+                      />
+                    )
+                  })}
+                </Geographies>
+                {/* Rank number labels on picked countries */}
+                {rankPicks.map((code,i)=>{
+                  const c = CENTROIDS[code]; if(!c) return null
+                  return (
+                    <Marker key={code} coordinates={c}>
+                      <circle r={10} fill="#22c55e" opacity={0.9}/>
+                      <text textAnchor="middle" dy="0.35em" fontSize={9} fontWeight={800} fill="white">#{i+1}</text>
+                    </Marker>
+                  )
+                })}
+              </ComposableMap>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── RANKING DONE ──────────────────────────────────────────────────
+  if (challengeType === 'ranking' && rankPhase === 'done') {
+    const n = rankTargets.length
+    const maxScore = n * 10
+    const scores: number[] = rankPicks.map((code, i) => {
+      const tIdx = rankTargets.findIndex(t=>t.code===code)
+      if (tIdx===-1) return 0
+      if (tIdx===i) return 10
+      return 5
+    })
+    const totalScore = scores.reduce((a,b)=>a+b,0)
+    const pct = Math.round((totalScore/maxScore)*100)
+
+    return (
+      <div style={page}>
+        <NavBar />
+        <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'calc(100vh - 56px)',padding:24}}>
+          <div style={{...WRAP,maxWidth:560}}>
+            <div style={{textAlign:'center',marginBottom:20}}>
+              <div style={{fontSize:40,marginBottom:8}}>{pct>=80?'👑':pct>=60?'🏅':pct>=40?'🌍':'📍'}</div>
+              <h2 style={{fontSize:24,fontWeight:900,color:'white',margin:'0 0 4px'}}>{totalScore}/{maxScore} points</h2>
+              <p style={{color:'#8899bb',margin:'0 0 20px'}}>{rankStatLabel} · {CONTINENT_NAMES[rankContinent]}</p>
+            </div>
+            {/* Result rows */}
+            <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
+              {rankTargets.map((t, i) => {
+                const userPickIdx = rankPicks.indexOf(t.code)
+                const score = scores[userPickIdx] ?? 0
+                const wasPickedAt = userPickIdx >= 0 ? userPickIdx + 1 : null
+                return (
+                  <div key={t.code} style={{display:'flex',alignItems:'center',gap:10,background:score===10?'rgba(34,197,94,0.08)':score===5?'rgba(245,158,11,0.08)':'rgba(239,68,68,0.05)',border:`1px solid ${score===10?'rgba(34,197,94,0.3)':score===5?'rgba(245,158,11,0.3)':'rgba(239,68,68,0.2)'}`,borderRadius:8,padding:'8px 12px'}}>
+                    <span style={{fontSize:14,fontWeight:800,color:'#4a5568',width:24}}>#{i+1}</span>
+                    {flagImg(t.code,18)}
+                    <span style={{flex:1,fontSize:13,fontWeight:700,color:'white'}}>{COUNTRY_NAMES[t.code]??t.code}</span>
+                    <span style={{fontSize:12,color:'#8899bb'}}>{t.total.toLocaleString()}</span>
+                    {wasPickedAt!==null && <span style={{fontSize:11,color:score===10?'#22c55e':score===5?'#f59e0b':'#ef4444'}}>You: #{wasPickedAt} ({score}pts)</span>}
+                    {wasPickedAt===null && <span style={{fontSize:11,color:'#4a5568'}}>Missed</span>}
+                  </div>
+                )
+              })}
+            </div>
+            {/* Countries the user picked that weren't in top N */}
+            {rankPicks.filter(c=>!rankTargets.find(t=>t.code===c)).length>0 && (
+              <div style={{marginBottom:16}}>
+                <div style={{fontSize:11,color:'#4a5568',marginBottom:6}}>Wrong picks (not in top {n}):</div>
+                <div style={{display:'flex',gap:5,flexWrap:'wrap' as const}}>
+                  {rankPicks.filter(c=>!rankTargets.find(t=>t.code===c)).map(code=>(
+                    <div key={code} style={{display:'flex',alignItems:'center',gap:4,background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:6,padding:'3px 8px',fontSize:11}}>
+                      {flagImg(code,12)}
+                      <span style={{color:'#ef4444'}}>{COUNTRY_NAMES[code]??code}</span>
+                      <span style={{color:'#4a5568'}}>0pts</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {/* Leaderboard submission */}
+            {gameMode==='daily' && (
+              <div style={{background:'rgba(59,130,246,0.07)',border:'1px solid #2a3d5e',borderRadius:10,padding:'16px 20px',marginBottom:16}}>
+                {!rankDailySubmitted ? (
+                  <>
+                    <div style={{fontSize:13,fontWeight:700,color:'#8899bb',marginBottom:10}}>Submit your score</div>
+                    <div style={{display:'flex',gap:8}}>
+                      <input value={rankDailyName} onChange={e=>setRankDailyName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&rankDailyName.trim())submitRankingDailyScore(totalScore,maxScore)}} placeholder="Your name…" style={{flex:1,background:'#111827',border:'1px solid #2a3d5e',borderRadius:6,padding:'8px 12px',color:'white',fontSize:16,outline:'none',fontFamily:'inherit'}}/>
+                      <button onClick={()=>submitRankingDailyScore(totalScore,maxScore)} disabled={!rankDailyName.trim()} style={{padding:'8px 18px',background:rankDailyName.trim()?'#dc2626':'#2a3d5e',color:'white',border:'none',borderRadius:6,fontWeight:800,fontSize:13,cursor:rankDailyName.trim()?'pointer':'default'}}>Submit</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{fontSize:12,fontWeight:700,color:'#4a6fa0',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:8}}>Today&apos;s Leaderboard</div>
+                    {[...rankDailyLb].sort((a,b)=>b.score-a.score).map((e,i)=>(
+                      <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',marginBottom:4,background:e.player_name===rankDailyName?'rgba(220,38,38,0.08)':'rgba(255,255,255,0.02)',border:`1px solid ${e.player_name===rankDailyName?'#7f1d1d':'#1e2d4a'}`,borderRadius:6}}>
+                        <span style={{fontSize:11,color:'#4a5568',width:20}}>{i+1}.</span>
+                        <span style={{flex:1,fontSize:13,fontWeight:700,color:'white'}}>{e.player_name}</span>
+                        <span style={{fontSize:12,fontWeight:700,color:'#f59e0b'}}>{e.score}/{e.max_score}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+            <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+              {gameMode!=='daily'&&<button onClick={startRanking} style={{padding:'12px 32px',background:'#dc2626',color:'white',border:'none',borderRadius:8,fontWeight:800,fontSize:14,cursor:'pointer'}}>Play Again</button>}
+              <button onClick={()=>{setGameMode('lobby');setPhase('setup')}} style={{padding:'12px 32px',background:'transparent',color:'#8899bb',border:'1px solid #2a3d5e',borderRadius:8,fontWeight:700,fontSize:14,cursor:'pointer'}}>Lobby</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ── HIGHER OR LOWER ───────────────────────────────────────────────
+  if (challengeType === 'higherLower') {
+    const current = hlSequence[hlCurrentIdx]
+    const next = hlSequence[hlCurrentIdx + 1]
+    const isDone = hlPhase === 'done'
+
+    if (isDone) {
+      return (
+        <div style={page}>
+          <NavBar />
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'calc(100vh - 56px)',padding:24}}>
+            <div style={{...WRAP,maxWidth:500,textAlign:'center' as const}}>
+              <div style={{fontSize:40,marginBottom:8}}>{hlStreak>=10?'🔥':hlStreak>=5?'⚡':hlStreak>=2?'👍':'💀'}</div>
+              <h2 style={{fontSize:28,fontWeight:900,color:'white',margin:'0 0 4px'}}>Streak: {hlStreak}</h2>
+              <p style={{color:'#8899bb',margin:'0 0 4px'}}>{hlStatLabel} · {CONTINENT_NAMES[hlContinent]}</p>
+              {current && next && hlLastCorrect===false && (
+                <div style={{background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:10,padding:'16px',margin:'16px 0'}}>
+                  <div style={{fontSize:13,color:'#8899bb',marginBottom:8}}>You guessed wrong on:</div>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:16}}>
+                    <div style={{textAlign:'center' as const}}>
+                      {flagImg(current.code,28)}
+                      <div style={{fontSize:12,color:'#8899bb',marginTop:4}}>{COUNTRY_NAMES[current.code]??current.code}</div>
+                      <div style={{fontSize:18,fontWeight:900,color:'white'}}>{current.total.toLocaleString()}</div>
+                    </div>
+                    <div style={{fontSize:20,color:'#ef4444'}}>vs</div>
+                    <div style={{textAlign:'center' as const}}>
+                      {flagImg(next.code,28)}
+                      <div style={{fontSize:12,color:'#8899bb',marginTop:4}}>{COUNTRY_NAMES[next.code]??next.code}</div>
+                      <div style={{fontSize:18,fontWeight:900,color:'#ef4444'}}>{next.total.toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Leaderboard submission */}
+              {gameMode==='daily' && (
+                <div style={{background:'rgba(59,130,246,0.07)',border:'1px solid #2a3d5e',borderRadius:10,padding:'16px 20px',marginBottom:16,textAlign:'left' as const}}>
+                  {!hlDailySubmitted ? (
+                    <>
+                      <div style={{fontSize:13,fontWeight:700,color:'#8899bb',marginBottom:10}}>Submit your streak</div>
+                      <div style={{display:'flex',gap:8}}>
+                        <input value={hlDailyName} onChange={e=>setHlDailyName(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&hlDailyName.trim())submitHlDailyScore(hlStreak)}} placeholder="Your name…" style={{flex:1,background:'#111827',border:'1px solid #2a3d5e',borderRadius:6,padding:'8px 12px',color:'white',fontSize:16,outline:'none',fontFamily:'inherit'}}/>
+                        <button onClick={()=>submitHlDailyScore(hlStreak)} disabled={!hlDailyName.trim()} style={{padding:'8px 18px',background:hlDailyName.trim()?'#dc2626':'#2a3d5e',color:'white',border:'none',borderRadius:6,fontWeight:800,fontSize:13,cursor:hlDailyName.trim()?'pointer':'default'}}>Submit</button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{fontSize:12,fontWeight:700,color:'#4a6fa0',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:8}}>Today&apos;s Leaderboard</div>
+                      {[...hlDailyLb].sort((a,b)=>b.streak-a.streak).map((e,i)=>(
+                        <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',marginBottom:4,background:e.player_name===hlDailyName?'rgba(220,38,38,0.08)':'rgba(255,255,255,0.02)',border:`1px solid ${e.player_name===hlDailyName?'#7f1d1d':'#1e2d4a'}`,borderRadius:6}}>
+                          <span style={{fontSize:11,color:'#4a5568',width:20}}>{i+1}.</span>
+                          <span style={{flex:1,fontSize:13,fontWeight:700,color:'white'}}>{e.player_name}</span>
+                          <span style={{fontSize:12,fontWeight:700,color:'#22c55e'}}>🔥 {e.streak}</span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              )}
+              <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+                {gameMode!=='daily'&&<button onClick={startHigherLower} style={{padding:'12px 32px',background:'#dc2626',color:'white',border:'none',borderRadius:8,fontWeight:800,fontSize:14,cursor:'pointer'}}>Play Again</button>}
+                <button onClick={()=>{setGameMode('lobby');setPhase('setup')}} style={{padding:'12px 32px',background:'transparent',color:'#8899bb',border:'1px solid #2a3d5e',borderRadius:8,fontWeight:700,fontSize:14,cursor:'pointer'}}>Lobby</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    // Playing state
+    const showNames = hlMode === 'easy'
+    return (
+      <div style={page}>
+        <NavBar />
+        <div style={WRAP}>
+          <div style={{display:'flex',gap:8,justifyContent:'flex-end',padding:'10px 0 4px'}}>
+            <button onClick={()=>{setGameMode('lobby');setPhase('setup')}} style={{padding:'5px 14px',background:'transparent',color:'#8899bb',border:'1px solid #2a3d5e',borderRadius:6,fontWeight:600,fontSize:12,cursor:'pointer'}}>← Lobby</button>
+            {gameMode!=='daily'&&<button onClick={startHigherLower} style={{padding:'5px 14px',background:'transparent',color:'#dc2626',border:'1px solid #7f1d1d',borderRadius:6,fontWeight:600,fontSize:12,cursor:'pointer'}}>Restart</button>}
+          </div>
+          {/* Banner */}
+          <div style={{padding:'12px 0 10px',borderBottom:'1px solid #1e2d4a',marginBottom:12}}>
+            <div style={{display:'flex',gap:10}}>
+              <div style={{flex:1,background:'rgba(59,130,246,0.10)',border:'1px solid rgba(59,130,246,0.25)',borderRadius:10,padding:'10px 14px'}}>
+                <div style={{fontSize:9,fontWeight:700,color:'#4a6fa0',textTransform:'uppercase' as const,letterSpacing:'0.1em',marginBottom:4}}>Stat</div>
+                <div style={{fontSize:15,fontWeight:900,color:'white'}}>{hlStatLabel}</div>
+              </div>
+              <div style={{flex:1,background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.22)',borderRadius:10,padding:'10px 14px'}}>
+                <div style={{fontSize:9,fontWeight:700,color:'#2a6645',textTransform:'uppercase' as const,letterSpacing:'0.1em',marginBottom:4}}>Streak</div>
+                <div style={{fontSize:17,fontWeight:900,color:'#22c55e'}}>🔥 {hlStreak}</div>
+              </div>
+              <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid #1e2d4a',borderRadius:10,padding:'10px 14px',minWidth:70}}>
+                <div style={{fontSize:9,fontWeight:700,color:'#4a5568',textTransform:'uppercase' as const,letterSpacing:'0.1em',marginBottom:4}}>Continent</div>
+                <div style={{fontSize:11,fontWeight:800,color:'#8899bb'}}>{CONTINENT_NAMES[hlContinent]}</div>
+              </div>
+            </div>
+          </div>
+          {/* Current country comparison */}
+          {current && next && (
+            <div style={{display:'flex',alignItems:'stretch',gap:12,marginBottom:12}}>
+              {/* Current (revealed) */}
+              <div style={{flex:1,background:'rgba(34,197,94,0.08)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:12,padding:'16px',textAlign:'center' as const}}>
+                {flagImg(current.code, 32)}
+                <div style={{fontSize:13,color:'#8899bb',margin:'8px 0 4px'}}>{showNames?(COUNTRY_NAMES[current.code]??current.code):'???'}</div>
+                <div style={{fontSize:26,fontWeight:900,color:'#22c55e'}}>{current.total.toLocaleString()}</div>
+                <div style={{fontSize:10,color:'#4a5568',marginTop:4}}>{hlStatLabel}</div>
+              </div>
+              {/* Next (hidden) */}
+              <div style={{flex:1,background:'rgba(245,158,11,0.08)',border:'1px solid rgba(245,158,11,0.3)',borderRadius:12,padding:'16px',textAlign:'center' as const,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+                {flagImg(next.code, 32)}
+                <div style={{fontSize:13,color:'#8899bb',margin:'8px 0 4px'}}>{showNames?(COUNTRY_NAMES[next.code]??next.code):'???'}</div>
+                <div style={{fontSize:26,fontWeight:900,color:'#f59e0b'}}>?</div>
+                <div style={{fontSize:10,color:'#4a5568',marginTop:4}}>{hlStatLabel}</div>
+              </div>
+            </div>
+          )}
+          {/* Higher / Lower buttons */}
+          <div style={{display:'flex',gap:12,marginBottom:12}}>
+            <button onClick={()=>guessHL('higher')} style={{flex:1,padding:'16px',background:'rgba(34,197,94,0.12)',border:'2px solid rgba(34,197,94,0.4)',borderRadius:12,color:'#22c55e',fontSize:16,fontWeight:800,cursor:'pointer'}}>▲ Higher</button>
+            <button onClick={()=>guessHL('lower')} style={{flex:1,padding:'16px',background:'rgba(239,68,68,0.12)',border:'2px solid rgba(239,68,68,0.4)',borderRadius:12,color:'#ef4444',fontSize:16,fontWeight:800,cursor:'pointer'}}>▼ Lower</button>
+          </div>
+          {/* Map showing the next country */}
+          <div style={{background:'#04101f',borderRadius:10,overflow:'hidden',margin:'8px 0',border:'1px solid #1e2d4a',position:'relative'}}>
+            <div style={{position:'absolute',top:8,right:8,zIndex:10,display:'flex',flexDirection:'column',gap:4}}>
+              {[{label:'+',fn:()=>setZoom(z=>Math.min(z*1.4,8))},{label:'−',fn:()=>setZoom(z=>Math.max(z/1.4,0.2))}].map(({label,fn})=>(
+                <button key={label} onClick={fn} style={{width:28,height:28,background:'rgba(255,255,255,0.08)',border:'1px solid #2a3d5e',borderRadius:6,color:'white',fontSize:16,fontWeight:700,cursor:'pointer',lineHeight:1,display:'flex',alignItems:'center',justifyContent:'center'}}>{label}</button>
+              ))}
+            </div>
+            {mounted && (
+              <ComposableMap projectionConfig={{scale:proj.scale*zoom,center:proj.center}} style={{width:'100%',height:'auto',display:'block'}}>
+                <Geographies geography={GEO_URL}>
+                  {({geographies}: any) => geographies.filter((g: any)=>!SKIP_GEOS.has(Number(g.id))).map((geo: any) => {
+                    const geoN2 = String(geo.id)
+                    let fifa: string|null = null
+                    if (geoN2==='826') fifa = ['ENG','SCO','WAL','NIR'].find(c=>hlContinent&&(CONTINENT_POOL[hlContinent]??[]).includes(c)) ?? null
+                    else fifa = ISO_TO_FIFA[geoN2] ?? null
+                    const inContinent = fifa ? (hlContinent ? (CONTINENT_POOL[hlContinent]??[]).includes(fifa) : false) : false
+                    const isCurrent = fifa === current?.code
+                    const isNext = fifa === next?.code
+                    const fill = !inContinent ? '#1a2d45'
+                      : isCurrent ? 'rgba(34,197,94,0.35)'
+                      : isNext ? 'rgba(245,158,11,0.40)'
+                      : 'rgba(59,130,246,0.10)'
+                    const stroke = !inContinent ? '#2e4a6a'
+                      : isCurrent ? '#22c55e'
+                      : isNext ? '#f59e0b'
+                      : '#3d5f82'
+                    return (
+                      <Geography key={geo.rsmKey} geography={geo}
+                        style={{default:{fill,stroke,strokeWidth:isCurrent||isNext?1.6:0.5,outline:'none'},hover:{fill,outline:'none'},pressed:{outline:'none'}}}
+                      />
+                    )
+                  })}
+                </Geographies>
+              </ComposableMap>
+            )}
+          </div>
         </div>
       </div>
     )

@@ -26,8 +26,10 @@ export type ATWPlayer = {
   assists:     number
   games:       number
   yellowCards: number
+  redCards:    number
   teams:       string[]               // PL clubs this player appeared for
   teamGoals:   Record<string, number> // goals per club
+  teamGames:   Record<string, number> // games per club
 }
 
 export const buildCache = unstable_cache(
@@ -37,7 +39,7 @@ export const buildCache = unstable_cache(
     while (true) {
       const { data } = await getClient()
         .from('player_seasons')
-        .select('name_display,games,goals,assists,cards_yellow,nationality,teams_played_for')
+        .select('name_display,games,goals,assists,cards_yellow,cards_red,nationality,teams_played_for')
         .range(offset, offset + 999)
       if (!data || data.length === 0) break
       all.push(...data)
@@ -46,28 +48,31 @@ export const buildCache = unstable_cache(
     }
 
     const byName: Record<string, {
-      goals: number; assists: number; games: number; yellowCards: number
+      goals: number; assists: number; games: number; yellowCards: number; redCards: number
       natFreq: Record<string, number>
-      teamSet: Set<string>; teamGoals: Record<string, number>
+      teamSet: Set<string>; teamGoals: Record<string, number>; teamGames: Record<string, number>
     }> = {}
 
     for (const row of all) {
       const name = row.name_display as string
-      if (!byName[name]) byName[name] = { goals: 0, assists: 0, games: 0, yellowCards: 0, natFreq: {}, teamSet: new Set(), teamGoals: {} }
+      if (!byName[name]) byName[name] = { goals: 0, assists: 0, games: 0, yellowCards: 0, redCards: 0, natFreq: {}, teamSet: new Set(), teamGoals: {}, teamGames: {} }
       const p = byName[name]
       const rowGoals = Number(row.goals) || 0
       p.goals       += rowGoals
       p.assists     += Number(row.assists)       || 0
       p.games       += Number(row.games)         || 0
       p.yellowCards += Number(row.cards_yellow)  || 0
+      p.redCards    += Number(row.cards_red)     || 0
       if (row.nationality) {
         const nat = fmtNat(row.nationality as string)
         p.natFreq[nat] = (p.natFreq[nat] || 0) + 1
       }
       const rowTeams = String(row.teams_played_for || '').split(',').map((t: string) => t.trim()).filter((t: string) => t && t !== '2 Teams')
       for (const team of rowTeams) {
+        const g = Number(row.games) || 0
         p.teamSet.add(team)
         p.teamGoals[team] = (p.teamGoals[team] ?? 0) + rowGoals
+        p.teamGames[team] = (p.teamGames[team] ?? 0) + g
       }
     }
 
@@ -75,13 +80,13 @@ export const buildCache = unstable_cache(
     for (const [name, p] of Object.entries(byName)) {
       const nat = Object.entries(p.natFreq).sort((a, b) => b[1] - a[1])[0]?.[0]
       if (nat && p.games > 0) {
-        players.push({ name, nat, goals: p.goals, assists: p.assists, games: p.games, yellowCards: p.yellowCards, teams: [...p.teamSet], teamGoals: p.teamGoals })
+        players.push({ name, nat, goals: p.goals, assists: p.assists, games: p.games, yellowCards: p.yellowCards, redCards: p.redCards, teams: [...p.teamSet], teamGoals: p.teamGoals, teamGames: p.teamGames })
       }
     }
 
     return { players }
   },
-  ['atw-players-v2'],
+  ['atw-players-v3'],
   { revalidate: 86400 }
 )
 
