@@ -441,6 +441,61 @@ const PEBBLE_BEACH: HoleDef[] = [
   { number:18, par:5, yardages:{Blue:541,White:506,Red:454}, path:{pts:[{x:70.3,y:208.6},{x:70,y:130.8},{x:67.7,y:168.6},{x:47.7,y:81.0}]},  hazardFrac:null, bunkerCount:3 },
 ]
 
+const AUGUSTA_HOLES: HoleDef[] = [
+  { number:1,  par:4, yardages:{Blue:455,White:414,Red:369}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:2,  par:5, yardages:{Blue:575,White:523,Red:466}, path:{pts:[{x:50,y:230},{x:45,y:156},{x:55,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:3,  par:4, yardages:{Blue:350,White:319,Red:284}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:1 },
+  { number:4,  par:3, yardages:{Blue:240,White:218,Red:194}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:5,  par:4, yardages:{Blue:495,White:450,Red:401}, path:{pts:[{x:50,y:230},{x:55,y:156},{x:45,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:6,  par:3, yardages:{Blue:180,White:164,Red:146}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:3 },
+  { number:7,  par:4, yardages:{Blue:450,White:410,Red:365}, path:{pts:[{x:50,y:230},{x:45,y:156},{x:55,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:8,  par:5, yardages:{Blue:570,White:519,Red:462}, path:{pts:[{x:50,y:230},{x:55,y:156},{x:45,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:9,  par:4, yardages:{Blue:460,White:419,Red:373}, path:{pts:[{x:50,y:230},{x:45,y:156},{x:55,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:10, par:4, yardages:{Blue:495,White:450,Red:401}, path:{pts:[{x:50,y:230},{x:55,y:156},{x:45,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:11, par:4, yardages:{Blue:505,White:460,Red:409}, path:{pts:[{x:50,y:230},{x:45,y:156},{x:55,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:1 },
+  { number:12, par:3, yardages:{Blue:155,White:141,Red:126}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:13, par:5, yardages:{Blue:510,White:464,Red:413}, path:{pts:[{x:50,y:230},{x:45,y:156},{x:55,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:14, par:4, yardages:{Blue:440,White:400,Red:356}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:15, par:5, yardages:{Blue:530,White:482,Red:429}, path:{pts:[{x:50,y:230},{x:55,y:156},{x:45,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:16, par:3, yardages:{Blue:170,White:155,Red:138}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:17, par:4, yardages:{Blue:440,White:400,Red:356}, path:{pts:[{x:50,y:230},{x:45,y:156},{x:55,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+  { number:18, par:4, yardages:{Blue:465,White:423,Red:377}, path:{pts:[{x:50,y:230},{x:55,y:156},{x:45,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
+]
+
+// Water hazards: Rae's Creek (holes 11,12,13), pond on 3/4, 15, 16
+const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
+  3:  { hazards:[{start:195,end:290}] },
+  4:  { hazards:[{start:200,end:240}] },
+  11: { hazards:[{start:470,end:505}] },
+  12: { hazards:[{start:0,end:155}] },
+  13: { hazards:[{start:215,end:265}] },
+  15: { hazards:[{start:480,end:530}] },
+  16: { hazards:[{start:0,end:170}] },
+}
+
+// Calibrated tee/green positions from aerial images (landscape, mostly tee-left/green-right)
+// H6, H7 are reversed (tee-right/green-left); H13 is a U-shape dogleg
+const AUGUSTA_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
+  1:  {teeFrac:[0.08,0.55], greenFrac:[0.88,0.18], waypointFracs:[[0.45,0.42]]},
+  2:  {teeFrac:[0.06,0.43], greenFrac:[0.90,0.39], waypointFracs:[[0.50,0.43]]},
+  3:  {teeFrac:[0.07,0.50], greenFrac:[0.87,0.36], waypointFracs:[[0.45,0.48]]},
+  4:  {teeFrac:[0.07,0.36], greenFrac:[0.87,0.40]},
+  5:  {teeFrac:[0.07,0.46], greenFrac:[0.88,0.34], waypointFracs:[[0.48,0.43]]},
+  6:  {teeFrac:[0.87,0.45], greenFrac:[0.11,0.25]},
+  7:  {teeFrac:[0.88,0.55], greenFrac:[0.11,0.22], waypointFracs:[[0.53,0.42]]},
+  8:  {teeFrac:[0.07,0.50], greenFrac:[0.88,0.33], waypointFracs:[[0.40,0.47],[0.68,0.38]]},
+  9:  {teeFrac:[0.07,0.50], greenFrac:[0.88,0.27], waypointFracs:[[0.48,0.46]]},
+  10: {teeFrac:[0.07,0.44], greenFrac:[0.88,0.55], waypointFracs:[[0.44,0.42]]},
+  11: {teeFrac:[0.07,0.43], greenFrac:[0.88,0.38], waypointFracs:[[0.45,0.42]]},
+  12: {teeFrac:[0.07,0.55], greenFrac:[0.88,0.47]},
+  13: {teeFrac:[0.88,0.65], greenFrac:[0.12,0.26], waypointFracs:[[0.58,0.70],[0.22,0.48]]},
+  14: {teeFrac:[0.07,0.50], greenFrac:[0.88,0.45], waypointFracs:[[0.47,0.47]]},
+  15: {teeFrac:[0.07,0.47], greenFrac:[0.88,0.33], waypointFracs:[[0.40,0.46],[0.68,0.40]]},
+  16: {teeFrac:[0.07,0.48], greenFrac:[0.88,0.42]},
+  17: {teeFrac:[0.07,0.50], greenFrac:[0.88,0.38], waypointFracs:[[0.47,0.46]]},
+  18: {teeFrac:[0.07,0.48], greenFrac:[0.88,0.40], waypointFracs:[[0.45,0.44]]},
+}
+
 // Manually calibrated hazards/bunkers for real course mode (yards from tee, Blue distances)
 // Populated via /golf-calibrate tool
 const REAL_COURSE_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
@@ -480,11 +535,13 @@ function generateBunkers(distance: number, hazards: Hazard[], count: number): Bu
   return bunkers
 }
 
-function buildCourse(tee: Tee, count: number, start = 1): Hole[] {
+function buildCourse(tee: Tee, count: number, start = 1, courseId = 'pebble-beach'): Hole[] {
+  const holeDefs = courseId === 'augusta' ? AUGUSTA_HOLES : PEBBLE_BEACH
+  const hazardMap = courseId === 'augusta' ? AUGUSTA_HAZARDS : REAL_COURSE_HAZARDS
   return Array.from({length: count}, (_, i) => {
-    const def = PEBBLE_BEACH[((start - 1 + i) % 18)]
+    const def = holeDefs[((start - 1 + i) % 18)]
     const distance = def.yardages['Blue']
-    const realHaz = REAL_COURSE_HAZARDS[def.number]
+    const realHaz = hazardMap[def.number]
     const hazards = realHaz?.hazards ?? []
     const bunkers = realHaz?.bunkers ?? []
     return { number: def.number, par: def.par, distance, hazards, bunkers, path: def.path }
@@ -807,7 +864,7 @@ export default function FootballGolf(){
   }
 
   function startGame(){
-    const hs = courseMode === 'real' ? buildCourse(tee, numHoles, startHole) : generateHoles(numHoles)
+    const hs = courseMode === 'real' ? buildCourse(tee, numHoles, startHole, selectedCourse) : generateHoles(numHoles)
     usedLabels.current    = new Set()
     recentFilters.current = []
     recentStats.current   = []
@@ -1419,7 +1476,7 @@ export default function FootballGolf(){
     h2hPlayerId.current=pid
     h2hIsHost.current=true
     setH2HError('')
-    const hs=courseMode==='real'?buildCourse(tee,numHoles,startHole):generateHoles(numHoles)
+    const hs=courseMode==='real'?buildCourse(tee,numHoles,startHole,selectedCourse):generateHoles(numHoles)
     // Pre-generate tee categories for all holes (same for both players)
     const tmpUsed=new Set<string>()
     const tmpRecentF:string[]=[]
@@ -1990,11 +2047,11 @@ export default function FootballGolf(){
                 isAnimating={isAnimating}
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
-                imageUrl={courseMode==='real' ? `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png` : undefined}
+                imageUrl={courseMode==='real' ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.jpg` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
-                realTeePos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].teeFrac) : undefined}
-                realGreenPos={courseMode==='real' ? fracToSVG(HOLE_POSITIONS[currentHole.number].greenFrac) : undefined}
-                realWaypoints={courseMode==='real' ? (HOLE_POSITIONS[currentHole.number].waypointFracs ?? []).map(fracToSVG) : undefined}
+                realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac) : undefined}
+                realGreenPos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac) : undefined}
+                realWaypoints={courseMode==='real' ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(fracToSVG) : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
@@ -2529,7 +2586,7 @@ function fracToSVG(frac:[number,number]):{x:number;y:number}{
 const REAL_COURSES = [
   { id:'pebble-beach', name:'Pebble Beach Golf Links', available:true },
   { id:'st-andrews',   name:'St Andrews — Old Course',  available:false },
-  { id:'augusta',      name:'Augusta National',          available:false },
+  { id:'augusta',      name:'Augusta National',          available:true },
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
