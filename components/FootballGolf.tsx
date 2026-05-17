@@ -609,7 +609,7 @@ export default function FootballGolf(){
   const [h2hOppShotReady, setH2HOppShotReady] = useState<any>(null) // tee shot sync
   const [h2hOppTurnShot, setH2HOppTurnShot] = useState<any>(null)   // non-tee opp shot
   const [h2hWaitPhraseIdx, setH2HWaitPhraseIdx] = useState(0)
-  const [h2hOppPlayerNames, setH2HOppPlayerNames] = useState<{name:string;value:number}[]|null>(null)
+  const [h2hOppShots, setH2HOppShots] = useState<{shot:number;question:string;picks:{name:string;value:number}[]}[]>([])
   const [showOppGuesses, setShowOppGuesses] = useState(false)
   const [h2hOppLastQuestion, setH2HOppLastQuestion] = useState<string|null>(null)
   // Refs
@@ -1066,7 +1066,7 @@ export default function FootballGolf(){
         }),
       }).then(r=>r.json()).then(d=>{
         if(d.bothReady){
-          if(d.opponentShot?.player_names) setH2HOppPlayerNames(d.opponentShot.player_names)
+          if(d.opponentShot?.player_names){setH2HOppShots(prev=>{const e={shot:1,question:d.opponentShot.question_label||'—',picks:d.opponentShot.player_names};const i=prev.findIndex(s=>s.shot===1);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}
           if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
           setH2HOppShotReady(d.opponentShot)
         } else startTeePoll(holeIdx)
@@ -1287,7 +1287,7 @@ export default function FootballGolf(){
       if(!d) return
       const shots:any[]=d.shots||[]
       const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===0)
-      if(oppShot){stopH2HPoll();if(oppShot.player_names) setH2HOppPlayerNames(oppShot.player_names);if(oppShot.question_label) setH2HOppLastQuestion(oppShot.question_label);setH2HOppShotReady(oppShot)}
+      if(oppShot){stopH2HPoll();if(oppShot.player_names){const q=oppShot.question_label||'—';setH2HOppShots(prev=>{const e={shot:1,question:q,picks:oppShot.player_names};const i=prev.findIndex(s=>s.shot===1);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}if(oppShot.question_label) setH2HOppLastQuestion(oppShot.question_label);setH2HOppShotReady(oppShot)}
     },1500)
   }
 
@@ -1307,7 +1307,7 @@ export default function FootballGolf(){
       const newer=shots
         .filter((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx>lastSeen)
         .sort((a:any,b:any)=>b.shot_idx-a.shot_idx)
-      if(newer.length>0){stopH2HPoll();if(newer[0].player_names) setH2HOppPlayerNames(newer[0].player_names);if(newer[0].question_label) setH2HOppLastQuestion(newer[0].question_label);setH2HOppTurnShot(newer[0])}
+      if(newer.length>0){stopH2HPoll();if(newer[0].player_names){const shotNum=newer[0].shot_idx+1;const q=newer[0].question_label||'—';setH2HOppShots(prev=>{const e={shot:shotNum,question:q,picks:newer[0].player_names};const i=prev.findIndex(s=>s.shot===shotNum);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}if(newer[0].question_label) setH2HOppLastQuestion(newer[0].question_label);setH2HOppTurnShot(newer[0])}
     },1500)
   }
 
@@ -1360,7 +1360,7 @@ export default function FootballGolf(){
     setH2HOppPastPin(false)
     setH2HIsMyTurn(true)
     setH2HOppShotCount(0)
-    setH2HOppPlayerNames(null)
+    setH2HOppShots([])
     setShowOppGuesses(false)
     setH2HOppLastQuestion(null)
     h2hOppHoleStrokesRef.current=null
@@ -1738,18 +1738,22 @@ export default function FootballGolf(){
               </button>
               {showOppGuesses&&(
                 <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'none',borderRadius:'0 0 7px 7px',padding:'6px 10px 8px'}}>
-                  {h2hOppLastQuestion&&<div style={{fontSize:10,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>{h2hOppLastQuestion}</div>}
-                  {h2hOppPlayerNames&&h2hOppPlayerNames.length>0?(
-                    h2hOppPlayerNames.map(p=>{
-                      const name=typeof p==='string'?p:(p as any).name
-                      const val=typeof p==='string'?null:(p as any).value
-                      return(
-                        <div key={name} style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:3}}>
-                          <span style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.85)'}}>{name}</span>
-                          {val!==null&&<span style={{fontSize:13,fontWeight:800,color:'#f59e0b',marginLeft:8}}>{val}</span>}
-                        </div>
-                      )
-                    })
+                  {h2hOppShots.length>0?(
+                    h2hOppShots.map(s=>(
+                      <div key={s.shot} style={{marginBottom:s.shot<h2hOppShots.length?8:0}}>
+                        <div style={{fontSize:10,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>Shot {s.shot} · {s.question}</div>
+                        {s.picks.map(p=>{
+                          const name=typeof p==='string'?p:(p as any).name
+                          const val=typeof p==='string'?null:(p as any).value
+                          return(
+                            <div key={name} style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:2}}>
+                              <span style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.85)'}}>{name}</span>
+                              {val!==null&&<span style={{fontSize:13,fontWeight:800,color:'#f59e0b',marginLeft:8}}>{val}</span>}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ))
                   ):(
                     <div style={{fontSize:12,color:'rgba(255,255,255,0.3)'}}>Not available yet</div>
                   )}
