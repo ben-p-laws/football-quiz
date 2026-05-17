@@ -1685,30 +1685,53 @@ export default function FootballGolf(){
       <div style={{maxWidth:560,margin:'0 auto',width:'100%',padding:'0 20px'}}>
         {/* H2H HUD */}
         {h2hStep==='playing'&&currentHole&&(
-          <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0 6px',borderBottom:'1px solid #1e2d4a',marginBottom:4}}>
-            <div style={{flex:1,display:'flex',flexDirection:'column',gap:1}}>
-              <div style={{display:'flex',alignItems:'center',gap:5}}>
-                <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#3b82f6':'#fbbf24',flexShrink:0}}/>
-                <div style={{fontSize:12,fontWeight:h2hIsMyTurn?900:600,color:h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hPlayerName||'You'}</div>
-                {h2hIsMyTurn&&<div style={{fontSize:10,fontWeight:800,color:'#22c55e'}}>▶</div>}
+          <div style={{borderBottom:'1px solid #1e2d4a',marginBottom:4}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,padding:'8px 0 6px'}}>
+              <div style={{flex:1,display:'flex',flexDirection:'column',gap:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:5}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#3b82f6':'#fbbf24',flexShrink:0}}/>
+                  <div style={{fontSize:12,fontWeight:h2hIsMyTurn?900:600,color:h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hPlayerName||'You'}</div>
+                  {h2hIsMyTurn&&<div style={{fontSize:10,fontWeight:800,color:'#22c55e'}}>▶</div>}
+                </div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingLeft:13}}>Sh {strokes+1} · {remaining} yds</div>
               </div>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingLeft:13}}>Sh {strokes+1} · {remaining} yds</div>
+              <div style={{textAlign:'center',flexShrink:0}}>
+                <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8'}}>
+                  {matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`}
+                </div>
+                <div style={{fontSize:9,color:'rgba(255,255,255,0.2)',marginTop:1}}>Hole {holeIdx+1} · Par {currentHole.par}</div>
+              </div>
+              <div style={{flex:1,display:'flex',flexDirection:'column',gap:1,alignItems:'flex-end'}}>
+                <div style={{display:'flex',alignItems:'center',gap:5}}>
+                  {!h2hIsMyTurn&&<div style={{fontSize:10,fontWeight:800,color:'#22c55e'}}>▶</div>}
+                  <div style={{fontSize:12,fontWeight:!h2hIsMyTurn?900:600,color:!h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hOppName||'Opp'}</div>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#fbbf24':'#3b82f6',flexShrink:0}}/>
+                </div>
+                <div style={{fontSize:13,fontWeight:800,color:!h2hIsMyTurn?'#fbbf24':'rgba(255,255,255,0.55)',paddingRight:13}}>
+                  Sh {h2hOppShotCount+1} · {h2hOppRemaining!==null?`${h2hOppRemaining} yds`:'—'}
+                </div>
+              </div>
             </div>
-            <div style={{textAlign:'center',flexShrink:0}}>
-              <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8'}}>
-                {matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`}
-              </div>
-              <div style={{fontSize:9,color:'rgba(255,255,255,0.2)',marginTop:1}}>Hole {holeIdx+1} · Par {currentHole.par}</div>
-            </div>
-            <div style={{flex:1,display:'flex',flexDirection:'column',gap:1,alignItems:'flex-end'}}>
-              <div style={{display:'flex',alignItems:'center',gap:5}}>
-                {!h2hIsMyTurn&&<div style={{fontSize:10,fontWeight:800,color:'#22c55e'}}>▶</div>}
-                <div style={{fontSize:12,fontWeight:!h2hIsMyTurn?900:600,color:!h2hIsMyTurn?'white':'rgba(255,255,255,0.45)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{h2hOppName||'Opp'}</div>
-                <div style={{width:8,height:8,borderRadius:'50%',background:h2hIsHost.current?'#fbbf24':'#3b82f6',flexShrink:0}}/>
-              </div>
-              <div style={{fontSize:13,fontWeight:800,color:!h2hIsMyTurn?'#fbbf24':'rgba(255,255,255,0.55)',paddingRight:13}}>
-                Sh {h2hOppShotCount+1} · {h2hOppRemaining!==null?`${h2hOppRemaining} yds`:'—'}
-              </div>
+            {/* Opp picks dropdown */}
+            <div style={{paddingBottom:6}}>
+              <button
+                onClick={()=>setShowOppGuesses(v=>!v)}
+                style={{width:'100%',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:7,padding:'5px 10px',display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'inherit'}}
+              >
+                <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>👀 {h2hOppName||'Opp'}'s picks</span>
+                <span style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{showOppGuesses?'▲':'▼'}</span>
+              </button>
+              {showOppGuesses&&(
+                <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderTop:'none',borderRadius:'0 0 7px 7px',padding:'6px 10px 8px'}}>
+                  {h2hOppPlayerNames&&h2hOppPlayerNames.length>0?(
+                    h2hOppPlayerNames.map(n=>(
+                      <div key={n} style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.85)',paddingTop:2}}>{n}</div>
+                    ))
+                  ):(
+                    <div style={{fontSize:12,color:'rgba(255,255,255,0.3)'}}>Not available yet</div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1800,20 +1823,6 @@ export default function FootballGolf(){
                   isBunker={shotResult.isInBunker}
                   isDaily={dailyMode}
                 />
-                {h2hStep==='playing'&&(
-                  <div style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'8px 12px'}}>
-                    <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:5}}>👀 {h2hOppName||'Opp'}'s picks</div>
-                    {h2hOppPlayerNames&&h2hOppPlayerNames.length>0?(
-                      <div style={{display:'flex',flexDirection:'column',gap:3}}>
-                        {h2hOppPlayerNames.map(n=>(
-                          <div key={n} style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.85)'}}>{n}</div>
-                        ))}
-                      </div>
-                    ):(
-                      <div style={{fontSize:12,color:'rgba(255,255,255,0.3)'}}>Not available yet</div>
-                    )}
-                  </div>
-                )}
               </>
             ) : isAnimating ? (
               <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4}}>
@@ -1824,99 +1833,67 @@ export default function FootballGolf(){
                 <div style={{fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>yards</div>
               </div>
             ) : h2hWaiting ? (
-              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8}}>
+              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6}}>
                 {/* Golfer swing animation */}
-                <svg viewBox="0 0 80 100" width="56" height="70" style={{opacity:0.9}}>
+                <svg viewBox="0 0 80 100" width="52" height="65" style={{opacity:0.9,flexShrink:0}}>
                   <style>{`
-                    @keyframes gSwing{
-                      0%  {transform:rotate(-35deg)}
-                      40% {transform:rotate(-35deg)}
-                      70% {transform:rotate(55deg)}
-                      85% {transform:rotate(50deg)}
-                      100%{transform:rotate(-35deg)}
-                    }
-                    @keyframes gSwingBody{
-                      0%  {transform:rotate(0deg)}
-                      40% {transform:rotate(-5deg)}
-                      70% {transform:rotate(8deg)}
-                      100%{transform:rotate(0deg)}
-                    }
+                    @keyframes gSwing{0%{transform:rotate(-35deg)}40%{transform:rotate(-35deg)}70%{transform:rotate(55deg)}85%{transform:rotate(50deg)}100%{transform:rotate(-35deg)}}
+                    @keyframes gSwingBody{0%{transform:rotate(0deg)}40%{transform:rotate(-5deg)}70%{transform:rotate(8deg)}100%{transform:rotate(0deg)}}
                   `}</style>
-                  {/* Shadow */}
                   <ellipse cx="38" cy="96" rx="18" ry="4" fill="rgba(0,0,0,0.3)"/>
-                  {/* Body group with subtle rotation */}
                   <g style={{transformOrigin:'38px 60px',animation:'gSwingBody 1.6s ease-in-out infinite'}}>
-                    {/* Hat */}
                     <rect x="26" y="6" width="22" height="5" rx="2" fill="#e2e8f0"/>
                     <rect x="22" y="10" width="28" height="4" rx="1" fill="#e2e8f0"/>
-                    {/* Head */}
                     <ellipse cx="37" cy="20" rx="9" ry="10" fill="#f5d0a9"/>
-                    {/* Neck */}
                     <rect x="34" y="29" width="6" height="5" fill="#f5d0a9"/>
-                    {/* Shirt / torso — red & white stripes */}
+                    {/* Vertical red & white striped shirt */}
                     <defs>
-                      <pattern id="jersey" x="0" y="0" width="8" height="1" patternUnits="userSpaceOnUse" patternTransform="rotate(90)">
-                        <rect width="4" height="1" fill="#dc2626"/>
-                        <rect x="4" width="4" height="1" fill="white"/>
+                      <pattern id="vstripe" x="0" y="0" width="6" height="100" patternUnits="userSpaceOnUse">
+                        <rect width="3" height="100" fill="#dc2626"/>
+                        <rect x="3" width="3" height="100" fill="white"/>
                       </pattern>
-                      <clipPath id="torsoClip">
-                        <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z"/>
-                      </clipPath>
+                      <clipPath id="torsoClip"><path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z"/></clipPath>
                     </defs>
-                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="url(#jersey)" clipPath="url(#torsoClip)"/>
-                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5"/>
-                    {/* Trousers */}
+                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="url(#vstripe)" clipPath="url(#torsoClip)"/>
                     <path d="M26,57 L22,90 L33,90 L37,70 L41,90 L52,90 L48,57 Z" fill="#1e3a5f"/>
-                    {/* Shoes */}
                     <ellipse cx="26" cy="91" rx="8" ry="4" fill="#1e293b"/>
                     <ellipse cx="48" cy="91" rx="8" ry="4" fill="#1e293b"/>
-                    {/* Left arm (static, tucked) */}
                     <path d="M27,36 Q18,48 20,56" stroke="#f5d0a9" strokeWidth="5" fill="none" strokeLinecap="round"/>
-                    {/* Glove */}
                     <circle cx="20" cy="57" r="4" fill="#e2e8f0"/>
-                    {/* Right arm + club — swings */}
                     <g style={{transformOrigin:'47px 38px',animation:'gSwing 1.6s ease-in-out infinite'}}>
                       <path d="M47,36 Q54,44 52,54" stroke="#f5d0a9" strokeWidth="5" fill="none" strokeLinecap="round"/>
-                      {/* Club shaft */}
                       <line x1="52" y1="55" x2="18" y2="88" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"/>
-                      {/* Club head */}
                       <rect x="10" y="84" width="12" height="7" rx="2" fill="#64748b"/>
                     </g>
                   </g>
-                  {/* Ball */}
                   <circle cx="14" cy="90" r="4" fill="white"/>
                 </svg>
+
                 {/* Rotating phrase */}
-                {(()=>{
-                  const oppN=h2hOppName||'Opp'
-                  const phrases=h2hIFinishedRef.current
-                    ?[`Waiting for ${oppN} to finish…`,`${oppN} still on the course…`,`Come on ${oppN}…`,'Hole not over yet…',`${oppN} taking their time…`]
-                    :[`${oppN} lining up the shot…`,`${oppN} checking the yardage…`,`${oppN} taking their stance…`,`Ball in flight…`,`${oppN} eyeing the fairway…`]
-                  return(
-                    <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.7)',textAlign:'center',minHeight:20}}>
-                      {phrases[h2hWaitPhraseIdx%phrases.length]}
-                    </div>
-                  )
-                })()}
-                {/* Opp distance */}
+                <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.7)',textAlign:'center'}}>
+                  {(()=>{
+                    const oppN=h2hOppName||'Opp'
+                    const phrases=h2hIFinishedRef.current
+                      ?[`Waiting for ${oppN} to finish…`,`${oppN} still on the course…`,`Come on ${oppN}…`,'Hole not over yet…',`${oppN} taking their time…`]
+                      :[`${oppN} lining up the shot…`,`${oppN} checking the yardage…`,`${oppN} taking their stance…`,`Ball in flight…`,`${oppN} eyeing the fairway…`]
+                    return phrases[h2hWaitPhraseIdx%phrases.length]
+                  })()}
+                </div>
+
                 {h2hOppRemaining!==null&&(
-                  <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>{h2hOppRemaining} yds to go</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{h2hOppRemaining} yds to go</div>
                 )}
-                {/* Opponent's question card */}
-                {(()=>{
-                  // Tee shot: shared question is known. Non-tee: use opp's last submitted question_label
-                  const showQ = strokes===0 ? question?.label : h2hOppLastQuestion
-                  if(!showQ) return null
-                  const isShared = strokes===0
-                  return(
-                    <div style={{marginTop:4,background:'rgba(255,255,255,0.06)',borderRadius:8,padding:'6px 10px',textAlign:'center',maxWidth:220}}>
-                      <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>
-                        {isShared?'Their question too':'Their question'}
-                      </div>
-                      <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.7)',lineHeight:1.3}}>{showQ}</div>
-                    </div>
-                  )
-                })()}
+
+                {/* Their question */}
+                <div style={{width:'100%',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,padding:'7px 10px'}}>
+                  <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>
+                    {strokes===0?'Their question too':'Their question'}
+                  </div>
+                  <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.8)',lineHeight:1.3}}>
+                    {strokes===0 ? question?.label : (h2hOppLastQuestion ?? '—')}
+                  </div>
+                </div>
+
               </div>
             ) : (
               <>
