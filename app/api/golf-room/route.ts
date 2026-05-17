@@ -61,11 +61,16 @@ export async function POST(req: Request) {
 
   // ── Join room ─────────────────────────────────────────────────────────────────
   if (body.action === 'join') {
-    const { roomId, guestId, guestName } = body
+    const { roomId, guestId: rawGuestId, guestName } = body
     const { data: room } = await db.from('golf_h2h_rooms').select('*').eq('id', roomId).single()
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     if (room.status !== 'waiting') return NextResponse.json({ error: 'Game already started' }, { status: 400 })
-    if (room.guest_id && room.guest_id !== guestId) return NextResponse.json({ error: 'Room is full' }, { status: 400 })
+    // If guest has the same ID as host (e.g. same device/browser), assign a fresh ID
+    const guestId = rawGuestId === room.host_id
+      ? Array.from({ length: 10 }, () => Math.random().toString(36)[2]).join('') + '_g'
+      : rawGuestId
+    if (room.guest_id && room.guest_id !== guestId && room.guest_id !== rawGuestId)
+      return NextResponse.json({ error: 'Room is full' }, { status: 400 })
     await db.from('golf_h2h_rooms').update({ guest_id: guestId, guest_name: guestName }).eq('id', roomId)
     return NextResponse.json({ room: { ...room, guest_id: guestId, guest_name: guestName } })
   }
@@ -106,6 +111,9 @@ export async function POST(req: Request) {
     const { data: room } = await db.from('golf_h2h_rooms').select('host_id,guest_id').eq('id', roomId).single()
     if (!room) return NextResponse.json({ error: 'Room not found' }, { status: 404 })
     const oppId = playerId === room.host_id ? room.guest_id : room.host_id
+
+    // Safety: if IDs are identical the opponent query would return our own shot — never report bothReady
+    if (!oppId || oppId === playerId) return NextResponse.json({ bothReady: false, opponentShot: null })
 
     const { data: oppShot } = await db.from('golf_h2h_shots')
       .select('*')

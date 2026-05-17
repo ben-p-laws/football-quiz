@@ -1471,6 +1471,8 @@ export default function FootballGolf(){
       body:JSON.stringify({action:'join',roomId:code,guestId:pid,guestName:h2hPlayerName||'Guest'}),
     }).then(r=>r.json())
     if(res.error){setH2HError(res.error);return}
+    // Server may have assigned a new guest ID if it collided with the host's ID
+    h2hPlayerId.current=res.room.guest_id
     setH2HRoomId(code)
     h2hRoomIdRef.current=code
     setH2HOppName(res.room.host_name)
