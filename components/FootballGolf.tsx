@@ -471,7 +471,7 @@ const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; b
    8: {bunkers:[{start:173,end:213}]},
   10: {bunkers:[{start:371,end:424}]},
   12: {hazards:[{start:107,end:136}], bunkers:[{start:140,end:146}]},
-  13: {hazards:[{start:481,end:491}]},
+  13: {hazards:[{start:71,end:92},{start:481,end:491}]},
   15: {hazards:[{start:451,end:496}]},
   16: {hazards:[{start:32,end:124}]},
   17: {bunkers:[{start:414,end:425}]},
