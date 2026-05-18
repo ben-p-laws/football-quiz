@@ -2286,22 +2286,24 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const bDouble = imageUrl ? 22 : 13  // height of double-line box
   const ballR   = imageUrl ? 3.5 : 3.2
 
+  const useCover = false
+
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative',background:imageUrl?'#0a0f1e':undefined}}>
 
-      {/* Real course photo — images are pre-rotated to 600×1560 portrait, display fills naturally */}
+      {/* Real course photo */}
       {imageUrl && (
         <img src={imageUrl} alt="" style={{
           position:'absolute', inset:0,
           width:'100%', height:'100%',
-          objectFit:'contain', objectPosition:'center',
+          objectFit: useCover ? 'cover' : 'contain', objectPosition:'center',
           ...(rot ? {transform:`rotate(${rot}deg)`} : {}),
         }}/>
       )}
       {/* Minimal scrim — just enough to keep labels readable without darkening bunkers */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.05)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" height="100%" viewBox={imageUrl ? `0 0 100 ${realYScale??260}` : "0 -10 100 165"} preserveAspectRatio={imageUrl ? "xMidYMid meet" : "xMidYMid slice"} style={{display:'block',flex:1,position:'relative'}}>
+      <svg width="100%" height="100%" viewBox={imageUrl ? `0 0 100 ${realYScale??260}` : "0 -10 100 165"} preserveAspectRatio={imageUrl ? (useCover ? "xMidYMid slice" : "xMidYMid meet") : "xMidYMid slice"} style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="35" x2="0" y2="255" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -2507,7 +2509,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const rangeText = `${distToNear}–${distToFar}`
           const fs = labelFs * 0.85
           const pw = imageUrl ? 40 : 20; const ph = imageUrl ? 10 : 5
-          const px = mid.x + 6; const py = mid.y - ph/2
+          const px = mid.x > 50 ? mid.x - pw - 6 : mid.x + 6; const py = mid.y - ph/2
           return (
             <g key={i}>
               <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(210,170,80,0.92)" stroke="#92600a" strokeWidth={0.9}/>
@@ -2690,18 +2692,18 @@ const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number
 }
 // Wii Golf images have varying aspect ratios — yScale = 100/(w/h)
 const WII_GOLF_YSCALE: Record<number, number> = {
-  1: 100/(377/662),   // 175.6
-  2: 100/(444/562),   // 126.6
-  3: 100/(1024/1536), // 150.0
+  1: 100/(246/627),   // 254.9 — portrait, use contain
+  2: 100/(398/538),   // 135.2 — wide, use cover
+  3: 100/(629/1443),  // 229.4 — portrait, use contain
 }
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
-  1: {teeFrac:[0.481,0.918], greenFrac:[0.49,0.15],   waypointFracs:[[0.379,0.43]]},
-  2: {teeFrac:[0.283,0.835], greenFrac:[0.602,0.286],  waypointFracs:[[0.479,0.58],[0.546,0.422]]},
-  3: {teeFrac:[0.346,0.875], greenFrac:[0.359,0.095],  waypointFracs:[[0.768,0.685],[0.702,0.281]]},
+  1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
+  2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
+  3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
 }
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
-  1: {bunkers:[{start:183,end:232},{start:332,end:337}]},
-  2: {hazards:[{start:29,end:62}], bunkers:[{start:105,end:116}]},
+  1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
+  2: {hazards:[{start:27,end:82}], bunkers:[{start:113,end:121}]},
 }
 
 // Augusta images have varying heights — yScale = 100/(w/h) so viewBox always 100 wide

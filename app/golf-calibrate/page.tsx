@@ -73,9 +73,9 @@ const HOLE_DISTANCES_AUGUSTA: Record<number, number> = {
 }
 
 const SAVED_POSITIONS_WII: Record<number, { teeFrac: FracPt; greenFrac: FracPt; waypointFracs?: FracPt[] }> = {
-  1: {teeFrac:[0.481,0.918], greenFrac:[0.49,0.15],   waypointFracs:[[0.379,0.43]]},
-  2: {teeFrac:[0.283,0.835], greenFrac:[0.602,0.286],  waypointFracs:[[0.479,0.58],[0.546,0.422]]},
-  3: {teeFrac:[0.346,0.875], greenFrac:[0.359,0.095],  waypointFracs:[[0.768,0.685],[0.702,0.281]]},
+  1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
+  2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
+  3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
 }
 const HOLE_DISTANCES_WII: Record<number, number> = {
   1: 370, 2: 134, 3: 465,
