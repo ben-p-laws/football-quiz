@@ -63,22 +63,23 @@ def hls_to_rgb_array(h, l, s):
 
 
 def recolor_hole(orig_path, out_path):
-    img = Image.open(orig_path).convert('RGB')
+    # Open as RGBA to preserve the original transparency (black border = alpha 0)
+    img = Image.open(orig_path).convert('RGBA')
     data = np.array(img, dtype=np.float32)
-    r, g, b = data[:,:,0], data[:,:,1], data[:,:,2]
+    r, g, b, a = data[:,:,0], data[:,:,1], data[:,:,2], data[:,:,3]
 
     _, l, s = rgb_to_hls_array(r, g, b)
     lum255 = l * 255.0
     sat100 = s * 100.0
 
     # Pixels that must never be recolored ─────────────────────────────────────
+    # Transparent background pixels (outside the hole silhouette)
+    is_background = (a < 10)
     # Green vegetation: G moderately dominates R and B
     is_green = (g > r + 15) & (g > b + 15) & (g > 50)
     # Water / teal hazards: B close to G and both above R by a margin
     is_water = (b > r + 30) & (np.abs(b.astype(np.float32) - g.astype(np.float32)) < 25)
-    # Near-black image background (outside the hole outline)
-    is_background = (lum255 < 4)
-    blocked = is_green | is_water | is_background
+    blocked = is_background | is_green | is_water
 
     # Seed: bright, desaturated grey pixels — original bunker surface ──────────
     seed_mask = (lum255 > 80) & (sat100 < 40) & (g < r + 25) & (b > g - 35) & ~blocked
@@ -108,8 +109,9 @@ def recolor_hole(orig_path, out_path):
     result[:,:,0] = np.where(bunker_region, np.clip(new_r, 0, 255), r)
     result[:,:,1] = np.where(bunker_region, np.clip(new_g, 0, 255), g)
     result[:,:,2] = np.where(bunker_region, np.clip(new_b, 0, 255), b)
+    # Alpha channel is unchanged — transparent pixels stay transparent
 
-    Image.fromarray(result.astype(np.uint8)).save(out_path)
+    Image.fromarray(result.astype(np.uint8), mode='RGBA').save(out_path)
 
 
 def main():
