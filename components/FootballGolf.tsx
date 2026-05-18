@@ -2144,7 +2144,7 @@ export default function FootballGolf(){
                 isAnimating={isAnimating}
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
-                imageUrl={courseMode==='real' ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
+                imageUrl={courseMode==='real' ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=4` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
                 realYScale={courseMode==='real' ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : 260) : undefined}
                 realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:260) : undefined}
