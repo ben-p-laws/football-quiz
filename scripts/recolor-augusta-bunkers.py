@@ -3,13 +3,14 @@ Recolors Augusta hole bunkers to warm sandy yellow.
 
 Algorithm (per-hole):
 1. Detect bright grey bunker seed pixels from the original RGBA image
-2. MaxFilter 30 px dilation to cover rim and adjacent shadow
-3. Secondary 30 px dilation for medium-dark shadow pixels (lum 5-70) in the zone
-4. Exclude clearly green vegetation at the very end (not during dilation) and
-   transparent background pixels
-5. Apply HSL-based recolor: set hue ~38° and saturation 48%, preserving luminosity
-   so shadows become dark sandy instead of neutral dark grey
-6. Alpha channel is carried through unchanged — transparent border stays transparent
+2. Iterative flood-fill dilation (20 × 7 px steps = 140 px max radius).
+   During each step, blocked pixels (green vegetation, water, transparent bg)
+   are removed so the fill cannot cross into rough or the creek.
+   The green threshold is kept permissive so even light-green rough stops the fill.
+3. Apply HSL recolor: set hue ~38° and saturation 48%, preserving luminosity.
+   A saturation-based blend factor protects any accidentally-caught higher-sat
+   pixels from going fully orange.
+4. Alpha channel is carried through unchanged — transparent border stays transparent.
 
 Usage: python3 scripts/recolor-augusta-bunkers.py
 Reads originals from /tmp/augusta_orig/, writes to public/holes/augusta/.
@@ -23,15 +24,13 @@ ORIG_DIR = '/tmp/augusta_orig'
 OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'public', 'holes', 'augusta')
 
 SANDY_HUE = 38 / 360.0    # ~38° warm yellow-brown
-SANDY_SAT = 0.48           # moderate saturation
+SANDY_SAT  = 0.48
 
-# Dilation radii (px) → MaxFilter kernel = 2*radius+1
-SEED_RADIUS   = 30   # standard dilation from bright seeds
-SHADOW_RADIUS = 30   # additional dilation from medium-dark shadow pixels in zone
+STEP_SIZE  = 7    # px radius per flood-fill iteration
+NUM_STEPS  = 20   # 20 × 7 = 140 px max radius
 
 
 def rgb_to_hls_array(r, g, b):
-    """Float32 RGB (0-255) → HLS each in 0-1."""
     rn, gn, bn = r / 255.0, g / 255.0, b / 255.0
     maxc = np.maximum(np.maximum(rn, gn), bn)
     minc = np.minimum(np.minimum(rn, gn), bn)
@@ -56,19 +55,12 @@ def _hls_v(p1, p2, hue):
 
 
 def hls_to_rgb_array(h, l, s):
-    """HLS (0-1 each) → float32 RGB (0-255)."""
     p2 = np.where(l <= 0.5, l * (1.0 + s), l + s - l * s)
     p1 = 2.0 * l - p2
     r = np.where(s == 0, l, _hls_v(p1, p2, h + 1/3))
     g = np.where(s == 0, l, _hls_v(p1, p2, h))
     b = np.where(s == 0, l, _hls_v(p1, p2, h - 1/3))
     return r * 255.0, g * 255.0, b * 255.0
-
-
-def maxfilter(mask_uint8, radius):
-    """Binary dilation via PIL MaxFilter. mask_uint8 is a 2-D uint8 array."""
-    pil = Image.fromarray(mask_uint8 * 255, mode='L')
-    return (np.array(pil.filter(ImageFilter.MaxFilter(radius * 2 + 1))) > 0)
 
 
 def recolor_hole(orig_path, out_path):
@@ -80,52 +72,46 @@ def recolor_hole(orig_path, out_path):
     lum255 = l * 255.0
     sat100 = s * 100.0
 
-    # --- Detect bright grey bunker seeds (original surface) ---
-    seed = (
-        (lum255 > 80) & (sat100 < 40) &
-        (g < r + 25) & (b > g - 35) &
-        (a > 10)  # inside hole only
-    ).astype(np.uint8)
-
-    # --- Pass 1: dilate seeds 30 px ---
-    zone = maxfilter(seed, SEED_RADIUS)
-
-    # --- Pass 2: within that zone, find shadow pixels and dilate 30 px more.
-    #     Near-black (lum < 10) gets a relaxed sat threshold since those pixels
-    #     are hard to assign saturation to reliably. ---
-    shadow_candidates = (
-        zone &
-        (lum255 >= 1) & (lum255 <= 70) &
-        ((sat100 < 45) | (lum255 < 10)) &
-        (a > 10)
-    ).astype(np.uint8)
-    shadow_zone = maxfilter(shadow_candidates, SHADOW_RADIUS)
-
-    combined = zone | shadow_zone
-
-    # --- Exclude vegetation, water, and transparent background pixels ---
-    # Applied AFTER dilation so thin green bands don't block inner shadows.
+    # Pixels the flood fill must never cross or include ─────────────────────
+    # Permissive green check (G > R+10 & G > B+10 & G > 45) so even
+    # light-green rough stops the fill and protects the creek on short holes.
     is_green = (g > r + 10) & (g > b + 10) & (g > 45)
     # Water / teal: B clearly dominates R and is close to G
     is_water = (b > r + 30) & (np.abs(b - g) < 30)
-    is_bg    = (a < 10)
+    # Transparent image background
+    is_bg = (a < 10)
+    blocked = is_green | is_water | is_bg
 
-    bunker_region = combined & ~is_green & ~is_water & ~is_bg
+    # Seed: bright desaturated grey = original bunker surface ────────────────
+    seed = (
+        (lum255 > 80) & (sat100 < 40) &
+        (g < r + 25) & (b > g - 35) &
+        ~blocked
+    ).astype(np.uint8)
 
-    print(f"  seed={seed.sum():,}  bunker={bunker_region.sum():,}")
+    print(f"  seed={seed.sum():,}", end='')
 
-    # --- HSL recolor: keep luminosity, set hue + saturation to sandy ---
+    # Flood fill: dilate STEP_SIZE px per iteration, remove blocked pixels ──
+    kernel = STEP_SIZE * 2 + 1
+    mask = seed.copy()
+    for _ in range(NUM_STEPS):
+        pil_mask = Image.fromarray(mask * 255, mode='L')
+        dilated = np.array(pil_mask.filter(ImageFilter.MaxFilter(kernel))) > 0
+        mask = (dilated & ~blocked).astype(np.uint8)
+
+    bunker_region = mask.astype(bool)
+    print(f"  bunker={bunker_region.sum():,}")
+
+    # HSL recolor: keep luminosity, set hue + sat to sandy ──────────────────
     h_arr, l_arr, _ = rgb_to_hls_array(r, g, b)
     target_h = np.full_like(h_arr, SANDY_HUE)
     target_s = np.full_like(l_arr, SANDY_SAT)
-    # Lift very dark shadows slightly so sandy hue is perceptible
     adjusted_l = np.where(l_arr < 0.08, l_arr + 0.06, l_arr)
 
     new_r, new_g, new_b = hls_to_rgb_array(target_h, adjusted_l, target_s)
 
-    # Blend strength: full (1.0) for low-sat pixels, fades to 0 by sat=55.
-    # This prevents aggressively recoloring high-saturation grass/water that
-    # might have slipped through the green exclusion.
+    # Blend factor: full recolor for low-sat pixels (sat < 25), fades to 0
+    # by sat = 55. Protects any accidentally-caught coloured pixels.
     blend = np.clip((55.0 - sat100) / 30.0, 0.0, 1.0)
 
     result = data.copy()
