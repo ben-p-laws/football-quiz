@@ -2414,39 +2414,43 @@ export default function AroundTheWorld() {
               <h2 style={{fontSize:24,fontWeight:900,color:'white',margin:'0 0 4px'}}>{totalScore}/{maxScore} points</h2>
               <p style={{color:'#8899bb',margin:'0 0 20px'}}>{rankStatLabel} · {CONTINENT_NAMES[rankContinent]}</p>
             </div>
-            {/* Result rows */}
-            <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:20}}>
+            {/* Side-by-side: Your list vs Correct list */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:4}}>
+              <div style={{fontSize:10,fontWeight:800,color:'#8899bb',textTransform:'uppercase' as const,letterSpacing:'0.08em',textAlign:'center' as const,paddingBottom:4}}>Your Order</div>
+              <div style={{fontSize:10,fontWeight:800,color:'#8899bb',textTransform:'uppercase' as const,letterSpacing:'0.08em',textAlign:'center' as const,paddingBottom:4}}>Correct Order</div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:5,marginBottom:20}}>
               {rankTargets.map((t, i) => {
-                const userPickIdx = rankPicks.indexOf(t.code)
-                const score = scores[userPickIdx] ?? 0
-                const wasPickedAt = userPickIdx >= 0 ? userPickIdx + 1 : null
+                const userCode = rankPicks[i] ?? null
+                const inTargets = userCode ? rankTargets.some(r=>r.code===userCode) : false
+                const isCorrect = userCode === t.code
+                const userColor = isCorrect ? '#22c55e' : inTargets ? '#86efac' : '#ef4444'
+                const userBg    = isCorrect ? 'rgba(34,197,94,0.12)' : inTargets ? 'rgba(134,239,172,0.08)' : 'rgba(239,68,68,0.08)'
+                const userBorder= isCorrect ? 'rgba(34,197,94,0.4)'  : inTargets ? 'rgba(134,239,172,0.3)'  : 'rgba(239,68,68,0.3)'
                 return (
-                  <div key={t.code} style={{display:'flex',alignItems:'center',gap:10,background:score===10?'rgba(34,197,94,0.08)':score===5?'rgba(245,158,11,0.08)':'rgba(239,68,68,0.05)',border:`1px solid ${score===10?'rgba(34,197,94,0.3)':score===5?'rgba(245,158,11,0.3)':'rgba(239,68,68,0.2)'}`,borderRadius:8,padding:'8px 12px'}}>
-                    <span style={{fontSize:14,fontWeight:800,color:'#4a5568',width:24}}>#{i+1}</span>
-                    {flagImg(t.code,18)}
-                    <span style={{flex:1,fontSize:13,fontWeight:700,color:'white'}}>{COUNTRY_NAMES[t.code]??t.code}</span>
-                    <span style={{fontSize:12,color:'#8899bb'}}>{t.total.toLocaleString()}</span>
-                    {wasPickedAt!==null && <span style={{fontSize:11,color:score===10?'#22c55e':score===5?'#f59e0b':'#ef4444'}}>You: #{wasPickedAt} ({score}pts)</span>}
-                    {wasPickedAt===null && <span style={{fontSize:11,color:'#4a5568'}}>Missed</span>}
+                  <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,alignItems:'stretch'}}>
+                    {/* User pick */}
+                    <div style={{display:'flex',alignItems:'center',gap:6,background:userBg,border:`1px solid ${userBorder}`,borderRadius:8,padding:'7px 10px'}}>
+                      <span style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.3)',width:18,flexShrink:0}}>#{i+1}</span>
+                      {userCode ? <>{flagImg(userCode,15)}<span style={{fontSize:12,fontWeight:700,color:userColor,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const}}>{COUNTRY_NAMES[userCode]??userCode}</span></> : <span style={{fontSize:12,color:'#4a5568'}}>—</span>}
+                    </div>
+                    {/* Correct answer */}
+                    <div style={{display:'flex',alignItems:'center',gap:6,background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,padding:'7px 10px'}}>
+                      <span style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.3)',width:18,flexShrink:0}}>#{i+1}</span>
+                      {flagImg(t.code,15)}
+                      <span style={{fontSize:12,fontWeight:700,color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap' as const}}>{COUNTRY_NAMES[t.code]??t.code}</span>
+                      <span style={{fontSize:10,color:'#4a5568',marginLeft:'auto',flexShrink:0}}>{t.total.toLocaleString()}</span>
+                    </div>
                   </div>
                 )
               })}
             </div>
-            {/* Countries the user picked that weren't in top N */}
-            {rankPicks.filter(c=>!rankTargets.find(t=>t.code===c)).length>0 && (
-              <div style={{marginBottom:16}}>
-                <div style={{fontSize:11,color:'#4a5568',marginBottom:6}}>Wrong picks (not in top {n}):</div>
-                <div style={{display:'flex',gap:5,flexWrap:'wrap' as const}}>
-                  {rankPicks.filter(c=>!rankTargets.find(t=>t.code===c)).map(code=>(
-                    <div key={code} style={{display:'flex',alignItems:'center',gap:4,background:'rgba(239,68,68,0.08)',border:'1px solid rgba(239,68,68,0.2)',borderRadius:6,padding:'3px 8px',fontSize:11}}>
-                      {flagImg(code,12)}
-                      <span style={{color:'#ef4444'}}>{COUNTRY_NAMES[code]??code}</span>
-                      <span style={{color:'#4a5568'}}>0pts</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {/* Legend */}
+            <div style={{display:'flex',gap:12,justifyContent:'center',marginBottom:16,flexWrap:'wrap' as const}}>
+              <span style={{fontSize:11,color:'#22c55e'}}>● Correct position</span>
+              <span style={{fontSize:11,color:'#86efac'}}>● Right country, wrong position</span>
+              <span style={{fontSize:11,color:'#ef4444'}}>● Wrong country</span>
+            </div>
             {/* Leaderboard submission */}
             {gameMode==='daily' && (
               <div style={{background:'rgba(59,130,246,0.07)',border:'1px solid #2a3d5e',borderRadius:10,padding:'16px 20px',marginBottom:16}}>
