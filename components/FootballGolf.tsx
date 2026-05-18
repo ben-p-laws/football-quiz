@@ -696,7 +696,7 @@ export default function FootballGolf(){
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'>('setup')
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
   const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
-  const [numHoles,setNumHoles]           = useState<3|6|9|18>(9)
+  const [numHoles,setNumHoles]           = useState<3|6|9|18>(3)
   const [tee,setTee]                     = useState<Tee>('White')
   const [startHole,setStartHole]         = useState(1)
   const [holes,setHoles]                 = useState<Hole[]>([])
@@ -2802,7 +2802,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           <div>
             <div style={lbl}>Course</div>
             <div style={{position:'relative'}}>
-            <select value={selectedCourse} onChange={e=>setSelectedCourse(e.target.value)}
+            <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf' && numHoles===18) setNumHoles(3) }}
               style={{width:'100%',background:'#111827',color:'white',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'10px 36px 10px 12px',fontSize:13,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
               {REAL_COURSES.filter(c=>c.available).map(c=>(
                 <option key={c.id} value={c.id}>{c.name}</option>
@@ -2836,11 +2836,16 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       <div style={{width:'100%',maxWidth:320}}>
         <div style={lbl}>Holes</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
-          {(courseMode==='real'&&selectedCourse==='wii-golf'?[1,2,3] as number[]:[3,6,9,18] as number[]).map(n=>(
-            <button key={n} onClick={()=>setNumHoles(n)} style={{background:numHoles===n?'rgba(34,197,94,0.1)':'#111827',color:numHoles===n?'#22c55e':'white',border:`2px solid ${numHoles===n?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'12px 0',fontSize:18,fontWeight:900,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
-              {n}
-            </button>
-          ))}
+          {([3,6,9,18] as number[]).map(n=>{
+            const isWii = courseMode==='real' && selectedCourse==='wii-golf'
+            const disabled = isWii && n===18
+            const active = numHoles===n && !disabled
+            return (
+              <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={{background:active?'rgba(34,197,94,0.1)':'#111827',color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'white',border:`2px solid ${active?'#22c55e':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'12px 0',fontSize:18,fontWeight:900,cursor:disabled?'not-allowed':'pointer',fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1}}>
+                {n}
+              </button>
+            )
+          })}
         </div>
       </div>
 
