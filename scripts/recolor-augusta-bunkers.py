@@ -1,27 +1,30 @@
 """
-Targeted dark-shadow fix for Augusta bunkers.
+Augusta bunker recoloring — final version.
 
-Source: the be06d9f images — already RGBA, correct size, correct sandy bunkers.
-These are the images the user confirmed looked right (on hole 1).
+Source: 6148b9f originals (/tmp/augusta_orig/) — correct image dimensions
+        that match AUGUSTA_YSCALE in FootballGolf.tsx.
 
-Fix: the RGB ratio shift used in those commits leaves dark shadow areas still
-looking neutral-grey. This script detects warm/sandy pixels that already exist
-in the source image, dilates 25 px to locate adjacent dark-grey shadow pixels,
-then applies HSL recoloring (H 38°, S 48%, preserve L) to those shadows only.
+Two-pass HSL recolor, no large dilation:
+  Pass 1 — bright grey bunker surface (lum>80, sat<40, warm-biased):
+            apply HSL recolor directly (no dilation).
+  Pass 2 — dark shadow pixels adjacent to Pass-1 pixels (≤20 px away):
+            lum 5-70, sat<40, not green, not blue-dominant.
+            Apply HSL recolor.
 
-Everything else — water, rough, trees, the transparent border — is unchanged.
+20 px dilation is safe for hole 12 where the bunker edge is ~17 px from
+Rae's Creek, because the seeds (bright sand) are centred ≥25 px above
+the water, so 20 px dilation stays ≤5 px from the water edge.
 """
 
-import os, shutil
+import os
 from PIL import Image, ImageFilter
 import numpy as np
 
-SRC_DIR = '/tmp/be06d9f_images'   # already-recolored RGBA images (correct bunkers)
-OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'public', 'holes', 'augusta')
+ORIG_DIR = '/tmp/augusta_orig'   # 6148b9f images — correct size for YSCALE
+OUT_DIR  = os.path.join(os.path.dirname(__file__), '..', 'public', 'holes', 'augusta')
 
 SANDY_HUE = 38 / 360.0
 SANDY_SAT  = 0.48
-SHADOW_RADIUS = 25   # px expansion from sandy pixels to find adjacent shadows
 
 
 def rgb_to_hls(r, g, b):
@@ -53,61 +56,71 @@ def hls_to_rgb(h, l, s):
     return (_v(p1,p2,h+1/3)*255, _v(p1,p2,h)*255, _v(p1,p2,h-1/3)*255)
 
 
-def dilate(mask, radius):
-    pil = Image.fromarray((mask*255).astype(np.uint8), mode='L')
+def apply_sandy(data, mask, h_arr, l_arr):
+    """Apply HSL sandy recolor to masked pixels in-place."""
+    adj_l = np.where(l_arr < 0.10, l_arr + 0.08, l_arr)
+    nr, ng, nb = hls_to_rgb(
+        np.full_like(h_arr, SANDY_HUE),
+        adj_l,
+        np.full_like(l_arr, SANDY_SAT),
+    )
+    data[:,:,0] = np.where(mask, np.clip(nr,0,255), data[:,:,0])
+    data[:,:,1] = np.where(mask, np.clip(ng,0,255), data[:,:,1])
+    data[:,:,2] = np.where(mask, np.clip(nb,0,255), data[:,:,2])
+
+
+def dilate(mask_bool, radius):
+    pil = Image.fromarray((mask_bool*255).astype(np.uint8), mode='L')
     return np.array(pil.filter(ImageFilter.MaxFilter(radius*2+1))) > 0
 
 
-def fix_hole(src_path, out_path):
+def recolor_hole(src_path, out_path):
     img = Image.open(src_path).convert('RGBA')
     data = np.array(img, dtype=np.float32)
     r, g, b, a = data[:,:,0], data[:,:,1], data[:,:,2], data[:,:,3]
 
     h_arr, l_arr, s_arr = rgb_to_hls(r, g, b)
-    lum255 = l_arr * 255.0
-    sat100 = s_arr * 100.0
+    lum = l_arr * 255.0
+    sat = s_arr * 100.0
+    inside = a > 10
 
-    # Already-sandy pixels: R is warm dominant (from the previous recoloring)
-    sandy = (r > g) & (r > b * 1.15) & (lum255 > 40) & (a > 10)
-
-    # Dilate to find adjacent shadow zone
-    shadow_zone = dilate(sandy.astype(np.uint8), SHADOW_RADIUS)
-
-    # Shadow pixels: dark, neutral (low saturation), inside hole, not green, not blue-dominant
+    # Shared exclusions
     is_green = (g > r + 10) & (g > b + 10) & (g > 45)
-    is_blue  = (b > r + 20) & (b > g + 10)   # sky / water reflections
-    shadow_pixels = (
-        shadow_zone &
-        (lum255 < 65) & (sat100 < 38) &
-        (a > 10) &
+    is_blue  = (b > r + 20) & (b > g + 10)
+
+    # ── Pass 1: bright grey bunker surface ──────────────────────────────────
+    seed = (
+        (lum > 80) & (sat < 40) &
+        (g < r + 25) & (b > g - 35) &
+        inside & ~is_green & ~is_blue
+    )
+    apply_sandy(data, seed, h_arr, l_arr)
+    print(f"  seed={seed.sum():,}", end='')
+
+    # ── Pass 2: dark shadows within 20 px of seeds ───────────────────────
+    zone = dilate(seed, 20)
+    shadow = (
+        zone & inside &
+        (lum >= 5) & (lum <= 70) &
+        (sat < 40) &
         ~is_green & ~is_blue
     )
+    # Re-compute HLS on updated data (Pass 1 already changed seed pixels)
+    r2, g2, b2 = data[:,:,0], data[:,:,1], data[:,:,2]
+    h2, l2, _ = rgb_to_hls(r2, g2, b2)
+    apply_sandy(data, shadow, h2, l2)
+    print(f"  shadow={shadow.sum():,}")
 
-    print(f"  sandy={sandy.sum():,}  shadows_to_fix={shadow_pixels.sum():,}")
-
-    # HSL recolor for shadow pixels only
-    target_h = np.full_like(h_arr, SANDY_HUE)
-    target_s = np.full_like(l_arr, SANDY_SAT)
-    adj_l = np.where(l_arr < 0.08, l_arr + 0.06, l_arr)
-
-    new_r, new_g, new_b = hls_to_rgb(target_h, adj_l, target_s)
-
-    result = data.copy()
-    result[:,:,0] = np.where(shadow_pixels, np.clip(new_r,0,255), r)
-    result[:,:,1] = np.where(shadow_pixels, np.clip(new_g,0,255), g)
-    result[:,:,2] = np.where(shadow_pixels, np.clip(new_b,0,255), b)
-    # Alpha unchanged
-
-    Image.fromarray(result.astype(np.uint8), mode='RGBA').save(out_path)
+    Image.fromarray(data.astype(np.uint8), mode='RGBA').save(out_path)
 
 
 def main():
-    holes = sorted(f for f in os.listdir(SRC_DIR) if f.endswith('.png'))
-    print(f"Fixing shadows in {len(holes)} Augusta holes …")
+    holes = sorted(f for f in os.listdir(ORIG_DIR) if f.endswith('.png'))
+    print(f"Processing {len(holes)} Augusta holes …")
     for fname in holes:
         print(f"  {fname}:", end='')
-        fix_hole(
-            os.path.join(SRC_DIR, fname),
+        recolor_hole(
+            os.path.join(ORIG_DIR, fname),
             os.path.join(OUT_DIR, fname),
         )
     print("Done.")
