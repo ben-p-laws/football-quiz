@@ -1369,14 +1369,16 @@ export default function AroundTheWorld() {
       <div style={page}>
         <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');`}</style>
         <NavBar />
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 24 }}>
-          <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 16 }}>
+          <div style={{ width: '100%', maxWidth: 620 }}>
 
-            <div style={{ textAlign: 'center', marginBottom: 0 }}>
+            <div style={{ textAlign: 'center', marginBottom: 12 }}>
               <div style={{ fontSize: 32, marginBottom: 4 }}>🌍</div>
               <h1 style={{ fontSize: 22, fontWeight: 900, color: 'white', margin: '0 0 4px' }}>Around the World in 80 Goals</h1>
               <p style={{ color: '#8899bb', margin: 0, fontSize: 13, lineHeight: 1.4 }}>Name PL players from across the globe and hit the target score to win.</p>
             </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
 
             {/* ── Card 0: Minefield ── */}
             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 14px 10px' }}>
@@ -1384,31 +1386,25 @@ export default function AroundTheWorld() {
                 <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>💣 Minefield</div>
                 <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Find every country hitting a stat threshold · 3 lives</div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   disabled={mineDailyLoading || !players}
                   onClick={mineAlreadyPlayed ? viewMinefieldDailyLeaderboard : startMinefieldDailyGame}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: `2px solid ${mineAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: mineAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (mineDailyLoading || !players) ? 'default' : 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>{mineAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>{mineAlreadyPlayed ? 'View leaderboard' : mineDailyLoading ? 'Loading…' : today}</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>{mineAlreadyPlayed ? '✓ Played' : '⚡ Daily'}</button>
                 <button
                   onClick={() => { setChallengeType('minefield'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>🎲 Free Play</button>
               </div>
               {mineDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
               {showMineLobbyLb && (
@@ -1437,37 +1433,25 @@ export default function AroundTheWorld() {
                 <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>🌍 Continent Challenge</div>
                 <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Pick players from across a continent · Hit the target</div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {/* Continent Daily */}
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   disabled={cntDailyLoading || !players}
                   onClick={cntAlreadyPlayed ? viewContinentDailyLeaderboard : startContinentDailyGame}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: `2px solid ${cntAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: cntAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (cntDailyLoading || !players) ? 'default' : 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>
-                    {cntAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>
-                    {cntAlreadyPlayed ? `View leaderboard` : cntDailyLoading ? 'Loading…' : today}
-                  </span>
-                </button>
-                {/* Continent Free Play */}
+                    fontSize: 12, fontWeight: 800,
+                  }}>{cntAlreadyPlayed ? '✓ Played' : '⚡ Daily'}</button>
                 <button
                   onClick={() => { setChallengeType('continent'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>🎲 Free Play</button>
               </div>
               {cntDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
               {showCntLobbyLb && (
@@ -1487,37 +1471,25 @@ export default function AroundTheWorld() {
                 <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>🔗 Complete the Chain</div>
                 <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Chain neighbouring countries · Hit the target</div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                {/* Chain Daily */}
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   disabled={dailyLoading || !players}
                   onClick={alreadyPlayed ? viewDailyLeaderboard : startDailyGame}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: `2px solid ${alreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: alreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (dailyLoading || !players) ? 'default' : 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>
-                    {alreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}
-                  </span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>
-                    {alreadyPlayed ? `View leaderboard` : dailyLoading ? 'Loading…' : today}
-                  </span>
-                </button>
-                {/* Chain Free Play */}
+                    fontSize: 12, fontWeight: 800,
+                  }}>{alreadyPlayed ? '✓ Played' : '⚡ Daily'}</button>
                 <button
                   onClick={() => { setChallengeType('chain'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random route</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>🎲 Free Play</button>
               </div>
               {dailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
               {showLobbyLb && (
@@ -1537,31 +1509,25 @@ export default function AroundTheWorld() {
                 <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>👑 Kings of the Continent</div>
                 <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Rank countries on a continent by their PL stat — top 10 in order</div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   disabled={rankDailyLoading || !players}
                   onClick={rankAlreadyPlayed ? viewRankLobbyLeaderboard : startRankingDailyGame}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: `2px solid ${rankAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: rankAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (rankDailyLoading || !players) ? 'default' : 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>{rankAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>{rankAlreadyPlayed ? 'View leaderboard' : rankDailyLoading ? 'Loading…' : today}</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>{rankAlreadyPlayed ? '✓ Played' : '⚡ Daily'}</button>
                 <button
                   onClick={() => { setChallengeType('ranking'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>🎲 Free Play</button>
               </div>
               {rankDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
               {showRankLobbyLb && (
@@ -1584,31 +1550,25 @@ export default function AroundTheWorld() {
                 <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>📈 Higher or Lower</div>
                 <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>A country&apos;s PL stat is shown — guess if the next country is higher or lower</div>
               </div>
-              <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   disabled={hlDailyLoading || !players}
                   onClick={hlAlreadyPlayed ? viewHlLobbyLeaderboard : startHlDailyGame}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: `2px solid ${hlAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: hlAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (hlDailyLoading || !players) ? 'default' : 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>{hlAlreadyPlayed ? '✓ Played' : '⚡ Daily Challenge'}</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#8899bb' }}>{hlAlreadyPlayed ? 'View leaderboard' : hlDailyLoading ? 'Loading…' : today}</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>{hlAlreadyPlayed ? '✓ Played' : '⚡ Daily'}</button>
                 <button
                   onClick={() => { setChallengeType('higherLower'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '9px 10px', borderRadius: 8,
+                    flex: 1, padding: '9px 8px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
-                  }}>
-                  <span style={{ fontSize: 13, fontWeight: 800 }}>🎲 Free Play</span>
-                  <span style={{ fontSize: 11, fontWeight: 400, color: '#4a5568' }}>Random continent</span>
-                </button>
+                    fontSize: 12, fontWeight: 800,
+                  }}>🎲 Free Play</button>
               </div>
               {hlDailyErr && <p style={{ color: '#ef4444', fontSize: 12, margin: '8px 0 0' }}>Failed to load — try again</p>}
               {showHlLobbyLb && (
@@ -1625,6 +1585,7 @@ export default function AroundTheWorld() {
               )}
             </div>
 
+            </div>
           </div>
         </div>
       </div>

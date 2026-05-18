@@ -194,7 +194,7 @@ export default function LandingPage() {
           onClick={() => router.push('/around-the-world')}>
           <div style={s.cardHead}>
             <div style={s.cardTitle}>Around the World in 80 Goals</div>
-            <div style={s.cardDesc}>Chain neighbouring countries · name a PL player from each one</div>
+            <div style={s.cardDesc}>Navigate your way through the world map by using your football knowledge</div>
           </div>
           <div style={{ ...s.preview, display: 'flex', gap: 8 }}>
             {/* Left: stat + target */}
