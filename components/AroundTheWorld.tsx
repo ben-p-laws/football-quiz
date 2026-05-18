@@ -321,23 +321,56 @@ const CONTINENT_PROJ: Record<string, { center: [number, number]; scale: number }
 
 // ── Ranking / Higher-or-Lower constants ──────────────────────────────
 const RANK_STAT_POOL: { spec: string; label: string }[] = [
+  // Generic stats — always work, higher weight via duplication
   { spec: 'goals',        label: 'PL Goals' },
   { spec: 'goalsAssists', label: 'PL Goals + Assists' },
   { spec: 'games',        label: 'PL Appearances' },
   { spec: 'assists',      label: 'PL Assists' },
   { spec: 'yellowCards',  label: 'Yellow Cards' },
-  { spec: 'redCards',     label: 'Red Cards' },
-  { spec: 'goals_Arsenal',         label: 'Goals for Arsenal' },
-  { spec: 'goals_Chelsea',         label: 'Goals for Chelsea' },
-  { spec: 'goals_Liverpool',       label: 'Goals for Liverpool' },
-  { spec: 'goals_Manchester City', label: 'Goals for Man City' },
-  { spec: 'goals_Manchester Utd',  label: 'Goals for Man Utd' },
-  { spec: 'goals_Tottenham',       label: 'Goals for Spurs' },
-  { spec: 'goals_Everton',         label: 'Goals for Everton' },
-  { spec: 'games_Arsenal',         label: 'Apps for Arsenal' },
-  { spec: 'games_Liverpool',       label: 'Apps for Liverpool' },
-  { spec: 'games_Manchester City', label: 'Apps for Man City' },
-  { spec: 'games_Manchester Utd',  label: 'Apps for Man Utd' },
+  // Goals for specific clubs
+  { spec: 'goals_Arsenal',            label: 'Goals for Arsenal' },
+  { spec: 'goals_Chelsea',            label: 'Goals for Chelsea' },
+  { spec: 'goals_Liverpool',          label: 'Goals for Liverpool' },
+  { spec: 'goals_Manchester City',    label: 'Goals for Man City' },
+  { spec: 'goals_Manchester Utd',     label: 'Goals for Man Utd' },
+  { spec: 'goals_Tottenham',          label: 'Goals for Spurs' },
+  { spec: 'goals_Everton',            label: 'Goals for Everton' },
+  { spec: 'goals_West Ham Utd',       label: 'Goals for West Ham' },
+  { spec: 'goals_Aston Villa',        label: 'Goals for Aston Villa' },
+  { spec: 'goals_Newcastle Utd',      label: 'Goals for Newcastle' },
+  { spec: 'goals_Leicester City',     label: 'Goals for Leicester' },
+  { spec: 'goals_Southampton',        label: 'Goals for Southampton' },
+  { spec: 'goals_Fulham',             label: 'Goals for Fulham' },
+  { spec: 'goals_Sunderland',         label: 'Goals for Sunderland' },
+  { spec: 'goals_Leeds Utd',          label: 'Goals for Leeds' },
+  { spec: 'goals_Middlesbrough',      label: 'Goals for Middlesbrough' },
+  { spec: 'goals_Blackburn Rovers',   label: 'Goals for Blackburn' },
+  { spec: 'goals_Bolton Wanderers',   label: 'Goals for Bolton' },
+  // Appearances for specific clubs
+  { spec: 'games_Arsenal',            label: 'Apps for Arsenal' },
+  { spec: 'games_Chelsea',            label: 'Apps for Chelsea' },
+  { spec: 'games_Liverpool',          label: 'Apps for Liverpool' },
+  { spec: 'games_Manchester City',    label: 'Apps for Man City' },
+  { spec: 'games_Manchester Utd',     label: 'Apps for Man Utd' },
+  { spec: 'games_Tottenham',          label: 'Apps for Spurs' },
+  { spec: 'games_Everton',            label: 'Apps for Everton' },
+  { spec: 'games_West Ham Utd',       label: 'Apps for West Ham' },
+  { spec: 'games_Aston Villa',        label: 'Apps for Aston Villa' },
+  { spec: 'games_Newcastle Utd',      label: 'Apps for Newcastle' },
+  { spec: 'games_Leicester City',     label: 'Apps for Leicester' },
+  { spec: 'games_Southampton',        label: 'Apps for Southampton' },
+  { spec: 'games_Fulham',             label: 'Apps for Fulham' },
+  { spec: 'games_Sunderland',         label: 'Apps for Sunderland' },
+  { spec: 'games_Leeds Utd',          label: 'Apps for Leeds' },
+  { spec: 'games_Middlesbrough',      label: 'Apps for Middlesbrough' },
+  { spec: 'games_Blackburn Rovers',   label: 'Apps for Blackburn' },
+  { spec: 'games_Bolton Wanderers',   label: 'Apps for Bolton' },
+  { spec: 'games_Wolves',             label: 'Apps for Wolves' },
+  { spec: 'games_Stoke City',         label: 'Apps for Stoke' },
+  { spec: 'games_West Brom',          label: 'Apps for West Brom' },
+  { spec: 'games_Charlton Athletic',  label: 'Apps for Charlton' },
+  { spec: 'games_Portsmouth',         label: 'Apps for Portsmouth' },
+  { spec: 'games_Ipswich Town',       label: 'Apps for Ipswich' },
 ]
 
 function rankStatVal(p: ATWPlayer, spec: string): number {
@@ -356,7 +389,7 @@ function countryRankTotal(playersByNat: Record<string, ATWPlayer[]>, code: strin
   return (playersByNat[code] ?? []).reduce((s, p) => s + rankStatVal(p, spec), 0)
 }
 
-const RANK_CONTINENTS = ['europe', 'africa', 's_america', 'n_america', 'asia']
+const RANK_CONTINENTS = ['europe', 'africa', 's_america']
 
 // ── Minefield constants ────────────────────────────────────────────
 type MineCategory =
