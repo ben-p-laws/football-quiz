@@ -1370,26 +1370,26 @@ export default function AroundTheWorld() {
         <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');`}</style>
         <NavBar />
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 56px)', padding: 24 }}>
-          <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ width: '100%', maxWidth: 500, display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            <div style={{ textAlign: 'center', marginBottom: 4 }}>
-              <div style={{ fontSize: 40, marginBottom: 8 }}>🌍</div>
-              <h1 style={{ fontSize: 26, fontWeight: 900, color: 'white', margin: '0 0 6px' }}>Around the World in 80 Goals</h1>
-              <p style={{ color: '#8899bb', margin: 0, fontSize: 14, lineHeight: 1.5 }}>Name PL players from across the globe and hit the target score to win.</p>
+            <div style={{ textAlign: 'center', marginBottom: 0 }}>
+              <div style={{ fontSize: 32, marginBottom: 4 }}>🌍</div>
+              <h1 style={{ fontSize: 22, fontWeight: 900, color: 'white', margin: '0 0 4px' }}>Around the World in 80 Goals</h1>
+              <p style={{ color: '#8899bb', margin: 0, fontSize: 13, lineHeight: 1.4 }}>Name PL players from across the globe and hit the target score to win.</p>
             </div>
 
             {/* ── Card 0: Minefield ── */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>💣 Minefield</div>
-                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Find every country hitting a stat threshold · 3 lives</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 14px 10px' }}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>💣 Minefield</div>
+                <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Find every country hitting a stat threshold · 3 lives</div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   disabled={mineDailyLoading || !players}
                   onClick={mineAlreadyPlayed ? viewMinefieldDailyLeaderboard : startMinefieldDailyGame}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: `2px solid ${mineAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: mineAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (mineDailyLoading || !players) ? 'default' : 'pointer',
@@ -1401,7 +1401,7 @@ export default function AroundTheWorld() {
                 <button
                   onClick={() => { setChallengeType('minefield'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
@@ -1432,10 +1432,10 @@ export default function AroundTheWorld() {
             </div>
 
             {/* ── Card 1: Continent Challenge ── */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>🌍 Continent Challenge</div>
-                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Pick players from across a continent · Hit the target</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 14px 10px' }}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>🌍 Continent Challenge</div>
+                <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Pick players from across a continent · Hit the target</div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 {/* Continent Daily */}
@@ -1443,7 +1443,7 @@ export default function AroundTheWorld() {
                   disabled={cntDailyLoading || !players}
                   onClick={cntAlreadyPlayed ? viewContinentDailyLeaderboard : startContinentDailyGame}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: `2px solid ${cntAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: cntAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (cntDailyLoading || !players) ? 'default' : 'pointer',
@@ -1460,7 +1460,7 @@ export default function AroundTheWorld() {
                 <button
                   onClick={() => { setChallengeType('continent'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
@@ -1482,10 +1482,10 @@ export default function AroundTheWorld() {
             </div>
 
             {/* ── Card 2: Complete the Chain ── */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>🔗 Complete the Chain</div>
-                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Chain neighbouring countries · Hit the target</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 14px 10px' }}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>🔗 Complete the Chain</div>
+                <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Chain neighbouring countries · Hit the target</div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 {/* Chain Daily */}
@@ -1493,7 +1493,7 @@ export default function AroundTheWorld() {
                   disabled={dailyLoading || !players}
                   onClick={alreadyPlayed ? viewDailyLeaderboard : startDailyGame}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: `2px solid ${alreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: alreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (dailyLoading || !players) ? 'default' : 'pointer',
@@ -1510,7 +1510,7 @@ export default function AroundTheWorld() {
                 <button
                   onClick={() => { setChallengeType('chain'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
@@ -1532,17 +1532,17 @@ export default function AroundTheWorld() {
             </div>
 
             {/* ── Card 3: Kings of the Continent ── */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>👑 Kings of the Continent</div>
-                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>Rank countries on a continent by their PL stat — top 10 in order</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 14px 10px' }}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>👑 Kings of the Continent</div>
+                <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>Rank countries on a continent by their PL stat — top 10 in order</div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   disabled={rankDailyLoading || !players}
                   onClick={rankAlreadyPlayed ? viewRankLobbyLeaderboard : startRankingDailyGame}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: `2px solid ${rankAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: rankAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (rankDailyLoading || !players) ? 'default' : 'pointer',
@@ -1554,7 +1554,7 @@ export default function AroundTheWorld() {
                 <button
                   onClick={() => { setChallengeType('ranking'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
@@ -1579,17 +1579,17 @@ export default function AroundTheWorld() {
             </div>
 
             {/* ── Card 4: Higher or Lower ── */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 14, padding: '20px 20px 16px' }}>
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 19, fontWeight: 900, color: 'white' }}>📈 Higher or Lower</div>
-                <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>A country&apos;s PL stat is shown — guess if the next country is higher or lower</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid #1e2d4a', borderRadius: 12, padding: '12px 14px 10px' }}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 15, fontWeight: 900, color: 'white' }}>📈 Higher or Lower</div>
+                <div style={{ fontSize: 11, color: '#8899bb', marginTop: 2 }}>A country&apos;s PL stat is shown — guess if the next country is higher or lower</div>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button
                   disabled={hlDailyLoading || !players}
                   onClick={hlAlreadyPlayed ? viewHlLobbyLeaderboard : startHlDailyGame}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: `2px solid ${hlAlreadyPlayed ? '#1e5c2e' : '#dc2626'}`,
                     background: hlAlreadyPlayed ? 'rgba(34,197,94,0.07)' : 'rgba(220,38,38,0.10)',
                     color: 'white', cursor: (hlDailyLoading || !players) ? 'default' : 'pointer',
@@ -1601,7 +1601,7 @@ export default function AroundTheWorld() {
                 <button
                   onClick={() => { setChallengeType('higherLower'); setGameMode('freeplay'); setPhase('setup') }}
                   style={{
-                    flex: 1, padding: '14px 12px', borderRadius: 10,
+                    flex: 1, padding: '9px 10px', borderRadius: 8,
                     border: '2px solid #2a3d5e', background: 'transparent',
                     color: '#c0cde0', cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3,
@@ -2424,9 +2424,9 @@ export default function AroundTheWorld() {
                 const userCode = rankPicks[i] ?? null
                 const inTargets = userCode ? rankTargets.some(r=>r.code===userCode) : false
                 const isCorrect = userCode === t.code
-                const userColor = isCorrect ? '#22c55e' : inTargets ? '#86efac' : '#ef4444'
-                const userBg    = isCorrect ? 'rgba(34,197,94,0.12)' : inTargets ? 'rgba(134,239,172,0.08)' : 'rgba(239,68,68,0.08)'
-                const userBorder= isCorrect ? 'rgba(34,197,94,0.4)'  : inTargets ? 'rgba(134,239,172,0.3)'  : 'rgba(239,68,68,0.3)'
+                const userColor = isCorrect ? '#22c55e' : inTargets ? '#eab308' : '#ef4444'
+                const userBg    = isCorrect ? 'rgba(34,197,94,0.12)' : inTargets ? 'rgba(234,179,8,0.10)' : 'rgba(239,68,68,0.08)'
+                const userBorder= isCorrect ? 'rgba(34,197,94,0.4)'  : inTargets ? 'rgba(234,179,8,0.35)'  : 'rgba(239,68,68,0.3)'
                 return (
                   <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,alignItems:'stretch'}}>
                     {/* User pick */}
@@ -2448,7 +2448,7 @@ export default function AroundTheWorld() {
             {/* Legend */}
             <div style={{display:'flex',gap:12,justifyContent:'center',marginBottom:16,flexWrap:'wrap' as const}}>
               <span style={{fontSize:11,color:'#22c55e'}}>● Correct position</span>
-              <span style={{fontSize:11,color:'#86efac'}}>● Right country, wrong position</span>
+              <span style={{fontSize:11,color:'#eab308'}}>● Right country, wrong position</span>
               <span style={{fontSize:11,color:'#ef4444'}}>● Wrong country</span>
             </div>
             {/* Leaderboard submission */}
