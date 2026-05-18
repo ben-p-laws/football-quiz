@@ -549,6 +549,12 @@ const WII_GOLF_HOLES: HoleDef[] = [
   { number:1, par:4, yardages:{Blue:370,White:370,Red:370}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
   { number:2, par:3, yardages:{Blue:134,White:134,Red:134}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
   { number:3, par:5, yardages:{Blue:465,White:465,Red:465}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:4, par:3, yardages:{Blue:142,White:142,Red:142}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:5, par:5, yardages:{Blue:461,White:461,Red:461}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:6, par:4, yardages:{Blue:345,White:345,Red:345}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:7, par:4, yardages:{Blue:327,White:327,Red:327}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:8, par:3, yardages:{Blue:223,White:223,Red:223}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:9, par:5, yardages:{Blue:455,White:455,Red:455}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
 ]
 
 const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {

@@ -79,6 +79,7 @@ const SAVED_POSITIONS_WII: Record<number, { teeFrac: FracPt; greenFrac: FracPt; 
 }
 const HOLE_DISTANCES_WII: Record<number, number> = {
   1: 370, 2: 134, 3: 465,
+  4: 142, 5: 461, 6: 345, 7: 327, 8: 223, 9: 455,
 }
 
 type CourseId = 'pebble-beach' | 'augusta' | 'wii-golf'
