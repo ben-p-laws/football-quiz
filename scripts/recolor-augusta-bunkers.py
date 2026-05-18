@@ -1,11 +1,15 @@
 """
 Recolors Augusta hole bunkers to warm sandy yellow.
 
-Algorithm:
-1. Detect bright bunker seed pixels (light grey, low saturation) from originals
-2. Iterative flood-fill dilation (stops at green grass/trees and black background)
-3. Apply HSL-based recoloring: preserve luminosity, set hue+sat to sandy yellow
-   (dark shadow pixels become dark sandy, bright areas become bright sandy)
+Algorithm (per-hole):
+1. Detect bright grey bunker seed pixels from the original RGBA image
+2. MaxFilter 30 px dilation to cover rim and adjacent shadow
+3. Secondary 30 px dilation for medium-dark shadow pixels (lum 5-70) in the zone
+4. Exclude clearly green vegetation at the very end (not during dilation) and
+   transparent background pixels
+5. Apply HSL-based recolor: set hue ~38° and saturation 48%, preserving luminosity
+   so shadows become dark sandy instead of neutral dark grey
+6. Alpha channel is carried through unchanged — transparent border stays transparent
 
 Usage: python3 scripts/recolor-augusta-bunkers.py
 Reads originals from /tmp/augusta_orig/, writes to public/holes/augusta/.
@@ -21,10 +25,9 @@ OUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'public', 'holes', 'augu
 SANDY_HUE = 38 / 360.0    # ~38° warm yellow-brown
 SANDY_SAT = 0.48           # moderate saturation
 
-# Flood-fill parameters: STEP_SIZE px radius per iteration, NUM_STEPS total
-# Total radius = (STEP_SIZE * NUM_STEPS) px — large enough to cover bunker interior
-STEP_SIZE = 7   # MaxFilter(2*STEP_SIZE+1)
-NUM_STEPS = 20  # 20 * 7 = 140 px effective flood radius
+# Dilation radii (px) → MaxFilter kernel = 2*radius+1
+SEED_RADIUS   = 30   # standard dilation from bright seeds
+SHADOW_RADIUS = 30   # additional dilation from medium-dark shadow pixels in zone
 
 
 def rgb_to_hls_array(r, g, b):
@@ -62,8 +65,13 @@ def hls_to_rgb_array(h, l, s):
     return r * 255.0, g * 255.0, b * 255.0
 
 
+def maxfilter(mask_uint8, radius):
+    """Binary dilation via PIL MaxFilter. mask_uint8 is a 2-D uint8 array."""
+    pil = Image.fromarray(mask_uint8 * 255, mode='L')
+    return (np.array(pil.filter(ImageFilter.MaxFilter(radius * 2 + 1))) > 0)
+
+
 def recolor_hole(orig_path, out_path):
-    # Open as RGBA to preserve the original transparency (black border = alpha 0)
     img = Image.open(orig_path).convert('RGBA')
     data = np.array(img, dtype=np.float32)
     r, g, b, a = data[:,:,0], data[:,:,1], data[:,:,2], data[:,:,3]
@@ -72,44 +80,60 @@ def recolor_hole(orig_path, out_path):
     lum255 = l * 255.0
     sat100 = s * 100.0
 
-    # Pixels that must never be recolored ─────────────────────────────────────
-    # Transparent background pixels (outside the hole silhouette)
-    is_background = (a < 10)
-    # Green vegetation: G moderately dominates R and B
-    is_green = (g > r + 15) & (g > b + 15) & (g > 50)
-    # Water / teal hazards: B close to G and both above R by a margin
-    is_water = (b > r + 30) & (np.abs(b.astype(np.float32) - g.astype(np.float32)) < 25)
-    blocked = is_background | is_green | is_water
+    # --- Detect bright grey bunker seeds (original surface) ---
+    seed = (
+        (lum255 > 80) & (sat100 < 40) &
+        (g < r + 25) & (b > g - 35) &
+        (a > 10)  # inside hole only
+    ).astype(np.uint8)
 
-    # Seed: bright, desaturated grey pixels — original bunker surface ──────────
-    seed_mask = (lum255 > 80) & (sat100 < 40) & (g < r + 25) & (b > g - 35) & ~blocked
-    print(f"  seed={seed_mask.sum():,}", end='')
+    # --- Pass 1: dilate seeds 30 px ---
+    zone = maxfilter(seed, SEED_RADIUS)
 
-    # Iterative flood fill: each step dilates by STEP_SIZE px, then clips blocked
-    kernel = STEP_SIZE * 2 + 1
-    mask = seed_mask.astype(np.uint8)
-    for _ in range(NUM_STEPS):
-        pil_mask = Image.fromarray(mask * 255, mode='L')
-        dilated = np.array(pil_mask.filter(ImageFilter.MaxFilter(kernel))) > 0
-        mask = (dilated & ~blocked).astype(np.uint8)
+    # --- Pass 2: within that zone, find shadow pixels and dilate 30 px more.
+    #     Near-black (lum < 10) gets a relaxed sat threshold since those pixels
+    #     are hard to assign saturation to reliably. ---
+    shadow_candidates = (
+        zone &
+        (lum255 >= 1) & (lum255 <= 70) &
+        ((sat100 < 45) | (lum255 < 10)) &
+        (a > 10)
+    ).astype(np.uint8)
+    shadow_zone = maxfilter(shadow_candidates, SHADOW_RADIUS)
 
-    bunker_region = mask.astype(bool)
-    print(f"  bunker={bunker_region.sum():,}")
+    combined = zone | shadow_zone
 
-    # HSL-based recolor: preserve luminosity, apply sandy hue + saturation ────
+    # --- Exclude vegetation, water, and transparent background pixels ---
+    # Applied AFTER dilation so thin green bands don't block inner shadows.
+    is_green = (g > r + 10) & (g > b + 10) & (g > 45)
+    # Water / teal: B clearly dominates R and is close to G
+    is_water = (b > r + 30) & (np.abs(b - g) < 30)
+    is_bg    = (a < 10)
+
+    bunker_region = combined & ~is_green & ~is_water & ~is_bg
+
+    print(f"  seed={seed.sum():,}  bunker={bunker_region.sum():,}")
+
+    # --- HSL recolor: keep luminosity, set hue + saturation to sandy ---
     h_arr, l_arr, _ = rgb_to_hls_array(r, g, b)
     target_h = np.full_like(h_arr, SANDY_HUE)
     target_s = np.full_like(l_arr, SANDY_SAT)
-    # Gently lift very dark shadow pixels so the sandy hue is perceptible
+    # Lift very dark shadows slightly so sandy hue is perceptible
     adjusted_l = np.where(l_arr < 0.08, l_arr + 0.06, l_arr)
 
     new_r, new_g, new_b = hls_to_rgb_array(target_h, adjusted_l, target_s)
 
+    # Blend strength: full (1.0) for low-sat pixels, fades to 0 by sat=55.
+    # This prevents aggressively recoloring high-saturation grass/water that
+    # might have slipped through the green exclusion.
+    blend = np.clip((55.0 - sat100) / 30.0, 0.0, 1.0)
+
     result = data.copy()
-    result[:,:,0] = np.where(bunker_region, np.clip(new_r, 0, 255), r)
-    result[:,:,1] = np.where(bunker_region, np.clip(new_g, 0, 255), g)
-    result[:,:,2] = np.where(bunker_region, np.clip(new_b, 0, 255), b)
-    # Alpha channel is unchanged — transparent pixels stay transparent
+    m = bunker_region
+    result[:,:,0] = np.where(m, r + blend*(np.clip(new_r,0,255)-r), r)
+    result[:,:,1] = np.where(m, g + blend*(np.clip(new_g,0,255)-g), g)
+    result[:,:,2] = np.where(m, b + blend*(np.clip(new_b,0,255)-b), b)
+    # Alpha unchanged
 
     Image.fromarray(result.astype(np.uint8), mode='RGBA').save(out_path)
 
