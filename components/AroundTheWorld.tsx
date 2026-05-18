@@ -109,7 +109,7 @@ function computeProjection(countries: string[]): { center: [number, number]; sca
 
 function buildIsoToFifa(): Record<string, string> {
   const m: Record<string, string> = {}
-  for (const [fifa, iso] of Object.entries(FIFA_TO_ISO)) m[String(iso)] = fifa
+  for (const [fifa, iso] of Object.entries(FIFA_TO_ISO)) m[String(iso).padStart(3, '0')] = fifa
   return m
 }
 const ISO_TO_FIFA = buildIsoToFifa()
@@ -2281,7 +2281,7 @@ export default function AroundTheWorld() {
   }
 
   // ── RANKING PLAYING ───────────────────────────────────────────────
-  if (challengeType === 'ranking' && phase === 'playing') {
+  if (challengeType === 'ranking' && phase === 'playing' && rankPhase !== 'done') {
     const mapCountries = rankAllCountries
 
     return (
