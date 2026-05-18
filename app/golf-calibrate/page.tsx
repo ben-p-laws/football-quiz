@@ -72,22 +72,41 @@ const HOLE_DISTANCES_AUGUSTA: Record<number, number> = {
   10:495,11:505,12:155,13:510,14:440,15:530,16:170,17:440,18:465,
 }
 
-type CourseId = 'pebble-beach' | 'augusta'
+const SAVED_POSITIONS_WII: Record<number, { teeFrac: FracPt; greenFrac: FracPt; waypointFracs?: FracPt[] }> = {
+  1: {teeFrac:[0.481,0.918], greenFrac:[0.49,0.15],   waypointFracs:[[0.379,0.43]]},
+  2: {teeFrac:[0.283,0.835], greenFrac:[0.602,0.286],  waypointFracs:[[0.479,0.58],[0.546,0.422]]},
+  3: {teeFrac:[0.346,0.875], greenFrac:[0.359,0.095],  waypointFracs:[[0.768,0.685],[0.702,0.281]]},
+}
+const HOLE_DISTANCES_WII: Record<number, number> = {
+  1: 370, 2: 134, 3: 465,
+}
 
+type CourseId = 'pebble-beach' | 'augusta' | 'wii-golf'
+
+function getCourseHoleCount(course: CourseId) {
+  if (course === 'wii-golf') return 3
+  return 18
+}
 function getSavedPositions(course: CourseId) {
-  return course === 'augusta' ? SAVED_POSITIONS_AUGUSTA : SAVED_POSITIONS_PEBBLE
+  if (course === 'augusta') return SAVED_POSITIONS_AUGUSTA
+  if (course === 'wii-golf') return SAVED_POSITIONS_WII
+  return SAVED_POSITIONS_PEBBLE
 }
 function getDistances(course: CourseId) {
-  return course === 'augusta' ? HOLE_DISTANCES_AUGUSTA : HOLE_DISTANCES_PEBBLE
+  if (course === 'augusta') return HOLE_DISTANCES_AUGUSTA
+  if (course === 'wii-golf') return HOLE_DISTANCES_WII
+  return HOLE_DISTANCES_PEBBLE
 }
 function getImageUrl(course: CourseId, hole: number) {
   const n = String(hole).padStart(2, '0')
-  return course === 'augusta' ? `/holes/augusta/hole_${n}.png` : `/holes/hole_${n}.png`
+  if (course === 'augusta') return `/holes/augusta/hole_${n}.png`
+  if (course === 'wii-golf') return `/holes/wii-golf/wii-golf-${hole}.png`
+  return `/holes/hole_${n}.png`
 }
 function getVarNames(course: CourseId) {
-  return course === 'augusta'
-    ? { positions: 'AUGUSTA_POSITIONS', hazards: 'AUGUSTA_HAZARDS' }
-    : { positions: 'HOLE_POSITIONS', hazards: 'REAL_COURSE_HAZARDS' }
+  if (course === 'augusta') return { positions: 'AUGUSTA_POSITIONS', hazards: 'AUGUSTA_HAZARDS' }
+  if (course === 'wii-golf') return { positions: 'WII_GOLF_POSITIONS', hazards: 'WII_GOLF_HAZARDS' }
+  return { positions: 'HOLE_POSITIONS', hazards: 'REAL_COURSE_HAZARDS' }
 }
 
 // ── Bezier helpers ────────────────────────────────────────────────────────────
@@ -153,9 +172,9 @@ export default function GolfCalibratePage() {
   const [hole, setHole] = useState(1)
   const [mode, setMode] = useState<Mode>('tee')
   const [calibByCourse, setCalibByCourse] = useState<Record<CourseId, Record<number, HoleCalib>>>(() => {
-    const makeCalib = (saved: typeof SAVED_POSITIONS_PEBBLE) => {
+    const makeCalib = (saved: Record<number, { teeFrac: FracPt; greenFrac: FracPt; waypointFracs?: FracPt[] }>, count: number) => {
       const init: Record<number, HoleCalib> = {}
-      for (let h = 1; h <= 18; h++) {
+      for (let h = 1; h <= count; h++) {
         const s = saved[h]
         init[h] = s
           ? { tee: s.teeFrac, green: s.greenFrac, waypoints: s.waypointFracs ?? [], hazards: [], bunkers: [] }
@@ -164,8 +183,9 @@ export default function GolfCalibratePage() {
       return init
     }
     return {
-      'pebble-beach': makeCalib(SAVED_POSITIONS_PEBBLE),
-      'augusta': makeCalib(SAVED_POSITIONS_AUGUSTA),
+      'pebble-beach': makeCalib(SAVED_POSITIONS_PEBBLE, 18),
+      'augusta': makeCalib(SAVED_POSITIONS_AUGUSTA, 18),
+      'wii-golf': makeCalib(SAVED_POSITIONS_WII, 3),
     }
   })
   const [pendingStart, setPendingStart] = useState<number | null>(null)
@@ -190,7 +210,7 @@ export default function GolfCalibratePage() {
   const current = calib[hole] ?? EMPTY_CALIB()
   const savedPositions = getSavedPositions(course)
   const pos = calib[hole]?.tee ? { teeFrac: calib[hole].tee!, greenFrac: calib[hole].green!, waypointFracs: calib[hole].waypoints } : savedPositions[hole]
-  const pathPts = pos && imgSize.w > 0 ? buildPathPts(pos, imgSize.w, imgSize.h) : null
+  const pathPts = pos && pos.teeFrac && pos.greenFrac && imgSize.w > 0 ? buildPathPts(pos, imgSize.w, imgSize.h) : null
   const distance = getDistances(course)[hole] ?? 400
   const varNames = getVarNames(course)
 
@@ -242,7 +262,7 @@ export default function GolfCalibratePage() {
 
   const outputPositionsJS = () => {
     const lines: string[] = []
-    for (let h = 1; h <= 18; h++) {
+    for (let h = 1; h <= holeCount; h++) {
       const c = calib[h]
       if (!c?.tee || !c?.green) continue
       const tf = `[${c.tee[0]},${c.tee[1]}]`
@@ -255,7 +275,7 @@ export default function GolfCalibratePage() {
 
   const outputHazardsJS = () => {
     const lines: string[] = []
-    for (let h = 1; h <= 18; h++) {
+    for (let h = 1; h <= holeCount; h++) {
       const c = calib[h]
       if (!c?.hazards?.length && !c?.bunkers?.length) continue
       const parts: string[] = []
@@ -288,6 +308,7 @@ export default function GolfCalibratePage() {
     )
   })
 
+  const holeCount = getCourseHoleCount(course)
   const calibrated = Object.keys(calib).filter(k => calib[+k]?.tee && calib[+k]?.green).length
   const withHazards = Object.keys(calib).filter(k => calib[+k]?.hazards?.length || calib[+k]?.bunkers?.length).length
 
@@ -301,21 +322,21 @@ export default function GolfCalibratePage() {
 
         {/* Course toggle */}
         <div style={{ display: 'flex', gap: 4 }}>
-          {(['pebble-beach', 'augusta'] as CourseId[]).map(c => (
+          {([['pebble-beach','Pebble Beach'],['augusta','Augusta'],['wii-golf','Wii Golf']] as [CourseId,string][]).map(([c,label]) => (
             <button key={c} onClick={() => { setCourse(c); setHole(1); setPendingStart(null) }}
               style={{ ...btnS, width: 'auto', background: course === c ? '#22c55e' : '#1e2d4a', color: course === c ? '#0a0f1e' : 'white', fontSize: 11 }}>
-              {c === 'pebble-beach' ? 'Pebble Beach' : 'Augusta'}
+              {label}
             </button>
           ))}
         </div>
 
-        <div style={{ fontSize: 11, color: '#8899bb' }}>{calibrated}/18 positions · {withHazards}/18 hazards</div>
+        <div style={{ fontSize: 11, color: '#8899bb' }}>{calibrated}/{holeCount} positions · {withHazards}/{holeCount} hazards</div>
 
         {/* Hole stepper */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <button onClick={() => { setHole(h => Math.max(1, h - 1)); setPendingStart(null) }} style={btnS}>&lsaquo;</button>
           <div style={{ minWidth: 56, textAlign: 'center', fontWeight: 900, fontSize: 16 }}>Hole {hole}</div>
-          <button onClick={() => { setHole(h => Math.min(18, h + 1)); setPendingStart(null) }} style={btnS}>&rsaquo;</button>
+          <button onClick={() => { setHole(h => Math.min(holeCount, h + 1)); setPendingStart(null) }} style={btnS}>&rsaquo;</button>
         </div>
 
         {/* Mode selector */}
@@ -437,7 +458,7 @@ export default function GolfCalibratePage() {
           {/* Hole jump grid */}
           <div style={{ fontWeight: 800, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Jump to hole</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6,1fr)', gap: 4 }}>
-            {Array.from({ length: 18 }, (_, i) => i + 1).map(h => {
+            {Array.from({ length: holeCount }, (_, i) => i + 1).map(h => {
               const c = calib[h]
               const hasHazard = !!(c?.hazards?.length || c?.bunkers?.length)
               return (

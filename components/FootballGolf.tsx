@@ -545,6 +545,12 @@ const AUGUSTA_HOLES: HoleDef[] = [
   { number:18, par:4, yardages:{Blue:465,White:423,Red:377}, path:{pts:[{x:50,y:230},{x:55,y:156},{x:45,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:2 },
 ]
 
+const WII_GOLF_HOLES: HoleDef[] = [
+  { number:1, par:4, yardages:{Blue:370,White:370,Red:370}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:2, par:3, yardages:{Blue:134,White:134,Red:134}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+  { number:3, par:5, yardages:{Blue:465,White:465,Red:465}, path:{pts:[{x:50,y:230},{x:50,y:156},{x:50,y:104},{x:50,y:30}]}, hazardFrac:null, bunkerCount:0 },
+]
+
 const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
    1: {bunkers:[{start:215,end:258}]},
    4: {bunkers:[{start:214,end:230}]},
@@ -625,10 +631,10 @@ function generateBunkers(distance: number, hazards: Hazard[], count: number): Bu
 }
 
 function buildCourse(tee: Tee, count: number, start = 1, courseId = 'pebble-beach'): Hole[] {
-  const holeDefs = courseId === 'augusta' ? AUGUSTA_HOLES : PEBBLE_BEACH
-  const hazardMap = courseId === 'augusta' ? AUGUSTA_HAZARDS : REAL_COURSE_HAZARDS
+  const holeDefs = courseId === 'augusta' ? AUGUSTA_HOLES : courseId === 'wii-golf' ? WII_GOLF_HOLES : PEBBLE_BEACH
+  const hazardMap = courseId === 'augusta' ? AUGUSTA_HAZARDS : courseId === 'wii-golf' ? WII_GOLF_HAZARDS : REAL_COURSE_HAZARDS
   return Array.from({length: count}, (_, i) => {
-    const def = holeDefs[((start - 1 + i) % 18)]
+    const def = holeDefs[((start - 1 + i) % holeDefs.length)]
     const distance = def.yardages['Blue']
     const realHaz = hazardMap[def.number]
     const hazards = realHaz?.hazards ?? []
@@ -2144,12 +2150,16 @@ export default function FootballGolf(){
                 isAnimating={isAnimating}
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
-                imageUrl={courseMode==='real' ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=12` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
+                imageUrl={courseMode==='real' ? (
+                  selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=12` :
+                  selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
+                  `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`
+                ) : undefined}
                 imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
-                realYScale={courseMode==='real' ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : 260) : undefined}
-                realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:260) : undefined}
-                realGreenPos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:260) : undefined}
-                realWaypoints={courseMode==='real' ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:260)) : undefined}
+                realYScale={courseMode==='real' ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined}
+                realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realGreenPos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realWaypoints={courseMode==='real' ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
@@ -2678,6 +2688,22 @@ const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number
  17:  {teeFrac:[0.589,0.844], greenFrac:[0.434,0.285], waypointFracs:[[0.525,0.567],[0.47,0.39]]},
  18:  {teeFrac:[0.299,0.829], greenFrac:[0.377,0.157], waypointFracs:[[0.724,0.573],[0.614,0.266]]},
 }
+// Wii Golf images have varying aspect ratios — yScale = 100/(w/h)
+const WII_GOLF_YSCALE: Record<number, number> = {
+  1: 100/(377/662),   // 175.6
+  2: 100/(444/562),   // 126.6
+  3: 100/(1024/1536), // 150.0
+}
+const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
+  1: {teeFrac:[0.481,0.918], greenFrac:[0.49,0.15],   waypointFracs:[[0.379,0.43]]},
+  2: {teeFrac:[0.283,0.835], greenFrac:[0.602,0.286],  waypointFracs:[[0.479,0.58],[0.546,0.422]]},
+  3: {teeFrac:[0.346,0.875], greenFrac:[0.359,0.095],  waypointFracs:[[0.768,0.685],[0.702,0.281]]},
+}
+const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
+  1: {bunkers:[{start:183,end:232},{start:332,end:337}]},
+  2: {hazards:[{start:29,end:62}], bunkers:[{start:105,end:116}]},
+}
+
 // Augusta images have varying heights — yScale = 100/(w/h) so viewBox always 100 wide
 const AUGUSTA_YSCALE: Record<number, number> = {
    1:100/(300/920),  2:100/(300/726),  3:100/(300/759),  4:100/(300/728),
@@ -2697,8 +2723,14 @@ const REAL_COURSES = [
   { id:'pebble-beach', name:'Pebble Beach Golf Links', available:true },
   { id:'st-andrews',   name:'St Andrews — Old Course',  available:false },
   { id:'augusta',      name:'Augusta National',          available:true },
+  { id:'wii-golf',     name:'Wii Sports — Golf',         available:true },
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
+
+function courseHoleCount(courseId: string) {
+  if (courseId === 'wii-golf') return 3
+  return 18
+}
 
 function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
@@ -2778,13 +2810,15 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           <div>
             <div style={lbl}>Start Hole</div>
             <div style={{display:'flex',alignItems:'center',gap:4,background:'#111827',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'6px 8px'}}>
-              <button onClick={()=>setStartHole(startHole===1?18:startHole-1)}
+              {(()=>{const maxH=courseHoleCount(selectedCourse);return(<>
+              <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)}
                 style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>‹</button>
               <div style={{fontSize:18,fontWeight:900,color:'white',width:28,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
-                {String(startHole).padStart(2,'0')}
+                {String(Math.min(startHole,maxH)).padStart(2,'0')}
               </div>
-              <button onClick={()=>setStartHole(startHole===18?1:startHole+1)}
+              <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)}
                 style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>›</button>
+              </>)})()}
             </div>
           </div>
         </div>
@@ -2794,7 +2828,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       <div style={{width:'100%',maxWidth:320}}>
         <div style={lbl}>Holes</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
-          {([3,6,9,18] as const).map(n=>(
+          {(courseMode==='real'&&selectedCourse==='wii-golf'?[1,2,3] as number[]:[3,6,9,18] as number[]).map(n=>(
             <button key={n} onClick={()=>setNumHoles(n)} style={{background:numHoles===n?'rgba(34,197,94,0.1)':'#111827',color:numHoles===n?'#22c55e':'white',border:`2px solid ${numHoles===n?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'12px 0',fontSize:18,fontWeight:900,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
               {n}
             </button>
