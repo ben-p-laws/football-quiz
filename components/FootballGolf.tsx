@@ -658,7 +658,7 @@ function getClub(remaining:number):ClubType{
   return 'putter'
 }
 
-const CLUB_RANGES:Record<ClubType,[number,number]>={driver:[250,300],iron:[120,260],wedge:[20,100],putter:[0,50]}
+const CLUB_RANGES:Record<ClubType,[number,number]>={driver:[250,300],iron:[120,999],wedge:[20,999],putter:[0,999]}
 const CLUB_LABEL:Record<ClubType,string>={driver:'Driver',iron:'Iron',wedge:'Wedge',putter:'Putter'}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -1972,18 +1972,12 @@ export default function FootballGolf(){
                 return (
                   <>
                     <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
-                      {CLUB_LABEL[club]} · max {clubMax} yds
+                      {CLUB_LABEL[club]}{club==='driver'?` · max ${clubMax} yds`:''}
                       {inBunker && <span style={{color:'#f59e0b'}}> · 🏖️ In bunker</span>}
                     </div>
                   </>
                 )
               })()}
-              {/* Past-pin indicator */}
-              {pastPin&&(
-                <div style={{fontSize:11,color:'#f97316',fontWeight:700}}>
-                  📍 {remaining} yds past the flag
-                </div>
-              )}
             </div>
 
             {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
@@ -2155,7 +2149,7 @@ export default function FootballGolf(){
                 arcOffset={arcOffset}
                 isAnimating={isAnimating}
                 strokes={strokes}
-                maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
+                maxRangePos={!pastPin && club==='driver' && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' && !dailyMode ? (
                   selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` :
                   selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
