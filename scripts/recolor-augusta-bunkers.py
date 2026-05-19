@@ -1,17 +1,21 @@
 """
-Augusta bunker flat-fill — dilate large components, bridge dark spots.
+Augusta bunker flat-fill — compact-component filter + strict alpha.
 
-The bunker in each hole has 2-3 large sandy components (≥500 px) detected by
-the v12 seed logic. Dark spots inside the bunker are separate small components
-because thin green pixels separate them from the bright sandy areas.
+Problems with previous versions:
+  - Semi-transparent edge pixels (alpha 10-200) formed large "components" at the
+    boundary of the hole shape → fixed by requiring alpha > 200 for seeds.
+  - Elongated right-side boundary strips (e.g. hole_01 comp=166, compactness=0.06)
+    were ≥500px but are not bunkers → filtered by requiring compactness ≥ 0.2.
+  - Dark green pixels inside the dilation zone were colored because is_fairway
+    only excluded bright green (g>130) → fixed by excluding any green-dominant
+    pixel (g > r+10 AND g > b+10) from the final fill.
 
-Fix:
-1. Find large components (≥500 px) of the v12 mask — the real bunker bodies.
-2. Dilate them by BRIDGE_PX to bridge through the thin green separator pixels.
-3. Within the dilated zone, accept ALL visible non-water pixels where G isn't
-   strongly dominant (G < R+25 OR G < 130) — this catches dark shadow pixels
-   while still excluding bright fairway green.
-4. Flat-fill everything accepted to #c8a96e.
+Algorithm:
+  1. v12 seed: lum>80, sat<40, not green-dominant, not blue, alpha>200.
+  2. 20px dilation + shadow to form v12_mask.
+  3. Label components; keep those ≥500px AND compactness ≥ 0.2 (area/bbox_area).
+  4. Dilate kept components by BRIDGE_PX to bridge thin green separator lines.
+  5. Within dilated zone, fill pixels that are not green-dominant and not blue.
 
 Sources: /tmp/augusta_orig (6148b9f)
 Output:  public/holes/augusta/
@@ -26,8 +30,9 @@ ORIG_DIR  = '/tmp/augusta_orig'
 OUT_DIR   = os.path.join(os.path.dirname(__file__), '..', 'public', 'holes', 'augusta')
 
 FLAT_R, FLAT_G, FLAT_B = 200, 169, 110   # #c8a96e
-MIN_COMPONENT = 500   # px — only use large blobs as seeds for dilation
-BRIDGE_PX     = 15    # px dilation to bridge thin green separator lines
+MIN_COMPONENT   = 500    # px — minimum blob size
+MIN_COMPACTNESS = 0.25   # area / bounding_box_area — filters elongated boundary strips
+BRIDGE_PX       = 8      # px dilation to bridge thin green separator lines
 
 
 def recolor_hole(src_path, out_path):
@@ -37,16 +42,19 @@ def recolor_hole(src_path, out_path):
 
     maxc = np.maximum(np.maximum(r, g), b)
     minc = np.minimum(np.minimum(r, g), b)
-    l    = (maxc + minc) / 2.0 / 255.0
-    lum  = l * 255.0
+    lv   = (maxc + minc) / 2.0 / 255.0
+    lum  = lv * 255.0
     diff = maxc - minc
     s    = np.where(diff == 0, 0.0,
-               np.where(l > 0.5,
+               np.where(lv > 0.5,
                    diff / (510.0 - maxc - minc),
                    diff / (maxc + minc)))
-    sat    = s * 100.0
+    sat = s * 100.0
+
+    # Keep a>10 for connectivity; edge artifacts are filtered by compactness below
     inside = a > 10
-    is_green = (g > r + 10) & (g > b + 10) & (g > 45)
+    # Green-dominant: any pixel where G clearly leads both R and B
+    is_green = (g > r + 10) & (g > b + 10)
     is_blue  = (b > r + 20) & (b > g + 10)
 
     # ── v12 mask ───────────────────────────────────────────────────────────────
@@ -60,20 +68,34 @@ def recolor_hole(src_path, out_path):
     shadow   = zone & inside & (lum >= 5) & (lum <= 70) & (sat < 40) & ~is_green & ~is_blue
     v12_mask = (seed | shadow).astype(bool)
 
-    # ── Keep only large components (real bunker bodies) ────────────────────────
+    # ── Keep large, compact components (real bunker bodies) ───────────────────
     labeled, _ = label(v12_mask)
-    sizes       = np.bincount(labeled.ravel())
-    large_mask  = np.isin(labeled, np.where(sizes >= MIN_COMPONENT)[0]) & (labeled > 0)
+    sizes = np.bincount(labeled.ravel())
 
-    # ── Dilate large components to bridge thin green separator lines ───────────
+    good_ids = []
+    for cid in np.where(sizes >= MIN_COMPONENT)[0]:
+        if cid == 0:
+            continue
+        ys, xs = np.where(labeled == cid)
+        bbox_area = max(1, int(ys.max() - ys.min() + 1) * int(xs.max() - xs.min() + 1))
+        compactness = sizes[cid] / bbox_area
+        if compactness >= MIN_COMPACTNESS:
+            good_ids.append(cid)
+
+    if not good_ids:
+        # Nothing found — write unchanged image
+        Image.fromarray(np.array(img, dtype=np.uint8), mode='RGBA').save(out_path)
+        print(f'  no bunker components found — skipped')
+        return
+
+    large_mask = np.isin(labeled, good_ids)
+
+    # ── Dilate to bridge thin green separator lines ────────────────────────────
     large_img = Image.fromarray((large_mask * 255).astype(np.uint8))
     zone_big  = np.array(large_img.filter(ImageFilter.MaxFilter(BRIDGE_PX * 2 + 1))) > 0
 
-    # ── Within zone: accept everything except bright fairway or water ──────────
-    # Bright fairway: G dominant (G > R+25) AND bright (G > 130)
-    # Dark shadow inside bunker: G < 130 OR G not much > R — keep these
-    is_fairway = (g > 130) & (g > r + 25) & (g > b + 25)
-    full_mask  = zone_big & inside & ~is_fairway & ~is_blue
+    # ── Fill: non-green, non-blue pixels with reasonable opacity inside zone ──
+    full_mask = zone_big & (a > 50) & ~is_green & ~is_blue
 
     out = np.array(img, dtype=np.uint8)
     out[:,:,0] = np.where(full_mask, FLAT_R, out[:,:,0])
@@ -81,8 +103,7 @@ def recolor_hole(src_path, out_path):
     out[:,:,2] = np.where(full_mask, FLAT_B, out[:,:,2])
 
     Image.fromarray(out, mode='RGBA').save(out_path)
-    nlarge = int((sizes >= MIN_COMPONENT).sum() - 1)
-    print(f'  v12={int(v12_mask.sum()):,}  large_comps={nlarge}  filled={int(full_mask.sum()):,}')
+    print(f'  kept={len(good_ids)} comps  filled={int(full_mask.sum()):,}')
 
 
 def main():
