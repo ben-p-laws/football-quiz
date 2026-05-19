@@ -692,19 +692,7 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-function useWindowWidth() {
-  const [w, setW] = useState(typeof window !== 'undefined' ? window.innerWidth : 800)
-  useEffect(() => {
-    const fn = () => setW(window.innerWidth)
-    window.addEventListener('resize', fn)
-    return () => window.removeEventListener('resize', fn)
-  }, [])
-  return w
-}
-
 export default function FootballGolf(){
-  const windowWidth = useWindowWidth()
-  const isMobile = windowWidth < 600
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'>('setup')
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
   const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
@@ -1958,10 +1946,10 @@ export default function FootballGolf(){
             </div>
           </div>
         )}
-        <div style={{display:'flex',flexDirection:isMobile?'column-reverse':'row',alignItems:'stretch',height:isMobile?undefined:'calc(50dvh + 172px)'}}>
+        <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)'}}>
 
           {/* Left panel */}
-          <div style={{flex:isMobile?undefined:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
+          <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
             <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
@@ -2153,13 +2141,13 @@ export default function FootballGolf(){
           </div>
 
           {/* Right panel — course */}
-          <div style={{flex:isMobile?undefined:7,minWidth:0,display:'flex',flexDirection:'column',padding:isMobile?'0':'0 0 20px',height:isMobile?'calc(50dvh + 20px)':undefined}}>
+          <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
             <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
               <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
             </div>
-            <div style={{flex:1,minHeight:0,marginTop:isMobile?4:22}}>
+            <div style={{flex:1,minHeight:0,marginTop:22}}>
               <CourseView
                 hole={currentHole}
                 displayBallPos={displayPos}
