@@ -412,7 +412,7 @@ export default function GolfCalibratePage() {
             {/* Dot markers: tee, green, waypoints */}
             {current.tee && <Dot frac={current.tee} color={MODE_COLORS.tee} label="T" />}
             {current.green && <Dot frac={current.green} color={MODE_COLORS.green} label="G" />}
-            {current.waypoints.map((w, i) => <Dot key={i} frac={w} color={MODE_COLORS.waypoint} label={String(i + 1)} />)}
+            {(current.waypoints ?? []).map((w, i) => <Dot key={i} frac={w} color={MODE_COLORS.waypoint} label={String(i + 1)} />)}
 
             {/* Dot markers for hazard endpoints */}
             {pathPts && hazardMarkers.map((m, i) => {
