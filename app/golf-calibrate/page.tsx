@@ -439,7 +439,7 @@ export default function GolfCalibratePage() {
           <div style={{ fontFamily: 'monospace', background: '#0a0f1e', borderRadius: 8, padding: 10, lineHeight: 1.7 }}>
             <div style={{ color: '#f97316' }}>tee: {current.tee ? current.tee.join(', ') : '—'}</div>
             <div style={{ color: '#22c55e' }}>green: {current.green ? current.green.join(', ') : '—'}</div>
-            <div style={{ color: '#60a5fa' }}>wpts: {current.waypoints.length ? current.waypoints.map(w => `[${w.join(',')}]`).join(' ') : '—'}</div>
+            <div style={{ color: '#60a5fa' }}>wpts: {current.waypoints?.length ? current.waypoints.map(w => `[${w.join(',')}]`).join(' ') : '—'}</div>
             {current.hazards?.length
               ? current.hazards.map((z, i) => <div key={i} style={{ color: '#3b82f6', marginTop: i === 0 ? 4 : 0 }}>water {i + 1}: {z.start}–{z.end} yds</div>)
               : <div style={{ color: '#3b82f6', marginTop: 4 }}>water: —</div>
