@@ -2157,7 +2157,7 @@ export default function FootballGolf(){
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? (
-                  selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=14` :
+                  selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=15` :
                   selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
                   `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`
                 ) : undefined}
@@ -2326,6 +2326,14 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {!imageUrl && !hole.isIsland && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
         {/* Real course: faint path line so ball trajectory is visible */}
         {imageUrl && <path d={fairwayD} stroke="rgba(255,255,255,0.25)" strokeWidth={2} fill="none" strokeLinecap="round" strokeDasharray="4 4"/>}
+        {imageUrl?.includes('augusta') && hole.bunkers.map((b,i)=>{
+          const sPos = yardToSVG(b.start, hole.distance, effectivePath)
+          const ePos = yardToSVG(b.end,   hole.distance, effectivePath)
+          const mid  = yardToSVG((b.start+b.end)/2, hole.distance, effectivePath)
+          const ry   = Math.max(5, Math.abs(sPos.y - ePos.y) / 2 + 3)
+          const cx   = i % 2 === 0 ? mid.x - 8 : mid.x + 8
+          return <ellipse key={i} cx={cx} cy={mid.y} rx={12} ry={ry} fill="#c8a96e" opacity={0.92}/>
+        })}
         {!imageUrl && !hole.isIsland && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
           const midPos   = yardToSVG(midYards,hole.distance,hole.path)
