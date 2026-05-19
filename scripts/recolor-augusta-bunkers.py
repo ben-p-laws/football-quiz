@@ -1,24 +1,31 @@
 """
-Augusta bunker flat-fill — targeted extension of v12 mask.
+Augusta bunker flat-fill — connected component flood fill.
 
-v12 recoloring (f3cf7c3) detected bunkers correctly but missed two classes of
-pixels inside the bunker zone:
-  1. Truly black spots: lum < 5, excluded by v12's `lum >= 5` lower bound.
-  2. Slightly-greenish shadows: sat 40-55%, excluded by v12's `sat < 40`.
+Color-threshold approaches miss dark spots inside bunkers. Instead:
 
-This script replicates v12's seed + 20 px dilation zone, then flat-fills:
-  - All pixels v12 would have recolored (seed + shadow lum 5-70, sat < 40)
-  - Truly black spots (lum < 5) inside the zone
-  - Slightly-greenish dark spots (lum 5-70, sat 40-55) that aren't green-dominant
-    (i.e. G-R < 30, preventing real tree pixels from being included)
+1. Build a "candidate" mask: opaque pixels that aren't bright green (fairway)
+   or blue (water). This includes the entire bunker shape — bright sandy
+   centre, dark shadow spots, and the outline ring.
+
+2. Label connected components of that candidate mask using scipy.
+
+3. Find which components contain v12-style seed pixels (lum>80, sat<40,
+   not green/blue). Those components ARE the bunkers.
+
+4. Flat-fill every pixel in those components to #c8a96e.
+
+Because we use full connectivity rather than a fixed dilation radius, every
+dark spot inside the bunker is guaranteed to be in the same component as the
+bright sandy pixels — as long as it's connected to them through non-green pixels.
 
 Sources: /tmp/augusta_orig (6148b9f)
 Output:  public/holes/augusta/
 """
 
 import os
-from PIL import Image, ImageFilter
 import numpy as np
+from PIL import Image
+from scipy.ndimage import label
 
 ORIG_DIR = '/tmp/augusta_orig'
 OUT_DIR  = os.path.join(os.path.dirname(__file__), '..', 'public', 'holes', 'augusta')
@@ -31,6 +38,7 @@ def recolor_hole(src_path, out_path):
     data = np.array(img, dtype=np.float32)
     r, g, b, a = data[:,:,0], data[:,:,1], data[:,:,2], data[:,:,3]
 
+    # ── HLS ────────────────────────────────────────────────────────────────────
     maxc = np.maximum(np.maximum(r, g), b)
     minc = np.minimum(np.minimum(r, g), b)
     l    = (maxc + minc) / 2.0 / 255.0
@@ -40,51 +48,40 @@ def recolor_hole(src_path, out_path):
                np.where(l > 0.5,
                    diff / (510.0 - maxc - minc),
                    diff / (maxc + minc)))
-    sat    = s * 100.0
-    inside = a > 10
+    sat = s * 100.0
 
-    # Standard exclusions (same as v12)
+    inside   = a > 10
     is_green = (g > r + 10) & (g > b + 10) & (g > 45)
     is_blue  = (b > r + 20) & (b > g + 10)
 
-    # ── Seed (same as v12) ─────────────────────────────────────────────────────
+    # ── Seed pixels (same detection as v12) ────────────────────────────────────
     seed = (
         (lum > 80) & (sat < 40) &
         (g < r + 25) & (b > g - 35) &
-        (a > 10) & ~is_green & ~is_blue
+        inside & ~is_green & ~is_blue
     )
 
-    # ── Zone: 20 px dilation (same radius as v12) ──────────────────────────────
-    seed_img = Image.fromarray((seed * 255).astype(np.uint8))
-    zone     = np.array(seed_img.filter(ImageFilter.MaxFilter(41))) > 0
+    # ── Candidate mask: all opaque non-green non-blue pixels ───────────────────
+    # This includes the whole bunker (bright centre + dark spots + outline).
+    candidate = inside & ~is_green & ~is_blue
 
-    # ── Extended shadow conditions ─────────────────────────────────────────────
-    # 1. v12 shadow (lum 5-70, sat < 40)
-    shadow_v12 = zone & inside & (lum >= 5) & (lum <= 70) & (sat < 40) & ~is_green & ~is_blue
+    # ── Connected components of candidate pixels ────────────────────────────────
+    labeled, n = label(candidate)
 
-    # 2. Truly black spots (lum < 5) — v12 excluded these with `lum >= 5`
-    truly_black = zone & inside & (lum < 5) & ~is_blue
+    # ── Find which components contain seed pixels ──────────────────────────────
+    seed_labels = np.unique(labeled[seed & (labeled > 0)])
 
-    # 3. Slightly-greenish shadows (sat 40-55) inside the zone.
-    #    Bunker lip/shadow pixels have sat 40-55% but G is not much > R.
-    #    Tree pixels have G >> R (G-R > 30), so we exclude those.
-    slight_green = (
-        zone & inside &
-        (lum >= 5) & (lum <= 70) &
-        (sat >= 40) & (sat <= 55) &
-        (g < r + 30) &           # not green-dominant → bunker lip, not tree
-        ~is_blue
-    )
+    # ── Build bunker mask from those components ────────────────────────────────
+    bunker_mask = np.isin(labeled, seed_labels) & (labeled > 0)
 
-    full_mask = seed | shadow_v12 | truly_black | slight_green
+    print(f'  seeds={int(seed.sum()):,}  components={len(seed_labels)}  filled={int(bunker_mask.sum()):,}', end='')
 
     out = np.array(img, dtype=np.uint8)
-    out[:,:,0] = np.where(full_mask, FLAT_R, out[:,:,0])
-    out[:,:,1] = np.where(full_mask, FLAT_G, out[:,:,1])
-    out[:,:,2] = np.where(full_mask, FLAT_B, out[:,:,2])
+    out[:,:,0] = np.where(bunker_mask, FLAT_R, out[:,:,0])
+    out[:,:,1] = np.where(bunker_mask, FLAT_G, out[:,:,1])
+    out[:,:,2] = np.where(bunker_mask, FLAT_B, out[:,:,2])
 
     Image.fromarray(out, mode='RGBA').save(out_path)
-    print(f'  seed={int(seed.sum()):,}  filled={int(full_mask.sum()):,}')
 
 
 def main():
@@ -96,6 +93,7 @@ def main():
             os.path.join(ORIG_DIR, fname),
             os.path.join(OUT_DIR, fname),
         )
+        print()
     print('Done.')
 
 
