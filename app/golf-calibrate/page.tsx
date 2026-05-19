@@ -85,7 +85,7 @@ const HOLE_DISTANCES_WII: Record<number, number> = {
 type CourseId = 'pebble-beach' | 'augusta' | 'wii-golf'
 
 function getCourseHoleCount(course: CourseId) {
-  if (course === 'wii-golf') return 3
+  if (course === 'wii-golf') return 5
   return 18
 }
 function getSavedPositions(course: CourseId) {

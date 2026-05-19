@@ -2698,9 +2698,11 @@ const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number
 }
 // Wii Golf images have varying aspect ratios — yScale = 100/(w/h)
 const WII_GOLF_YSCALE: Record<number, number> = {
-  1: 100/(246/627),   // 254.9 — portrait, use contain
-  2: 100/(398/538),   // 135.2 — wide, use cover
-  3: 100/(629/1443),  // 229.4 — portrait, use contain
+  1: 100/(246/627),   // 254.9 — portrait
+  2: 100/(398/538),   // 135.2
+  3: 100/(629/1443),  // 229.4 — portrait
+  4: 100/(349/715),   // 204.9 — portrait
+  5: 100/(1024/1536), // 150.0
 }
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
   1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
