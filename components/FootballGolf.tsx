@@ -2157,7 +2157,7 @@ export default function FootballGolf(){
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' ? (
-                  selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=16` :
+                  selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=17` :
                   selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
                   `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`
                 ) : undefined}
