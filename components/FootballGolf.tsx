@@ -2258,8 +2258,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; realYScale?:number
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor,useCover=false}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; realYScale?:number; useCover?:boolean
   realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Real course: build path directly from calibrated tee → waypoints → green
@@ -2287,12 +2287,10 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const rot = imageRotation ?? 0
   const labelFs = imageUrl ? 8 : 4.5
   const iconFs  = imageUrl ? 6 : 4
-  const bHalf   = imageUrl ? 14 : 8   // half-width of label box
-  const bSingle = imageUrl ? 14 : 8   // height of single-line box
-  const bDouble = imageUrl ? 22 : 13  // height of double-line box
+  const bHalf   = imageUrl ? 14 : 8
+  const bSingle = imageUrl ? 14 : 8
+  const bDouble = imageUrl ? 22 : 13
   const ballR   = imageUrl ? 3.5 : 3.2
-
-  const useCover = false
 
   return (
     <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative',background:imageUrl?'#0a0f1e':undefined}}>
@@ -2701,15 +2699,15 @@ const WII_GOLF_YSCALE: Record<number, number> = {
   1: 100/(246/627),   // 254.9 — portrait
   2: 100/(398/538),   // 135.2
   3: 100/(629/1443),  // 229.4 — portrait
-  4: 100/(349/715),   // 204.9 — portrait
-  5: 100/(1024/1536), // 150.0
+  4: 100/(200/715),   // 357.5 — cropped to 200px wide
+  5: 100/(650/1536),  // 236.3 — cropped to 650px wide
 }
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
   1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
   2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
-  4: {teeFrac:[0.498,0.859], greenFrac:[0.45,0.222], waypointFracs:[[0.502,0.585],[0.502,0.432]]},
-  5: {teeFrac:[0.499,0.839], greenFrac:[0.679,0.142], waypointFracs:[[0.194,0.405],[0.288,0.241]]},
+  4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
+  5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
 }
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
   1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
