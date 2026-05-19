@@ -1219,8 +1219,7 @@ export default function AroundTheWorld() {
   const cntRunning = useMemo(() => Object.values(cntFilled).reduce((s, e) => s + e.val, 0), [cntFilled])
   const cntPct     = target > 0 ? Math.round((cntRunning / target) * 100) : 0
 
-  // Normalise: TopoJSON zero-pads codes < 100 (e.g. "056" for Belgium)
-  function norm(id: string | number) { return String(Number(id)) }
+  function norm(id: string | number) { return String(id).padStart(3, '0') }
 
   function geoFill(id: string | number) {
     const n = norm(id)
