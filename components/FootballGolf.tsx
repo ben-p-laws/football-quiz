@@ -2156,16 +2156,16 @@ export default function FootballGolf(){
                 isAnimating={isAnimating}
                 strokes={strokes}
                 maxRangePos={!pastPin && remaining > clubMax ? ballPos + clubMax : undefined}
-                imageUrl={courseMode==='real' ? (
+                imageUrl={courseMode==='real' && !dailyMode ? (
                   selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` :
                   selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
                   `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`
                 ) : undefined}
-                imageRotation={courseMode==='real' ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
-                realYScale={courseMode==='real' ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined}
-                realTeePos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
-                realGreenPos={courseMode==='real' ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
-                realWaypoints={courseMode==='real' ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
+                imageRotation={courseMode==='real' && !dailyMode ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
+                realYScale={courseMode==='real' && !dailyMode ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined}
+                realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
