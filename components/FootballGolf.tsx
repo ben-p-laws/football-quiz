@@ -2708,10 +2708,14 @@ const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[nu
   1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
   2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
+  4: {teeFrac:[0.498,0.859], greenFrac:[0.45,0.222], waypointFracs:[[0.502,0.585],[0.502,0.432]]},
+  5: {teeFrac:[0.499,0.839], greenFrac:[0.679,0.142], waypointFracs:[[0.194,0.405],[0.288,0.241]]},
 }
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
   1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
   2: {hazards:[{start:27,end:82}], bunkers:[{start:113,end:121}]},
+  4: {bunkers:[{start:115,end:124}]},
+  5: {bunkers:[{start:134,end:144}]},
 }
 
 // Augusta images have varying heights — yScale = 100/(w/h) so viewBox always 100 wide
