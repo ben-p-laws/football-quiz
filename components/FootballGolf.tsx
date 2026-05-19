@@ -2742,7 +2742,7 @@ const REAL_COURSES = [
 ]
 
 function courseHoleCount(courseId: string) {
-  if (courseId === 'wii-golf') return 3
+  if (courseId === 'wii-golf') return 5
   return 18
 }
 
@@ -2824,7 +2824,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           <div>
             <div style={lbl}>Start Hole</div>
             <div style={{display:'flex',alignItems:'center',gap:4,background:'#111827',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'6px 8px'}}>
-              {(()=>{const maxH=selectedCourse==='wii-golf'?3:courseHoleCount(selectedCourse);return(<>
+              {(()=>{const maxH=courseHoleCount(selectedCourse);return(<>
               <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)}
                 style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>‹</button>
               <div style={{fontSize:18,fontWeight:900,color:'white',width:28,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
