@@ -2852,7 +2852,7 @@ const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; 
   4: {bunkers:[{start:115,end:124}]},
   5: {bunkers:[{start:134,end:144}]},
   6: {hazards:[{start:31,end:108},{start:268,end:297}], bunkers:[{start:308,end:320}]},
-  7: {hazards:[{start:295,end:312}]},
+  7: {bunkers:[{start:295,end:312}]},
 }
 
 // Augusta images have varying heights — yScale = 100/(w/h) so viewBox always 100 wide
