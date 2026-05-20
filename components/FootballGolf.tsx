@@ -559,6 +559,7 @@ const WII_GOLF_HOLES: HoleDef[] = [
 
 const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
    1: {bunkers:[{start:215,end:258}]},
+   3: {bunkers:[{start:166,end:222}]},
    4: {bunkers:[{start:214,end:230}]},
    5: {bunkers:[{start:252,end:271},{start:277,end:292}]},
    6: {bunkers:[{start:144,end:165}]},
@@ -579,7 +580,7 @@ const AUGUSTA_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; b
 const AUGUSTA_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
    1: {teeFrac:[0.482,0.902], greenFrac:[0.575,0.144], waypointFracs:[[0.43,0.445],[0.466,0.311]]},
    2: {teeFrac:[0.215,0.924], greenFrac:[0.449,0.107], waypointFracs:[[0.961,0.324]]},
-   3: {teeFrac:[0.562,0.917], greenFrac:[0.635,0.122], waypointFracs:[[0.506,0.296]]},
+   3: {teeFrac:[0.577,0.917], greenFrac:[0.637,0.12], waypointFracs:[[0.38,0.427],[0.303,0.247]]},
    4: {teeFrac:[0.506,0.847], greenFrac:[0.523,0.168]},
    5: {teeFrac:[0.426,0.895], greenFrac:[0.358,0.132], waypointFracs:[[0.705,0.414]]},
    6: {teeFrac:[0.484,0.87],  greenFrac:[0.448,0.178]},
@@ -782,7 +783,7 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 export default function FootballGolf(){
   const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'>('setup')
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
-  const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
+  const [selectedCourse,setSelectedCourse] = useState<string>('augusta')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(3)
   const [tee,setTee]                     = useState<Tee>('White')
   const [startHole,setStartHole]         = useState(1)
@@ -2834,8 +2835,8 @@ const WII_GOLF_YSCALE: Record<number, number> = {
   3: 100/(629/1443),  // 229.4 — portrait
   4: 100/(200/715),   // 357.5 — cropped to 200px wide
   5: 100/(650/1536),  // 236.3 — cropped to 650px wide
-  6: 100/(370/674),   // 182.2
-  7: 100/(1024/1536), // 150.0
+  6: 100/(310/674),   // 217.4 — cropped to 310px wide
+  7: 100/(830/1536),  // 185.1 — cropped to 830px wide
 }
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
   1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
@@ -2843,8 +2844,8 @@ const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[nu
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
   4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
   5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
-  6: {teeFrac:[0.346,0.892], greenFrac:[0.608,0.173], waypointFracs:[[0.478,0.42]]},
-  7: {teeFrac:[0.414,0.868], greenFrac:[0.736,0.273], waypointFracs:[[0.243,0.255],[0.436,0.109]]},
+  6: {teeFrac:[0.332,0.892], greenFrac:[0.645,0.173], waypointFracs:[[0.490,0.42]]},
+  7: {teeFrac:[0.390,0.868], greenFrac:[0.788,0.273], waypointFracs:[[0.180,0.255],[0.418,0.109]]},
 }
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
   1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
@@ -2871,10 +2872,10 @@ function fracToSVG(frac:[number,number], yScale=260):{x:number;y:number}{
 // ── Setup screen ───────────────────────────────────────────────────────────────
 
 const REAL_COURSES = [
-  { id:'pebble-beach', name:'Pebble Beach Golf Links', available:true },
-  { id:'st-andrews',   name:'St Andrews — Old Course',  available:false },
   { id:'augusta',      name:'Augusta National',          available:true },
+  { id:'pebble-beach', name:'Pebble Beach',              available:true },
   { id:'wii-golf',     name:'Wii Sports — Golf',         available:true },
+  { id:'st-andrews',   name:'St Andrews — Old Course',  available:false },
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
@@ -3101,97 +3102,93 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       </div>
 
       {/* Normal Play card */}
-      <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14,display:'flex',flexDirection:'column',gap:12}}>
-        <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Normal Play</div>
+      {(()=>{
+        const rowLbl: React.CSSProperties = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',whiteSpace:'nowrap',flexShrink:0,minWidth:46}
+        const row: React.CSSProperties = {display:'flex',alignItems:'center',gap:10}
+        const pill = (active:boolean,disabled=false): React.CSSProperties => ({
+          flex:1,background:active?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',
+          color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'rgba(255,255,255,0.6)',
+          border:`1.5px solid ${active?'rgba(34,197,94,0.5)':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.07)'}`,
+          borderRadius:9,padding:'7px 0',fontSize:13,fontWeight:800,cursor:disabled?'not-allowed':'pointer',
+          fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1,
+        })
+        const maxH = courseHoleCount(selectedCourse)
+        return(
+        <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'12px 14px',display:'flex',flexDirection:'column',gap:9}}>
+          <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Normal Play</div>
 
-        {/* Solo / H2H */}
-        <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:3,display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
-          {([['solo','Solo'],['h2h','Head to Head']] as const).map(([val,label])=>(
-            <button key={val} onClick={()=>setMode(val)} style={{background:mode===val?'rgba(34,197,94,0.15)':'transparent',color:mode===val?'#22c55e':'rgba(255,255,255,0.35)',border:`1.5px solid ${mode===val?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'8px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Course type toggle */}
-        <div>
-          <div style={lbl}>Course Type</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-            <button onClick={()=>setCourseMode('real')}
-              style={{background:courseMode==='real'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='real'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
-              <div style={{fontSize:13,fontWeight:900}}>🏌️ Real Course</div>
-            </button>
-            <button onClick={()=>setCourseMode('random')}
-              style={{background:courseMode==='random'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='random'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
-              <div style={{fontSize:13,fontWeight:900}}>🎲 Random</div>
-            </button>
+          {/* Mode row */}
+          <div style={row}>
+            <div style={rowLbl}>Mode</div>
+            <button onClick={()=>setMode('solo')} style={pill(mode==='solo')}>Solo</button>
+            <button onClick={()=>setMode('h2h')} style={pill(mode==='h2h')}>Head to Head</button>
           </div>
-        </div>
 
-        {/* Real course options: course selector + start hole side by side */}
-        {courseMode==='real'&&(
-          <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'end'}}>
-            <div>
-              <div style={lbl}>Course</div>
-              <div style={{position:'relative'}}>
+          {/* Type row */}
+          <div style={row}>
+            <div style={rowLbl}>Type</div>
+            <button onClick={()=>setCourseMode('real')} style={pill(courseMode==='real')}>🏌️ Real</button>
+            <button onClick={()=>setCourseMode('random')} style={pill(courseMode==='random')}>🎲 Random</button>
+          </div>
+
+          {/* Course + start hole row (real only) */}
+          {courseMode==='real'&&(
+            <div style={{...row,alignItems:'flex-end'}}>
+              <div style={{...rowLbl,alignSelf:'center'}}>Course</div>
+              <div style={{flex:1,position:'relative'}}>
                 <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf' && numHoles===18) setNumHoles(3) }}
-                  style={{width:'100%',background:'rgba(255,255,255,0.04)',color:'white',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'10px 36px 10px 12px',fontSize:13,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
+                  style={{width:'100%',background:'rgba(34,197,94,0.12)',color:'#22c55e',border:'1.5px solid rgba(34,197,94,0.5)',borderRadius:9,padding:'7px 32px 7px 10px',fontSize:13,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
                   {REAL_COURSES.filter(c=>c.available).map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
                   {REAL_COURSES.filter(c=>!c.available).map(c=>(<option key={c.id} value={c.id} disabled>{c.name} (soon)</option>))}
                 </select>
-                <div style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,0.4)',fontSize:10,lineHeight:1}}>▼</div>
+                <div style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(34,197,94,0.6)',fontSize:9}}>▼</div>
               </div>
-            </div>
-            <div>
-              <div style={lbl}>Start Hole</div>
-              <div style={{display:'flex',alignItems:'center',gap:4,background:'rgba(255,255,255,0.04)',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'6px 8px'}}>
-                {(()=>{const maxH=courseHoleCount(selectedCourse);return(<>
+              <div style={{position:'relative',flexShrink:0}}>
+                <div style={{position:'absolute',top:-13,left:'50%',transform:'translateX(-50%)',fontSize:7,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Start Hole</div>
+              <div style={{display:'flex',alignItems:'center',gap:2,background:'rgba(255,255,255,0.04)',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:9,padding:'3px 4px'}}>
                 <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)}
-                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>‹</button>
-                <div style={{fontSize:18,fontWeight:900,color:'white',width:28,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
+                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:4,width:16,height:16,fontSize:10,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+                <div style={{fontSize:11,fontWeight:900,color:'white',width:18,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
                   {String(Math.min(startHole,maxH)).padStart(2,'0')}
                 </div>
                 <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)}
-                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>›</button>
-                </>)})()}
+                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:4,width:16,height:16,fontSize:10,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
+              </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Holes */}
-        <div>
-          <div style={lbl}>Holes</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
+          {/* Holes row */}
+          <div style={row}>
+            <div style={rowLbl}>Holes</div>
             {([3,6,9,18] as number[]).map(n=>{
-              const isWii = courseMode==='real' && selectedCourse==='wii-golf'
-              const disabled = isWii && n===18
-              const active = numHoles===n && !disabled
-              return (
-                <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={{background:active?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'white',border:`2px solid ${active?'#22c55e':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'7px 0',fontSize:16,fontWeight:900,cursor:disabled?'not-allowed':'pointer',fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1}}>
+              const disabled = courseMode==='real' && selectedCourse==='wii-golf' && n===18
+              return(
+                <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={pill(numHoles===n && !disabled, disabled)}>
                   {n}
                 </button>
               )
             })}
           </div>
-        </div>
 
-        {/* CTA */}
-        {mode==='solo'
-          ? <button onClick={onStart} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-              Tee Off →
-            </button>
-          : <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                Create Room
+          {/* CTA */}
+          {mode==='solo'
+            ? <button onClick={onStart} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginTop:2}}>
+                Tee Off →
               </button>
-              <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
-              <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'2px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                Join Room
-              </button>
-            </div>
-        }
-      </div>
+            : <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
+                <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                  Create Room
+                </button>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
+                <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'1.5px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                  Join Room
+                </button>
+              </div>
+          }
+        </div>
+        )
+      })()}
     </div>
   )
 }

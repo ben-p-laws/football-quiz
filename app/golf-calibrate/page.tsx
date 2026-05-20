@@ -78,8 +78,8 @@ const SAVED_POSITIONS_WII: Record<number, { teeFrac: FracPt; greenFrac: FracPt; 
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
   4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
   5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
-  6: {teeFrac:[0.346,0.892], greenFrac:[0.608,0.173], waypointFracs:[[0.478,0.42]]},
-  7: {teeFrac:[0.414,0.868], greenFrac:[0.736,0.273], waypointFracs:[[0.243,0.255],[0.436,0.109]]},
+  6: {teeFrac:[0.332,0.892], greenFrac:[0.645,0.173], waypointFracs:[[0.490,0.42]]},
+  7: {teeFrac:[0.390,0.868], greenFrac:[0.788,0.273], waypointFracs:[[0.180,0.255],[0.418,0.109]]},
 }
 const HOLE_DISTANCES_WII: Record<number, number> = {
   1: 370, 2: 134, 3: 465,
