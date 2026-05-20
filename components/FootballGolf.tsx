@@ -2900,7 +2900,7 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
               <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'3px 0'}}>
                 <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',width:14,textAlign:'right'}}>{i+1}</div>
                 <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',flex:1}}>{r.holes}H · {r.date}</div>
-                <div style={{fontSize:11,fontWeight:800,color:ns>0?'#22c55e':ns<0?'#ef4444':'white'}}>{vp===0?'E':vp>0?`+${vp}`:vp} <span style={{fontSize:9,fontWeight:500,color:'rgba(255,255,255,0.3)'}}>({ns>0?'+':''}{Math.round(ns*10)/10} norm)</span></div>
+                <div style={{fontSize:11,fontWeight:800,color:ns<0?'#22c55e':ns>0?'#ef4444':'white'}}>{vp===0?'E':vp>0?`+${vp}`:vp} <span style={{fontSize:9,fontWeight:500,color:'rgba(255,255,255,0.3)'}}>({ns>0?'+':''}{Math.round(ns*10)/10} norm)</span></div>
               </div>
             )
           })}
@@ -2984,8 +2984,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       {/* Handicap card + expand + leaderboard button */}
       <div style={{width:'100%',maxWidth:320,display:'flex',gap:8,alignItems:'stretch'}}>
         <HandicapCard globalRank={globalRank} />
-        <button onClick={()=>setHcpExpanded(v=>!v)} style={{flexShrink:0,background:hcpExpanded?'rgba(255,255,255,0.1)':'#111827',border:`1.5px solid ${hcpExpanded?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:'0 10px',cursor:'pointer',fontSize:12,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.5)',transition:'all 0.15s',transform:hcpExpanded?'rotate(180deg)':'none'}}>▼</button>
-        <button onClick={openLeaderboard} style={{flexShrink:0,background:lbOpen?'rgba(34,197,94,0.15)':'#111827',border:`1.5px solid ${lbOpen?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:'0 12px',cursor:'pointer',fontSize:18,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>🌍</button>
+        <button onClick={()=>setHcpExpanded(v=>!v)} style={{flexShrink:0,width:44,background:hcpExpanded?'rgba(255,255,255,0.1)':'#111827',border:`1.5px solid ${hcpExpanded?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:0,cursor:'pointer',fontSize:16,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.5)',transition:'all 0.15s'}}>?</button>
+        <button onClick={openLeaderboard} style={{flexShrink:0,width:44,background:lbOpen?'rgba(34,197,94,0.15)':'#111827',border:`1.5px solid ${lbOpen?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:0,cursor:'pointer',fontSize:18,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>🌍</button>
       </div>
 
       {/* Handicap expanded content */}
