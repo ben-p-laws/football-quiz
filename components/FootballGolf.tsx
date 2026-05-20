@@ -3096,12 +3096,12 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
             </div>
             <div style={{fontSize:10,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓ Done':'Play →'}</div>
           </button>
-          <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1a2e1a,#0f1f0f)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#16a34a'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
+          <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
               <span style={{fontSize:16,lineHeight:1}}>🏌️</span>
               <span style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</span>
             </div>
-            <div style={{fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#16a34a'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
+            <div style={{fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#3b82f6'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
           </button>
         </div>
       </div>
@@ -3124,14 +3124,12 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           <div style={lbl}>Course Type</div>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
             <button onClick={()=>setCourseMode('real')}
-              style={{background:courseMode==='real'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='real'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
+              style={{background:courseMode==='real'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='real'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
               <div style={{fontSize:13,fontWeight:900}}>🏌️ Real Course</div>
-              <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>Play a real course</div>
             </button>
             <button onClick={()=>setCourseMode('random')}
-              style={{background:courseMode==='random'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='random'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
+              style={{background:courseMode==='random'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='random'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center'}}>
               <div style={{fontSize:13,fontWeight:900}}>🎲 Random</div>
-              <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>New layout each game</div>
             </button>
           </div>
         </div>
@@ -3176,7 +3174,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
               const disabled = isWii && n===18
               const active = numHoles===n && !disabled
               return (
-                <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={{background:active?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'white',border:`2px solid ${active?'#22c55e':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'12px 0',fontSize:18,fontWeight:900,cursor:disabled?'not-allowed':'pointer',fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1}}>
+                <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={{background:active?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'white',border:`2px solid ${active?'#22c55e':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'7px 0',fontSize:16,fontWeight:900,cursor:disabled?'not-allowed':'pointer',fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1}}>
                   {n}
                 </button>
               )
