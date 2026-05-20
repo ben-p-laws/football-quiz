@@ -657,6 +657,25 @@ const USERNAME_KEY = 'golf_username'
 function getSavedUsername(){ return typeof window!=='undefined' ? localStorage.getItem(USERNAME_KEY)??'' : '' }
 function setSavedUsername(name:string){ if(typeof window!=='undefined') localStorage.setItem(USERNAME_KEY, name) }
 
+function getDeviceId():string{
+  if(typeof window==='undefined') return ''
+  let id = localStorage.getItem('golf_device_id')
+  if(!id){ id = Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('golf_device_id', id) }
+  return id
+}
+function setDeviceId(id:string){ if(typeof window!=='undefined') localStorage.setItem('golf_device_id', id) }
+
+async function upsertHandicap(){
+  const hcp = getHandicapData()
+  const username = getSavedUsername()
+  const deviceId = getDeviceId()
+  if(!hcp || !username || !deviceId) return
+  fetch('/api/golf-handicap',{
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({deviceId, username, handicapIndex:hcp.index, tier:hcp.tier, totalRounds:hcp.totalRounds}),
+  }).catch(()=>{})
+}
+
 function saveGolfRound(holes:number, strokes:number, par:number){
   if(typeof window==='undefined') return
   const rounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
@@ -1022,15 +1041,10 @@ export default function FootballGolf(){
     setPhase('playing')
   }
 
-  function getDailyDeviceId(): string {
-    let id = localStorage.getItem('golf_device_id')
-    if (!id) { id = Math.random().toString(36).slice(2)+Date.now().toString(36); localStorage.setItem('golf_device_id', id) }
-    return id
-  }
 
   async function startDailyChallenge(playerName: string) {
     const today = new Date().toISOString().slice(0,10)
-    const deviceId = getDailyDeviceId()
+    const deviceId = getDeviceId()
     // Check localStorage first — no network round-trip needed for already-played
     const stored = localStorage.getItem(`golf_daily_${today}`)
     const resp = await fetch(`/api/golf-daily?date=${today}`)
@@ -1315,7 +1329,7 @@ export default function FootballGolf(){
       setDailyResult(res)
       setShotResult(null)
       localStorage.setItem(`golf_daily_${dailyDate}`, JSON.stringify(res))
-      const deviceId = getDailyDeviceId()
+      const deviceId = getDeviceId()
       fetch('/api/golf-daily',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({date:dailyDate,playerName:dailyPlayerName,deviceId,distanceFromPin:res.distanceFromPin,isOob})
       }).then(r=>r.json()).then(d=>{ if(d.leaderboard) setDailyLeaderboard(d.leaderboard) }).catch(()=>{})
@@ -2800,19 +2814,86 @@ function HandicapCard(){
     : 'transparent'
   const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
 
+  const [lbOpen, setLbOpen]           = useState(false)
+  const [lbData, setLbData]           = useState<{username:string;handicap_index:number;tier:string}[]>([])
+  const [lbLoading, setLbLoading]     = useState(false)
+  const [linkMode, setLinkMode]       = useState<'off'|'generate'|'claim'>('off')
+  const [linkCode, setLinkCode]       = useState('')
+  const [linkInput, setLinkInput]     = useState('')
+  const [linkMsg, setLinkMsg]         = useState('')
+
+  function openLeaderboard(){
+    setLbOpen(true)
+    if(lbData.length) return
+    setLbLoading(true)
+    fetch('/api/golf-handicap?limit=50')
+      .then(r=>r.json())
+      .then(d=>setLbData(d.leaderboard??[]))
+      .finally(()=>setLbLoading(false))
+  }
+
+  async function generateCode(){
+    setLinkMsg('')
+    const res = await fetch('/api/golf-device-link',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'generate',deviceId:getDeviceId()})}).then(r=>r.json())
+    if(res.error) setLinkMsg(res.error)
+    else { setLinkCode(res.code); setLinkMode('generate') }
+  }
+
+  async function claimCode(){
+    setLinkMsg('')
+    const res = await fetch('/api/golf-device-link',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'claim',code:linkInput.toUpperCase(),newDeviceId:getDeviceId()})}).then(r=>r.json())
+    if(res.error){ setLinkMsg(res.error); return }
+    setDeviceId(res.primaryDeviceId)
+    setLinkMsg('✓ Devices linked! Your stats are now synced.')
+    setLinkMode('off')
+  }
+
   return(
+    <>
+    {/* Leaderboard overlay */}
+    {lbOpen&&(
+      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:100,display:'flex',flexDirection:'column',alignItems:'center',padding:'20px 16px',overflowY:'auto'}}
+           onClick={e=>e.target===e.currentTarget&&setLbOpen(false)}>
+        <div style={{width:'100%',maxWidth:380,background:'#111827',borderRadius:16,padding:'20px 16px'}}>
+          <div style={{display:'flex',alignItems:'center',marginBottom:16}}>
+            <div style={{fontSize:16,fontWeight:900,color:'white',flex:1}}>🌍 Global Handicap</div>
+            <button onClick={()=>setLbOpen(false)} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:20,cursor:'pointer',lineHeight:1}}>×</button>
+          </div>
+          {lbLoading&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'20px 0'}}>Loading…</div>}
+          {!lbLoading&&lbData.length===0&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'20px 0'}}>No entries yet</div>}
+          {lbData.map((e,i)=>{
+            const [,color]=getHandicapTier(e.handicap_index)
+            const isMe = getSavedUsername() && e.username===getSavedUsername()
+            return(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:10,background:isMe?'rgba(255,255,255,0.05)':'transparent',marginBottom:2}}>
+                <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.25)',width:22,textAlign:'right'}}>#{i+1}</div>
+                <div style={{flex:1,fontSize:13,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.username}</div>
+                <div style={{fontSize:11,fontWeight:800,color}}>{e.tier}</div>
+                <div style={{fontSize:13,fontWeight:900,color:e.handicap_index<0?'#22c55e':e.handicap_index===0?'white':'rgba(255,255,255,0.6)',minWidth:36,textAlign:'right'}}>
+                  {e.handicap_index>0?'+':''}{e.handicap_index}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )}
+
     <div style={{width:'100%',maxWidth:320,background:cardBg,borderRadius:12,overflow:'hidden',border:cardBorder}}>
       {/* Collapsed row */}
-      <button onClick={()=>setExpanded(e=>!e)} style={{width:'100%',background:'transparent',border:'none',cursor:'pointer',padding:'10px 14px',display:'flex',alignItems:'center',gap:10,fontFamily:'inherit'}}>
+      <div style={{display:'flex',alignItems:'center',padding:'10px 14px',gap:10}}>
         <div style={{fontSize:18,lineHeight:1}}>🏆</div>
         <div style={{flex:1,textAlign:'left'}}>
           {hcp
-            ? <><span style={{fontSize:13,fontWeight:900,color:'white'}}>Handicap {hcp.index > 0 ? '+' : ''}{hcp.index}</span><span style={{fontSize:12,fontWeight:700,color:hcp.color,marginLeft:8}}>{hcp.tier}</span></>
+            ? <><span style={{fontSize:13,fontWeight:900,color:'white'}}>Handicap {hcp.index>0?'+':''}{hcp.index}</span><span style={{fontSize:12,fontWeight:700,color:hcp.color,marginLeft:8}}>{hcp.tier}</span></>
             : <span style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>Complete 5 rounds to get a handicap</span>
           }
         </div>
-        <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',transition:'transform 0.2s',transform:expanded?'rotate(180deg)':'none'}}>▼</div>
-      </button>
+        <button onClick={openLeaderboard} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:7,padding:'4px 8px',cursor:'pointer',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.5)',fontFamily:'inherit'}}>🌍</button>
+        <button onClick={()=>setExpanded(e=>!e)} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 4px',fontFamily:'inherit',fontSize:10,color:'rgba(255,255,255,0.3)',transition:'transform 0.2s',transform:expanded?'rotate(180deg)':'none'}}>▼</button>
+      </div>
 
       {/* Expanded breakdown */}
       {expanded&&(
@@ -2852,9 +2933,36 @@ function HandicapCard(){
               {roundCount} / 5 rounds completed
             </div>
           )}
+          {/* Device linking */}
+          <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',marginTop:10,paddingTop:10}}>
+            <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Link Another Device</div>
+            {linkMode==='off'&&(
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={generateCode} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.6)',cursor:'pointer',fontFamily:'inherit'}}>Get code</button>
+                <button onClick={()=>setLinkMode('claim')} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.6)',cursor:'pointer',fontFamily:'inherit'}}>Enter code</button>
+              </div>
+            )}
+            {linkMode==='generate'&&(
+              <div style={{textAlign:'center'}}>
+                <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginBottom:4}}>Enter this code on your other device · expires in 10 min</div>
+                <div style={{fontSize:26,fontWeight:900,color:'white',letterSpacing:'0.15em'}}>{linkCode}</div>
+                <button onClick={()=>setLinkMode('off')} style={{marginTop:8,background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
+              </div>
+            )}
+            {linkMode==='claim'&&(
+              <div style={{display:'flex',gap:6}}>
+                <input value={linkInput} onChange={e=>setLinkInput(e.target.value.toUpperCase())} placeholder="CODE" maxLength={6}
+                  style={{flex:1,background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'7px 10px',fontSize:14,fontWeight:900,color:'white',fontFamily:'inherit',letterSpacing:'0.15em',textTransform:'uppercase',outline:'none'}}/>
+                <button onClick={claimCode} style={{background:'#22c55e',border:'none',borderRadius:8,padding:'7px 12px',fontSize:11,fontWeight:900,color:'#0a0f1e',cursor:'pointer',fontFamily:'inherit'}}>Link</button>
+                <button onClick={()=>setLinkMode('off')} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+              </div>
+            )}
+            {linkMsg&&<div style={{fontSize:11,color:linkMsg.startsWith('✓')?'#22c55e':'#ef4444',marginTop:6,fontWeight:700}}>{linkMsg}</div>}
+          </div>
         </div>
       )}
     </div>
+    </>
   )
 }
 
@@ -3142,6 +3250,7 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
 
   useEffect(()=>{
     saveGolfRound(numHoles, totalStrokes, totalPar)
+    upsertHandicap()
     if(name.trim()) saveScore()
   },[])
 
