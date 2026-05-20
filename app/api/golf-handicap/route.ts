@@ -19,18 +19,24 @@ export async function GET(req: Request) {
   const db = getClient()
 
   if (deviceId) {
-    const { data } = await db
+    const { data: entry } = await db
       .from('golf_handicap')
       .select('username, handicap_index, tier, total_rounds')
       .eq('device_id', deviceId)
       .maybeSingle()
-    return NextResponse.json({ entry: data ?? null })
+    if (!entry) return NextResponse.json({ entry: null, rank: null })
+    // Rank = number of players with higher handicap_index (better) + 1
+    const { count } = await db
+      .from('golf_handicap')
+      .select('*', { count: 'exact', head: true })
+      .gt('handicap_index', entry.handicap_index)
+    return NextResponse.json({ entry, rank: (count ?? 0) + 1 })
   }
 
   const { data } = await db
     .from('golf_handicap')
     .select('username, handicap_index, tier, total_rounds')
-    .order('handicap_index', { ascending: true })
+    .order('handicap_index', { ascending: false })
     .limit(limit)
 
   return NextResponse.json({ leaderboard: data ?? [] })

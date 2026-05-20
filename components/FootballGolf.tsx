@@ -2801,19 +2801,37 @@ const TIER_ROWS:[string,string,string][] = [
   ['30+',  'Hacker',      '#ef4444'],
 ]
 
-function HandicapCard(){
-  const [expanded, setExpanded] = useState(false)
+function HandicapCard({globalRank}:{globalRank:number|null}){
   const hcp = useMemo(()=>getHandicapData(),[])
-  const roundCount = useMemo(()=>{
-    if(typeof window==='undefined') return 0
-    return (JSON.parse(localStorage.getItem('golf_rounds')?? '[]') as GolfRound[]).length
-  },[])
+  useEffect(()=>{ upsertHandicap() },[])
+
+  const cardBg = hcp ? `linear-gradient(135deg,${hcp.color}22,${hcp.color}11)` : 'transparent'
+  const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
+
+  return(
+    <div style={{flex:1,background:cardBg,borderRadius:12,border:cardBorder,padding:'10px 12px',display:'flex',alignItems:'center',gap:8}}>
+      <div style={{fontSize:16,lineHeight:1}}>🏆</div>
+      <div style={{flex:1}}>
+        {hcp
+          ? <>
+              <div style={{fontSize:12,fontWeight:900,color:'white'}}>
+                Hcp {hcp.index>0?`+${hcp.index}`:Math.abs(hcp.index)}
+                <span style={{fontSize:11,fontWeight:700,color:hcp.color,marginLeft:6}}>{hcp.tier}</span>
+              </div>
+              {globalRank&&<div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>Ranked #{globalRank} globally</div>}
+            </>
+          : <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>5 rounds for handicap</span>
+        }
+      </div>
+    </div>
+  )
+}
+
+function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCount:number}){
   const [linkMode, setLinkMode] = useState<'off'|'generate'|'claim'>('off')
   const [linkCode, setLinkCode] = useState('')
   const [linkInput, setLinkInput] = useState('')
   const [linkMsg, setLinkMsg] = useState('')
-
-  useEffect(()=>{ upsertHandicap() },[])
 
   async function generateCode(){
     setLinkMsg('')
@@ -2833,89 +2851,65 @@ function HandicapCard(){
     setLinkMode('off')
   }
 
-  const cardBg = hcp ? `linear-gradient(135deg,${hcp.color}22,${hcp.color}11)` : 'transparent'
-  const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
-
   return(
-    <div style={{flex:1,background:cardBg,borderRadius:12,overflow:'hidden',border:cardBorder}}>
-      {/* Collapsed row */}
-      <button onClick={()=>setExpanded(e=>!e)} style={{width:'100%',background:'transparent',border:'none',cursor:'pointer',padding:'10px 12px',display:'flex',alignItems:'center',gap:8,fontFamily:'inherit'}}>
-        <div style={{fontSize:16,lineHeight:1}}>🏆</div>
-        <div style={{flex:1,textAlign:'left'}}>
-          {hcp
-            ? <><span style={{fontSize:12,fontWeight:900,color:'white'}}>Hcp {hcp.index>0?`+${hcp.index}`:Math.abs(hcp.index)}</span><span style={{fontSize:11,fontWeight:700,color:hcp.color,marginLeft:6}}>{hcp.tier}</span></>
-            : <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>5 rounds for handicap</span>
-          }
-        </div>
-        <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',transition:'transform 0.2s',transform:expanded?'rotate(180deg)':'none'}}>▼</div>
-      </button>
-
-      {/* Expanded breakdown */}
-      {expanded&&(
-        <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',padding:'10px 14px 12px'}}>
-          {/* Tier table */}
-          <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',gap:'4px 10px',marginBottom:hcp?10:0}}>
-            {TIER_ROWS.map(([range,label,color])=>{
-              const active = hcp?.tier===label
-              return(
-                <React.Fragment key={label}>
-                  <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',alignSelf:'center'}}>{range}</div>
-                  <div style={{fontSize:11,fontWeight:800,color:active?color:'rgba(255,255,255,0.45)',alignSelf:'center'}}>{label}</div>
-                  <div style={{width:6,height:6,borderRadius:'50%',background:active?color:'rgba(255,255,255,0.1)',alignSelf:'center',justifySelf:'end'}}/>
-                </React.Fragment>
-              )
-            })}
-          </div>
-          {/* Top 5 rounds */}
-          {hcp&&(
-            <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8}}>
-              <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Top 5 rounds ({hcp.totalRounds} played)</div>
-              {hcp.top5.map((r,i)=>{
-                const ns = normalisedScore(r)
-                const vp = r.strokes - r.par
-                return(
-                  <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'3px 0'}}>
-                    <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',width:14,textAlign:'right'}}>{i+1}</div>
-                    <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',flex:1}}>{r.holes}H · {r.date}</div>
-                    <div style={{fontSize:11,fontWeight:800,color:ns<0?'#22c55e':ns>0?'#ef4444':'white'}}>{vp===0?'E':vp>0?`+${vp}`:vp} <span style={{fontSize:9,fontWeight:500,color:'rgba(255,255,255,0.3)'}}>({ns>0?'+':''}{Math.round(ns*10)/10} norm)</span></div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-          {!hcp&&(
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',textAlign:'center',paddingTop:4}}>
-              {roundCount} / 5 rounds completed
-            </div>
-          )}
-          {/* Device linking */}
-          <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',marginTop:10,paddingTop:10}}>
-            <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Link Another Device</div>
-            {linkMode==='off'&&(
-              <div style={{display:'flex',gap:6}}>
-                <button onClick={generateCode} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.6)',cursor:'pointer',fontFamily:'inherit'}}>Get code</button>
-                <button onClick={()=>setLinkMode('claim')} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.6)',cursor:'pointer',fontFamily:'inherit'}}>Enter code</button>
+    <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'12px 14px'}}>
+      {/* Tier table */}
+      <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',gap:'4px 10px',marginBottom:hcp?10:0}}>
+        {TIER_ROWS.map(([range,label,color])=>{
+          const active = hcp?.tier===label
+          return(
+            <React.Fragment key={label}>
+              <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',alignSelf:'center'}}>{range}</div>
+              <div style={{fontSize:11,fontWeight:800,color:active?color:'rgba(255,255,255,0.45)',alignSelf:'center'}}>{label}</div>
+              <div style={{width:6,height:6,borderRadius:'50%',background:active?color:'rgba(255,255,255,0.1)',alignSelf:'center',justifySelf:'end'}}/>
+            </React.Fragment>
+          )
+        })}
+      </div>
+      {/* Top 5 rounds */}
+      {hcp&&(
+        <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8}}>
+          <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Top 5 rounds ({hcp.totalRounds} played)</div>
+          {hcp.top5.map((r,i)=>{
+            const ns = normalisedScore(r)
+            const vp = r.strokes - r.par
+            return(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'3px 0'}}>
+                <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',width:14,textAlign:'right'}}>{i+1}</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',flex:1}}>{r.holes}H · {r.date}</div>
+                <div style={{fontSize:11,fontWeight:800,color:ns>0?'#22c55e':ns<0?'#ef4444':'white'}}>{vp===0?'E':vp>0?`+${vp}`:vp} <span style={{fontSize:9,fontWeight:500,color:'rgba(255,255,255,0.3)'}}>({ns>0?'+':''}{Math.round(ns*10)/10} norm)</span></div>
               </div>
-            )}
-            {linkMode==='generate'&&(
-              <div style={{textAlign:'center'}}>
-                <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginBottom:4}}>Enter this code on your other device · expires in 10 min</div>
-                <div style={{fontSize:26,fontWeight:900,color:'white',letterSpacing:'0.15em'}}>{linkCode}</div>
-                <button onClick={()=>setLinkMode('off')} style={{marginTop:8,background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
-              </div>
-            )}
-            {linkMode==='claim'&&(
-              <div style={{display:'flex',gap:6}}>
-                <input value={linkInput} onChange={e=>setLinkInput(e.target.value.toUpperCase())} placeholder="CODE" maxLength={6}
-                  style={{flex:1,background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'7px 10px',fontSize:14,fontWeight:900,color:'white',fontFamily:'inherit',letterSpacing:'0.15em',textTransform:'uppercase',outline:'none'}}/>
-                <button onClick={claimCode} style={{background:'#22c55e',border:'none',borderRadius:8,padding:'7px 12px',fontSize:11,fontWeight:900,color:'#0a0f1e',cursor:'pointer',fontFamily:'inherit'}}>Link</button>
-                <button onClick={()=>setLinkMode('off')} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
-              </div>
-            )}
-            {linkMsg&&<div style={{fontSize:11,color:linkMsg.startsWith('✓')?'#22c55e':'#ef4444',marginTop:6,fontWeight:700}}>{linkMsg}</div>}
-          </div>
+            )
+          })}
         </div>
       )}
+      {!hcp&&<div style={{fontSize:10,color:'rgba(255,255,255,0.3)',textAlign:'center',paddingTop:4}}>{roundCount} / 5 rounds completed</div>}
+      {/* Device linking */}
+      <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',marginTop:10,paddingTop:10}}>
+        <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Link Another Device</div>
+        {linkMode==='off'&&(
+          <div style={{display:'flex',gap:6}}>
+            <button onClick={generateCode} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.6)',cursor:'pointer',fontFamily:'inherit'}}>Get code</button>
+            <button onClick={()=>setLinkMode('claim')} style={{flex:1,background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.6)',cursor:'pointer',fontFamily:'inherit'}}>Enter code</button>
+          </div>
+        )}
+        {linkMode==='generate'&&(
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.4)',marginBottom:4}}>Enter this on your other device · expires in 10 min</div>
+            <div style={{fontSize:26,fontWeight:900,color:'white',letterSpacing:'0.15em'}}>{linkCode}</div>
+            <button onClick={()=>setLinkMode('off')} style={{marginTop:8,background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:11,cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
+          </div>
+        )}
+        {linkMode==='claim'&&(
+          <div style={{display:'flex',gap:6}}>
+            <input value={linkInput} onChange={e=>setLinkInput(e.target.value.toUpperCase())} placeholder="CODE" maxLength={6}
+              style={{flex:1,background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'7px 10px',fontSize:14,fontWeight:900,color:'white',fontFamily:'inherit',letterSpacing:'0.15em',textTransform:'uppercase',outline:'none'}}/>
+            <button onClick={claimCode} style={{background:'#22c55e',border:'none',borderRadius:8,padding:'7px 12px',fontSize:11,fontWeight:900,color:'#0a0f1e',cursor:'pointer',fontFamily:'inherit'}}>Link</button>
+            <button onClick={()=>setLinkMode('off')} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+          </div>
+        )}
+        {linkMsg&&<div style={{fontSize:11,color:linkMsg.startsWith('✓')?'#22c55e':'#ef4444',marginTop:6,fontWeight:700}}>{linkMsg}</div>}
+      </div>
     </div>
   )
 }
@@ -2932,8 +2926,17 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   const [lbOpen, setLbOpen]       = useState(false)
   const [lbData, setLbData]       = useState<{username:string;handicap_index:number;tier:string}[]>([])
   const [lbLoading, setLbLoading] = useState(false)
+  const [hcpExpanded, setHcpExpanded] = useState(false)
+  const [globalRank, setGlobalRank]   = useState<number|null>(null)
   const today = new Date().toISOString().slice(0,10)
   const dailyPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
+
+  useEffect(()=>{
+    fetch('/api/golf-handicap?deviceId='+getDeviceId())
+      .then(r=>r.json())
+      .then(d=>{ if(d.rank) setGlobalRank(d.rank) })
+      .catch(()=>{})
+  },[])
 
   function openLeaderboard(){
     setLbOpen(v=>!v)
@@ -2952,11 +2955,19 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       {/* Title */}
       <div style={{fontSize:24,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:2}}>Football Golf</div>
 
-      {/* Handicap card + leaderboard button */}
+      {/* Handicap card + expand + leaderboard button */}
       <div style={{width:'100%',maxWidth:320,display:'flex',gap:8,alignItems:'stretch'}}>
-        <HandicapCard />
+        <HandicapCard globalRank={globalRank} />
+        <button onClick={()=>setHcpExpanded(v=>!v)} style={{flexShrink:0,background:hcpExpanded?'rgba(255,255,255,0.1)':'#111827',border:`1.5px solid ${hcpExpanded?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:'0 10px',cursor:'pointer',fontSize:12,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.5)',transition:'all 0.15s',transform:hcpExpanded?'rotate(180deg)':'none'}}>▼</button>
         <button onClick={openLeaderboard} style={{flexShrink:0,background:lbOpen?'rgba(34,197,94,0.15)':'#111827',border:`1.5px solid ${lbOpen?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:'0 12px',cursor:'pointer',fontSize:18,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>🌍</button>
       </div>
+
+      {/* Handicap expanded content */}
+      {hcpExpanded&&(()=>{
+        const hcp = getHandicapData()
+        const rounds:GolfRound[] = typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')?? '[]'):[]
+        return <HandicapExpandedContent hcp={hcp} roundCount={rounds.length} />
+      })()}
 
       {/* Handicap leaderboard (inline dropdown) */}
       {lbOpen&&(
