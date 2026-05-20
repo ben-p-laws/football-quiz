@@ -3085,119 +3085,121 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       )}
 
-      {/* Daily challenges — two cards in a row */}
-      <div style={{width:'100%',maxWidth:320,display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-        <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:16,lineHeight:1}}>⛳</span>
-            <span style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</span>
-          </div>
-          <div style={{fontSize:10,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓ Done':'Play →'}</div>
-        </button>
-        <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1a2e1a,#0f1f0f)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#16a34a'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            <span style={{fontSize:16,lineHeight:1}}>🏌️</span>
-            <span style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</span>
-          </div>
-          <div style={{fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#16a34a'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
-        </button>
-      </div>
-
-      {/* Solo / H2H */}
-      <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:10,padding:3,display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
-        {([['solo','Solo'],['h2h','Head to Head']] as const).map(([val,label])=>(
-          <button key={val} onClick={()=>setMode(val)} style={{background:mode===val?'rgba(34,197,94,0.15)':'transparent',color:mode===val?'#22c55e':'rgba(255,255,255,0.35)',border:`1.5px solid ${mode===val?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'8px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
-            {label}
-          </button>
-        ))}
-      </div>
-
-      {/* Course type toggle */}
-      <div style={{width:'100%',maxWidth:320}}>
-        <div style={lbl}>Course Type</div>
+      {/* Daily Challenges card */}
+      <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14}}>
+        <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Daily Challenges</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-          <button onClick={()=>setCourseMode('real')}
-            style={{background:courseMode==='real'?'rgba(34,197,94,0.1)':'#111827',color:'white',border:`2px solid ${courseMode==='real'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
-            <div style={{fontSize:13,fontWeight:900}}>🏌️ Real Course</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>Play a real course</div>
+          <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <span style={{fontSize:16,lineHeight:1}}>⛳</span>
+              <span style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</span>
+            </div>
+            <div style={{fontSize:10,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓ Done':'Play →'}</div>
           </button>
-          <button onClick={()=>setCourseMode('random')}
-            style={{background:courseMode==='random'?'rgba(34,197,94,0.1)':'#111827',color:'white',border:`2px solid ${courseMode==='random'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
-            <div style={{fontSize:13,fontWeight:900}}>🎲 Random</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>New layout each game</div>
+          <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1a2e1a,#0f1f0f)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#16a34a'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <span style={{fontSize:16,lineHeight:1}}>🏌️</span>
+              <span style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</span>
+            </div>
+            <div style={{fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#16a34a'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
           </button>
         </div>
       </div>
 
-      {/* Real course options: course selector + start hole side by side */}
-      {courseMode==='real'&&(
-        <div style={{width:'100%',maxWidth:320,display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'end'}}>
-          {/* Course selector */}
-          <div>
-            <div style={lbl}>Course</div>
-            <div style={{position:'relative'}}>
-            <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf' && numHoles===18) setNumHoles(3) }}
-              style={{width:'100%',background:'#111827',color:'white',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'10px 36px 10px 12px',fontSize:13,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
-              {REAL_COURSES.filter(c=>c.available).map(c=>(
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-              {REAL_COURSES.filter(c=>!c.available).map(c=>(
-                <option key={c.id} value={c.id} disabled>{c.name} (soon)</option>
-              ))}
-            </select>
-            <div style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,0.4)',fontSize:10,lineHeight:1}}>▼</div>
-            </div>
+      {/* Normal Play card */}
+      <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14,display:'flex',flexDirection:'column',gap:12}}>
+        <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Normal Play</div>
+
+        {/* Solo / H2H */}
+        <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:3,display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
+          {([['solo','Solo'],['h2h','Head to Head']] as const).map(([val,label])=>(
+            <button key={val} onClick={()=>setMode(val)} style={{background:mode===val?'rgba(34,197,94,0.15)':'transparent',color:mode===val?'#22c55e':'rgba(255,255,255,0.35)',border:`1.5px solid ${mode===val?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'8px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s'}}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Course type toggle */}
+        <div>
+          <div style={lbl}>Course Type</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            <button onClick={()=>setCourseMode('real')}
+              style={{background:courseMode==='real'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='real'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
+              <div style={{fontSize:13,fontWeight:900}}>🏌️ Real Course</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>Play a real course</div>
+            </button>
+            <button onClick={()=>setCourseMode('random')}
+              style={{background:courseMode==='random'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:'white',border:`2px solid ${courseMode==='random'?'#22c55e':'rgba(255,255,255,0.06)'}`,borderRadius:12,padding:'10px 8px',cursor:'pointer',fontFamily:'inherit',transition:'all 0.15s',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:3}}>
+              <div style={{fontSize:13,fontWeight:900}}>🎲 Random</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.35)'}}>New layout each game</div>
+            </button>
           </div>
-          {/* Start hole stepper */}
-          <div>
-            <div style={lbl}>Start Hole</div>
-            <div style={{display:'flex',alignItems:'center',gap:4,background:'#111827',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'6px 8px'}}>
-              {(()=>{const maxH=courseHoleCount(selectedCourse);return(<>
-              <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)}
-                style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>‹</button>
-              <div style={{fontSize:18,fontWeight:900,color:'white',width:28,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
-                {String(Math.min(startHole,maxH)).padStart(2,'0')}
+        </div>
+
+        {/* Real course options: course selector + start hole side by side */}
+        {courseMode==='real'&&(
+          <div style={{display:'grid',gridTemplateColumns:'1fr auto',gap:8,alignItems:'end'}}>
+            <div>
+              <div style={lbl}>Course</div>
+              <div style={{position:'relative'}}>
+                <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf' && numHoles===18) setNumHoles(3) }}
+                  style={{width:'100%',background:'rgba(255,255,255,0.04)',color:'white',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'10px 36px 10px 12px',fontSize:13,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
+                  {REAL_COURSES.filter(c=>c.available).map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
+                  {REAL_COURSES.filter(c=>!c.available).map(c=>(<option key={c.id} value={c.id} disabled>{c.name} (soon)</option>))}
+                </select>
+                <div style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,0.4)',fontSize:10,lineHeight:1}}>▼</div>
               </div>
-              <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)}
-                style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>›</button>
-              </>)})()}
+            </div>
+            <div>
+              <div style={lbl}>Start Hole</div>
+              <div style={{display:'flex',alignItems:'center',gap:4,background:'rgba(255,255,255,0.04)',border:'2px solid rgba(255,255,255,0.06)',borderRadius:10,padding:'6px 8px'}}>
+                {(()=>{const maxH=courseHoleCount(selectedCourse);return(<>
+                <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)}
+                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>‹</button>
+                <div style={{fontSize:18,fontWeight:900,color:'white',width:28,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
+                  {String(Math.min(startHole,maxH)).padStart(2,'0')}
+                </div>
+                <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)}
+                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:5,width:26,height:26,fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>›</button>
+                </>)})()}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Holes */}
-      <div style={{width:'100%',maxWidth:320}}>
-        <div style={lbl}>Holes</div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
-          {([3,6,9,18] as number[]).map(n=>{
-            const isWii = courseMode==='real' && selectedCourse==='wii-golf'
-            const disabled = isWii && n===18
-            const active = numHoles===n && !disabled
-            return (
-              <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={{background:active?'rgba(34,197,94,0.1)':'#111827',color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'white',border:`2px solid ${active?'#22c55e':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'12px 0',fontSize:18,fontWeight:900,cursor:disabled?'not-allowed':'pointer',fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1}}>
-                {n}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* CTA */}
-      {mode==='solo'
-        ? <button onClick={onStart} style={{width:'100%',maxWidth:320,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginTop:2}}>
-            Tee Off →
-          </button>
-        : <div style={{display:'flex',alignItems:'center',gap:8,width:'100%',maxWidth:320,marginTop:2}}>
-            <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-              Create Room
-            </button>
-            <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
-            <button onClick={onJoin} style={{flex:1,background:'#111827',color:'white',border:'2px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-              Join Room
-            </button>
+        {/* Holes */}
+        <div>
+          <div style={lbl}>Holes</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:6}}>
+            {([3,6,9,18] as number[]).map(n=>{
+              const isWii = courseMode==='real' && selectedCourse==='wii-golf'
+              const disabled = isWii && n===18
+              const active = numHoles===n && !disabled
+              return (
+                <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={{background:active?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'white',border:`2px solid ${active?'#22c55e':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'12px 0',fontSize:18,fontWeight:900,cursor:disabled?'not-allowed':'pointer',fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1}}>
+                  {n}
+                </button>
+              )
+            })}
           </div>
-      }
+        </div>
+
+        {/* CTA */}
+        {mode==='solo'
+          ? <button onClick={onStart} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+              Tee Off →
+            </button>
+          : <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                Create Room
+              </button>
+              <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
+              <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'2px solid rgba(255,255,255,0.08)',borderRadius:12,padding:'14px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                Join Room
+              </button>
+            </div>
+        }
+      </div>
     </div>
   )
 }
