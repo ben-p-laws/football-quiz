@@ -685,7 +685,7 @@ function saveGolfRound(holes:number, strokes:number, par:number){
 
 function normalisedScore(r:GolfRound){ return (r.strokes - r.par) * (18 / r.holes) }
 
-type HandicapData = { index:number; tier:string; color:string; top5:GolfRound[]; totalRounds:number }
+type HandicapData = { index:number; tier:string; color:string; top5:GolfRound[]; totalRounds:number; fromCache?:boolean }
 
 function getHandicapTier(idx:number):[string,string]{
   if(idx > 0)   return ['Tour Pro',   '#22c55e']
@@ -695,16 +695,34 @@ function getHandicapTier(idx:number):[string,string]{
   return               ['Hacker',     '#ef4444']
 }
 
+const HCP_CACHE_KEY = 'golf_hcp_cache'
+function getCachedHcp():HandicapData|null{
+  if(typeof window==='undefined') return null
+  try{
+    const raw = localStorage.getItem(HCP_CACHE_KEY)
+    if(!raw) return null
+    const d = JSON.parse(raw)
+    const [tier,color] = getHandicapTier(d.index)
+    return { index:d.index, tier, color, top5:[], totalRounds:d.totalRounds, fromCache:true }
+  }catch{ return null }
+}
+function setCachedHcp(index:number, totalRounds:number){
+  if(typeof window!=='undefined') localStorage.setItem(HCP_CACHE_KEY, JSON.stringify({index, totalRounds}))
+}
+
 function getHandicapData():HandicapData|null{
   if(typeof window==='undefined') return null
   const rounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
-  if(rounds.length < 5) return null
-  const sorted = [...rounds].sort((a,b)=>normalisedScore(a)-normalisedScore(b))
-  const top5 = sorted.slice(0,5)
-  const avg = top5.reduce((s,r)=>s+normalisedScore(r),0)/5
-  const rounded = Math.round(-avg*10)/10  // flip: over par → negative index, under par → positive
-  const [tier,color] = getHandicapTier(rounded)
-  return { index:rounded, tier, color, top5, totalRounds:rounds.length }
+  if(rounds.length >= 5){
+    const sorted = [...rounds].sort((a,b)=>normalisedScore(a)-normalisedScore(b))
+    const top5 = sorted.slice(0,5)
+    const avg = top5.reduce((s,r)=>s+normalisedScore(r),0)/5
+    const rounded = Math.round(-avg*10)/10  // flip: over par → negative index, under par → positive
+    const [tier,color] = getHandicapTier(rounded)
+    return { index:rounded, tier, color, top5, totalRounds:rounds.length }
+  }
+  // fall back to server-synced cache (e.g. after device linking)
+  return getCachedHcp()
 }
 
 // ── Club types ─────────────────────────────────────────────────────────────────
@@ -2847,7 +2865,12 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
       body:JSON.stringify({action:'claim',code:linkInput.toUpperCase(),newDeviceId:getDeviceId()})}).then(r=>r.json())
     if(res.error){ setLinkMsg(res.error); return }
     setDeviceId(res.primaryDeviceId)
-    setLinkMsg('✓ Devices linked! Your stats are now synced.')
+    // fetch and cache the linked device's handicap so it shows immediately
+    fetch('/api/golf-handicap?deviceId='+res.primaryDeviceId)
+      .then(r=>r.json())
+      .then(d=>{ if(d.entry?.handicap_index!=null) setCachedHcp(d.entry.handicap_index, d.entry.total_rounds) })
+      .catch(()=>{})
+    setLinkMsg('✓ Devices linked! Reload to see your synced handicap.')
     setLinkMode('off')
   }
 
@@ -2934,7 +2957,10 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   useEffect(()=>{
     fetch('/api/golf-handicap?deviceId='+getDeviceId())
       .then(r=>r.json())
-      .then(d=>{ if(d.rank) setGlobalRank(d.rank) })
+      .then(d=>{
+        if(d.rank) setGlobalRank(d.rank)
+        if(d.entry?.handicap_index!=null) setCachedHcp(d.entry.handicap_index, d.entry.total_rounds)
+      })
       .catch(()=>{})
   },[])
 
