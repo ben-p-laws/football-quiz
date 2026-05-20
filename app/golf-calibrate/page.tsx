@@ -76,6 +76,10 @@ const SAVED_POSITIONS_WII: Record<number, { teeFrac: FracPt; greenFrac: FracPt; 
   1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
   2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
+  4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
+  5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
+  6: {teeFrac:[0.390,0.930], greenFrac:[0.640,0.100], waypointFracs:[[0.420,0.620],[0.520,0.330]]},
+  7: {teeFrac:[0.330,0.830], greenFrac:[0.730,0.170], waypointFracs:[[0.330,0.520],[0.600,0.270]]},
 }
 const HOLE_DISTANCES_WII: Record<number, number> = {
   1: 370, 2: 134, 3: 465,
@@ -85,7 +89,7 @@ const HOLE_DISTANCES_WII: Record<number, number> = {
 type CourseId = 'pebble-beach' | 'augusta' | 'wii-golf'
 
 function getCourseHoleCount(course: CourseId) {
-  if (course === 'wii-golf') return 5
+  if (course === 'wii-golf') return 7
   return 18
 }
 function getSavedPositions(course: CourseId) {
@@ -186,7 +190,7 @@ export default function GolfCalibratePage() {
     return {
       'pebble-beach': makeCalib(SAVED_POSITIONS_PEBBLE, 18),
       'augusta': makeCalib(SAVED_POSITIONS_AUGUSTA, 18),
-      'wii-golf': makeCalib(SAVED_POSITIONS_WII, 3),
+      'wii-golf': makeCalib(SAVED_POSITIONS_WII, 7),
     }
   })
   const [pendingStart, setPendingStart] = useState<number | null>(null)
