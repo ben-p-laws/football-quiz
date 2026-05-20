@@ -649,6 +649,17 @@ function buildCourse(tee: Tee, count: number, start = 1, courseId = 'pebble-beac
   })
 }
 
+function buildCourseFromHoles(holeNums: number[], courseId: string): Hole[] {
+  const holeDefs = courseId === 'augusta' ? AUGUSTA_HOLES : PEBBLE_BEACH
+  const hazardMap = courseId === 'augusta' ? AUGUSTA_HAZARDS : REAL_COURSE_HAZARDS
+  return holeNums.map(num => {
+    const def = holeDefs.find(h => h.number === num) ?? holeDefs[0]
+    const distance = def.yardages['Blue']
+    const realHaz = hazardMap[def.number]
+    return { number: def.number, par: def.par, distance, hazards: realHaz?.hazards ?? [], bunkers: realHaz?.bunkers ?? [], path: def.path }
+  })
+}
+
 // ── Handicap system ────────────────────────────────────────────────────────────
 
 type GolfRound = { date:string; holes:number; strokes:number; par:number }
@@ -769,7 +780,7 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function FootballGolf(){
-  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'>('setup')
+  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'>('setup')
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
   const [selectedCourse,setSelectedCourse] = useState<string>('pebble-beach')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(3)
@@ -824,6 +835,13 @@ export default function FootballGolf(){
   const [dailyPlayerName, setDailyPlayerName] = useState('')
   const [dailyLeaderboard, setDailyLeaderboard] = useState<DailyEntry[]>([])
   const [dailyResult, setDailyResult] = useState<{distanceFromPin:number|null;isOob:boolean}|null>(null)
+
+  type DailyRoundEntry = { player_name:string; total_strokes:number; score_to_par:number }
+  const [dailyRoundMode, setDailyRoundMode]       = useState(false)
+  const [dailyRoundDate, setDailyRoundDate]       = useState('')
+  const [dailyRoundPlayerName, setDailyRoundPlayerName] = useState('')
+  const [dailyRoundLeaderboard, setDailyRoundLeaderboard] = useState<DailyRoundEntry[]>([])
+  const [dailyRoundResult, setDailyRoundResult]   = useState<{totalStrokes:number;scoreToPar:number}|null>(null)
 
   // ── H2H multiplayer state ───────────────────────────────────────────────────
   const [h2hStep, setH2HStep] = useState<H2HStep>('off')
@@ -1093,6 +1111,37 @@ export default function FootballGolf(){
     setDailyResult(null)
     setDailyMode(true)
     setQuestion(data.category as Category)
+    resetInputs()
+    if (!localStorage.getItem('golf_rules_seen')) setShowRules(true)
+    setPhase('playing')
+  }
+
+  async function startDailyRoundChallenge(playerName: string) {
+    const today = new Date().toISOString().slice(0,10)
+    const stored = localStorage.getItem(`golf_daily_round_${today}`)
+    const resp = await fetch(`/api/golf-daily-round?date=${today}`)
+    const data = await resp.json()
+    setDailyRoundDate(today)
+    setDailyRoundPlayerName(playerName)
+    setDailyRoundLeaderboard(data.leaderboard ?? [])
+    if (stored) {
+      setDailyRoundResult(JSON.parse(stored))
+      setPhase('daily-round-done')
+      return
+    }
+    const builtHoles = buildCourseFromHoles(data.holeNumbers, data.course)
+    setCourseMode('real')
+    setSelectedCourse(data.course)
+    setHoles(builtHoles)
+    setHoleIdx(0)
+    setScores([])
+    setRemaining(builtHoles[0].distance)
+    setStrokes(0)
+    setShotResult(null)
+    setPastPin(false)
+    setDailyRoundResult(null)
+    setDailyRoundMode(true)
+    setQuestion(nextPickedCategory(builtHoles[0].distance))
     resetInputs()
     if (!localStorage.getItem('golf_rules_seen')) setShowRules(true)
     setPhase('playing')
@@ -1498,7 +1547,22 @@ export default function FootballGolf(){
     setTimeout(()=>{
       setHoleResult(null)
       if(holeIdx+1>=holes.length){
-        setPhase('done')
+        if(dailyRoundMode){
+          const totalStrokes = newScores.reduce((s:number,n)=>s+(n??0), 0)
+          const totalPar = holes.reduce((s,h)=>s+h.par, 0)
+          const scoreToPar = totalStrokes - totalPar
+          const res = { totalStrokes, scoreToPar }
+          setDailyRoundResult(res)
+          const today = new Date().toISOString().slice(0,10)
+          localStorage.setItem(`golf_daily_round_${today}`, JSON.stringify(res))
+          fetch('/api/golf-daily-round',{method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({date:dailyRoundDate,playerName:dailyRoundPlayerName,deviceId:getDeviceId(),totalStrokes,scoreToPar})
+          }).then(r=>r.json()).then(d=>{ if(d.leaderboard) setDailyRoundLeaderboard(d.leaderboard) }).catch(()=>{})
+          setDailyRoundMode(false)
+          setPhase('daily-round-done')
+        } else {
+          setPhase('done')
+        }
       }else{
         const nextIdx=holeIdx+1
         setHoleIdx(nextIdx)
@@ -1853,10 +1917,12 @@ export default function FootballGolf(){
     </>)
   }
 
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
+  if(phase==='daily-round-setup') return <><NavBar /><DailyRoundSetupScreen onPlay={startDailyRoundChallenge} onBack={()=>setPhase('setup')} /></>
+  if(phase==='daily-round-done')  return <><NavBar /><DailyRoundDoneScreen result={dailyRoundResult} leaderboard={dailyRoundLeaderboard} playerName={dailyRoundPlayerName} onBack={()=>{setDailyRoundResult(null);setDailyRoundLeaderboard([]);setPhase('setup')}} /></>
   if(!currentHole) return null
 
   // Keep ball at landing spot while result/bunker panel is open; only reset to actual pos after advancing
@@ -2937,13 +3003,13 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
   )
 }
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
   tee:Tee; setTee:(t:Tee)=>void
   startHole:number; setStartHole:(n:number)=>void
-  onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void
+  onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void; onDailyRound:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
   const [lbOpen, setLbOpen]       = useState(false)
@@ -2952,7 +3018,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   const [hcpExpanded, setHcpExpanded] = useState(false)
   const [globalRank, setGlobalRank]   = useState<number|null>(null)
   const today = new Date().toISOString().slice(0,10)
-  const dailyPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
+  const dailyPlayed      = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
+  const dailyRoundPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_round_${today}`)
 
   useEffect(()=>{
     fetch('/api/golf-handicap?deviceId='+getDeviceId())
@@ -3018,15 +3085,21 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       )}
 
-      {/* Daily challenge */}
-      <button onClick={onDaily} style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 14px',cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:12}}>
-        <div style={{fontSize:22,lineHeight:1}}>⛳</div>
-        <div style={{flex:1,textAlign:'left'}}>
-          <div style={{fontSize:13,fontWeight:900,color:'white'}}>Daily Challenge</div>
-          <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:1}}>{dailyPlayed?'Played today · view leaderboard':'Closest to the pin · new hole every day'}</div>
-        </div>
-        <div style={{fontSize:12,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓':'→'}</div>
-      </button>
+      {/* Daily challenges — two cards in a row */}
+      <div style={{width:'100%',maxWidth:320,display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+        <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
+          <div style={{fontSize:18,lineHeight:1,marginBottom:5}}>⛳</div>
+          <div style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</div>
+          <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',marginTop:2,lineHeight:1.3}}>Closest to the pin</div>
+          <div style={{marginTop:6,fontSize:10,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓ Done':'Play →'}</div>
+        </button>
+        <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1a2e1a,#0f1f0f)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#16a34a'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
+          <div style={{fontSize:18,lineHeight:1,marginBottom:5}}>🏌️</div>
+          <div style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</div>
+          <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',marginTop:2,lineHeight:1.3}}>Pebble or Augusta</div>
+          <div style={{marginTop:6,fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#16a34a'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
+        </button>
+      </div>
 
       {/* Solo / H2H */}
       <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:10,padding:3,display:'grid',gridTemplateColumns:'1fr 1fr',gap:3}}>
@@ -3249,6 +3322,114 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
               <div style={{fontSize:14,fontWeight:900,color:e.is_oob?'#ef4444':'#3b82f6'}}>
                 {e.is_oob ? 'OOB' : `${e.distance_from_pin} yds`}
               </div>
+            </div>
+          )
+        })}
+      </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Daily round screens ────────────────────────────────────────────────────────
+
+function DailyRoundSetupScreen({onPlay,onBack}:{onPlay:(name:string)=>void;onBack:()=>void}){
+  const [name,setName] = useState(getSavedUsername)
+  const [loading,setLoading] = useState(false)
+  const todayKey = new Date().toISOString().slice(0,10)
+  const alreadyPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_round_${todayKey}`)
+  const todayLabel = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
+  function submit(){
+    const n=name.trim()
+    if(!n) return
+    setSavedUsername(n)
+    setLoading(true)
+    onPlay(n)
+  }
+  return(
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:32,marginBottom:8}}>🏌️</div>
+        <div style={{fontSize:26,fontWeight:900,color:'white',letterSpacing:'-0.5px'}}>3-Hole Round</div>
+        <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6}}>{todayLabel}</div>
+      </div>
+      <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:14,padding:'16px 20px',width:'100%',maxWidth:320,textAlign:'center'}}>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginBottom:6,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em'}}>Today's Challenge</div>
+        <div style={{fontSize:15,fontWeight:800,color:'white'}}>3 Seeded Holes</div>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Pebble Beach or Augusta · lowest score wins</div>
+      </div>
+      {alreadyPlayed&&(
+        <div style={{background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.3)',borderRadius:12,padding:'14px 20px',width:'100%',maxWidth:320,textAlign:'center'}}>
+          <div style={{fontSize:14,fontWeight:800,color:'#22c55e'}}>✓ Already played today</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Enter your name to view the leaderboard</div>
+        </div>
+      )}
+      <div style={{width:'100%',maxWidth:320}}>
+        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Your name</div>
+        <input value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="Enter your name…"
+          style={{width:'100%',background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'13px 14px',fontSize:16,color:'white',fontFamily:'inherit',outline:'none'}}/>
+      </div>
+      <button onClick={submit} disabled={!name.trim()||loading}
+        style={{background:name.trim()&&!loading?'#16a34a':'#1e2d4a',color:'white',border:'none',borderRadius:12,padding:'14px 52px',fontSize:16,fontWeight:900,cursor:name.trim()&&!loading?'pointer':'default',fontFamily:'inherit',transition:'background 0.15s'}}>
+        {loading?'Loading…':alreadyPlayed?'View Leaderboard →':'Tee Off →'}
+      </button>
+    </div>
+  )
+}
+
+type DailyRoundEntry = { player_name:string; total_strokes:number; score_to_par:number }
+
+function DailyRoundDoneScreen({result,leaderboard,playerName,onBack}:{
+  result:{totalStrokes:number;scoreToPar:number}|null
+  leaderboard:DailyRoundEntry[]; playerName:string; onBack:()=>void
+}){
+  const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
+  const myRank = leaderboard.findIndex(e=>e.player_name===playerName)+1 || null
+  function scoreLabel(s:number){ return s===0?'E':s>0?`+${s}`:String(s) }
+  function scoreColor(s:number){ return s<0?'#22c55e':s>0?'#ef4444':'#94a3b8' }
+  return(
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <div style={{maxWidth:430,margin:'0 auto',display:'flex',flexDirection:'column'}}>
+      <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:'0 0 16px 0'}}>← Back</button>
+
+      <div style={{textAlign:'center',marginBottom:20}}>
+        <div style={{fontSize:24,fontWeight:900,color:'white'}}>🏌️ 3-Hole Round</div>
+        <div style={{fontSize:12,color:'rgba(255,255,255,0.35)',marginTop:4}}>{today}</div>
+      </div>
+
+      {result&&(
+        <div style={{background:'#111827',border:`2px solid ${scoreColor(result.scoreToPar)}`,borderRadius:14,padding:'18px 20px',marginBottom:20,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginBottom:4,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.06em'}}>Your score</div>
+          <div style={{fontSize:40,fontWeight:900,color:scoreColor(result.scoreToPar)}}>{scoreLabel(result.scoreToPar)}</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.5)',marginTop:4}}>{result.totalStrokes} strokes total</div>
+          {myRank&&<div style={{marginTop:8,fontSize:13,fontWeight:800,color:'#22c55e'}}>#{myRank} on today's leaderboard</div>}
+        </div>
+      )}
+      {!result&&(
+        <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:14,padding:'14px 20px',marginBottom:20,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.5)'}}>You've already played today — come back tomorrow!</div>
+          {leaderboard.find(e=>e.player_name===playerName) && (
+            <div style={{fontSize:22,fontWeight:900,marginTop:6,color:scoreColor(leaderboard.find(e=>e.player_name===playerName)!.score_to_par)}}>
+              {scoreLabel(leaderboard.find(e=>e.player_name===playerName)!.score_to_par)}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{fontWeight:800,fontSize:13,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Leaderboard</div>
+      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+        {leaderboard.length===0&&<div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
+        {leaderboard.map((e,i)=>{
+          const isMe = e.player_name===playerName
+          return(
+            <div key={i} style={{background:isMe?'rgba(22,163,74,0.1)':'#111827',border:`1px solid ${isMe?'rgba(22,163,74,0.4)':'#1e2d4a'}`,borderRadius:10,padding:'11px 14px',display:'flex',alignItems:'center',gap:12}}>
+              <div style={{width:28,fontSize:14,fontWeight:900,color:i===0?'#fbbf24':i===1?'#9ca3af':i===2?'#cd7c2f':'rgba(255,255,255,0.3)',textAlign:'center'}}>#{i+1}</div>
+              <div style={{flex:1,fontSize:14,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.player_name}</div>
+              <div style={{fontSize:14,fontWeight:900,color:scoreColor(e.score_to_par)}}>{scoreLabel(e.score_to_par)}</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',minWidth:32,textAlign:'right'}}>{e.total_strokes} str</div>
             </div>
           )
         })}
