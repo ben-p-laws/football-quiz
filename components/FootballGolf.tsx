@@ -2834,6 +2834,8 @@ const WII_GOLF_YSCALE: Record<number, number> = {
   3: 100/(629/1443),  // 229.4 — portrait
   4: 100/(200/715),   // 357.5 — cropped to 200px wide
   5: 100/(650/1536),  // 236.3 — cropped to 650px wide
+  6: 100/(370/674),   // 182.2
+  7: 100/(1024/1536), // 150.0
 }
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
   1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
@@ -2841,6 +2843,8 @@ const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[nu
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
   4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
   5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
+  6: {teeFrac:[0.390,0.930], greenFrac:[0.640,0.100], waypointFracs:[[0.420,0.620],[0.520,0.330]]},
+  7: {teeFrac:[0.330,0.830], greenFrac:[0.730,0.170], waypointFracs:[[0.330,0.520],[0.600,0.270]]},
 }
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
   1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
@@ -2873,7 +2877,7 @@ const REAL_COURSES = [
 ]
 
 function courseHoleCount(courseId: string) {
-  if (courseId === 'wii-golf') return 5
+  if (courseId === 'wii-golf') return 7
   return 18
 }
 
@@ -2957,7 +2961,7 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
       </div>
       <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8,fontSize:10,color:'rgba(255,255,255,0.35)',lineHeight:1.5}}>
         {hcp
-          ? <>Handicap calculated from your best 5 of <span style={{color:'rgba(255,255,255,0.6)',fontWeight:700}}>{hcp.totalRounds} rounds</span>. Keep playing to improve it.</>
+          ? <>Handicap calculated from your best 5 rounds. Keep playing to improve it.</>
           : <>{roundCount} / 5 rounds played. Keep playing to unlock your handicap.</>
         }
       </div>
