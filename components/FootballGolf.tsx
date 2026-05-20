@@ -2795,8 +2795,13 @@ function HandicapCard(){
     return (JSON.parse(localStorage.getItem('golf_rounds')?? '[]') as GolfRound[]).length
   },[])
 
+  const cardBg = hcp
+    ? `linear-gradient(135deg,${hcp.color}22,${hcp.color}11)`
+    : 'transparent'
+  const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
+
   return(
-    <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:12,overflow:'hidden',border:'1.5px solid rgba(255,255,255,0.07)'}}>
+    <div style={{width:'100%',maxWidth:320,background:cardBg,borderRadius:12,overflow:'hidden',border:cardBorder}}>
       {/* Collapsed row */}
       <button onClick={()=>setExpanded(e=>!e)} style={{width:'100%',background:'transparent',border:'none',cursor:'pointer',padding:'10px 14px',display:'flex',alignItems:'center',gap:10,fontFamily:'inherit'}}>
         <div style={{fontSize:18,lineHeight:1}}>🏆</div>
