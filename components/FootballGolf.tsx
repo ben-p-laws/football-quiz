@@ -653,6 +653,10 @@ function buildCourse(tee: Tee, count: number, start = 1, courseId = 'pebble-beac
 
 type GolfRound = { date:string; holes:number; strokes:number; par:number }
 
+const USERNAME_KEY = 'golf_username'
+function getSavedUsername(){ return typeof window!=='undefined' ? localStorage.getItem(USERNAME_KEY)??'' : '' }
+function setSavedUsername(name:string){ if(typeof window!=='undefined') localStorage.setItem(USERNAME_KEY, name) }
+
 function saveGolfRound(holes:number, strokes:number, par:number){
   if(typeof window==='undefined') return
   const rounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
@@ -788,7 +792,7 @@ export default function FootballGolf(){
   const [h2hStep, setH2HStep] = useState<H2HStep>('off')
   const [h2hRoomId, setH2HRoomId] = useState('')
   const [h2hJoinInput, setH2HJoinInput] = useState('')
-  const [h2hPlayerName, setH2HPlayerName] = useState('')
+  const [h2hPlayerName, setH2HPlayerName] = useState(getSavedUsername)
   const [h2hOppName, setH2HOppName] = useState('')
   const [h2hWaiting, setH2HWaiting] = useState(false)
   const [h2hOppRemaining, setH2HOppRemaining] = useState<number|null>(null)
@@ -1647,6 +1651,7 @@ export default function FootballGolf(){
       body:JSON.stringify({action:'create',hostId:pid,hostName:h2hPlayerName||'Host',config:{courseMode,numHoles,tee},holes:hs,teeCategories:teeCats}),
     }).then(r=>r.json())
     if(res.error){setH2HError(res.error);return}
+    setSavedUsername(h2hPlayerName)
     setH2HRoomId(res.roomId)
     h2hRoomIdRef.current=res.roomId
     h2hRoomData.current={holes:hs,teeCategories:teeCats}
@@ -1672,6 +1677,7 @@ export default function FootballGolf(){
       body:JSON.stringify({action:'join',roomId:code,guestId:pid,guestName:h2hPlayerName||'Guest'}),
     }).then(r=>r.json())
     if(res.error){setH2HError(res.error);return}
+    setSavedUsername(h2hPlayerName)
     // Server may have assigned a new guest ID if it collided with the host's ID
     h2hPlayerId.current=res.room.guest_id
     setH2HRoomId(code)
@@ -2981,7 +2987,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 // ── Daily challenge screens ────────────────────────────────────────────────────
 
 function DailySetupScreen({onPlay,onBack}:{onPlay:(name:string)=>void;onBack:()=>void}){
-  const [name,setName] = useState('')
+  const [name,setName] = useState(getSavedUsername)
   const [loading,setLoading] = useState(false)
   const todayKey = new Date().toISOString().slice(0,10)
   const alreadyPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${todayKey}`)
@@ -2989,6 +2995,7 @@ function DailySetupScreen({onPlay,onBack}:{onPlay:(name:string)=>void;onBack:()=
   function submit(){
     const n=name.trim()
     if(!n) return
+    setSavedUsername(n)
     setLoading(true)
     onPlay(n)
   }
@@ -3120,7 +3127,7 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
   const vsPar        = totalStrokes - totalPar
   const vsParColor   = vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'
 
-  const [name,setName]               = useState('')
+  const [name,setName]               = useState(getSavedUsername)
   const [submitted,setSubmitted]     = useState(false)
   const [saving,setSaving]           = useState(false)
   const [saveError,setSaveError]     = useState('')
@@ -3150,7 +3157,7 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
       })
       const data = await res.json()
       if(data.error) setSaveError(data.error)
-      else { setLeaderboard(data.leaderboard??[]); setSubmitted(true) }
+      else { setSavedUsername(name.trim()); setLeaderboard(data.leaderboard??[]); setSubmitted(true) }
     }catch(e){ setSaveError(String(e)) }
     setSaving(false)
   }
