@@ -2991,7 +2991,7 @@ const TIER_ROWS:[string,string,string][] = [
   ['20+',   'Hacker',   '#ef4444'],
 ]
 
-function HandicapCard({globalRank}:{globalRank:number|null}){
+function HandicapCard({globalRank,expanded,onToggle}:{globalRank:number|null;expanded:boolean;onToggle:()=>void}){
   const hcp = useMemo(()=>getHandicapData(),[])
   useEffect(()=>{ upsertHandicap() },[])
   const rounds:GolfRound[] = typeof window!=='undefined' ? JSON.parse(localStorage.getItem('golf_rounds')?? '[]') : []
@@ -3002,7 +3002,7 @@ function HandicapCard({globalRank}:{globalRank:number|null}){
   const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
 
   return(
-    <div style={{flex:1,background:cardBg,borderRadius:12,border:cardBorder,padding:'10px 12px',display:'flex',alignItems:'center',gap:8}}>
+    <button onClick={onToggle} style={{width:'100%',background:cardBg,borderRadius:12,border:cardBorder,padding:'10px 12px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
       <div style={{fontSize:16,lineHeight:1}}>🏆</div>
       <div style={{flex:1}}>
         {hcp
@@ -3024,7 +3024,8 @@ function HandicapCard({globalRank}:{globalRank:number|null}){
           : <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>5 rounds for handicap</span>
         }
       </div>
-    </div>
+      <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',flexShrink:0}}>{expanded?'▲':'▼'}</div>
+    </button>
   )
 }
 
@@ -3033,6 +3034,14 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
   const [linkCode, setLinkCode] = useState('')
   const [linkInput, setLinkInput] = useState('')
   const [linkMsg, setLinkMsg] = useState('')
+  const [lbData, setLbData] = useState<{username:string;handicap_index:number;tier:string}[]>([])
+  const [lbLoading, setLbLoading] = useState(true)
+  useEffect(()=>{
+    fetch('/api/golf-handicap?limit=50')
+      .then(r=>r.json())
+      .then(d=>setLbData(d.leaderboard??[]))
+      .finally(()=>setLbLoading(false))
+  },[])
 
   async function generateCode(){
     setLinkMsg('')
@@ -3059,8 +3068,28 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
 
   return(
     <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'12px 14px'}}>
+      {/* Global leaderboard — top 5 */}
+      <div style={{marginBottom:12}}>
+        <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>🌍 Global Rankings</div>
+        {lbLoading&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'8px 0'}}>Loading…</div>}
+        {!lbLoading&&lbData.length===0&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:12,padding:'8px 0'}}>No entries yet</div>}
+        {lbData.slice(0,5).map((e,i)=>{
+          const [,color]=getHandicapTier(e.handicap_index)
+          const isMe = !!getSavedUsername() && e.username===getSavedUsername()
+          return(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 6px',borderRadius:8,background:isMe?'rgba(255,255,255,0.05)':'transparent',marginBottom:2}}>
+              <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)',width:20,textAlign:'right'}}>#{i+1}</div>
+              <div style={{flex:1,fontSize:12,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.username}</div>
+              <div style={{fontSize:10,fontWeight:800,color,marginRight:4}}>{e.tier}</div>
+              <div style={{fontSize:12,fontWeight:900,color:e.handicap_index>0?'#22c55e':'rgba(255,255,255,0.6)',minWidth:30,textAlign:'right'}}>
+                {e.handicap_index>0?`+${e.handicap_index}`:Math.abs(e.handicap_index)}
+              </div>
+            </div>
+          )
+        })}
+      </div>
       {/* Tier table */}
-      <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',gap:'4px 10px',marginBottom:hcp?10:0}}>
+      <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',gap:'4px 10px',marginBottom:hcp?10:0,borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:10}}>
         {TIER_ROWS.map(([range,label,color])=>{
           const active = hcp?.tier===label
           return(
@@ -3120,9 +3149,6 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void; onDailyRound:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
-  const [lbOpen, setLbOpen]       = useState(false)
-  const [lbData, setLbData]       = useState<{username:string;handicap_index:number;tier:string}[]>([])
-  const [lbLoading, setLbLoading] = useState(false)
   const [hcpExpanded, setHcpExpanded] = useState(false)
   const [globalRank, setGlobalRank]   = useState<number|null>(null)
   const today = new Date().toISOString().slice(0,10)
@@ -3139,15 +3165,6 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       .catch(()=>{})
   },[])
 
-  function openLeaderboard(){
-    setLbOpen(v=>!v)
-    if(lbData.length) return
-    setLbLoading(true)
-    fetch('/api/golf-handicap?limit=50')
-      .then(r=>r.json())
-      .then(d=>setLbData(d.leaderboard??[]))
-      .finally(()=>setLbLoading(false))
-  }
   const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
   return(
     <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'12px 20px',overflowY:'auto'}}>
@@ -3156,11 +3173,9 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       {/* Title */}
       <div style={{fontSize:24,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:2}}>Football Golf</div>
 
-      {/* Handicap card + expand + leaderboard button */}
-      <div style={{width:'100%',maxWidth:320,display:'flex',gap:8,alignItems:'stretch'}}>
-        <HandicapCard globalRank={globalRank} />
-        <button onClick={()=>setHcpExpanded(v=>!v)} style={{flexShrink:0,width:44,background:hcpExpanded?'rgba(255,255,255,0.1)':'#111827',border:`1.5px solid ${hcpExpanded?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:0,cursor:'pointer',fontSize:16,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center',color:'rgba(255,255,255,0.5)',transition:'all 0.15s'}}>?</button>
-        <button onClick={openLeaderboard} style={{flexShrink:0,width:44,background:lbOpen?'rgba(34,197,94,0.15)':'#111827',border:`1.5px solid ${lbOpen?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:0,cursor:'pointer',fontSize:18,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>🌍</button>
+      {/* Handicap card — tap to expand */}
+      <div style={{width:'100%',maxWidth:320}}>
+        <HandicapCard globalRank={globalRank} expanded={hcpExpanded} onToggle={()=>setHcpExpanded(v=>!v)} />
       </div>
 
       {/* Handicap expanded content */}
@@ -3169,29 +3184,6 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         const rounds:GolfRound[] = typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')?? '[]'):[]
         return <HandicapExpandedContent hcp={hcp} roundCount={rounds.length} />
       })()}
-
-      {/* Handicap leaderboard (inline dropdown) */}
-      {lbOpen&&(
-        <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'12px 14px'}}>
-          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Global Handicap Rankings</div>
-          {lbLoading&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'12px 0'}}>Loading…</div>}
-          {!lbLoading&&lbData.length===0&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'12px 0'}}>No entries yet</div>}
-          {lbData.map((e,i)=>{
-            const [,color]=getHandicapTier(e.handicap_index)
-            const isMe = !!getSavedUsername() && e.username===getSavedUsername()
-            return(
-              <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:8,background:isMe?'rgba(255,255,255,0.05)':'transparent',marginBottom:2}}>
-                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)',width:20,textAlign:'right'}}>#{i+1}</div>
-                <div style={{flex:1,fontSize:12,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.username}</div>
-                <div style={{fontSize:10,fontWeight:800,color,marginRight:4}}>{e.tier}</div>
-                <div style={{fontSize:12,fontWeight:900,color:e.handicap_index>0?'#22c55e':'rgba(255,255,255,0.6)',minWidth:30,textAlign:'right'}}>
-                  {e.handicap_index>0?`+${e.handicap_index}`:Math.abs(e.handicap_index)}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
 
       {/* Daily Challenges card */}
       <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14}}>
