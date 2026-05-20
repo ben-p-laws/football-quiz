@@ -688,11 +688,11 @@ function normalisedScore(r:GolfRound){ return (r.strokes - r.par) * (18 / r.hole
 type HandicapData = { index:number; tier:string; color:string; top5:GolfRound[]; totalRounds:number }
 
 function getHandicapTier(idx:number):[string,string]{
-  if(idx < 0)  return ['Tour Pro',   '#22c55e']
-  if(idx < 10) return ['Scratch',    '#86efac']
-  if(idx < 20) return ['Club Player','#fbbf24']
-  if(idx < 30) return ['Amateur',    '#f97316']
-  return              ['Hacker',     '#ef4444']
+  if(idx > 0)   return ['Tour Pro',   '#22c55e']
+  if(idx >= -9)  return ['Scratch',    '#86efac']
+  if(idx >= -19) return ['Club Player','#fbbf24']
+  if(idx >= -29) return ['Amateur',    '#f97316']
+  return               ['Hacker',     '#ef4444']
 }
 
 function getHandicapData():HandicapData|null{
@@ -702,7 +702,7 @@ function getHandicapData():HandicapData|null{
   const sorted = [...rounds].sort((a,b)=>normalisedScore(a)-normalisedScore(b))
   const top5 = sorted.slice(0,5)
   const avg = top5.reduce((s,r)=>s+normalisedScore(r),0)/5
-  const rounded = Math.round(avg*10)/10
+  const rounded = Math.round(-avg*10)/10  // flip: over par → negative index, under par → positive
   const [tier,color] = getHandicapTier(rounded)
   return { index:rounded, tier, color, top5, totalRounds:rounds.length }
 }
@@ -2794,7 +2794,7 @@ function courseHoleCount(courseId: string) {
 }
 
 const TIER_ROWS:[string,string,string][] = [
-  ['< 0',  'Tour Pro',    '#22c55e'],
+  ['> 0',  'Tour Pro',    '#22c55e'],
   ['0–9',  'Scratch',     '#86efac'],
   ['10–19','Club Player', '#fbbf24'],
   ['20–29','Amateur',     '#f97316'],
@@ -2843,7 +2843,7 @@ function HandicapCard(){
         <div style={{fontSize:16,lineHeight:1}}>🏆</div>
         <div style={{flex:1,textAlign:'left'}}>
           {hcp
-            ? <><span style={{fontSize:12,fontWeight:900,color:'white'}}>Hcp {hcp.index>0?'+':''}{hcp.index}</span><span style={{fontSize:11,fontWeight:700,color:hcp.color,marginLeft:6}}>{hcp.tier}</span></>
+            ? <><span style={{fontSize:12,fontWeight:900,color:'white'}}>Hcp {hcp.index>0?`+${hcp.index}`:Math.abs(hcp.index)}</span><span style={{fontSize:11,fontWeight:700,color:hcp.color,marginLeft:6}}>{hcp.tier}</span></>
             : <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>5 rounds for handicap</span>
           }
         </div>
@@ -2972,8 +2972,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
                 <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)',width:20,textAlign:'right'}}>#{i+1}</div>
                 <div style={{flex:1,fontSize:12,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.username}</div>
                 <div style={{fontSize:10,fontWeight:800,color,marginRight:4}}>{e.tier}</div>
-                <div style={{fontSize:12,fontWeight:900,color:e.handicap_index<0?'#22c55e':'rgba(255,255,255,0.6)',minWidth:30,textAlign:'right'}}>
-                  {e.handicap_index>0?'+':''}{e.handicap_index}
+                <div style={{fontSize:12,fontWeight:900,color:e.handicap_index>0?'#22c55e':'rgba(255,255,255,0.6)',minWidth:30,textAlign:'right'}}>
+                  {e.handicap_index>0?`+${e.handicap_index}`:Math.abs(e.handicap_index)}
                 </div>
               </div>
             )
