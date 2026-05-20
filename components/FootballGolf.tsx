@@ -3087,17 +3087,19 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
       {/* Daily challenges — two cards in a row */}
       <div style={{width:'100%',maxWidth:320,display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-        <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
-          <div style={{fontSize:18,lineHeight:1,marginBottom:5}}>⛳</div>
-          <div style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</div>
-          <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',marginTop:2,lineHeight:1.3}}>Closest to the pin</div>
-          <div style={{marginTop:6,fontSize:10,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓ Done':'Play →'}</div>
+        <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontSize:16,lineHeight:1}}>⛳</span>
+            <span style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</span>
+          </div>
+          <div style={{fontSize:10,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓ Done':'Play →'}</div>
         </button>
-        <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1a2e1a,#0f1f0f)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#16a34a'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
-          <div style={{fontSize:18,lineHeight:1,marginBottom:5}}>🏌️</div>
-          <div style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</div>
-          <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',marginTop:2,lineHeight:1.3}}>Pebble or Augusta</div>
-          <div style={{marginTop:6,fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#16a34a'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
+        <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1a2e1a,#0f1f0f)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#16a34a'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
+          <div style={{display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontSize:16,lineHeight:1}}>🏌️</span>
+            <span style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</span>
+          </div>
+          <div style={{fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#16a34a'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
         </button>
       </div>
 
