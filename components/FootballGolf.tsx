@@ -707,11 +707,12 @@ function normalisedScore(r:GolfRound){
 type HandicapData = { index:number; tier:string; color:string; top5:GolfRound[]; totalRounds:number; fromCache?:boolean }
 
 function getHandicapTier(idx:number):[string,string]{
-  if(idx > 0)   return ['Tour Pro',   '#22c55e']
-  if(idx >= -9)  return ['Scratch',    '#86efac']
-  if(idx >= -19) return ['Club Player','#fbbf24']
-  if(idx >= -29) return ['Amateur',    '#f97316']
-  return               ['Hacker',     '#ef4444']
+  if(idx > 2)   return ['Tour Pro',      '#22c55e']
+  if(idx >= 0)  return ['Scratch',       '#86efac']
+  if(idx >= -5) return ['Club Pro',      '#60a5fa']
+  if(idx >= -10) return ['Decent',   '#fbbf24']
+  if(idx >= -20) return ['Amateur',  '#f97316']
+  return               ['Hacker',   '#ef4444']
 }
 
 const HCP_CACHE_KEY = 'golf_hcp_cache'
@@ -2946,11 +2947,12 @@ function courseHoleCount(courseId: string) {
 }
 
 const TIER_ROWS:[string,string,string][] = [
-  ['> 0',  'Tour Pro',    '#22c55e'],
-  ['0–9',  'Scratch',     '#86efac'],
-  ['10–19','Club Player', '#fbbf24'],
-  ['20–29','Amateur',     '#f97316'],
-  ['30+',  'Hacker',      '#ef4444'],
+  ['> +2',  'Tour Pro',     '#22c55e'],
+  ['0–+2',  'Scratch',      '#86efac'],
+  ['1–5',   'Club Pro',     '#60a5fa'],
+  ['6–10',  'Decent',   '#fbbf24'],
+  ['11–20', 'Amateur',  '#f97316'],
+  ['20+',   'Hacker',   '#ef4444'],
 ]
 
 function HandicapCard({globalRank}:{globalRank:number|null}){
