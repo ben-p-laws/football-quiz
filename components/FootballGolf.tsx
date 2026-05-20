@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import NavBar from '@/components/NavBar'
 
 // ── Categories ───────────────────────────────────────────────────────────────
@@ -647,6 +647,41 @@ function buildCourse(tee: Tee, count: number, start = 1, courseId = 'pebble-beac
     const bunkers = realHaz?.bunkers ?? []
     return { number: def.number, par: def.par, distance, hazards, bunkers, path: def.path }
   })
+}
+
+// ── Handicap system ────────────────────────────────────────────────────────────
+
+type GolfRound = { date:string; holes:number; strokes:number; par:number }
+
+function saveGolfRound(holes:number, strokes:number, par:number){
+  if(typeof window==='undefined') return
+  const rounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
+  rounds.push({ date:new Date().toISOString().slice(0,10), holes, strokes, par })
+  localStorage.setItem('golf_rounds', JSON.stringify(rounds))
+}
+
+function normalisedScore(r:GolfRound){ return (r.strokes - r.par) * (18 / r.holes) }
+
+type HandicapData = { index:number; tier:string; color:string; top5:GolfRound[]; totalRounds:number }
+
+function getHandicapTier(idx:number):[string,string]{
+  if(idx < 0)  return ['Tour Pro',   '#22c55e']
+  if(idx < 10) return ['Scratch',    '#86efac']
+  if(idx < 20) return ['Club Player','#fbbf24']
+  if(idx < 30) return ['Amateur',    '#f97316']
+  return              ['Hacker',     '#ef4444']
+}
+
+function getHandicapData():HandicapData|null{
+  if(typeof window==='undefined') return null
+  const rounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
+  if(rounds.length < 5) return null
+  const sorted = [...rounds].sort((a,b)=>normalisedScore(a)-normalisedScore(b))
+  const top5 = sorted.slice(0,5)
+  const avg = top5.reduce((s,r)=>s+normalisedScore(r),0)/5
+  const rounded = Math.round(avg*10)/10
+  const [tier,color] = getHandicapTier(rounded)
+  return { index:rounded, tier, color, top5, totalRounds:rounds.length }
 }
 
 // ── Club types ─────────────────────────────────────────────────────────────────
@@ -2738,6 +2773,80 @@ function courseHoleCount(courseId: string) {
   return 18
 }
 
+const TIER_ROWS:[string,string,string][] = [
+  ['< 0',  'Tour Pro',    '#22c55e'],
+  ['0–9',  'Scratch',     '#86efac'],
+  ['10–19','Club Player', '#fbbf24'],
+  ['20–29','Amateur',     '#f97316'],
+  ['30+',  'Hacker',      '#ef4444'],
+]
+
+function HandicapCard(){
+  const [expanded, setExpanded] = useState(false)
+  const hcp = useMemo(()=>getHandicapData(),[])
+  const roundCount = useMemo(()=>{
+    if(typeof window==='undefined') return 0
+    return (JSON.parse(localStorage.getItem('golf_rounds')?? '[]') as GolfRound[]).length
+  },[])
+
+  return(
+    <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:12,overflow:'hidden',border:'1.5px solid rgba(255,255,255,0.07)'}}>
+      {/* Collapsed row */}
+      <button onClick={()=>setExpanded(e=>!e)} style={{width:'100%',background:'transparent',border:'none',cursor:'pointer',padding:'10px 14px',display:'flex',alignItems:'center',gap:10,fontFamily:'inherit'}}>
+        <div style={{fontSize:18,lineHeight:1}}>🏆</div>
+        <div style={{flex:1,textAlign:'left'}}>
+          {hcp
+            ? <><span style={{fontSize:13,fontWeight:900,color:'white'}}>Handicap {hcp.index > 0 ? '+' : ''}{hcp.index}</span><span style={{fontSize:12,fontWeight:700,color:hcp.color,marginLeft:8}}>{hcp.tier}</span></>
+            : <span style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>Complete 5 rounds to get a handicap</span>
+          }
+        </div>
+        <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',transition:'transform 0.2s',transform:expanded?'rotate(180deg)':'none'}}>▼</div>
+      </button>
+
+      {/* Expanded breakdown */}
+      {expanded&&(
+        <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',padding:'10px 14px 12px'}}>
+          {/* Tier table */}
+          <div style={{display:'grid',gridTemplateColumns:'auto 1fr auto',gap:'4px 10px',marginBottom:hcp?10:0}}>
+            {TIER_ROWS.map(([range,label,color])=>{
+              const active = hcp?.tier===label
+              return(
+                <React.Fragment key={label}>
+                  <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',alignSelf:'center'}}>{range}</div>
+                  <div style={{fontSize:11,fontWeight:800,color:active?color:'rgba(255,255,255,0.45)',alignSelf:'center'}}>{label}</div>
+                  <div style={{width:6,height:6,borderRadius:'50%',background:active?color:'rgba(255,255,255,0.1)',alignSelf:'center',justifySelf:'end'}}/>
+                </React.Fragment>
+              )
+            })}
+          </div>
+          {/* Top 5 rounds */}
+          {hcp&&(
+            <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8}}>
+              <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Top 5 rounds ({hcp.totalRounds} played)</div>
+              {hcp.top5.map((r,i)=>{
+                const ns = normalisedScore(r)
+                const vp = r.strokes - r.par
+                return(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'3px 0'}}>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',width:14,textAlign:'right'}}>{i+1}</div>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',flex:1}}>{r.holes}H · {r.date}</div>
+                    <div style={{fontSize:11,fontWeight:800,color:ns<0?'#22c55e':ns>0?'#ef4444':'white'}}>{vp===0?'E':vp>0?`+${vp}`:vp} <span style={{fontSize:9,fontWeight:500,color:'rgba(255,255,255,0.3)'}}>({ns>0?'+':''}{Math.round(ns*10)/10} norm)</span></div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {!hcp&&(
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',textAlign:'center',paddingTop:4}}>
+              {roundCount} / 5 rounds completed
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
@@ -2751,11 +2860,14 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   const dailyPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
   const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
   return(
-    <div style={{height:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'12px 20px',overflow:'hidden'}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'12px 20px',overflowY:'auto'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
 
       {/* Title */}
       <div style={{fontSize:24,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:2}}>Football Golf</div>
+
+      {/* Handicap card */}
+      <HandicapCard />
 
       {/* Daily challenge */}
       <button onClick={onDaily} style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 14px',cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:12}}>
@@ -3015,6 +3127,8 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
   const [leaderboard,setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [lbLoading,setLbLoading]     = useState(true)
   const [lbError,setLbError]         = useState('')
+
+  useEffect(()=>{ saveGolfRound(numHoles, totalStrokes, totalPar) },[])
 
   useEffect(()=>{
     fetch(`/api/golf-leaderboard?holes=${numHoles}`)
