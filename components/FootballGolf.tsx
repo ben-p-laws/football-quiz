@@ -746,6 +746,40 @@ function seedRoundsFromCache(index:number, totalRounds:number){
   localStorage.setItem('golf_rounds', JSON.stringify(syntheticRounds))
 }
 
+const DECAY_RATE = 0.15 // index points lost per missed day
+
+function getRealRounds(rounds:GolfRound[]){ return rounds.filter(r=>r.date!=='2000-01-01') }
+
+function getStreak(rounds:GolfRound[]):number{
+  const dates = new Set(getRealRounds(rounds).map(r=>r.date))
+  if(dates.size===0) return 0
+  const today = new Date()
+  let streak = 0
+  let skippedToday = false
+  for(let i=0;i<365;i++){
+    const d = new Date(today)
+    d.setDate(d.getDate()-i)
+    const key = d.toISOString().slice(0,10)
+    if(dates.has(key)){
+      streak++
+    } else if(i===0){
+      skippedToday = true // no round today yet — check from yesterday
+    } else {
+      break
+    }
+  }
+  return skippedToday && streak===0 ? 0 : streak
+}
+
+function getDecayDays(rounds:GolfRound[]):number{
+  const real = getRealRounds(rounds)
+  if(real.length===0) return 0
+  const lastDate = real.map(r=>r.date).sort().pop()!
+  const today = new Date().toISOString().slice(0,10)
+  const diff = Math.floor((new Date(today).getTime()-new Date(lastDate).getTime())/(864e5))
+  return Math.max(0, diff-1) // 1 day grace — playing yesterday keeps streak alive
+}
+
 function getHandicapData():HandicapData|null{
   if(typeof window==='undefined') return null
   const rounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
@@ -753,7 +787,9 @@ function getHandicapData():HandicapData|null{
     const sorted = [...rounds].sort((a,b)=>normalisedScore(a)-normalisedScore(b))
     const top5 = sorted.slice(0,5)
     const avg = top5.reduce((s,r)=>s+normalisedScore(r),0)/5
-    const rounded = Math.round(-avg*10)/10  // flip: over par → negative index, under par → positive
+    const base = Math.round(-avg*10)/10  // flip: over par → negative index, under par → positive
+    const decay = getDecayDays(rounds) * DECAY_RATE
+    const rounded = Math.round((base - decay)*10)/10
     const [tier,color] = getHandicapTier(rounded)
     return { index:rounded, tier, color, top5, totalRounds:rounds.length }
   }
@@ -2958,6 +2994,9 @@ const TIER_ROWS:[string,string,string][] = [
 function HandicapCard({globalRank}:{globalRank:number|null}){
   const hcp = useMemo(()=>getHandicapData(),[])
   useEffect(()=>{ upsertHandicap() },[])
+  const rounds:GolfRound[] = typeof window!=='undefined' ? JSON.parse(localStorage.getItem('golf_rounds')?? '[]') : []
+  const streak = getStreak(rounds)
+  const decayDays = getDecayDays(rounds)
 
   const cardBg = hcp ? `linear-gradient(135deg,${hcp.color}22,${hcp.color}11)` : 'transparent'
   const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
@@ -2968,11 +3007,19 @@ function HandicapCard({globalRank}:{globalRank:number|null}){
       <div style={{flex:1}}>
         {hcp
           ? <>
-              <div style={{fontSize:12,fontWeight:900,color:'white'}}>
+              <div style={{fontSize:12,fontWeight:900,color:'white',display:'flex',alignItems:'center',gap:6}}>
                 Hcp {hcp.index>0?`+${hcp.index}`:Math.abs(hcp.index)}
-                <span style={{fontSize:11,fontWeight:700,color:hcp.color,marginLeft:6}}>{hcp.tier}</span>
+                <span style={{fontSize:11,fontWeight:700,color:hcp.color}}>{hcp.tier}</span>
               </div>
-              {globalRank&&<div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>Ranked #{globalRank} globally</div>}
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1,display:'flex',alignItems:'center',gap:6}}>
+                {globalRank && <span>#{globalRank} globally</span>}
+                {streak > 0
+                  ? <span style={{color:'#f97316'}}>🔥 {streak} day streak</span>
+                  : decayDays > 0
+                    ? <span style={{color:'rgba(255,255,255,0.25)'}}>📉 -{(decayDays*DECAY_RATE).toFixed(1)} decay</span>
+                    : null
+                }
+              </div>
             </>
           : <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>5 rounds for handicap</span>
         }
@@ -3025,11 +3072,14 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
           )
         })}
       </div>
-      <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8,fontSize:10,color:'rgba(255,255,255,0.35)',lineHeight:1.5}}>
+      <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8,fontSize:10,color:'rgba(255,255,255,0.35)',lineHeight:1.6}}>
         {hcp
           ? <>Handicap calculated from your best 5 rounds. Keep playing to improve it.</>
           : <>{roundCount} / 5 rounds played. Keep playing to unlock your handicap.</>
         }
+      </div>
+      <div style={{background:'rgba(249,115,22,0.08)',border:'1px solid rgba(249,115,22,0.2)',borderRadius:8,padding:'7px 10px',fontSize:10,color:'rgba(255,255,255,0.5)',lineHeight:1.6}}>
+        🔥 <span style={{color:'rgba(249,115,22,0.9)',fontWeight:800}}>Keep your daily streak</span> to maintain your handicap. Miss a day and it will gradually worsen.
       </div>
       {/* Device linking */}
       <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',marginTop:10,paddingTop:10}}>
