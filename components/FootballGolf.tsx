@@ -695,7 +695,14 @@ function saveGolfRound(holes:number, strokes:number, par:number){
   localStorage.setItem('golf_rounds', JSON.stringify(rounds))
 }
 
-function normalisedScore(r:GolfRound){ return (r.strokes - r.par) * (18 / r.holes) }
+function normalisedScore(r:GolfRound){
+  const raw = r.strokes - r.par
+  if(raw === 0) return 0
+  // Under par: compress goodness for short rounds (good 3-hole scores barely count)
+  if(raw < 0) return raw * Math.pow(r.holes / 18, 0.7)
+  // Over par: partially normalise bad scores (worse than raw, but not fully scaled to 18)
+  return raw * Math.pow(18 / r.holes, 0.5)
+}
 
 type HandicapData = { index:number; tier:string; color:string; top5:GolfRound[]; totalRounds:number; fromCache?:boolean }
 
