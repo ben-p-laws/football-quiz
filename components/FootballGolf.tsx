@@ -3012,7 +3012,7 @@ function HandicapCard({globalRank}:{globalRank:number|null}){
                 <span style={{fontSize:11,fontWeight:700,color:hcp.color}}>{hcp.tier}</span>
               </div>
               <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1,display:'flex',alignItems:'center',gap:6}}>
-                {globalRank && <span>#{globalRank} globally</span>}
+                {globalRank && <span style={{fontWeight:800,color:'rgba(255,255,255,0.5)'}}>#{globalRank} globally</span>}
                 {streak > 0
                   ? <span style={{color:'#f97316'}}>🔥 {streak} day streak</span>
                   : decayDays > 0
@@ -3072,9 +3072,9 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
           )
         })}
       </div>
-      <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8,fontSize:10,color:'rgba(255,255,255,0.35)',lineHeight:1.6}}>
+      <div style={{background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,padding:'7px 10px',fontSize:10,color:'rgba(255,255,255,0.4)',lineHeight:1.6}}>
         {hcp
-          ? <>Handicap calculated from your best 5 rounds. Keep playing to improve it.</>
+          ? <>⛳ Handicap calculated from your best 5 rounds. Keep playing to improve it.</>
           : <>{roundCount} / 5 rounds played. Keep playing to unlock your handicap.</>
         }
       </div>
