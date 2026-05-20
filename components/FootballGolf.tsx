@@ -2955,24 +2955,12 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
           )
         })}
       </div>
-      {/* Top 5 rounds */}
-      {hcp&&(
-        <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8}}>
-          <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:5}}>Top 5 rounds ({hcp.totalRounds} played)</div>
-          {hcp.top5.map((r,i)=>{
-            const ns = normalisedScore(r)
-            const vp = r.strokes - r.par
-            return(
-              <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'3px 0'}}>
-                <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',width:14,textAlign:'right'}}>{i+1}</div>
-                <div style={{fontSize:10,color:'rgba(255,255,255,0.5)',flex:1}}>{r.holes}H · {r.date}</div>
-                <div style={{fontSize:11,fontWeight:800,color:ns<0?'#22c55e':ns>0?'#ef4444':'white'}}>{vp===0?'E':vp>0?`+${vp}`:vp} <span style={{fontSize:9,fontWeight:500,color:'rgba(255,255,255,0.3)'}}>({ns>0?'+':''}{Math.round(ns*10)/10} norm)</span></div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-      {!hcp&&<div style={{fontSize:10,color:'rgba(255,255,255,0.3)',textAlign:'center',paddingTop:4}}>{roundCount} / 5 rounds completed</div>}
+      <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',paddingTop:8,fontSize:10,color:'rgba(255,255,255,0.35)',lineHeight:1.5}}>
+        {hcp
+          ? <>Handicap calculated from your best 5 of <span style={{color:'rgba(255,255,255,0.6)',fontWeight:700}}>{hcp.totalRounds} rounds</span>. Keep playing to improve it.</>
+          : <>{roundCount} / 5 rounds played. Keep playing to unlock your handicap.</>
+        }
+      </div>
       {/* Device linking */}
       <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',marginTop:10,paddingTop:10}}>
         <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Link Another Device</div>
