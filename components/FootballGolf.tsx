@@ -834,6 +834,7 @@ export default function FootballGolf(){
   const [preAnimBallPos,setPreAnimBallPos] = useState(0) // ball pos before shot started (for swing graphic)
   const [arcOffset,setArcOffset]         = useState(0)   // lateral arc during flight
   const [pendingResult,setPendingResult] = useState<ShotResult|null>(null)
+  const [shotOverlay,setShotOverlay]     = useState(false) // stays true 1s after animation ends
   const animFrameRef       = useRef<number|null>(null)
   const oobDir             = useRef<0|1|-1>(0)
   const oobTargetArcOffset = useRef<number>(0)
@@ -1189,12 +1190,13 @@ export default function FootballGolf(){
   function animateShot(fromPos:number, toPos:number, result:ShotResult){
     if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
     setIsAnimating(true)
+    setShotOverlay(true)
     setPreAnimBallPos(fromPos)
     setPendingResult(result)
     setAnimBallPos(fromPos)
     setArcOffset(0)
     const startTime = performance.now()
-    const duration  = 2000
+    const duration  = 3000
     const dir = oobDir.current
     const tick = (now:number)=>{
       const t     = Math.min(1,(now-startTime)/duration)
@@ -1212,6 +1214,7 @@ export default function FootballGolf(){
         if(dir===0) setArcOffset(0)
         setShotResult(result)
         setPendingResult(null)
+        setTimeout(()=>setShotOverlay(false), 1000)
       }
     }
     animFrameRef.current=requestAnimationFrame(tick)
@@ -2102,7 +2105,42 @@ export default function FootballGolf(){
             </div>
           </div>
         )}
-        <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)'}}>
+        <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)',position:'relative'}}>
+          {/* Shot animation overlay — expands CourseView across full game row */}
+          {shotOverlay && currentHole && (
+            <div style={{position:'absolute',inset:0,zIndex:10,background:'#0a0f1e',display:'flex',flexDirection:'column'}}>
+              <CourseView
+                hole={currentHole}
+                displayBallPos={displayPos}
+                preAnimBallPos={preAnimBallPos}
+                arcOffset={arcOffset}
+                isAnimating={isAnimating}
+                strokes={strokes}
+                imageUrl={courseMode==='real' && !dailyMode ? (
+                  selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` :
+                  selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
+                  `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`
+                ) : undefined}
+                imageRotation={courseMode==='real' && !dailyMode ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
+                realYScale={courseMode==='real' && !dailyMode ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined}
+                realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
+                oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining) : undefined}
+                myBallColor={h2hStep==='playing'?(h2hIsHost.current?'#3b82f6':'#fbbf24'):undefined}
+                oppBallColor={h2hStep==='playing'?(h2hIsHost.current?'#fbbf24':'#3b82f6'):undefined}
+              />
+              <div style={{position:'absolute',bottom:16,left:16,background:'rgba(0,0,0,0.65)',backdropFilter:'blur(8px)',borderRadius:14,padding:'8px 16px',textAlign:'left',minWidth:100}}>
+                <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:2}}>Shot</div>
+                <div style={{fontSize:40,fontWeight:900,color:'white',lineHeight:1,fontVariantNumeric:'tabular-nums'}}>
+                  {Math.abs(Math.round(animBallPos - preAnimBallPos))}
+                </div>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',marginTop:3}}>
+                  <span style={{color:'rgba(255,255,255,0.25)'}}>pin </span>{currentHole.distance - preAnimBallPos} yds
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Left panel */}
           <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
