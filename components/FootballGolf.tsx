@@ -2843,14 +2843,16 @@ const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[nu
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
   4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
   5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
-  6: {teeFrac:[0.390,0.930], greenFrac:[0.640,0.100], waypointFracs:[[0.420,0.620],[0.520,0.330]]},
-  7: {teeFrac:[0.330,0.830], greenFrac:[0.730,0.170], waypointFracs:[[0.330,0.520],[0.600,0.270]]},
+  6: {teeFrac:[0.346,0.892], greenFrac:[0.608,0.173], waypointFracs:[[0.478,0.42]]},
+  7: {teeFrac:[0.414,0.868], greenFrac:[0.736,0.273], waypointFracs:[[0.243,0.255],[0.436,0.109]]},
 }
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
   1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
   2: {hazards:[{start:27,end:82}], bunkers:[{start:113,end:121}]},
   4: {bunkers:[{start:115,end:124}]},
   5: {bunkers:[{start:134,end:144}]},
+  6: {hazards:[{start:31,end:108},{start:268,end:297}], bunkers:[{start:308,end:320}]},
+  7: {hazards:[{start:295,end:312}]},
 }
 
 // Augusta images have varying heights — yScale = 100/(w/h) so viewBox always 100 wide
