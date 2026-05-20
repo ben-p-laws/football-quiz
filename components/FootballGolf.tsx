@@ -3135,7 +3135,10 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
   const [lbLoading,setLbLoading]     = useState(true)
   const [lbError,setLbError]         = useState('')
 
-  useEffect(()=>{ saveGolfRound(numHoles, totalStrokes, totalPar) },[])
+  useEffect(()=>{
+    saveGolfRound(numHoles, totalStrokes, totalPar)
+    if(name.trim()) saveScore()
+  },[])
 
   useEffect(()=>{
     fetch(`/api/golf-leaderboard?holes=${numHoles}`)
