@@ -2808,29 +2808,12 @@ function HandicapCard(){
     if(typeof window==='undefined') return 0
     return (JSON.parse(localStorage.getItem('golf_rounds')?? '[]') as GolfRound[]).length
   },[])
+  const [linkMode, setLinkMode] = useState<'off'|'generate'|'claim'>('off')
+  const [linkCode, setLinkCode] = useState('')
+  const [linkInput, setLinkInput] = useState('')
+  const [linkMsg, setLinkMsg] = useState('')
 
-  const cardBg = hcp
-    ? `linear-gradient(135deg,${hcp.color}22,${hcp.color}11)`
-    : 'transparent'
-  const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
-
-  const [lbOpen, setLbOpen]           = useState(false)
-  const [lbData, setLbData]           = useState<{username:string;handicap_index:number;tier:string}[]>([])
-  const [lbLoading, setLbLoading]     = useState(false)
-  const [linkMode, setLinkMode]       = useState<'off'|'generate'|'claim'>('off')
-  const [linkCode, setLinkCode]       = useState('')
-  const [linkInput, setLinkInput]     = useState('')
-  const [linkMsg, setLinkMsg]         = useState('')
-
-  function openLeaderboard(){
-    setLbOpen(true)
-    if(lbData.length) return
-    setLbLoading(true)
-    fetch('/api/golf-handicap?limit=50')
-      .then(r=>r.json())
-      .then(d=>setLbData(d.leaderboard??[]))
-      .finally(()=>setLbLoading(false))
-  }
+  useEffect(()=>{ upsertHandicap() },[])
 
   async function generateCode(){
     setLinkMsg('')
@@ -2850,50 +2833,22 @@ function HandicapCard(){
     setLinkMode('off')
   }
 
-  return(
-    <>
-    {/* Leaderboard overlay */}
-    {lbOpen&&(
-      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.85)',zIndex:100,display:'flex',flexDirection:'column',alignItems:'center',padding:'20px 16px',overflowY:'auto'}}
-           onClick={e=>e.target===e.currentTarget&&setLbOpen(false)}>
-        <div style={{width:'100%',maxWidth:380,background:'#111827',borderRadius:16,padding:'20px 16px'}}>
-          <div style={{display:'flex',alignItems:'center',marginBottom:16}}>
-            <div style={{fontSize:16,fontWeight:900,color:'white',flex:1}}>🌍 Global Handicap</div>
-            <button onClick={()=>setLbOpen(false)} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:20,cursor:'pointer',lineHeight:1}}>×</button>
-          </div>
-          {lbLoading&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'20px 0'}}>Loading…</div>}
-          {!lbLoading&&lbData.length===0&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'20px 0'}}>No entries yet</div>}
-          {lbData.map((e,i)=>{
-            const [,color]=getHandicapTier(e.handicap_index)
-            const isMe = getSavedUsername() && e.username===getSavedUsername()
-            return(
-              <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'8px 10px',borderRadius:10,background:isMe?'rgba(255,255,255,0.05)':'transparent',marginBottom:2}}>
-                <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.25)',width:22,textAlign:'right'}}>#{i+1}</div>
-                <div style={{flex:1,fontSize:13,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.username}</div>
-                <div style={{fontSize:11,fontWeight:800,color}}>{e.tier}</div>
-                <div style={{fontSize:13,fontWeight:900,color:e.handicap_index<0?'#22c55e':e.handicap_index===0?'white':'rgba(255,255,255,0.6)',minWidth:36,textAlign:'right'}}>
-                  {e.handicap_index>0?'+':''}{e.handicap_index}
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      </div>
-    )}
+  const cardBg = hcp ? `linear-gradient(135deg,${hcp.color}22,${hcp.color}11)` : 'transparent'
+  const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
 
-    <div style={{width:'100%',maxWidth:320,background:cardBg,borderRadius:12,overflow:'hidden',border:cardBorder}}>
+  return(
+    <div style={{flex:1,background:cardBg,borderRadius:12,overflow:'hidden',border:cardBorder}}>
       {/* Collapsed row */}
-      <div style={{display:'flex',alignItems:'center',padding:'10px 14px',gap:10}}>
-        <div style={{fontSize:18,lineHeight:1}}>🏆</div>
+      <button onClick={()=>setExpanded(e=>!e)} style={{width:'100%',background:'transparent',border:'none',cursor:'pointer',padding:'10px 12px',display:'flex',alignItems:'center',gap:8,fontFamily:'inherit'}}>
+        <div style={{fontSize:16,lineHeight:1}}>🏆</div>
         <div style={{flex:1,textAlign:'left'}}>
           {hcp
-            ? <><span style={{fontSize:13,fontWeight:900,color:'white'}}>Handicap {hcp.index>0?'+':''}{hcp.index}</span><span style={{fontSize:12,fontWeight:700,color:hcp.color,marginLeft:8}}>{hcp.tier}</span></>
-            : <span style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>Complete 5 rounds to get a handicap</span>
+            ? <><span style={{fontSize:12,fontWeight:900,color:'white'}}>Hcp {hcp.index>0?'+':''}{hcp.index}</span><span style={{fontSize:11,fontWeight:700,color:hcp.color,marginLeft:6}}>{hcp.tier}</span></>
+            : <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>5 rounds for handicap</span>
           }
         </div>
-        <button onClick={openLeaderboard} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:7,padding:'4px 8px',cursor:'pointer',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.5)',fontFamily:'inherit'}}>🌍</button>
-        <button onClick={()=>setExpanded(e=>!e)} style={{background:'none',border:'none',cursor:'pointer',padding:'2px 4px',fontFamily:'inherit',fontSize:10,color:'rgba(255,255,255,0.3)',transition:'transform 0.2s',transform:expanded?'rotate(180deg)':'none'}}>▼</button>
-      </div>
+        <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',transition:'transform 0.2s',transform:expanded?'rotate(180deg)':'none'}}>▼</div>
+      </button>
 
       {/* Expanded breakdown */}
       {expanded&&(
@@ -2962,7 +2917,6 @@ function HandicapCard(){
         </div>
       )}
     </div>
-    </>
   )
 }
 
@@ -2975,8 +2929,21 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
+  const [lbOpen, setLbOpen]       = useState(false)
+  const [lbData, setLbData]       = useState<{username:string;handicap_index:number;tier:string}[]>([])
+  const [lbLoading, setLbLoading] = useState(false)
   const today = new Date().toISOString().slice(0,10)
   const dailyPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
+
+  function openLeaderboard(){
+    setLbOpen(v=>!v)
+    if(lbData.length) return
+    setLbLoading(true)
+    fetch('/api/golf-handicap?limit=50')
+      .then(r=>r.json())
+      .then(d=>setLbData(d.leaderboard??[]))
+      .finally(()=>setLbLoading(false))
+  }
   const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
   return(
     <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'12px 20px',overflowY:'auto'}}>
@@ -2985,8 +2952,34 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       {/* Title */}
       <div style={{fontSize:24,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:2}}>Football Golf</div>
 
-      {/* Handicap card */}
-      <HandicapCard />
+      {/* Handicap card + leaderboard button */}
+      <div style={{width:'100%',maxWidth:320,display:'flex',gap:8,alignItems:'stretch'}}>
+        <HandicapCard />
+        <button onClick={openLeaderboard} style={{flexShrink:0,background:lbOpen?'rgba(34,197,94,0.15)':'#111827',border:`1.5px solid ${lbOpen?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:12,padding:'0 12px',cursor:'pointer',fontSize:18,fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>🌍</button>
+      </div>
+
+      {/* Handicap leaderboard (inline dropdown) */}
+      {lbOpen&&(
+        <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'12px 14px'}}>
+          <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Global Handicap Rankings</div>
+          {lbLoading&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'12px 0'}}>Loading…</div>}
+          {!lbLoading&&lbData.length===0&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'12px 0'}}>No entries yet</div>}
+          {lbData.map((e,i)=>{
+            const [,color]=getHandicapTier(e.handicap_index)
+            const isMe = !!getSavedUsername() && e.username===getSavedUsername()
+            return(
+              <div key={i} style={{display:'flex',alignItems:'center',gap:8,padding:'6px 8px',borderRadius:8,background:isMe?'rgba(255,255,255,0.05)':'transparent',marginBottom:2}}>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)',width:20,textAlign:'right'}}>#{i+1}</div>
+                <div style={{flex:1,fontSize:12,fontWeight:isMe?800:600,color:isMe?'white':'rgba(255,255,255,0.7)'}}>{e.username}</div>
+                <div style={{fontSize:10,fontWeight:800,color,marginRight:4}}>{e.tier}</div>
+                <div style={{fontSize:12,fontWeight:900,color:e.handicap_index<0?'#22c55e':'rgba(255,255,255,0.6)',minWidth:30,textAlign:'right'}}>
+                  {e.handicap_index>0?'+':''}{e.handicap_index}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Daily challenge */}
       <button onClick={onDaily} style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 14px',cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',gap:12}}>
