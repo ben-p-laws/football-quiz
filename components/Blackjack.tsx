@@ -208,7 +208,8 @@ export default function Blackjack() {
   const [newDeal,        setNewDeal]        = useState(false)
   const [blackjackFlash, setBlackjackFlash] = useState(false)
   const [hadBlackjack,   setHadBlackjack]   = useState(false)
-  const [pendingBust,    setPendingBust]    = useState(false)
+  const [pendingBust,      setPendingBust]      = useState(false)
+  const [pendingBlackjack, setPendingBlackjack] = useState(false)
 
   const dealerRef       = useRef<GameCard[]>([])
   const deckRef         = useRef<GameCard[]>([])
@@ -243,6 +244,7 @@ export default function Blackjack() {
     setBlackjackFlash(false)
     setHadBlackjack(false)
     setPendingBust(false)
+    setPendingBlackjack(false)
     hadBlackjackRef.current = false
     setPlayerHand([])
     setDealerHand([])
@@ -362,15 +364,19 @@ export default function Blackjack() {
         setPendingBust(true)
       }
     } else if (total === 21) {
-      setPhase('dealer')
-      setBlackjackFlash(true)
-      setTimeout(() => {
-        setBlackjackFlash(false)
-        const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
-        dealerRef.current = revealed
-        setDealerHand([...revealed])
-        setTimeout(() => playDealer(), 700)
-      }, 1600)
+      if (mode === 'easy') {
+        setPhase('dealer')
+        setBlackjackFlash(true)
+        setTimeout(() => {
+          setBlackjackFlash(false)
+          const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+          dealerRef.current = revealed
+          setDealerHand([...revealed])
+          setTimeout(() => playDealer(), 700)
+        }, 1600)
+      } else {
+        setPendingBlackjack(true)
+      }
     }
   }
 
@@ -394,6 +400,19 @@ export default function Blackjack() {
     if (pendingBust) {
       setPendingBust(false)
       setTimeout(() => triggerBust(), 0)
+      return
+    }
+    if (pendingBlackjack) {
+      setPendingBlackjack(false)
+      setPhase('dealer')
+      setBlackjackFlash(true)
+      setTimeout(() => {
+        setBlackjackFlash(false)
+        const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+        dealerRef.current = revealed
+        setDealerHand([...revealed])
+        setTimeout(() => playDealer(), 700)
+      }, 1600)
       return
     }
     setPhase('dealer')
@@ -567,7 +586,7 @@ export default function Blackjack() {
         <>
           {/* Top nav chips */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 540 }}>
-            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false); setPendingBust(false); setPlayerHand([]); setDealerHand([]) }}
+            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false); setPendingBust(false); setPendingBlackjack(false); setPlayerHand([]); setDealerHand([]) }}
               style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>
               ← Menu
             </button>
@@ -761,12 +780,15 @@ export default function Blackjack() {
 
             {phase === 'player' && !busy && !busting && (
               <>
-                <button onClick={hit} style={{
+                <button onClick={hit} disabled={pendingBlackjack} style={{
                   padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800,
-                  cursor: 'pointer',
-                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                  cursor: pendingBlackjack ? 'not-allowed' : 'pointer',
+                  background: pendingBlackjack
+                    ? 'linear-gradient(135deg, #6b7280, #4b5563)'
+                    : 'linear-gradient(135deg, #dc2626, #b91c1c)',
                   border: 'none', color: 'white',
                   boxShadow: '0 4px 20px rgba(220,38,38,0.4)',
+                  opacity: pendingBlackjack ? 0.5 : 1,
                 }}>
                   Hit
                 </button>
