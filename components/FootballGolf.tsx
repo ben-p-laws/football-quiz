@@ -1849,7 +1849,7 @@ export default function FootballGolf(){
     })
     const res=await fetch('/api/golf-room',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'create',hostId:pid,hostName:h2hPlayerName||'Host',config:{courseMode,numHoles,tee},holes:hs,teeCategories:teeCats}),
+      body:JSON.stringify({action:'create',hostId:pid,hostName:h2hPlayerName||'Host',config:{courseMode,numHoles,tee,selectedCourse},holes:hs,teeCategories:teeCats}),
     }).then(r=>r.json())
     if(res.error){setH2HError(res.error);return}
     setSavedUsername(h2hPlayerName)
@@ -1886,6 +1886,12 @@ export default function FootballGolf(){
     setH2HOppName(res.room.host_name)
     h2hOppId.current=res.room.host_id
     h2hRoomData.current={holes:res.room.holes,teeCategories:res.room.tee_categories}
+    const cfg=res.room.config
+    if(cfg){
+      if(cfg.courseMode) setCourseMode(cfg.courseMode)
+      if(cfg.selectedCourse) setSelectedCourse(cfg.selectedCourse)
+      if(cfg.tee) setTee(cfg.tee)
+    }
     setH2HStep('lobby')
     startLobbyPoll()
   }
