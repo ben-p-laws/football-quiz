@@ -151,10 +151,9 @@ function PlayingCard({ card, stat, mode, reveal }: {
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
-      {/* Top-right corner */}
-      <div style={{ position: 'absolute', top: 6, right: 7, lineHeight: 1, textAlign: 'right', zIndex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
+      {/* Top-right corner: TB logo */}
+      <div style={{ position: 'absolute', top: 5, right: 5, zIndex: 1 }}>
+        <TbMiniLogo size={13} />
       </div>
       {/* Centre: player name + team */}
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 62, textAlign: 'center', zIndex: 1 }}>
@@ -162,13 +161,12 @@ function PlayingCard({ card, stat, mode, reveal }: {
         <div style={{ fontSize: 7.5, color: '#6b7280', lineHeight: 1.2, marginTop: 2 }}>{card.team}</div>
         {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af', marginTop: 3 }}>?</div>}
       </div>
-      {/* Bottom-left corner (inverted) */}
-      <div style={{ position: 'absolute', bottom: 6, left: 7, transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
+      {/* Bottom-left corner: TB logo (inverted) */}
+      <div style={{ position: 'absolute', bottom: 5, left: 5, transform: 'rotate(180deg)', zIndex: 1 }}>
+        <TbMiniLogo size={13} />
       </div>
-      {/* Bottom-right corner (inverted) */}
-      <div style={{ position: 'absolute', bottom: 6, right: 7, transform: 'rotate(180deg)', lineHeight: 1, textAlign: 'right', zIndex: 1 }}>
+      {/* Bottom-right corner: stat value + icon (inverted) */}
+      <div style={{ position: 'absolute', bottom: 6, right: 7, transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
