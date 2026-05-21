@@ -3733,8 +3733,9 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
         } else {
           navigator.clipboard.writeText(text).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2000) }).catch(()=>{})
         }
-      }} style={{background:'#1e2d4a',color:'white',border:'1.5px solid rgba(255,255,255,0.12)',borderRadius:12,padding:'13px 48px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-        {copied ? '✓ Copied!' : '📤 Share Result'}
+      }} style={{background:'#1e2d4a',color:'white',border:'1.5px solid rgba(255,255,255,0.12)',borderRadius:12,padding:'13px 20px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',width:'100%',maxWidth:340,textAlign:'center'}}>
+        {copied ? '✓ Link copied!' : '🏌️ Challenge a Friend'}
+        {!copied&&<div style={{fontSize:11,fontWeight:500,color:'rgba(255,255,255,0.45)',marginTop:3}}>Share this link to see if they can beat your score</div>}
       </button>
 
       <button onClick={onRestart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'13px 48px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
