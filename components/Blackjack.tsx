@@ -66,7 +66,7 @@ function PlayingCard({ card, stat, mode, reveal }: {
   if (card.faceDown) {
     return (
       <div style={{
-        width: 100, height: 150, borderRadius: 10, flexShrink: 0,
+        width: 82, height: 124, borderRadius: 8, flexShrink: 0,
         background: 'linear-gradient(135deg, #1a2744 25%, #0d1b36 50%, #1a2744 75%)',
         border: '2px solid #3a5080',
         boxShadow: '0 6px 24px rgba(0,0,0,0.6)',
@@ -76,36 +76,36 @@ function PlayingCard({ card, stat, mode, reveal }: {
         transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
         position: 'relative', overflow: 'hidden',
       }}>
-        <div style={{ position: 'absolute', inset: 5, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 6 }} />
-        <div style={{ fontSize: 30, opacity: 0.2 }}>♦</div>
-        <div style={{ position: 'absolute', top: 7, left: 9, fontSize: 10, color: 'rgba(255,255,255,0.18)', fontWeight: 700 }}>TB</div>
-        <div style={{ position: 'absolute', bottom: 7, right: 9, fontSize: 10, color: 'rgba(255,255,255,0.18)', fontWeight: 700, transform: 'rotate(180deg)' }}>TB</div>
+        <div style={{ position: 'absolute', inset: 4, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5 }} />
+        <div style={{ fontSize: 26, opacity: 0.2 }}>♦</div>
+        <div style={{ position: 'absolute', top: 6, left: 7, fontSize: 9, color: 'rgba(255,255,255,0.18)', fontWeight: 700 }}>TB</div>
+        <div style={{ position: 'absolute', bottom: 6, right: 7, fontSize: 9, color: 'rgba(255,255,255,0.18)', fontWeight: 700, transform: 'rotate(180deg)' }}>TB</div>
       </div>
     )
   }
 
   return (
     <div style={{
-      width: 100, height: 150, borderRadius: 10, flexShrink: 0,
+      width: 82, height: 124, borderRadius: 8, flexShrink: 0,
       background: 'white', border: '1px solid #d1d5db',
       boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
-      display: 'flex', flexDirection: 'column', padding: '7px 8px',
+      display: 'flex', flexDirection: 'column', padding: '6px 7px',
       transform: card.animIn ? 'translateY(0)' : 'translateY(-120px)',
       opacity: card.animIn ? 1 : 0,
       transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
     }}>
       <div style={{ lineHeight: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 10 }}>{STAT_ICON[stat]}</div>
+        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 2 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: '#111', lineHeight: 1.25, wordBreak: 'break-word' }}>{card.player}</div>
-        <div style={{ fontSize: 8.5, color: '#6b7280', lineHeight: 1.2 }}>{card.team}</div>
-        {!showValue && <div style={{ fontSize: 18, fontWeight: 900, color: '#9ca3af' }}>?</div>}
+        <div style={{ fontSize: 9, fontWeight: 800, color: '#111', lineHeight: 1.25, wordBreak: 'break-word' }}>{card.player}</div>
+        <div style={{ fontSize: 7.5, color: '#6b7280', lineHeight: 1.2 }}>{card.team}</div>
+        {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af' }}>?</div>}
       </div>
       <div style={{ alignSelf: 'flex-end', transform: 'rotate(180deg)', lineHeight: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 10 }}>{STAT_ICON[stat]}</div>
+        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
     </div>
   )
@@ -423,19 +423,19 @@ export default function Blackjack() {
 
           {/* Casino table */}
           <div style={{
-            width: '100%', maxWidth: 520,
+            width: '100%', maxWidth: 450,
             background: 'linear-gradient(135deg, #c9a84c 0%, #f0d060 40%, #c9a84c 70%, #a07828 100%)',
-            borderRadius: 180, padding: 7,
+            borderRadius: 150, padding: 7,
             boxShadow: '0 16px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)',
             position: 'relative',
           }}>
             {/* Felt */}
             <div style={{
-              borderRadius: 170, overflow: 'hidden',
+              borderRadius: 142, overflow: 'hidden',
               background: 'radial-gradient(ellipse at 50% 30%, #236b35 0%, #1a5428 60%, #163f20 100%)',
-              padding: '20px 28px',
+              padding: '18px 24px',
               boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)',
-              minHeight: 380, display: 'flex', flexDirection: 'column', gap: 0,
+              minHeight: 330, display: 'flex', flexDirection: 'column', gap: 0,
               position: 'relative',
             }}>
 
@@ -447,7 +447,7 @@ export default function Blackjack() {
                   background: 'rgba(140,0,0,0.65)',
                   animation: 'fade-bust 1.6s ease-in-out forwards',
                   pointerEvents: 'none',
-                  borderRadius: 170,
+                  borderRadius: 142,
                 }}>
                   <div style={{
                     fontSize: 72, fontWeight: 900, color: 'white',
@@ -479,7 +479,7 @@ export default function Blackjack() {
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', minHeight: 155 }}>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', minHeight: 128 }}>
                   {dealerHand.map(c => <PlayingCard key={c.id} card={c} stat={stat} mode={mode} reveal={reveal} />)}
                 </div>
               </div>
@@ -499,7 +499,7 @@ export default function Blackjack() {
 
               {/* Player row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', minHeight: 155 }}>
+                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', minHeight: 128 }}>
                   {playerHand.map(c => <PlayingCard key={c.id} card={c} stat={stat} mode={mode} reveal={reveal} />)}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
