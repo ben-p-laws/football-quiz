@@ -582,19 +582,6 @@ export default function Blackjack() {
             </button>
           </div>
 
-          {/* Stat + Season — big display */}
-          {season ? (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: '#f59e0b', letterSpacing: -0.5, lineHeight: 1 }}>
-                {STAT_ICON[stat]} {STAT_LABEL[stat]}
-              </div>
-              <div style={{ fontSize: 16, color: 'rgba(255,255,255,0.45)', fontWeight: 600, marginTop: 3, letterSpacing: 1 }}>
-                {season}
-              </div>
-            </div>
-          ) : (
-            <div style={{ height: 52 }} />
-          )}
 
           {/* Casino table */}
           <div style={{
@@ -684,7 +671,15 @@ export default function Blackjack() {
                 </div>
               </div>
 
-              {/* Centre brand + New Hand overlay */}
+              {/* Side logos */}
+              <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.55, zIndex: 1 }}>
+                <TbMiniLogo size={32} />
+              </div>
+              <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.55, zIndex: 1 }}>
+                <TbMiniLogo size={32} />
+              </div>
+
+              {/* Centre stat + New Hand overlay */}
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px 0', position: 'relative' }}>
                 {/* New Hand button — pops up here when result is ready */}
                 {phase === 'result' && newDeal && (
@@ -701,14 +696,27 @@ export default function Blackjack() {
                   </button>
                 )}
                 <div style={{
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                  background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '8px 20px',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '7px 18px',
                   border: '1px solid rgba(255,255,255,0.07)',
                   opacity: phase === 'result' && newDeal ? 0.25 : 1,
+                  textAlign: 'center',
                 }}>
-                  {TB_LOGO}
-                  <div style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, marginTop: 1 }}>TOPBINS CASINO</div>
-                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.2)', letterSpacing: 2 }}>♠  BLACKJACK  ♠</div>
+                  {season ? (
+                    <>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: '#f59e0b', lineHeight: 1.1, letterSpacing: -0.3 }}>
+                        {STAT_ICON[stat]} {STAT_LABEL[stat]}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600, letterSpacing: 1 }}>
+                        {season}
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: 3 }}>TOPBINS CASINO</div>
+                      <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.18)', letterSpacing: 2 }}>♠  BLACKJACK  ♠</div>
+                    </>
+                  )}
                 </div>
               </div>
 
