@@ -96,8 +96,8 @@ function PlayingCard({ card, stat, mode, reveal }: {
     return (
       <div style={{
         width: 82, height: 124, borderRadius: 8, flexShrink: 0,
-        background: 'linear-gradient(135deg, #1a2744 25%, #0d1b36 50%, #1a2744 75%)',
-        border: '2px solid #3a5080',
+        background: '#0a0f1e',
+        border: '2px solid #dc2626',
         boxShadow: '0 6px 24px rgba(0,0,0,0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transform: card.animIn ? 'translateY(0) rotate(-1deg)' : 'translateY(-120px)',
@@ -105,10 +105,29 @@ function PlayingCard({ card, stat, mode, reveal }: {
         transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
         position: 'relative', overflow: 'hidden',
       }}>
-        <div style={{ position: 'absolute', inset: 4, border: '1px solid rgba(255,255,255,0.08)', borderRadius: 5 }} />
-        <div style={{ fontSize: 26, opacity: 0.2 }}>♦</div>
-        <div style={{ position: 'absolute', top: 6, left: 7, fontSize: 9, color: 'rgba(255,255,255,0.18)', fontWeight: 700 }}>TB</div>
-        <div style={{ position: 'absolute', bottom: 6, right: 7, fontSize: 9, color: 'rgba(255,255,255,0.18)', fontWeight: 700, transform: 'rotate(180deg)' }}>TB</div>
+        {/* Grid pattern matching site */}
+        <svg style={{ position: 'absolute', inset: 0 }} width="82" height="124" xmlns="http://www.w3.org/2000/svg">
+          <line x1="20" y1="0" x2="20" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="40" y1="0" x2="40" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="60" y1="0" x2="60" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="0" y1="25" x2="82" y2="25" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="0" y1="50" x2="82" y2="50" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="0" y1="75" x2="82" y2="75" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="0" y1="100" x2="82" y2="100" stroke="#1e2d4a" strokeWidth="1"/>
+        </svg>
+        {/* Inner red border frame */}
+        <div style={{ position: 'absolute', inset: 5, border: '1px solid rgba(220,38,38,0.3)', borderRadius: 4 }} />
+        {/* Centre TB logo */}
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <TbMiniLogo size={38} />
+        </div>
+        {/* Corner logos */}
+        <div style={{ position: 'absolute', top: 6, left: 6, zIndex: 1 }}>
+          <TbMiniLogo size={11} />
+        </div>
+        <div style={{ position: 'absolute', bottom: 6, right: 6, transform: 'rotate(180deg)', zIndex: 1 }}>
+          <TbMiniLogo size={11} />
+        </div>
       </div>
     )
   }
@@ -118,7 +137,6 @@ function PlayingCard({ card, stat, mode, reveal }: {
       width: 82, height: 124, borderRadius: 8, flexShrink: 0,
       background: 'white', border: '1px solid #d1d5db',
       boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
-      display: 'flex', flexDirection: 'column', padding: '6px 7px',
       position: 'relative', overflow: 'hidden',
       transform: card.animIn ? 'translateY(0)' : 'translateY(-120px)',
       opacity: card.animIn ? 1 : 0,
@@ -128,24 +146,29 @@ function PlayingCard({ card, stat, mode, reveal }: {
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.11, pointerEvents: 'none', zIndex: 0 }}>
         <TbMiniLogo size={50} />
       </div>
-      {/* Top-right TB logo */}
-      <div style={{ position: 'absolute', top: 5, right: 5, zIndex: 1 }}>
-        <TbMiniLogo size={13} />
-      </div>
-      {/* Bottom-left TB logo (inverted) */}
-      <div style={{ position: 'absolute', bottom: 5, left: 5, transform: 'rotate(180deg)', zIndex: 1 }}>
-        <TbMiniLogo size={13} />
-      </div>
-      <div style={{ lineHeight: 1, zIndex: 1 }}>
+      {/* Top-left corner */}
+      <div style={{ position: 'absolute', top: 6, left: 7, lineHeight: 1, zIndex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 2, zIndex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.2, wordBreak: 'break-word' }}>{card.player}</div>
-        <div style={{ fontSize: 7.5, color: '#6b7280', lineHeight: 1.2 }}>{card.team}</div>
-        {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af' }}>?</div>}
+      {/* Top-right corner */}
+      <div style={{ position: 'absolute', top: 6, right: 7, lineHeight: 1, textAlign: 'right', zIndex: 1 }}>
+        <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
+        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
-      <div style={{ alignSelf: 'flex-end', transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
+      {/* Centre: player name + team */}
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 62, textAlign: 'center', zIndex: 1 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.2, wordBreak: 'break-word' }}>{card.player}</div>
+        <div style={{ fontSize: 7.5, color: '#6b7280', lineHeight: 1.2, marginTop: 2 }}>{card.team}</div>
+        {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af', marginTop: 3 }}>?</div>}
+      </div>
+      {/* Bottom-left corner (inverted) */}
+      <div style={{ position: 'absolute', bottom: 6, left: 7, transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
+        <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
+        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
+      </div>
+      {/* Bottom-right corner (inverted) */}
+      <div style={{ position: 'absolute', bottom: 6, right: 7, transform: 'rotate(180deg)', lineHeight: 1, textAlign: 'right', zIndex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
@@ -272,11 +295,11 @@ export default function Blackjack() {
     setTimeout(() => {
       dealerRef.current = [{ ...d1, animIn: true }]
       setDealerHand([...dealerRef.current])
-    }, 350)
+    }, 600)
     setTimeout(() => {
       playerRef.current = [...playerRef.current, { ...p2, animIn: true }]
       setPlayerHand([...playerRef.current])
-    }, 700)
+    }, 900)
     setTimeout(() => {
       dealerRef.current = [...dealerRef.current, { ...d2, animIn: true }]
       setDealerHand([...dealerRef.current])
@@ -305,7 +328,7 @@ export default function Blackjack() {
       } else {
         setPhase('player')
       }
-    }, 1050)
+    }, 1350)
   }
 
   // ── Hit ───────────────────────────────────────────────────────────────────────
@@ -369,7 +392,7 @@ export default function Blackjack() {
     const newHand = [...current, newCard]
     dealerRef.current = newHand
     setDealerHand([...newHand])
-    setTimeout(playDealer, 900)
+    setTimeout(playDealer, 1100)
   }
 
   // ── Resolve ───────────────────────────────────────────────────────────────────
@@ -465,10 +488,22 @@ export default function Blackjack() {
           <h1 style={{ fontSize: 34, fontWeight: 900, margin: '0 0 6px', letterSpacing: -1 }}>
             Topbins <span style={{ color: '#f59e0b' }}>Casino</span>
           </h1>
-          <p style={{ color: '#8899bb', margin: '0 0 28px', fontSize: 13, lineHeight: 1.6 }}>
+          <p style={{ color: '#8899bb', margin: '0 0 20px', fontSize: 13, lineHeight: 1.6 }}>
             The top 52 players from a random season and stat form the deck.<br/>
             Card value = their stat figure. Get closest to 21 without busting.
           </p>
+          <input
+            value={username}
+            onChange={e => saveUsername(e.target.value)}
+            placeholder="Enter your name for the leaderboard"
+            maxLength={20}
+            style={{
+              padding: '10px 18px', borderRadius: 20, fontSize: 13, marginBottom: 20,
+              background: '#111827', border: '1px solid #374151',
+              color: 'white', outline: 'none', width: '100%', textAlign: 'center',
+              boxSizing: 'border-box',
+            }}
+          />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
             <button onClick={() => setMode('easy')} style={{
               padding: '24px 12px', borderRadius: 14, cursor: 'pointer',
@@ -738,19 +773,6 @@ export default function Blackjack() {
               </div>
             )}
           </div>
-
-          {/* Username row */}
-          <input
-            value={username}
-            onChange={e => saveUsername(e.target.value)}
-            placeholder="Your name for leaderboard"
-            maxLength={20}
-            style={{
-              padding: '8px 16px', borderRadius: 20, fontSize: 13,
-              background: '#111827', border: '1px solid #374151',
-              color: 'white', outline: 'none', width: 220, textAlign: 'center',
-            }}
-          />
 
           {/* Leaderboard */}
           {showLB && (
