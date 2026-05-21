@@ -3656,6 +3656,17 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
         <div style={{fontSize:14,color:'rgba(255,255,255,0.4)',marginTop:4}}>{totalStrokes} strokes · Par {totalPar}</div>
       </div>
 
+      {/* Share */}
+      <button onClick={()=>{
+        const breakdown = holes.map((h,i)=>(scores[i]??0)-h.par)
+        const payload: SharePayload = { n: name.trim()||'Someone', h: numHoles, sp: vsPar, st: totalStrokes, b: breakdown }
+        const url = `${window.location.origin}/football-golf?s=${encodeShare(payload)}`
+        navigator.clipboard.writeText(url).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2000) }).catch(()=>{})
+      }} style={{background:'#1e2d4a',color:'white',border:'1.5px solid rgba(255,255,255,0.12)',borderRadius:12,padding:'13px 20px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',width:'100%',maxWidth:340,textAlign:'center'}}>
+        {copied ? '✓ Link copied!' : '🏌️ Challenge a Friend'}
+        {!copied&&<div style={{fontSize:11,fontWeight:500,color:'rgba(255,255,255,0.45)',marginTop:3}}>Share this link to see if they can beat your score</div>}
+      </button>
+
       {/* Hole breakdown */}
       <div style={{width:'100%',maxWidth:340,background:'#111827',borderRadius:12,overflow:'hidden'}}>
         <div style={{display:'grid',gridTemplateColumns:'36px 1fr 1fr 1fr',padding:'7px 12px',borderBottom:'1px solid rgba(255,255,255,0.08)'}}>
@@ -3721,22 +3732,6 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
           </div>
         )}
       </div>
-
-      {/* Share */}
-      <button onClick={()=>{
-        const breakdown = holes.map((h,i)=>(scores[i]??0)-h.par)
-        const payload: SharePayload = { n: name.trim()||'Someone', h: numHoles, sp: vsPar, st: totalStrokes, b: breakdown }
-        const url = `${window.location.origin}/football-golf?s=${encodeShare(payload)}`
-        const text = buildShareText(payload, url)
-        if (navigator.share) {
-          navigator.share({ text }).catch(()=>{})
-        } else {
-          navigator.clipboard.writeText(text).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2000) }).catch(()=>{})
-        }
-      }} style={{background:'#1e2d4a',color:'white',border:'1.5px solid rgba(255,255,255,0.12)',borderRadius:12,padding:'13px 20px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',width:'100%',maxWidth:340,textAlign:'center'}}>
-        {copied ? '✓ Link copied!' : '🏌️ Challenge a Friend'}
-        {!copied&&<div style={{fontSize:11,fontWeight:500,color:'rgba(255,255,255,0.45)',marginTop:3}}>Share this link to see if they can beat your score</div>}
-      </button>
 
       <button onClick={onRestart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'13px 48px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
         Play Again
