@@ -132,11 +132,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  // ── Sudden death ─────────────────────────────────────────────────────────────
+  if (body.action === 'startSD') {
+    const { roomId, sdHole, sdCategory } = body
+    const { data: room } = await db.from('golf_h2h_rooms').select('config').eq('id', roomId).single()
+    const newConfig = { ...(room?.config || {}), sdHole, sdCategory }
+    await db.from('golf_h2h_rooms').update({ config: newConfig }).eq('id', roomId)
+    return NextResponse.json({ ok: true })
+  }
+
   // ── Rematch ───────────────────────────────────────────────────────────────────
   if (body.action === 'rematch') {
     const { roomId, holes, teeCategories } = body
     await db.from('golf_h2h_shots').delete().eq('room_id', roomId)
-    await db.from('golf_h2h_rooms').update({ holes, tee_categories: teeCategories, status: 'playing' }).eq('id', roomId)
+    await db.from('golf_h2h_rooms').update({ holes, tee_categories: teeCategories, status: 'playing', config: {} }).eq('id', roomId)
     return NextResponse.json({ ok: true })
   }
 
