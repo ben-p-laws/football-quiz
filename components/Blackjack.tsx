@@ -41,15 +41,31 @@ const TB_LOGO = (
   </svg>
 )
 
-// Mini TopBins logo for card corners / watermark
+// Mini TopBins logo — identical to Chrome tab favicon, unique clipPath ID per mount
+let _tbLogoSeq = 0
 function TbMiniLogo({ size = 12 }: { size?: number }) {
+  const clipId = useRef(`tbml-${++_tbLogoSeq}`).current
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <defs><clipPath id={clipId}><circle cx="17" cy="15" r="6.1"/></clipPath></defs>
       <rect width="32" height="32" rx="7" fill="#0a0f1e"/>
       <rect width="28" height="4" fill="#e2e8f0"/>
       <rect x="24" y="4" width="4" height="28" fill="#e2e8f0"/>
-      <circle cx="17" cy="15" r="6.5" fill="white"/>
-      <circle cx="17" cy="15" r="7.5" fill="none" stroke="#dc2626" strokeWidth="2"/>
+      <line x1="4"  y1="4" x2="2"  y2="32" stroke="#334155" strokeWidth="0.8"/>
+      <line x1="9"  y1="4" x2="7"  y2="32" stroke="#334155" strokeWidth="0.8"/>
+      <line x1="14" y1="4" x2="12" y2="32" stroke="#334155" strokeWidth="0.8"/>
+      <line x1="19" y1="4" x2="17" y2="32" stroke="#334155" strokeWidth="0.8"/>
+      <line x1="0" y1="9"  x2="24" y2="9"  stroke="#334155" strokeWidth="0.8"/>
+      <line x1="0" y1="14" x2="24" y2="14" stroke="#334155" strokeWidth="0.8"/>
+      <line x1="0" y1="19" x2="24" y2="19" stroke="#334155" strokeWidth="0.8"/>
+      <line x1="0" y1="24" x2="24" y2="24" stroke="#334155" strokeWidth="0.8"/>
+      <circle cx="17" cy="15" r="6.2" fill="white"/>
+      <circle cx="17" cy="15" r="7.2" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5"/>
+      <g clipPath={`url(#${clipId})`}>
+        <path transform="translate(16.5,12.5)" fill="#dc2626" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z"/>
+        <path transform="translate(13,17.5)"   fill="#dc2626" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z"/>
+        <path transform="translate(21,17.5)"   fill="#dc2626" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z"/>
+      </g>
     </svg>
   )
 }
@@ -109,7 +125,7 @@ function PlayingCard({ card, stat, mode, reveal }: {
       transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
     }}>
       {/* Faint centre watermark */}
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.06, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.11, pointerEvents: 'none', zIndex: 0 }}>
         <TbMiniLogo size={50} />
       </div>
       {/* Top-right TB logo */}
@@ -158,10 +174,12 @@ export default function Blackjack() {
   const [newDeal,        setNewDeal]        = useState(false)
   const [blackjackFlash, setBlackjackFlash] = useState(false)
   const [hadBlackjack,   setHadBlackjack]   = useState(false)
+  const [pendingBust,    setPendingBust]    = useState(false)
 
-  const dealerRef = useRef<GameCard[]>([])
-  const deckRef   = useRef<GameCard[]>([])
-  const playerRef = useRef<GameCard[]>([])
+  const dealerRef       = useRef<GameCard[]>([])
+  const deckRef         = useRef<GameCard[]>([])
+  const playerRef       = useRef<GameCard[]>([])
+  const hadBlackjackRef = useRef(false)
 
   // ── Bootstrap ────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -190,6 +208,8 @@ export default function Blackjack() {
     setNewDeal(false)
     setBlackjackFlash(false)
     setHadBlackjack(false)
+    setPendingBust(false)
+    hadBlackjackRef.current = false
     setPlayerHand([])
     setDealerHand([])
     dealerRef.current = []
@@ -265,6 +285,7 @@ export default function Blackjack() {
       const pTotal = p1.value + p2.value
       if (pTotal === 21) {
         setHadBlackjack(true)
+        hadBlackjackRef.current = true
         setPhase('dealer')
         if (mode === 'easy') {
           setBlackjackFlash(true)
@@ -298,7 +319,11 @@ export default function Blackjack() {
     setPlayerHand([...newHand])
 
     if (allTotal(newHand) > 21) {
-      setTimeout(() => triggerBust(), 500)
+      if (mode === 'easy') {
+        setTimeout(() => triggerBust(), 500)
+      } else {
+        setPendingBust(true)
+      }
     }
   }
 
@@ -319,6 +344,11 @@ export default function Blackjack() {
   // ── Stand → dealer plays ───────────────────────────────────────────────────────
   function stand() {
     if (phase !== 'player' || busy) return
+    if (pendingBust) {
+      setPendingBust(false)
+      setTimeout(() => triggerBust(), 0)
+      return
+    }
     setPhase('dealer')
     const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
     dealerRef.current = revealed
@@ -362,7 +392,7 @@ export default function Blackjack() {
     setPhase('result')
 
     setStreak(prev => {
-      const next = r === 'win' ? prev + 1 : r === 'lose' ? 0 : prev
+      const next = r === 'win' ? prev + (hadBlackjackRef.current ? 2 : 1) : r === 'lose' ? 0 : prev
       setBestStreak(best => {
         const newBest = Math.max(best, next)
         localStorage.setItem('bj_best_streak', String(newBest))
@@ -478,7 +508,7 @@ export default function Blackjack() {
         <>
           {/* Top nav chips */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 540 }}>
-            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false); setPlayerHand([]); setDealerHand([]) }}
+            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false); setPendingBust(false); setPlayerHand([]); setDealerHand([]) }}
               style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>
               ← Menu
             </button>
