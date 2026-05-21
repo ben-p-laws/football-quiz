@@ -304,37 +304,56 @@ export default function LandingPage() {
             <div style={s.ctaSm}><span style={s.ctaText}>Play Stat Clash →</span></div>
           </div>
 
-          {/* ---- TENABLE ---- */}
+          {/* ---- BLACKJACK ---- */}
           <div style={s.card}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/tenables')}>
+            onClick={() => router.push('/blackjack')}>
             <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Build your own top 10 quiz</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Blackjack</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Top 52 players as cards · beat the dealer to 21</div>
             </div>
-            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
-              {[
-                { n: 1, name: 'R. Giggs',      val: '162', pct: 100, found: true  },
-                { n: 2, name: 'K. De Bruyne',  val: '111', pct: 69,  found: true  },
-                { n: 3, name: '?',             val: '103', pct: 0,   found: false },
-              ].map(r => (
-                <div key={r.n} style={{ display: 'flex', alignItems: 'stretch', gap: 4, flex: 1 }}>
-                  <span style={{ fontSize: 9, color: '#2a3d5e', width: 10, display: 'flex', alignItems: 'center' }}>{r.n}</span>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const }}>
-                    <div style={{ flex: 1, background: '#0a0f1e', borderRadius: 6, border: `1px solid ${r.found ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, display: 'flex', alignItems: 'center', padding: '0 10px', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', marginBottom: 3 }}>
-                      {r.found && <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${r.pct}%`, background: 'rgba(34,197,94,0.15)', borderRight: '1px solid rgba(34,197,94,0.5)' }} />}
-                      <span style={{ fontSize: 11, fontWeight: r.found ? 700 : 400, color: r.found ? '#22c55e' : '#8899bb', position: 'relative' }}>{r.found ? r.name : '?'}</span>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: r.found ? '#22c55e' : '#4a5568', position: 'relative' }}>{r.val}</span>
+            <div style={{ padding: '0 10px 8px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ background: '#1a5428', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>
+                <div style={{ display: 'flex', gap: 0 }}>
+                  {[{ v: '⚽', n: 'Haaland', t: '36' }, { v: '⚽', n: 'Salah', t: '19' }].map((c, i) => (
+                    <div key={i} style={{ width: 52, height: 72, borderRadius: 6, background: 'white', border: '1px solid #e5e7eb', marginLeft: i === 0 ? 0 : -12, zIndex: i, position: 'relative', display: 'flex', flexDirection: 'column', padding: '4px 5px', boxShadow: '0 3px 10px rgba(0,0,0,0.4)' }}>
+                      <div style={{ fontSize: 12, fontWeight: 900, color: '#111', lineHeight: 1 }}>{c.t}</div>
+                      <div style={{ fontSize: 8 }}>{c.v}</div>
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+                        <div style={{ fontSize: 7, fontWeight: 800, color: '#111', textAlign: 'center' }}>{c.n}</div>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, fontWeight: 700 }}>TOPBINS CASINO</div>
+              </div>
             </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Tenable →</span></div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Blackjack →</span></div>
           </div>
 
-          {/* ---- GRID ---- */}
+          {/* ---- COUNTDOWN (moved up) ---- */}
+          <div style={s.card}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+            onClick={() => router.push('/countdown')}>
+            <div style={{ padding: '10px 12px 8px' }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Footy Countdown</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Letters, numbers & conundrum · 7 rounds</div>
+            </div>
+            <div style={{ padding: '0 10px 10px', flex: 1 }}>
+              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Final Conundrum</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
+                {['L','G','R','I','N','E','S','T'].map((l, i) => (
+                  <div key={i} style={{ width: 18, height: 22, background: '#0a0f1e', border: '1px solid #dc2626', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'white' }}>{l}</div>
+                ))}
+              </div>
+              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#4a5568', textAlign: 'center' as const }}>Unscramble the PL surname →</div>
+            </div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Countdown →</span></div>
+          </div>
+
+          {/* ---- GRID (moved down) — now position 5, after Teammates ---- */}
           {(() => {
             const cols = ['Man Utd', 'Chelsea', 'City']
             const rows = ['Arsenal', 'Liverpool', 'Spurs']
@@ -397,25 +416,34 @@ export default function LandingPage() {
             <div style={s.ctaSm}><span style={s.ctaText}>Play Teammates →</span></div>
           </div>
 
-          {/* ---- COUNTDOWN ---- */}
+          {/* ---- TENABLE (moved down) ---- */}
           <div style={s.card}
             onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/countdown')}>
+            onClick={() => router.push('/tenables')}>
             <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Footy Countdown</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Letters, numbers & conundrum · 7 rounds</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Build your own top 10 quiz</div>
             </div>
-            <div style={{ padding: '0 10px 10px', flex: 1 }}>
-              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Final Conundrum</div>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
-                {['L','G','R','I','N','E','S','T'].map((l, i) => (
-                  <div key={i} style={{ width: 18, height: 22, background: '#0a0f1e', border: '1px solid #dc2626', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'white' }}>{l}</div>
-                ))}
-              </div>
-              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#4a5568', textAlign: 'center' as const }}>Unscramble the PL surname →</div>
+            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
+              {[
+                { n: 1, name: 'R. Giggs',      val: '162', pct: 100, found: true  },
+                { n: 2, name: 'K. De Bruyne',  val: '111', pct: 69,  found: true  },
+                { n: 3, name: '?',             val: '103', pct: 0,   found: false },
+              ].map(r => (
+                <div key={r.n} style={{ display: 'flex', alignItems: 'stretch', gap: 4, flex: 1 }}>
+                  <span style={{ fontSize: 9, color: '#2a3d5e', width: 10, display: 'flex', alignItems: 'center' }}>{r.n}</span>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const }}>
+                    <div style={{ flex: 1, background: '#0a0f1e', borderRadius: 6, border: `1px solid ${r.found ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, display: 'flex', alignItems: 'center', padding: '0 10px', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', marginBottom: 3 }}>
+                      {r.found && <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${r.pct}%`, background: 'rgba(34,197,94,0.15)', borderRight: '1px solid rgba(34,197,94,0.5)' }} />}
+                      <span style={{ fontSize: 11, fontWeight: r.found ? 700 : 400, color: r.found ? '#22c55e' : '#8899bb', position: 'relative' }}>{r.found ? r.name : '?'}</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: r.found ? '#22c55e' : '#4a5568', position: 'relative' }}>{r.val}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Countdown →</span></div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Tenable →</span></div>
           </div>
 
           {/* ---- COMING SOON ---- */}

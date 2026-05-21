@@ -176,39 +176,48 @@ export default function Blackjack() {
     if (!Array.isArray(raw) || raw.length < 4) { setBusy(false); return }
 
     const shuffled = shuffle(raw)
-    const cards = shuffled.map((c, i): GameCard => ({ ...c, id: `${i}-${c.player}`, faceDown: false, animIn: false }))
-    const [p1, d1, p2, d2] = cards
-    deckRef.current = cards.slice(4)
+
+    // Guarantee the initial 2 player cards don't bust — scan for valid pair
+    let p1Idx = 0, p2Idx = -1
+    outer:
+    for (let i = 0; i < Math.min(shuffled.length, 40); i++) {
+      for (let j = i + 1; j < Math.min(shuffled.length, 40); j++) {
+        if (shuffled[i].value + shuffled[j].value <= 21) {
+          p1Idx = i; p2Idx = j; break outer
+        }
+      }
+    }
+    if (p2Idx === -1) { p1Idx = 0; p2Idx = 1 } // fallback (all combos bust — extremely rare)
+
+    const mk = (c: RawCard, idx: number, fd = false): GameCard =>
+      ({ ...c, id: `${idx}-${c.player}`, faceDown: fd, animIn: false })
+
+    const playerSet = new Set([p1Idx, p2Idx])
+    const rest4 = shuffled.filter((_, i) => !playerSet.has(i))
+    const p1 = mk(shuffled[p1Idx], 0)
+    const p2 = mk(shuffled[p2Idx], 1)
+    const d1 = mk(rest4[0], 2)
+    const d2 = mk(rest4[1], 3, true)
+    deckRef.current = rest4.slice(2).map((c, i) => mk(c, i + 4))
 
     // Animate deal: p1 → d1 → p2 → d2(face-down)
     setTimeout(() => {
-      const c = { ...p1, animIn: true }
-      playerRef.current = [c]
-      setPlayerHand([c])
+      playerRef.current = [{ ...p1, animIn: true }]
+      setPlayerHand([...playerRef.current])
     }, 0)
     setTimeout(() => {
-      const c = { ...d1, animIn: true }
-      dealerRef.current = [c]
-      setDealerHand([c])
+      dealerRef.current = [{ ...d1, animIn: true }]
+      setDealerHand([...dealerRef.current])
     }, 350)
     setTimeout(() => {
-      const c = { ...p2, animIn: true }
-      playerRef.current = [...playerRef.current, c]
+      playerRef.current = [...playerRef.current, { ...p2, animIn: true }]
       setPlayerHand([...playerRef.current])
     }, 700)
     setTimeout(() => {
-      const c = { ...d2, faceDown: true, animIn: true }
-      dealerRef.current = [...dealerRef.current, c]
+      dealerRef.current = [...dealerRef.current, { ...d2, animIn: true }]
       setDealerHand([...dealerRef.current])
       setBusy(false)
-
-      // Check for immediate bust on initial deal
-      const pTotal = allTotal(playerRef.current)
-      if (pTotal > 21) {
-        setTimeout(() => triggerBust(), 400)
-      } else {
-        setPhase('player')
-      }
+      setPhase('player') // guaranteed no bust on initial deal
     }, 1050)
   }
 
@@ -479,17 +488,36 @@ export default function Blackjack() {
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', minHeight: 128 }}>
-                  {dealerHand.map(c => <PlayingCard key={c.id} card={c} stat={stat} mode={mode} reveal={reveal} />)}
+                <div style={{ display: 'flex', justifyContent: 'center', minHeight: 128, alignItems: 'flex-start' }}>
+                  {dealerHand.map((c, i) => (
+                    <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
+                      <PlayingCard card={c} stat={stat} mode={mode} reveal={reveal} />
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Centre brand */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '6px 0' }}>
+              {/* Centre brand + New Hand overlay */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px 0', position: 'relative' }}>
+                {/* New Hand button — pops up here when result is ready */}
+                {phase === 'result' && newDeal && (
+                  <button onClick={dealHand} style={{
+                    position: 'absolute', zIndex: 20,
+                    padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800,
+                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+                    border: '3px solid rgba(255,255,255,0.3)', color: '#111',
+                    animation: 'pulse-deal 1.2s ease-in-out infinite',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                  }}>
+                    New Hand
+                  </button>
+                )}
                 <div style={{
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                   background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '8px 20px',
                   border: '1px solid rgba(255,255,255,0.07)',
+                  opacity: phase === 'result' && newDeal ? 0.25 : 1,
                 }}>
                   {TB_LOGO}
                   <div style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,0.4)', letterSpacing: 3, marginTop: 1 }}>TOPBINS CASINO</div>
@@ -499,8 +527,12 @@ export default function Blackjack() {
 
               {/* Player row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', gap: 10, justifyContent: 'center', minHeight: 128 }}>
-                  {playerHand.map(c => <PlayingCard key={c.id} card={c} stat={stat} mode={mode} reveal={reveal} />)}
+                <div style={{ display: 'flex', justifyContent: 'center', minHeight: 128, alignItems: 'flex-start' }}>
+                  {playerHand.map((c, i) => (
+                    <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
+                      <PlayingCard card={c} stat={stat} mode={mode} reveal={reveal} />
+                    </div>
+                  ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 3 }}>YOU</span>
@@ -560,27 +592,14 @@ export default function Blackjack() {
             )}
 
             {phase === 'result' && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-                <div style={{
-                  padding: '10px 28px', borderRadius: 50,
-                  background: result === 'win' ? 'rgba(21,128,61,0.35)' : result === 'lose' ? 'rgba(185,28,28,0.35)' : 'rgba(71,85,105,0.35)',
-                  border: `2px solid ${result === 'win' ? '#22c55e' : result === 'lose' ? '#ef4444' : '#64748b'}`,
-                  color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8',
-                  fontSize: 17, fontWeight: 900,
-                }}>
-                  {result === 'win' ? `🎉 WIN${streak > 1 ? ` · ${streak} in a row!` : '!'}` : result === 'lose' ? '💀 Lose' : '🤝 Push'}
-                </div>
-                {newDeal && (
-                  <button onClick={dealHand} style={{
-                    padding: '13px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800,
-                    cursor: 'pointer',
-                    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-                    border: 'none', color: '#111',
-                    animation: 'pulse-deal 1.2s ease-in-out infinite',
-                  }}>
-                    New Hand
-                  </button>
-                )}
+              <div style={{
+                padding: '10px 28px', borderRadius: 50,
+                background: result === 'win' ? 'rgba(21,128,61,0.35)' : result === 'lose' ? 'rgba(185,28,28,0.35)' : 'rgba(71,85,105,0.35)',
+                border: `2px solid ${result === 'win' ? '#22c55e' : result === 'lose' ? '#ef4444' : '#64748b'}`,
+                color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8',
+                fontSize: 17, fontWeight: 900,
+              }}>
+                {result === 'win' ? `🎉 WIN${streak > 1 ? ` · ${streak} in a row!` : '!'}` : result === 'lose' ? '💀 Lose' : '🤝 Push'}
               </div>
             )}
           </div>
