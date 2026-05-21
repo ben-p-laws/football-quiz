@@ -17,9 +17,15 @@ async function fetchLeaderboard(holes: number) {
     .eq('holes', holes)
     .order('vs_par', { ascending: true })
     .order('strokes', { ascending: true })
-    .limit(20)
+    .limit(500)
   if (error) throw new Error(error.message)
-  return data ?? []
+  const seen = new Set<string>()
+  const deduped = (data ?? []).filter(row => {
+    if (seen.has(row.username)) return false
+    seen.add(row.username)
+    return true
+  })
+  return deduped.slice(0, 20)
 }
 
 // GET ?holes=9
