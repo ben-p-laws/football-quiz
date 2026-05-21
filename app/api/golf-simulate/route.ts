@@ -89,9 +89,8 @@ function simulate(
       if (valid.length === 0) continue
 
       const weighted = valid.flatMap(f => {
-        if (f.k === 'all')  return Array(5).fill(f)
-        if (f.k === 'cont') return Array(3).fill(f)
-        if (f.k === 'nat')  return Array(2).fill(f)
+        if (f.k === 'all')  return Array(2).fill(f)
+        if (f.k === 'cont') return Array(2).fill(f)
         return [f]
       })
 

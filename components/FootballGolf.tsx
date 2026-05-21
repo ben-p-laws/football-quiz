@@ -277,12 +277,10 @@ function pickCategory(
 
     if (valid.length === 0) continue
 
-    // Weight broader filters more heavily so niche clubs/nations don't dominate
     const weighted = valid.flatMap(f => {
-      if (f.k === 'all')  return Array(5).fill(f)  // unfiltered: 5× weight
-      if (f.k === 'cont') return Array(3).fill(f)  // continent: 3×
-      if (f.k === 'nat')  return Array(2).fill(f)  // nationality: 2×
-      return [f]                                    // club / cont+club: 1×
+      if (f.k === 'all')  return Array(2).fill(f)  // unfiltered: 2×
+      if (f.k === 'cont') return Array(2).fill(f)  // continent: 2×
+      return [f]                                    // nat / club / cc: 1×
     })
     const f = weighted[Math.floor(Math.random() * weighted.length)]
     const { label, statLabel } = makeCategoryLabel(stat, f)
