@@ -92,7 +92,8 @@ function simulate(
     let picked = false
     for (let attempt = 0; attempt < 120; attempt++) {
       const kind = sampleKind(probs)
-      const useTemporal = Math.random() < 0.4
+      const canUseTemporal = kind !== 'club' && kind !== 'cc'
+      const useTemporal = canUseTemporal && Math.random() < 0.4
       const pool = useTemporal ? temporalPool : basePool
       const stat = pool[Math.floor(Math.random() * pool.length)]
       const isClubStat = CLUB_STATS.includes(stat)

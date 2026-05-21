@@ -282,7 +282,9 @@ function pickCategory(
 
   for (let attempt = 0; attempt < 120; attempt++) {
     const kind = sampleFilterKind(probs)
-    const useTemporal = freshTemporal.length > 0 && Math.random() < 0.4
+    // Club/cc filters don't support temporal stats — skip temporal for those types
+    const canUseTemporal = kind !== 'club' && kind !== 'cc'
+    const useTemporal = canUseTemporal && freshTemporal.length > 0 && Math.random() < 0.4
     const pool = useTemporal
       ? (freshTemporal.length > 0 ? freshTemporal : temporalPool)
       : (freshBase.length > 0 ? freshBase : basePool)
