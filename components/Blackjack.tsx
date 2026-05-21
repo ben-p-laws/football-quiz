@@ -171,7 +171,7 @@ function PlayingCard({ card, stat, mode, reveal }: {
       {/* Centre: player name + team */}
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 62, textAlign: 'center', zIndex: 1 }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.2, wordBreak: 'break-word' }}>{card.player}</div>
-        <div style={{ fontSize: 7.5, color: '#6b7280', lineHeight: 1.2, marginTop: 2 }}>{card.team}</div>
+        <div style={{ fontSize: 9, fontWeight: 700, color: '#1f2937', lineHeight: 1.2, marginTop: 2 }}>{card.team}</div>
         {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af', marginTop: 3 }}>?</div>}
       </div>
       {/* Bottom-left corner: TB badge (inverted) */}
