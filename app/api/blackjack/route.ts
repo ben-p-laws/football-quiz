@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
   const sb = getClient()
 
   if (searchParams.get('seasons') === '1') {
-    const { data } = await sb.from('player_seasons').select('year_id')
+    const { data } = await sb.from('player_seasons').select('year_id').limit(50000)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const seasons = [...new Set((data || []).map((r: any) => r.year_id as string))]
       .filter(Boolean).sort().reverse()
@@ -85,10 +85,11 @@ export async function GET(req: NextRequest) {
       }))).slice(0, 52)
       return NextResponse.json(cards)
     }
-    // Fallback: JS aggregation from first page of raw data
+    // Fallback: JS aggregation — fetch all rows to count seasons per player+club
     const { data: rawData } = await sb
       .from('player_seasons')
       .select('name_display, teams_played_for')
+      .limit(50000)
     const counts: Record<string, { player: string; team: string; value: number }> = {}
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const row of (rawData || []) as any[]) {
@@ -99,7 +100,13 @@ export async function GET(req: NextRequest) {
       if (!counts[key]) counts[key] = { player, team, value: 0 }
       counts[key].value++
     }
-    const cards = shuffleArr(Object.values(counts).filter(c => c.value >= 2)).slice(0, 52)
+    // Take top 200 by season count (mirrors the RPC), then shuffle for randomness
+    const cards = shuffleArr(
+      Object.values(counts)
+        .filter(c => c.value >= 2)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 200)
+    ).slice(0, 52)
     return NextResponse.json(cards)
   }
 
