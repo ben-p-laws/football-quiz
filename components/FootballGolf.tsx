@@ -874,7 +874,7 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function FootballGolf(){
-  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'>('setup')
+  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'|'h2h-done'|'h2h-sudden-death'>('setup')
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
   const [selectedCourse,setSelectedCourse] = useState<string>('augusta')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(3)
@@ -977,6 +977,18 @@ export default function FootballGolf(){
   const h2hMyRemainingRef = useRef(0)
   const h2hPendingShot = useRef<{result:ShotResult;toPos:number}|null>(null)
   const h2hPollRef     = useRef<ReturnType<typeof setInterval>|null>(null)
+
+  // ── Sudden death / play again state ────────────────────────────────────────
+  const [sdQuestion, setSdQuestion]         = useState<Category|null>(null)
+  const [sdInput, setSdInput]               = useState('')
+  const [sdSubmitted, setSdSubmitted]       = useState(false)
+  const [sdMyRemaining, setSdMyRemaining]   = useState<number|null>(null)
+  const [sdOppRemaining, setSdOppRemaining] = useState<number|null>(null)
+  const [sdResult, setSdResult]             = useState<'win'|'loss'|'tie'|null>(null)
+  const [sdWaiting, setSdWaiting]           = useState(false)
+  const [h2hRematchWaiting, setH2HRematchWaiting] = useState(false)
+  const sdPollRef = useRef<ReturnType<typeof setInterval>|null>(null)
+  const rematchPollRef = useRef<ReturnType<typeof setInterval>|null>(null)
 
   useEffect(()=>{
     fetch('/api/football-golf?names=1').then(r=>r.json()).then(d=>{
@@ -1789,7 +1801,16 @@ export default function FootballGolf(){
     h2hIFinishedRef.current=false
     h2hOppFinishedRef.current=false
     h2hMyHoleStrokes.current=0
-    if(holeIdx+1>=holes.length){setPhase('done');return}
+    if(holeIdx+1>=holes.length){
+      stopH2HPoll()
+      if(matchScore===0){
+        initSuddenDeath()
+        setPhase('h2h-sudden-death')
+      }else{
+        setPhase('h2h-done')
+      }
+      return
+    }
     const nextIdx=holeIdx+1
     setHoleIdx(nextIdx)
     const dist=holes[nextIdx].distance
@@ -1936,6 +1957,140 @@ export default function FootballGolf(){
     setPhase('playing')
   }
 
+  // ── Sudden death ──────────────────────────────────────────────────────────
+
+  function initSuddenDeath(){
+    const cat = nextPickedCategory(150)
+    setSdQuestion(cat)
+    setSdInput('')
+    setSdSubmitted(false)
+    setSdMyRemaining(null)
+    setSdOppRemaining(null)
+    setSdResult(null)
+    setSdWaiting(false)
+  }
+
+  function getStatValueForSd(name: string, cat: Category): number {
+    const p = playerData[name]
+    if (!p) return 0
+    if (cat.natFilter && p.nationality !== cat.natFilter) return 0
+    if (cat.continentFilter && CONTINENT_MEMBERS[p.nationality] !== cat.continentFilter) return 0
+    const cf = cat.clubFilter
+    if (cf) {
+      if (cat.key === 'goals')              return p.clubGoals[cf] || 0
+      if (cat.key === 'assists')            return p.clubAssists[cf] || 0
+      if (cat.key === 'goals_assists')      return (p.clubGoals[cf] || 0) + (p.clubAssists[cf] || 0)
+      if (cat.key === 'appearances')        return p.clubGames[cf] || 0
+      if (cat.key === 'apps_minus_goals')   return Math.max(0, (p.clubGames[cf] || 0) - (p.clubGoals[cf] || 0))
+      if (cat.key === 'yellow_cards')       return p.clubYellowCards[cf] || 0
+      if (cat.key === 'clean_sheets')       return p.clubCleanSheets[cf] || 0
+      return 0
+    }
+    if (cat.key === 'goals')              return p.goals
+    if (cat.key === 'assists')            return p.assists
+    if (cat.key === 'goals_assists')      return p.goals + p.assists
+    if (cat.key === 'appearances')        return p.games
+    if (cat.key === 'apps_minus_goals')   return Math.max(0, p.games - p.goals)
+    if (cat.key === 'yellow_cards')       return p.yellow_cards
+    if (cat.key === 'clean_sheets')       return p.clean_sheets
+    const qk = cat.key as string
+    const sgm = qk.match(/^goals_since_(\d+)$/)
+    if (sgm) return p.goalsSince?.[parseInt(sgm[1])] ?? 0
+    const sgam = qk.match(/^ga_since_(\d+)$/)
+    if (sgam) return p.gaSince?.[parseInt(sgam[1])] ?? 0
+    const bgm = qk.match(/^goals_before_(\d+)$/)
+    if (bgm) return p.goalsBefore?.[parseInt(bgm[1])] ?? 0
+    const bgam = qk.match(/^ga_before_(\d+)$/)
+    if (bgam) return p.gaBefore?.[parseInt(bgam[1])] ?? 0
+    return 0
+  }
+
+  async function submitSdShot(){
+    if (!sdQuestion || !sdInput.trim() || sdSubmitted) return
+    const normInput = normSearch(sdInput.trim())
+    const matchIdx = normalisedNames.current.findIndex(n => n === normInput)
+    const name = matchIdx >= 0 ? (allPlayerNames[matchIdx] ?? sdInput.trim()) : sdInput.trim()
+    const val = getStatValueForSd(name, sdQuestion)
+    const myRem = Math.max(0, 150 - val)
+    setSdMyRemaining(myRem)
+    setSdSubmitted(true)
+    setSdWaiting(true)
+    await fetch('/api/golf-room', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        action: 'shot', roomId: h2hRoomIdRef.current, playerId: h2hPlayerId.current,
+        holeIdx: 99, shotIdx: 0, remainingAfter: myRem, pastPin: false, holedOut: myRem===0,
+        holeStrokes: 1,
+      }),
+    })
+    startSdPoll(myRem)
+  }
+
+  function startSdPoll(myRem: number){
+    if (sdPollRef.current) clearInterval(sdPollRef.current)
+    sdPollRef.current = setInterval(async () => {
+      const d = await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=99`).then(r=>r.json()).catch(()=>null)
+      if (!d?.shots) return
+      const oppId = h2hIsHost.current ? undefined : undefined // determined by exclusion
+      const myId = h2hPlayerId.current
+      const myShot = d.shots.find((s:any) => s.player_id === myId)
+      const oppShot = d.shots.find((s:any) => s.player_id !== myId)
+      if (myShot && oppShot) {
+        clearInterval(sdPollRef.current!)
+        sdPollRef.current = null
+        const oppRem: number = oppShot.remaining_after ?? 150
+        setSdOppRemaining(oppRem)
+        setSdWaiting(false)
+        if (myRem < oppRem) setSdResult('win')
+        else if (myRem > oppRem) setSdResult('loss')
+        else setSdResult('tie')
+      }
+    }, 1500)
+  }
+
+  async function hostPlayAgain(){
+    if (!metaReady) return
+    setH2HRematchWaiting(true)
+    const hs = courseMode === 'real'
+      ? buildCourse(tee, numHoles, startHole, selectedCourse)
+      : generateHoles(numHoles)
+    const tmpUsed = new Set<string>()
+    const tmpRecentF: string[] = []
+    const tmpRecentS: StatKey[] = []
+    const ccPairs = top3CacheRef.current ? metaContClubPairs.current : []
+    const teeCats = hs.map(hole => {
+      const cl = getClub(hole.distance)
+      const cat = pickCategory(hole.distance, cl, tmpUsed, tmpRecentF, tmpRecentS, metaNations.current, metaClubs.current, metaContinents.current, ccPairs, top3CacheRef.current)
+      tmpUsed.add(cat.label)
+      tmpRecentS.push(cat.key)
+      if (cat.natFilter) { const cont = CONTINENT_MEMBERS[cat.natFilter]; tmpRecentF.push(cat.natFilter); if (cont) tmpRecentF.push(cont) }
+      else if (cat.clubFilter && !cat.continentFilter) tmpRecentF.push(cat.clubFilter)
+      else if (cat.continentFilter) tmpRecentF.push(cat.continentFilter)
+      return cat
+    })
+    await fetch('/api/golf-room', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({action:'rematch', roomId: h2hRoomIdRef.current, holes: hs, teeCategories: teeCats}),
+    })
+    h2hRoomData.current = {holes: hs, teeCategories: teeCats}
+    setH2HRematchWaiting(false)
+    startH2HGame()
+  }
+
+  function startRematchPoll(){
+    if (rematchPollRef.current) clearInterval(rematchPollRef.current)
+    rematchPollRef.current = setInterval(async () => {
+      const d = await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}`).then(r=>r.json()).catch(()=>null)
+      if (d?.room?.status === 'playing') {
+        clearInterval(rematchPollRef.current!)
+        rematchPollRef.current = null
+        const room = d.room
+        h2hRoomData.current = { holes: room.holes, teeCategories: room.tee_categories }
+        startH2HGame()
+      }
+    }, 2000)
+  }
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   // H2H screens (take priority over setup)
@@ -2022,6 +2177,134 @@ export default function FootballGolf(){
               <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for host to start…</div>
             </div>
         }
+      </div>
+    </>)
+  }
+
+  if(phase==='h2h-done'){
+    const myName = h2hPlayerName || 'You'
+    const oppName = h2hOppName || 'Opponent'
+    const iWon = matchScore > 0
+    const theyWon = matchScore < 0
+    const abs = Math.abs(matchScore)
+    const holesLeft = holes.length - abs // simplistic "x&y" calculation
+    const resultText = iWon
+      ? `${myName} wins ${abs} up`
+      : theyWon
+      ? `${oppName} wins ${abs} up`
+      : 'Match halved'
+    if (!h2hIsHost.current && !rematchPollRef.current) startRematchPoll()
+    return (<><NavBar />
+      <div style={{...h2hScreenStyle,gap:24}}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Match Result</div>
+          <div style={{fontSize:32,fontWeight:900,color:iWon?'#22c55e':theyWon?'#ef4444':'#94a3b8'}}>{resultText}</div>
+          <div style={{fontSize:14,color:'rgba(255,255,255,0.45)',marginTop:6}}>{numHoles}-hole match play · {holes.length} holes played</div>
+        </div>
+        <div style={{display:'flex',gap:12,width:'100%',maxWidth:340}}>
+          <div style={{flex:1,background:'#111827',border:`2px solid ${iWon?'#22c55e':'#1e2d4a'}`,borderRadius:12,padding:'14px',textAlign:'center'}}>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginBottom:4}}>{myName}</div>
+            <div style={{fontSize:28,fontWeight:900,color:iWon?'#22c55e':theyWon?'#ef4444':'#94a3b8'}}>{matchScore>0?`+${matchScore}`:matchScore<0?matchScore:'-'}</div>
+          </div>
+          <div style={{flex:1,background:'#111827',border:`2px solid ${theyWon?'#22c55e':'#1e2d4a'}`,borderRadius:12,padding:'14px',textAlign:'center'}}>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginBottom:4}}>{oppName}</div>
+            <div style={{fontSize:28,fontWeight:900,color:theyWon?'#22c55e':iWon?'#ef4444':'#94a3b8'}}>{matchScore<0?`+${Math.abs(matchScore)}`:matchScore>0?`-${matchScore}`:'-'}</div>
+          </div>
+        </div>
+        {h2hIsHost.current
+          ? <button style={h2hBtnStyle} onClick={hostPlayAgain} disabled={h2hRematchWaiting}>
+              {h2hRematchWaiting?'Setting up…':'Play Again →'}
+            </button>
+          : <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'pulse 1.5s ease-in-out infinite'}}/>
+              <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for host to start a rematch…</div>
+            </div>
+        }
+        <button style={h2hSecBtnStyle} onClick={()=>{
+          if(rematchPollRef.current){clearInterval(rematchPollRef.current);rematchPollRef.current=null}
+          setH2HStep('off');setPhase('setup')
+        }}>Exit to Menu</button>
+      </div>
+    </>)
+  }
+
+  if(phase==='h2h-sudden-death'){
+    if (!h2hIsHost.current && sdResult !== null && !rematchPollRef.current) startRematchPoll()
+    const myColor = h2hIsHost.current ? '#3b82f6' : '#fbbf24'
+    const oppColor = h2hIsHost.current ? '#fbbf24' : '#3b82f6'
+    return (<><NavBar />
+      <div style={{...h2hScreenStyle,gap:20}}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:13,fontWeight:700,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Sudden Death</div>
+          <div style={{fontSize:22,fontWeight:900,color:'white'}}>Closest to the Pin</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:4}}>150 yard iron shot — name one player</div>
+        </div>
+        {sdQuestion && (
+          <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:12,padding:'16px',width:'100%',maxWidth:340,textAlign:'center'}}>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginBottom:4}}>Category</div>
+            <div style={{fontSize:16,fontWeight:800,color:'white'}}>{sdQuestion.label}</div>
+          </div>
+        )}
+        {!sdSubmitted && (
+          <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:340}}>
+            <input
+              style={h2hInputStyle} placeholder="Player name…"
+              value={sdInput} onChange={e=>setSdInput(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&submitSdShot()}
+            />
+            <button style={h2hBtnStyle} onClick={submitSdShot} disabled={!sdInput.trim()}>
+              Take Shot →
+            </button>
+          </div>
+        )}
+        {sdSubmitted && (
+          <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{background:'#111827',border:`2px solid ${myColor}`,borderRadius:12,padding:'14px',textAlign:'center'}}>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginBottom:4}}>Your shot</div>
+              <div style={{fontSize:28,fontWeight:900,color:'white'}}>{sdMyRemaining}yd</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>from the pin</div>
+            </div>
+            {sdWaiting && (
+              <div style={{display:'flex',alignItems:'center',gap:8,justifyContent:'center'}}>
+                <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'pulse 1.5s ease-in-out infinite'}}/>
+                <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for opponent…</div>
+              </div>
+            )}
+            {!sdWaiting && sdOppRemaining !== null && (
+              <>
+                <div style={{background:'#111827',border:`2px solid ${oppColor}`,borderRadius:12,padding:'14px',textAlign:'center'}}>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginBottom:4}}>{h2hOppName||'Opponent'}&apos;s shot</div>
+                  <div style={{fontSize:28,fontWeight:900,color:'white'}}>{sdOppRemaining}yd</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.35)'}}>from the pin</div>
+                </div>
+                <div style={{textAlign:'center',marginTop:4}}>
+                  <div style={{fontSize:24,fontWeight:900,color:sdResult==='win'?'#22c55e':sdResult==='loss'?'#ef4444':'#94a3b8'}}>
+                    {sdResult==='win'?'You Win! 🏆':sdResult==='loss'?'You Lose':'Draw — play again?'}
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:10,justifyContent:'center'}}>
+                  {h2hIsHost.current && sdResult!=='tie' && (
+                    <button style={h2hBtnStyle} onClick={hostPlayAgain} disabled={h2hRematchWaiting}>
+                      {h2hRematchWaiting?'Setting up…':'Play Again →'}
+                    </button>
+                  )}
+                  {h2hIsHost.current && sdResult==='tie' && (
+                    <button style={h2hBtnStyle} onClick={hostPlayAgain} disabled={h2hRematchWaiting}>
+                      {h2hRematchWaiting?'Setting up…':'Play Again →'}
+                    </button>
+                  )}
+                  {!h2hIsHost.current && sdResult==='tie' && (
+                    <div style={{fontSize:13,color:'rgba(255,255,255,0.4)'}}>Waiting for host to start rematch…</div>
+                  )}
+                  {!h2hIsHost.current && sdResult!=='tie' && (
+                    <div style={{fontSize:13,color:'rgba(255,255,255,0.4)'}}>Waiting for host to start rematch…</div>
+                  )}
+                  <button style={h2hSecBtnStyle} onClick={()=>{setH2HStep('off');setPhase('setup')}}>Exit</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </>)
   }

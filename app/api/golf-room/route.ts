@@ -132,5 +132,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
 
+  // ── Rematch ───────────────────────────────────────────────────────────────────
+  if (body.action === 'rematch') {
+    const { roomId, holes, teeCategories } = body
+    await db.from('golf_h2h_shots').delete().eq('room_id', roomId)
+    await db.from('golf_h2h_rooms').update({ holes, tee_categories: teeCategories, status: 'playing' }).eq('id', roomId)
+    return NextResponse.json({ ok: true })
+  }
+
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }
