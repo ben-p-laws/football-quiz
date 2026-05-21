@@ -2160,6 +2160,7 @@ export default function FootballGolf(){
                 arcOffset={arcOffset}
                 isAnimating={isAnimating}
                 strokes={strokes}
+                useMeet={courseMode!=='real' || dailyMode}
                 imageUrl={courseMode==='real' && !dailyMode ? (
                   selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` :
                   selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
@@ -2490,8 +2491,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor,useCover=false}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; realYScale?:number; useCover?:boolean
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean
   realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Real course: build path directly from calibrated tee → waypoints → green
@@ -2539,7 +2540,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Minimal scrim — just enough to keep labels readable without darkening bunkers */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.05)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" height="100%" viewBox={imageUrl ? `0 0 100 ${realYScale??260}` : "0 -10 100 165"} preserveAspectRatio={imageUrl ? (useCover ? "xMidYMid slice" : "xMidYMid meet") : "xMidYMid slice"} style={{display:'block',flex:1,position:'relative'}}>
+      <svg width="100%" height="100%" viewBox={imageUrl ? `0 0 100 ${realYScale??260}` : "0 -10 100 165"} preserveAspectRatio={imageUrl ? (useCover ? "xMidYMid slice" : "xMidYMid meet") : (useMeet ? "xMidYMid meet" : "xMidYMid slice")} style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="35" x2="0" y2="255" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
