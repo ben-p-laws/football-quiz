@@ -14,6 +14,7 @@ const LINKS = [
   { label: 'Grid',                 href: '/grid' },
   { label: 'Teammates',            href: '/teammates' },
   { label: 'Countdown',            href: '/countdown' },
+  { label: 'Blackjack',            href: '/blackjack' },
 ]
 
 const LOGO = (
