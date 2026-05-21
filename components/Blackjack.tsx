@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
-type StatType = 'goals' | 'assists' | 'yellow_cards' | 'clean_sheets'
+type StatType = 'goals' | 'assists' | 'yellow_cards' | 'clean_sheets' | 'club_seasons'
 type Mode     = 'easy' | 'hard'
 type Phase    = 'idle' | 'player' | 'dealer' | 'result'
 type Result   = 'win' | 'lose' | 'push'
@@ -17,9 +17,11 @@ const STATS: StatType[] = ['goals', 'assists', 'yellow_cards', 'clean_sheets']
 const STAT_LABEL: Record<StatType, string> = {
   goals: 'Goals', assists: 'Assists',
   yellow_cards: 'Yellow Cards', clean_sheets: 'Clean Sheets',
+  club_seasons: 'Seasons at Club',
 }
 const STAT_ICON: Record<StatType, string> = {
   goals: '⚽', assists: '🎯', yellow_cards: '🟨', clean_sheets: '🧤',
+  club_seasons: '🏟️',
 }
 
 // TopBins logo SVG (same as NavBar)
@@ -247,13 +249,22 @@ export default function Blackjack() {
     dealerRef.current = []
     playerRef.current = []
 
-    const newStat   = STATS[Math.floor(Math.random() * STATS.length)]
-    const poolSize  = Math.min(seasons.length, 12)
-    const newSeason = seasons[Math.floor(Math.random() * poolSize)]
+    const newStat: StatType = Math.random() < 0.25
+      ? 'club_seasons'
+      : STATS[Math.floor(Math.random() * STATS.length)]
     setStat(newStat)
-    setSeason(newSeason)
 
-    const res  = await fetch(`/api/blackjack?stat=${newStat}&season=${newSeason}`)
+    let fetchUrl: string
+    if (newStat === 'club_seasons') {
+      setSeason('All Time')
+      fetchUrl = '/api/blackjack?stat=club_seasons'
+    } else {
+      const newSeason = seasons[Math.floor(Math.random() * seasons.length)]
+      setSeason(newSeason)
+      fetchUrl = `/api/blackjack?stat=${newStat}&season=${newSeason}`
+    }
+
+    const res  = await fetch(fetchUrl)
     const raw: RawCard[] = await res.json()
     if (!Array.isArray(raw) || raw.length < 4) { setBusy(false); return }
 
@@ -319,21 +330,14 @@ export default function Blackjack() {
         setHadBlackjack(true)
         hadBlackjackRef.current = true
         setPhase('dealer')
-        if (mode === 'easy') {
-          setBlackjackFlash(true)
-          setTimeout(() => {
-            setBlackjackFlash(false)
-            const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
-            dealerRef.current = revealed
-            setDealerHand([...revealed])
-            setTimeout(() => playDealer(), 700)
-          }, 1600)
-        } else {
+        setBlackjackFlash(true)
+        setTimeout(() => {
+          setBlackjackFlash(false)
           const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
           dealerRef.current = revealed
           setDealerHand([...revealed])
-          setTimeout(() => playDealer(), 600)
-        }
+          setTimeout(() => playDealer(), 700)
+        }, 1600)
       } else {
         setPhase('player')
       }
@@ -350,12 +354,23 @@ export default function Blackjack() {
     playerRef.current = newHand
     setPlayerHand([...newHand])
 
-    if (allTotal(newHand) > 21) {
+    const total = allTotal(newHand)
+    if (total > 21) {
       if (mode === 'easy') {
         setTimeout(() => triggerBust(), 500)
       } else {
         setPendingBust(true)
       }
+    } else if (total === 21) {
+      setPhase('dealer')
+      setBlackjackFlash(true)
+      setTimeout(() => {
+        setBlackjackFlash(false)
+        const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+        dealerRef.current = revealed
+        setDealerHand([...revealed])
+        setTimeout(() => playDealer(), 700)
+      }, 1600)
     }
   }
 
