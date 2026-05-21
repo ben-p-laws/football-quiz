@@ -13,12 +13,56 @@ const TEAM_NORM: Record<string, string> = {
 }
 const normTeam = (t: string) => TEAM_NORM[t] ?? t
 
+const NAT_NAME_TO_CODE: Record<string, string> = {
+  // Africa
+  'Algerian':'ALG','Angolan':'ANG','Beninese':'BEN','Burkinabe':'BFA','Burundian':'BDI',
+  'Cameroonian':'CMR','Cape Verdean':'CPV','Congolese':'COG','DR Congo':'COD',
+  'Egyptian':'EGY','Equatorial Guinean':'EQG','Ethiopian':'ETH','Gabonese':'GAB',
+  'Gambian':'GAM','Ghanaian':'GHA','Guinean':'GUI','Guinea-Bissauan':'GNB',
+  'Ivorian':'CIV','Kenyan':'KEN','Liberian':'LBR','Libyan':'LBA','Malagasy':'MAD',
+  'Malawian':'MWI','Malian':'MLI','Mauritanian':'MTN','Mauritian':'MRI',
+  'Moroccan':'MAR','Mozambican':'MOZ','Namibian':'NAM','Nigerien':'NIG','Nigerian':'NGA',
+  'Rwandan':'RWA','Senegalese':'SEN','Sierra Leonean':'SLE','Somali':'SOM',
+  'South African':'ZAF','Sudanese':'SDN','Swazi':'SWZ','Tanzanian':'TAN',
+  'Togolese':'TGO','Tunisian':'TUN','Ugandan':'UGA','Zambian':'ZAM','Zimbabwean':'ZIM',
+  // Europe
+  'Albanian':'ALB','Armenian':'ARM','Austrian':'AUT','Azerbaijani':'AZE',
+  'Belarusian':'BLR','Belgian':'BEL','Bosnian':'BIH','Bulgarian':'BUL',
+  'Croatian':'CRO','Cypriot':'CYP','Czech':'CZE','Danish':'DEN','English':'ENG',
+  'Estonian':'EST','Finnish':'FIN','French':'FRA','Georgian':'GEO','German':'GER',
+  'Greek':'GRE','Hungarian':'HUN','Icelandic':'ISL','Irish':'IRL','Israeli':'ISR',
+  'Italian':'ITA','Kosovar':'KVX','Latvian':'LVA','Lithuanian':'LTU','Luxembourger':'LUX',
+  'Maltese':'MLT','Moldovan':'MDA','Montenegrin':'MNE','Dutch':'NED','Macedonian':'MKD',
+  'Northern Irish':'NIR','Norwegian':'NOR','Polish':'POL','Portuguese':'POR',
+  'Romanian':'ROU','Russian':'RUS','Scottish':'SCO','Serbian':'SRB','Slovak':'SVK',
+  'Slovenian':'SVN','Spanish':'ESP','Swedish':'SWE','Swiss':'SUI','Turkish':'TUR',
+  'Ukrainian':'UKR','Welsh':'WAL',
+  // Asia
+  'Afghan':'AFG','Bahraini':'BHR','Bangladeshi':'BAN','Chinese':'CHN','Indian':'IND',
+  'Indonesian':'IDN','Iranian':'IRN','Iraqi':'IRQ','Japanese':'JPN','Jordanian':'JOR',
+  'Kuwaiti':'KUW','Lebanese':'LBN','Malaysian':'MAS','Mongolian':'MNG','Nepali':'NEP',
+  'Omani':'OMA','Pakistani':'PAK','Palestinian':'PSE','Filipino':'PHI','Qatari':'QAT',
+  'Saudi Arabian':'KSA','Singaporean':'SGP','South Korean':'KOR','Sri Lankan':'LKA',
+  'Syrian':'SYR','Thai':'THA','Emirati':'UAE','Uzbek':'UZB','Vietnamese':'VIE','Yemeni':'YEM',
+  // S. America
+  'Argentine':'ARG','Bolivian':'BOL','Brazilian':'BRA','Chilean':'CHI','Colombian':'COL',
+  'Ecuadorian':'ECU','Guyanese':'GUY','Paraguayan':'PAR','Peruvian':'PER',
+  'Uruguayan':'URU','Venezuelan':'VEN','Surinamese':'SUR',
+  // N. America
+  'American':'USA','Canadian':'CAN','Mexican':'MEX','Costa Rican':'CRC',
+  'Jamaican':'JAM','Trinidadian':'TRI','Haitian':'HAI','Cuban':'CUB','Dominican':'DOM',
+  'Panamanian':'PAN','Honduran':'HON','Guatemalan':'GUA',
+  // Oceania
+  'Australian':'AUS','New Zealander':'NZL','Fijian':'FIJ',
+}
+
 function fmtNat(raw: string): string {
-  const parts = raw.trim().split(/\s+/)
+  const trimmed = raw.trim()
+  const parts = trimmed.split(/\s+/)
   for (let i = parts.length - 1; i >= 0; i--) {
     if (/^[A-Z]{2,4}$/.test(parts[i])) return parts[i]
   }
-  return raw
+  return NAT_NAME_TO_CODE[trimmed] ?? raw
 }
 
 function getClient() {
@@ -166,7 +210,7 @@ const buildCache = unstable_cache(
     const playerNames = Object.keys(players).sort()
     return { players, playerNames }
   },
-  ['football-golf-data-v4'],
+  ['football-golf-data-v5'],
   { revalidate: 86400 }
 )
 
@@ -379,7 +423,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, continents, contClubPairs, top3Cache }
   },
-  ['football-golf-meta-v10'],
+  ['football-golf-meta-v11'],
   { revalidate: 86400 }
 )
 
