@@ -19,7 +19,18 @@ const STAT_COLS: Record<string, string> = {
   clean_sheets: 'gk_clean_sheets',
 }
 
-// Supabase function required for club_seasons stat — run once in SQL editor:
+// ── Run BOTH functions once in the Supabase SQL editor ────────────────────────
+//
+// 1) Distinct seasons (fixes biased season selection):
+// CREATE OR REPLACE FUNCTION get_distinct_seasons()
+// RETURNS TABLE(year_id text) LANGUAGE sql STABLE AS $$
+//   SELECT DISTINCT year_id::text
+//   FROM player_seasons
+//   WHERE year_id IS NOT NULL
+//   ORDER BY year_id DESC;
+// $$;
+//
+// 2) Club seasons stat:
 // CREATE OR REPLACE FUNCTION get_club_seasons()
 // RETURNS TABLE(player text, team text, value bigint) LANGUAGE sql STABLE AS $$
 //   SELECT name_display::text,
@@ -31,6 +42,7 @@ const STAT_COLS: Record<string, string> = {
 //   HAVING COUNT(*) >= 2
 //   ORDER BY COUNT(*) DESC LIMIT 200;
 // $$;
+// ─────────────────────────────────────────────────────────────────────────────
 
 function getClient() {
   return createClient(
@@ -53,9 +65,20 @@ export async function GET(req: NextRequest) {
   const sb = getClient()
 
   if (searchParams.get('seasons') === '1') {
-    const { data } = await sb.from('player_seasons').select('year_id').limit(50000)
+    // Try RPC first (accurate — no row-limit issues)
+    const { data: rpcSeasons, error: rpcSeasonsErr } = await sb.rpc('get_distinct_seasons')
+    if (!rpcSeasonsErr && Array.isArray(rpcSeasons) && rpcSeasons.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const seasons = (rpcSeasons as any[]).map((r: any) => String(r.year_id || '')).filter(Boolean)
+      return NextResponse.json(seasons)
+    }
+    // Fallback: two parallel fetches (ASC + DESC) to sample both ends of the season range
+    const [{ data: asc }, { data: desc }] = await Promise.all([
+      sb.from('player_seasons').select('year_id').order('year_id', { ascending: true }).limit(1000),
+      sb.from('player_seasons').select('year_id').order('year_id', { ascending: false }).limit(1000),
+    ])
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seasons = [...new Set((data || []).map((r: any) => r.year_id as string))]
+    const seasons = [...new Set([...(asc || []), ...(desc || [])].map((r: any) => r.year_id as string))]
       .filter(Boolean).sort().reverse()
     return NextResponse.json(seasons)
   }
