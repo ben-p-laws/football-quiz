@@ -209,6 +209,22 @@ function makeFilterLabel(cat: Category): string {
   return `All PL ${noun}`
 }
 
+type FilterKind = 'nat'|'club'|'cc'|'cont'|'all'
+
+function typeProbs(club: ClubType): Record<FilterKind, number> {
+  if (club === 'driver') return { nat:23, club:23, cc:27, cont:22, all:5 }
+  if (club === 'iron')   return { nat:25, club:25, cc:25, cont:20, all:5 }
+  return                        { nat:27, club:27, cc:25, cont:18, all:3 }
+}
+
+function sampleFilterKind(probs: Record<FilterKind, number>): FilterKind {
+  const types: FilterKind[] = ['nat','club','cc','cont','all']
+  const total = types.reduce((s, t) => s + probs[t], 0)
+  let r = Math.random() * total
+  for (const t of types) { r -= probs[t]; if (r <= 0) return t }
+  return 'nat'
+}
+
 function pickCategory(
   remaining: number,
   club: ClubType,
@@ -237,52 +253,45 @@ function pickCategory(
 
   const isLong = remaining > 150
   const basePool     = isLong ? BASE_LONG  : BASE_SHORT
-  const temporalPool = isLong ? [...SINCE_KEYS, ...BEFORE_KEYS] : [...SINCE_KEYS, ...BEFORE_KEYS]
+  const temporalPool = [...SINCE_KEYS, ...BEFORE_KEYS]
   const freshBase     = basePool.filter(s => !recentStatsSet.has(s))
   const freshTemporal = temporalPool.filter(s => !recentStatsSet.has(s))
 
-  // Build full filter pool
-  const allFilters: FilterSpec[] = [
-    { k:'all' },
-    ...nations.map(n => ({ k:'nat' as const, code:n.code, label:n.label })),
-    ...clubs.map(c => ({ k:'club' as const, name:c })),
-    ...continents.map(c => ({ k:'cont' as const, name:c })),
-    ...contClubPairs.map(([cont,cl]) => ({ k:'cc' as const, continent:cont, club:cl })),
-  ]
+  const probs = typeProbs(club)
+
+  const filtersByKind: Record<FilterKind, FilterSpec[]> = {
+    all:  [{ k:'all' }],
+    nat:  nations.map(n => ({ k:'nat' as const, code:n.code, label:n.label })),
+    club: clubs.map(c => ({ k:'club' as const, name:c })),
+    cont: continents.map(c => ({ k:'cont' as const, name:c })),
+    cc:   contClubPairs.map(([cont,cl]) => ({ k:'cc' as const, continent:cont, club:cl })),
+  }
+
+  function isValidFilter(f: FilterSpec, stat: StatKey): boolean {
+    const isClubStat = CLUB_STATS.includes(stat)
+    if (!isClubStat && (f.k==='club' || f.k==='cc')) return false
+    const fs = filterStr(f)
+    if (fs && recentSet.has(fs)) return false
+    if (f.k==='nat') {
+      const cont = CONTINENT_MEMBERS[f.code]
+      if (cont && recentSet.has(cont)) return false
+    }
+    if ((top3Cache![cacheKeyFor(stat, f)] ?? 0) < threshold) return false
+    return !usedLabels.has(makeLabel(stat, f))
+  }
 
   for (let attempt = 0; attempt < 120; attempt++) {
-    // 60% base stats (support club/nat filters), 40% temporal (since/before)
+    const kind = sampleFilterKind(probs)
     const useTemporal = freshTemporal.length > 0 && Math.random() < 0.4
     const pool = useTemporal
       ? (freshTemporal.length > 0 ? freshTemporal : temporalPool)
       : (freshBase.length > 0 ? freshBase : basePool)
     const stat = pool[Math.floor(Math.random() * pool.length)]
-    const isClubStat = CLUB_STATS.includes(stat)
 
-    const valid = allFilters.filter(f => {
-      if (!isClubStat && (f.k==='club' || f.k==='cc')) return false
-      const fs = filterStr(f)
-      if (fs && recentSet.has(fs)) return false
-      // Block nat filters whose continent was recently used (prevents e.g. NGA→SEN back-to-back)
-      if (f.k==='nat') {
-        const cont = CONTINENT_MEMBERS[f.code]
-        if (cont && recentSet.has(cont)) return false
-      }
-      if (top3Cache) {
-        const sum = top3Cache[cacheKeyFor(stat, f)] ?? 0
-        if (sum < threshold) return false
-      }
-      return !usedLabels.has(makeLabel(stat, f))
-    })
-
+    const valid = filtersByKind[kind].filter(f => isValidFilter(f, stat))
     if (valid.length === 0) continue
 
-    const weighted = valid.flatMap(f => {
-      if (f.k === 'all')  return Array(2).fill(f)  // unfiltered: 2×
-      if (f.k === 'cont') return Array(2).fill(f)  // continent: 2×
-      return [f]                                    // nat / club / cc: 1×
-    })
-    const f = weighted[Math.floor(Math.random() * weighted.length)]
+    const f = valid[Math.floor(Math.random() * valid.length)]
     const { label, statLabel } = makeCategoryLabel(stat, f)
     const cat: Category = { key:stat, label, statLabel }
     if (f.k==='nat') cat.natFilter = f.code

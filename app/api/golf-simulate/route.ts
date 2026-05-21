@@ -41,8 +41,23 @@ const SINCE_YEARS = [2010, 2015, 2020]
 const BEFORE_YEARS = [2000, 2005, 2010]
 const SINCE_KEYS = SINCE_YEARS.flatMap(y => [`goals_since_${y}`, `ga_since_${y}`])
 const BEFORE_KEYS = BEFORE_YEARS.flatMap(y => [`goals_before_${y}`, `ga_before_${y}`])
-const ALL_STATS = [...BASE_STATS, ...SINCE_KEYS, ...BEFORE_KEYS]
 const CLUB_STATS = ['goals', 'assists', 'goals_assists', 'appearances', 'apps_minus_goals', 'yellow_cards', 'clean_sheets']
+
+type FilterKind = 'nat'|'club'|'cc'|'cont'|'all'
+
+function getTypeProbs(club: string): Record<FilterKind, number> {
+  if (club === 'driver') return { nat:23, club:23, cc:27, cont:22, all:5 }
+  if (club === 'iron')   return { nat:25, club:25, cc:25, cont:20, all:5 }
+  return                        { nat:27, club:27, cc:25, cont:18, all:3 }
+}
+
+function sampleKind(probs: Record<FilterKind, number>): FilterKind {
+  const types: FilterKind[] = ['nat','club','cc','cont','all']
+  const total = types.reduce((s, t) => s + probs[t], 0)
+  let r = Math.random() * total
+  for (const t of types) { r -= probs[t]; if (r <= 0) return t }
+  return 'nat'
+}
 
 function simulate(
   distance: number,
@@ -55,14 +70,15 @@ function simulate(
 ): Record<string, number> {
   const club = getClub(distance)
   const threshold = CLUB_THRESHOLD[club]
+  const probs = getTypeProbs(club)
 
-  const allFilters: FilterSpec[] = [
-    { k: 'all' },
-    ...nations.map(c => ({ k: 'nat' as const, code: c })),
-    ...clubs.map(c => ({ k: 'club' as const, name: c })),
-    ...continents.map(c => ({ k: 'cont' as const, name: c })),
-    ...contClubPairs.map(([cont, cl]) => ({ k: 'cc' as const, continent: cont, club: cl })),
-  ]
+  const filtersByKind: Record<FilterKind, FilterSpec[]> = {
+    all:  [{ k: 'all' }],
+    nat:  nations.map(c => ({ k: 'nat' as const, code: c })),
+    club: clubs.map(c => ({ k: 'club' as const, name: c })),
+    cont: continents.map(c => ({ k: 'cont' as const, name: c })),
+    cc:   contClubPairs.map(([cont, cl]) => ({ k: 'cc' as const, continent: cont, club: cl })),
+  }
 
   const isLong = distance > 150
   const basePool = isLong
@@ -75,12 +91,13 @@ function simulate(
   for (let i = 0; i < n; i++) {
     let picked = false
     for (let attempt = 0; attempt < 120; attempt++) {
+      const kind = sampleKind(probs)
       const useTemporal = Math.random() < 0.4
       const pool = useTemporal ? temporalPool : basePool
       const stat = pool[Math.floor(Math.random() * pool.length)]
       const isClubStat = CLUB_STATS.includes(stat)
 
-      const valid = allFilters.filter(f => {
+      const valid = filtersByKind[kind].filter(f => {
         if (!isClubStat && (f.k === 'club' || f.k === 'cc')) return false
         const sum = top3Cache[cacheKey(stat, f)] ?? 0
         return sum >= threshold
@@ -88,13 +105,7 @@ function simulate(
 
       if (valid.length === 0) continue
 
-      const weighted = valid.flatMap(f => {
-        if (f.k === 'all')  return Array(2).fill(f)
-        if (f.k === 'cont') return Array(2).fill(f)
-        return [f]
-      })
-
-      const f = weighted[Math.floor(Math.random() * weighted.length)]
+      const f = valid[Math.floor(Math.random() * valid.length)]
       const key = filterLabel(f)
       freq[key] = (freq[key] ?? 0) + 1
       picked = true
