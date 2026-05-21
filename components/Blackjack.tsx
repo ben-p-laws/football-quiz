@@ -41,6 +41,19 @@ const TB_LOGO = (
   </svg>
 )
 
+// Mini TopBins logo for card corners / watermark
+function TbMiniLogo({ size = 12 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="7" fill="#0a0f1e"/>
+      <rect width="28" height="4" fill="#e2e8f0"/>
+      <rect x="24" y="4" width="4" height="28" fill="#e2e8f0"/>
+      <circle cx="17" cy="15" r="6.5" fill="white"/>
+      <circle cx="17" cy="15" r="7.5" fill="none" stroke="#dc2626" strokeWidth="2"/>
+    </svg>
+  )
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 function shuffle<T>(a: T[]): T[] {
   const b = [...a]
@@ -90,20 +103,33 @@ function PlayingCard({ card, stat, mode, reveal }: {
       background: 'white', border: '1px solid #d1d5db',
       boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
       display: 'flex', flexDirection: 'column', padding: '6px 7px',
+      position: 'relative', overflow: 'hidden',
       transform: card.animIn ? 'translateY(0)' : 'translateY(-120px)',
       opacity: card.animIn ? 1 : 0,
       transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
     }}>
-      <div style={{ lineHeight: 1 }}>
+      {/* Faint centre watermark */}
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.06, pointerEvents: 'none', zIndex: 0 }}>
+        <TbMiniLogo size={50} />
+      </div>
+      {/* Top-right TB logo */}
+      <div style={{ position: 'absolute', top: 5, right: 5, zIndex: 1 }}>
+        <TbMiniLogo size={13} />
+      </div>
+      {/* Bottom-left TB logo (inverted) */}
+      <div style={{ position: 'absolute', bottom: 5, left: 5, transform: 'rotate(180deg)', zIndex: 1 }}>
+        <TbMiniLogo size={13} />
+      </div>
+      <div style={{ lineHeight: 1, zIndex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 2 }}>
-        <div style={{ fontSize: 9, fontWeight: 800, color: '#111', lineHeight: 1.25, wordBreak: 'break-word' }}>{card.player}</div>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', gap: 2, zIndex: 1 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.2, wordBreak: 'break-word' }}>{card.player}</div>
         <div style={{ fontSize: 7.5, color: '#6b7280', lineHeight: 1.2 }}>{card.team}</div>
         {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af' }}>?</div>}
       </div>
-      <div style={{ alignSelf: 'flex-end', transform: 'rotate(180deg)', lineHeight: 1 }}>
+      <div style={{ alignSelf: 'flex-end', transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
@@ -127,9 +153,11 @@ export default function Blackjack() {
   const [username,    setUsername]    = useState('')
   const [leaderboard, setLeaderboard] = useState<LeaderEntry[]>([])
   const [showLB,      setShowLB]      = useState(false)
-  const [busy,        setBusy]        = useState(false)
-  const [busting,     setBusting]     = useState(false)  // bust flash overlay
-  const [newDeal,     setNewDeal]     = useState(false)  // pulsing new deal button
+  const [busy,           setBusy]           = useState(false)
+  const [busting,        setBusting]        = useState(false)
+  const [newDeal,        setNewDeal]        = useState(false)
+  const [blackjackFlash, setBlackjackFlash] = useState(false)
+  const [hadBlackjack,   setHadBlackjack]   = useState(false)
 
   const dealerRef = useRef<GameCard[]>([])
   const deckRef   = useRef<GameCard[]>([])
@@ -160,6 +188,8 @@ export default function Blackjack() {
     setReveal(false)
     setBusting(false)
     setNewDeal(false)
+    setBlackjackFlash(false)
+    setHadBlackjack(false)
     setPlayerHand([])
     setDealerHand([])
     dealerRef.current = []
@@ -192,13 +222,27 @@ export default function Blackjack() {
     const mk = (c: RawCard, idx: number, fd = false): GameCard =>
       ({ ...c, id: `${idx}-${c.player}`, faceDown: fd, animIn: false })
 
-    const playerSet = new Set([p1Idx, p2Idx])
-    const rest4 = shuffled.filter((_, i) => !playerSet.has(i))
+    const playerSet  = new Set([p1Idx, p2Idx])
+    const afterPlayer = shuffled.filter((_, i) => !playerSet.has(i))
     const p1 = mk(shuffled[p1Idx], 0)
     const p2 = mk(shuffled[p2Idx], 1)
-    const d1 = mk(rest4[0], 2)
-    const d2 = mk(rest4[1], 3, true)
-    deckRef.current = rest4.slice(2).map((c, i) => mk(c, i + 4))
+
+    // Guarantee the initial 2 dealer cards don't bust
+    let d1Idx = 0, d2Idx = -1
+    outerD:
+    for (let i = 0; i < Math.min(afterPlayer.length, 40); i++) {
+      for (let j = i + 1; j < Math.min(afterPlayer.length, 40); j++) {
+        if (afterPlayer[i].value + afterPlayer[j].value <= 21) {
+          d1Idx = i; d2Idx = j; break outerD
+        }
+      }
+    }
+    if (d2Idx === -1) { d1Idx = 0; d2Idx = 1 }
+
+    const dealerSet = new Set([d1Idx, d2Idx])
+    const d1 = mk(afterPlayer[d1Idx], 2)
+    const d2 = mk(afterPlayer[d2Idx], 3, true)
+    deckRef.current = afterPlayer.filter((_, i) => !dealerSet.has(i)).map((c, i) => mk(c, i + 4))
 
     // Animate deal: p1 → d1 → p2 → d2(face-down)
     setTimeout(() => {
@@ -217,7 +261,29 @@ export default function Blackjack() {
       dealerRef.current = [...dealerRef.current, { ...d2, animIn: true }]
       setDealerHand([...dealerRef.current])
       setBusy(false)
-      setPhase('player') // guaranteed no bust on initial deal
+
+      const pTotal = p1.value + p2.value
+      if (pTotal === 21) {
+        setHadBlackjack(true)
+        setPhase('dealer')
+        if (mode === 'easy') {
+          setBlackjackFlash(true)
+          setTimeout(() => {
+            setBlackjackFlash(false)
+            const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+            dealerRef.current = revealed
+            setDealerHand([...revealed])
+            setTimeout(() => playDealer(), 700)
+          }, 1600)
+        } else {
+          const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+          dealerRef.current = revealed
+          setDealerHand([...revealed])
+          setTimeout(() => playDealer(), 600)
+        }
+      } else {
+        setPhase('player')
+      }
     }, 1050)
   }
 
@@ -349,6 +415,17 @@ export default function Blackjack() {
           75%  { opacity: 1; }
           100% { opacity: 0; }
         }
+        @keyframes bj-in {
+          0%   { transform: scale(0.3) rotate(8deg);  opacity: 0; }
+          60%  { transform: scale(1.1) rotate(-2deg); opacity: 1; }
+          100% { transform: scale(1)   rotate(0deg);  opacity: 1; }
+        }
+        @keyframes fade-bj {
+          0%   { opacity: 0; }
+          15%  { opacity: 1; }
+          75%  { opacity: 1; }
+          100% { opacity: 0; }
+        }
       `}</style>
 
       {/* ── Mode selection ─────────────────────────────────────────────────────── */}
@@ -401,7 +478,7 @@ export default function Blackjack() {
         <>
           {/* Top nav chips */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 540 }}>
-            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setPlayerHand([]); setDealerHand([]) }}
+            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false); setPlayerHand([]); setDealerHand([]) }}
               style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>
               ← Menu
             </button>
@@ -469,11 +546,32 @@ export default function Blackjack() {
                 </div>
               )}
 
+              {/* Blackjack flash overlay (easy mode) */}
+              {blackjackFlash && (
+                <div style={{
+                  position: 'absolute', inset: 0, zIndex: 30,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(0,80,20,0.70)',
+                  animation: 'fade-bj 1.6s ease-in-out forwards',
+                  pointerEvents: 'none',
+                  borderRadius: 142,
+                }}>
+                  <div style={{
+                    fontSize: 52, fontWeight: 900, color: '#f59e0b',
+                    textShadow: '0 0 40px #fde68a, 0 4px 8px rgba(0,0,0,0.6)',
+                    letterSpacing: 4,
+                    animation: 'bj-in 0.4s cubic-bezier(.22,.68,0,1.3) forwards',
+                  }}>
+                    BLACKJACK!
+                  </div>
+                </div>
+              )}
+
               {/* Dealer row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 3 }}>DEALER</span>
-                  {(phase === 'dealer' || phase === 'result') && dealerHand.length > 0 && (
+                  {(phase === 'dealer' || phase === 'result') && dealerHand.length > 0 && (mode === 'easy' || reveal) && (
                     <span style={{
                       fontSize: 12, fontWeight: 800, padding: '1px 9px', borderRadius: 20,
                       background: 'rgba(0,0,0,0.35)',
@@ -482,7 +580,7 @@ export default function Blackjack() {
                       {dealerBusted ? `BUST ${allTotal(dealerRef.current)}` : allTotal(dealerRef.current)}
                     </span>
                   )}
-                  {phase === 'player' && dealerHand.length > 0 && (
+                  {phase === 'player' && dealerHand.length > 0 && mode === 'easy' && (
                     <span style={{ fontSize: 12, fontWeight: 800, padding: '1px 9px', borderRadius: 20, background: 'rgba(0,0,0,0.3)', color: 'rgba(255,255,255,0.5)' }}>
                       {visibleTotal(dealerHand)} + ?
                     </span>
@@ -536,7 +634,7 @@ export default function Blackjack() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 3 }}>YOU</span>
-                  {playerHand.length > 0 && (
+                  {playerHand.length > 0 && (mode === 'easy' || reveal) && (
                     <span style={{
                       fontSize: 12, fontWeight: 800, padding: '1px 9px', borderRadius: 20,
                       background: 'rgba(0,0,0,0.35)',
@@ -592,14 +690,21 @@ export default function Blackjack() {
             )}
 
             {phase === 'result' && (
-              <div style={{
-                padding: '10px 28px', borderRadius: 50,
-                background: result === 'win' ? 'rgba(21,128,61,0.35)' : result === 'lose' ? 'rgba(185,28,28,0.35)' : 'rgba(71,85,105,0.35)',
-                border: `2px solid ${result === 'win' ? '#22c55e' : result === 'lose' ? '#ef4444' : '#64748b'}`,
-                color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8',
-                fontSize: 17, fontWeight: 900,
-              }}>
-                {result === 'win' ? `🎉 WIN${streak > 1 ? ` · ${streak} in a row!` : '!'}` : result === 'lose' ? '💀 Lose' : '🤝 Push'}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                <div style={{
+                  padding: '10px 28px', borderRadius: 50,
+                  background: result === 'win' ? 'rgba(21,128,61,0.35)' : result === 'lose' ? 'rgba(185,28,28,0.35)' : 'rgba(71,85,105,0.35)',
+                  border: `2px solid ${result === 'win' ? '#22c55e' : result === 'lose' ? '#ef4444' : '#64748b'}`,
+                  color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8',
+                  fontSize: 17, fontWeight: 900,
+                }}>
+                  {result === 'win' ? `🎉 WIN${streak > 1 ? ` · ${streak} in a row!` : '!'}` : result === 'lose' ? '💀 Lose' : '🤝 Push'}
+                </div>
+                {hadBlackjack && (
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', letterSpacing: 2 }}>
+                    ♠ BLACKJACK ♠
+                  </div>
+                )}
               </div>
             )}
           </div>
