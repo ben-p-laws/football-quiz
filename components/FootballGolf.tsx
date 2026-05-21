@@ -153,6 +153,34 @@ function filterStr(f: FilterSpec): string {
   return `${f.continent}:${f.club}`
 }
 
+// ── Share helpers ──────────────────────────────────────────────────────────────
+
+type SharePayload = { n: string; h: number; sp: number; st: number; b: number[] }
+
+function encodeShare(p: SharePayload): string {
+  return btoa(JSON.stringify(p)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+}
+
+function decodeShare(s: string): SharePayload | null {
+  try { return JSON.parse(atob(s.replace(/-/g, '+').replace(/_/g, '/'))) } catch { return null }
+}
+
+function shareEmoji(diff: number): string {
+  if (diff <= -2) return '🦅'
+  if (diff === -1) return '🐦'
+  if (diff === 0)  return '⭕'
+  if (diff === 1)  return '🟡'
+  return '🔴'
+}
+
+function buildShareText(p: SharePayload, url: string): string {
+  const label = p.sp === 0 ? 'E' : p.sp > 0 ? `+${p.sp}` : String(p.sp)
+  const emoji = p.b.map(shareEmoji).join('')
+  return `${p.n} scored ${label} on Top Bins Golf (${p.h} holes)\n${emoji}\nCan you beat it? ${url}`
+}
+
+// ── Label helper ───────────────────────────────────────────────────────────────
+
 function makeLabel(stat: StatKey, f: FilterSpec): string {
   const sl = getStatLabel(stat)
   if (f.k==='all')  return `All-time PL ${sl}`
@@ -249,7 +277,14 @@ function pickCategory(
 
     if (valid.length === 0) continue
 
-    const f = valid[Math.floor(Math.random() * valid.length)]
+    // Weight broader filters more heavily so niche clubs/nations don't dominate
+    const weighted = valid.flatMap(f => {
+      if (f.k === 'all')  return Array(5).fill(f)  // unfiltered: 5× weight
+      if (f.k === 'cont') return Array(3).fill(f)  // continent: 3×
+      if (f.k === 'nat')  return Array(2).fill(f)  // nationality: 2×
+      return [f]                                    // club / cont+club: 1×
+    })
+    const f = weighted[Math.floor(Math.random() * weighted.length)]
     const { label, statLabel } = makeCategoryLabel(stat, f)
     const cat: Category = { key:stat, label, statLabel }
     if (f.k==='nat') cat.natFilter = f.code
@@ -864,6 +899,7 @@ export default function FootballGolf(){
   const top3CacheRef     = useRef<Record<string,number>|null>(null)
   const [metaReady, setMetaReady] = useState(false)
   const [showRules, setShowRules] = useState(false)
+  const [sharedResult, setSharedResult] = useState<SharePayload|null>(null)
   const [playerInputs,setPlayerInputs]   = useState(['','',''])
   const [suggestions,setSuggestions]     = useState<string[][]>([[],[],[]])
   const [confirmedPlayers,setConfirmedPlayers] = useState<(string|null)[]>([null,null,null])
@@ -967,6 +1003,11 @@ export default function FootballGolf(){
         top3CacheRef.current     = m.top3Cache
         setMetaReady(true)
       }).catch(()=>setMetaReady(true)) // on error, allow play with fallback lists
+  },[])
+
+  useEffect(()=>{
+    const p = new URLSearchParams(window.location.search).get('s')
+    if (p) { const d = decodeShare(p); if (d) setSharedResult(d) }
   },[])
 
   useEffect(()=>{
@@ -1981,7 +2022,7 @@ export default function FootballGolf(){
     </>)
   }
 
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -3141,13 +3182,14 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
   )
 }
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,sharedResult,onDismissShare}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
   tee:Tee; setTee:(t:Tee)=>void
   startHole:number; setStartHole:(n:number)=>void
   onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void; onDailyRound:()=>void
+  sharedResult:SharePayload|null; onDismissShare:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
   const [hcpExpanded, setHcpExpanded] = useState(false)
@@ -3173,6 +3215,19 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
       {/* Title */}
       <div style={{fontSize:24,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:2}}>Football Golf</div>
+
+      {/* Shared result banner */}
+      {sharedResult&&(
+        <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(99,102,241,0.5)',borderRadius:16,padding:'14px 16px',position:'relative'}}>
+          <button onClick={onDismissShare} style={{position:'absolute',top:8,right:10,background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',lineHeight:1}}>✕</button>
+          <div style={{fontSize:10,fontWeight:800,color:'rgba(99,102,241,0.8)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Challenge from a friend</div>
+          <div style={{fontSize:15,fontWeight:800,color:'white',marginBottom:4}}>
+            {sharedResult.n} scored <span style={{color:sharedResult.sp<0?'#22c55e':sharedResult.sp>0?'#ef4444':'white'}}>{sharedResult.sp===0?'E':sharedResult.sp>0?`+${sharedResult.sp}`:sharedResult.sp}</span> · {sharedResult.h} holes
+          </div>
+          <div style={{fontSize:20,letterSpacing:2,marginBottom:8}}>{sharedResult.b.map(shareEmoji).join('')}</div>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.4)'}}>{sharedResult.st} strokes · Can you beat it?</div>
+        </div>
+      )}
 
       {/* Handicap card — tap to expand */}
       <div style={{width:'100%',maxWidth:320}}>
@@ -3557,6 +3612,7 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
   const [leaderboard,setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [lbLoading,setLbLoading]     = useState(true)
   const [lbError,setLbError]         = useState('')
+  const [copied,setCopied]           = useState(false)
 
   useEffect(()=>{
     saveGolfRound(numHoles, totalStrokes, totalPar)
@@ -3665,6 +3721,21 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
           </div>
         )}
       </div>
+
+      {/* Share */}
+      <button onClick={()=>{
+        const breakdown = holes.map((h,i)=>(scores[i]??0)-h.par)
+        const payload: SharePayload = { n: name.trim()||'Someone', h: numHoles, sp: vsPar, st: totalStrokes, b: breakdown }
+        const url = `${window.location.origin}/football-golf?s=${encodeShare(payload)}`
+        const text = buildShareText(payload, url)
+        if (navigator.share) {
+          navigator.share({ text }).catch(()=>{})
+        } else {
+          navigator.clipboard.writeText(text).then(()=>{ setCopied(true); setTimeout(()=>setCopied(false),2000) }).catch(()=>{})
+        }
+      }} style={{background:'#1e2d4a',color:'white',border:'1.5px solid rgba(255,255,255,0.12)',borderRadius:12,padding:'13px 48px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+        {copied ? '✓ Copied!' : '📤 Share Result'}
+      </button>
 
       <button onClick={onRestart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'13px 48px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
         Play Again
