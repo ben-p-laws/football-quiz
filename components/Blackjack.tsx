@@ -22,10 +22,17 @@ const STAT_ICON: Record<StatType, string> = {
   club_seasons: '🏟️',
 }
 const CHIP_AMOUNTS = [10, 20, 30, 40, 50]
+const CHIP_CFG: Record<number, { bg: string; stripe: string; text: string }> = {
+  10: { bg: '#f1f5f9', stripe: '#dc2626', text: '#1f2937' },
+  20: { bg: '#1d4ed8', stripe: '#bfdbfe', text: 'white'   },
+  30: { bg: '#15803d', stripe: '#bbf7d0', text: 'white'   },
+  40: { bg: '#c2410c', stripe: '#fed7aa', text: 'white'   },
+  50: { bg: '#1e1b4b', stripe: '#c7d2fe', text: 'white'   },
+}
 const STARTING_CHIPS = 50
-const GOAL_CHIPS = 250
+const GOAL_CHIPS     = 250
 
-// ─── SVG Components ────────────────────────────────────────────────────────────
+// ─── SVG helpers ───────────────────────────────────────────────────────────────
 function TbBadge({ size = 13 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
@@ -36,12 +43,12 @@ function TbBadge({ size = 13 }: { size?: number }) {
   )
 }
 
-let _tbLogoSeq = 0
+let _seq = 0
 function TbMiniLogo({ size = 12 }: { size?: number }) {
-  const clipId = useRef(`tbml-${++_tbLogoSeq}`).current
+  const id = useRef(`tbml-${++_seq}`).current
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <defs><clipPath id={clipId}><circle cx="17" cy="15" r="6.1"/></clipPath></defs>
+      <defs><clipPath id={id}><circle cx="17" cy="15" r="6.1"/></clipPath></defs>
       <rect width="32" height="32" rx="7" fill="#0a0f1e"/>
       <rect width="28" height="4" fill="#e2e8f0"/>
       <rect x="24" y="4" width="4" height="28" fill="#e2e8f0"/>
@@ -55,12 +62,43 @@ function TbMiniLogo({ size = 12 }: { size?: number }) {
       <line x1="0" y1="24" x2="24" y2="24" stroke="#334155" strokeWidth="0.8"/>
       <circle cx="17" cy="15" r="6.2" fill="white"/>
       <circle cx="17" cy="15" r="7.2" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5"/>
-      <g clipPath={`url(#${clipId})`}>
+      <g clipPath={`url(#${id})`}>
         <path transform="translate(16.5,12.5)" fill="#dc2626" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z"/>
         <path transform="translate(13,17.5)"   fill="#dc2626" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z"/>
         <path transform="translate(21,17.5)"   fill="#dc2626" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z"/>
       </g>
     </svg>
+  )
+}
+
+// ─── Casino chip ────────────────────────────────────────────────────────────────
+function ChipSingle({ amount, size = 44 }: { amount: number; size?: number }) {
+  const r = size / 2
+  const { bg, stripe, text } = CHIP_CFG[amount] ?? CHIP_CFG[10]
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ display: 'block' }}>
+      <ellipse cx={r} cy={r + 2} rx={r - 1} ry={3} fill="rgba(0,0,0,0.35)"/>
+      <circle cx={r} cy={r} r={r - 1.5} fill={bg} stroke="rgba(255,255,255,0.2)" strokeWidth="1.5"/>
+      <circle cx={r} cy={r} r={r * 0.72} fill="none" stroke={stripe} strokeWidth={r * 0.28} strokeDasharray={`${r * 0.4} ${r * 0.22}`}/>
+      <circle cx={r} cy={r} r={r * 0.47} fill={bg} stroke={stripe} strokeWidth="1.5"/>
+      <text x={r} y={r} dominantBaseline="middle" textAnchor="middle" fontSize={r * 0.46} fontWeight="900" fill={text} fontFamily="Arial Black, sans-serif">{amount}</text>
+    </svg>
+  )
+}
+
+// Stacked chips for felt display
+function ChipStack({ bet, chipSize = 30 }: { bet: number; chipSize?: number }) {
+  const count  = Math.round(bet / 10)
+  const offset = Math.round(chipSize * 0.15)
+  const h      = chipSize + (count - 1) * offset
+  return (
+    <div style={{ position: 'relative', width: chipSize, height: h, flexShrink: 0 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{ position: 'absolute', bottom: i * offset, left: 0 }}>
+          <ChipSingle amount={bet} size={chipSize} />
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -73,22 +111,17 @@ function shuffle<T>(a: T[]): T[] {
   }
   return b
 }
-function allTotal(cards: GameCard[]): number {
-  return cards.reduce((s, c) => s + c.value, 0)
-}
+function allTotal(cards: GameCard[]): number { return cards.reduce((s, c) => s + c.value, 0) }
 
-// ─── Playing Card ───────────────────────────────────────────────────────────────
-function PlayingCard({ card, stat, reveal }: {
-  card: GameCard; stat: StatType; reveal: boolean
-}) {
+// ─── Playing card ───────────────────────────────────────────────────────────────
+function PlayingCard({ card, stat, reveal }: { card: GameCard; stat: StatType; reveal: boolean }) {
   const showValue = !card.faceDown && reveal
 
   if (card.faceDown) {
     return (
       <div style={{
         width: 82, height: 124, borderRadius: 8, flexShrink: 0,
-        background: '#0a0f1e',
-        border: '2px solid #dc2626',
+        background: '#0a0f1e', border: '2px solid #dc2626',
         boxShadow: '0 6px 24px rgba(0,0,0,0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transform: card.animIn ? 'translateY(0) rotate(-1deg)' : 'translateY(-120px)',
@@ -96,7 +129,7 @@ function PlayingCard({ card, stat, reveal }: {
         transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
         position: 'relative', overflow: 'hidden',
       }}>
-        <svg style={{ position: 'absolute', inset: 0 }} width="82" height="124" xmlns="http://www.w3.org/2000/svg">
+        <svg style={{ position: 'absolute', inset: 0 }} width="82" height="124">
           <line x1="20" y1="0" x2="20" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
           <line x1="40" y1="0" x2="40" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
           <line x1="60" y1="0" x2="60" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
@@ -105,16 +138,10 @@ function PlayingCard({ card, stat, reveal }: {
           <line x1="0" y1="75" x2="82" y2="75" stroke="#1e2d4a" strokeWidth="1"/>
           <line x1="0" y1="100" x2="82" y2="100" stroke="#1e2d4a" strokeWidth="1"/>
         </svg>
-        <div style={{ position: 'absolute', inset: 5, border: '1px solid rgba(220,38,38,0.3)', borderRadius: 4 }} />
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <TbMiniLogo size={38} />
-        </div>
-        <div style={{ position: 'absolute', top: 6, left: 6, zIndex: 1 }}>
-          <TbBadge size={11} />
-        </div>
-        <div style={{ position: 'absolute', bottom: 6, right: 6, transform: 'rotate(180deg)', zIndex: 1 }}>
-          <TbBadge size={11} />
-        </div>
+        <div style={{ position: 'absolute', inset: 5, border: '1px solid rgba(220,38,38,0.3)', borderRadius: 4 }}/>
+        <div style={{ position: 'relative', zIndex: 1 }}><TbMiniLogo size={38}/></div>
+        <div style={{ position: 'absolute', top: 6, left: 6, zIndex: 1 }}><TbBadge size={11}/></div>
+        <div style={{ position: 'absolute', bottom: 6, right: 6, transform: 'rotate(180deg)', zIndex: 1 }}><TbBadge size={11}/></div>
       </div>
     )
   }
@@ -129,24 +156,20 @@ function PlayingCard({ card, stat, reveal }: {
       opacity: card.animIn ? 1 : 0,
       transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
     }}>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', opacity: 0.11, pointerEvents: 'none', zIndex: 0 }}>
-        <TbMiniLogo size={50} />
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.11, pointerEvents: 'none', zIndex: 0 }}>
+        <TbMiniLogo size={50}/>
       </div>
       <div style={{ position: 'absolute', top: 6, left: 7, lineHeight: 1, zIndex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
       </div>
-      <div style={{ position: 'absolute', top: 5, right: 5, zIndex: 1 }}>
-        <TbBadge size={13} />
-      </div>
+      <div style={{ position: 'absolute', top: 5, right: 5, zIndex: 1 }}><TbBadge size={13}/></div>
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 62, textAlign: 'center', zIndex: 1 }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.2, wordBreak: 'break-word' }}>{card.player}</div>
         <div style={{ fontSize: 9, fontWeight: 700, color: '#1f2937', lineHeight: 1.2, marginTop: 2 }}>{card.team}</div>
         {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af', marginTop: 3 }}>?</div>}
       </div>
-      <div style={{ position: 'absolute', bottom: 5, left: 5, transform: 'rotate(180deg)', zIndex: 1 }}>
-        <TbBadge size={13} />
-      </div>
+      <div style={{ position: 'absolute', bottom: 5, left: 5, transform: 'rotate(180deg)', zIndex: 1 }}><TbBadge size={13}/></div>
       <div style={{ position: 'absolute', bottom: 6, right: 7, transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
         <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
         <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
@@ -155,7 +178,7 @@ function PlayingCard({ card, stat, reveal }: {
   )
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────────────
+// ─── Main component ─────────────────────────────────────────────────────────────
 export default function Blackjack() {
   const [gameStarted,    setGameStarted]    = useState(false)
   const [seasons,        setSeasons]        = useState<string[]>([])
@@ -193,8 +216,8 @@ export default function Blackjack() {
 
   useEffect(() => {
     fetch('/api/blackjack?seasons=1').then(r => r.json()).then(setSeasons)
-    const savedName = localStorage.getItem('bj_username')
-    if (savedName) setUsername(savedName)
+    const saved = localStorage.getItem('bj_username')
+    if (saved) setUsername(saved)
   }, [])
 
   const saveUsername = useCallback((name: string) => {
@@ -203,53 +226,26 @@ export default function Blackjack() {
   }, [])
 
   function resetGame() {
-    setGameStarted(false)
-    setPhase('idle')
-    setResult(null)
-    setReveal(false)
-    setBusting(false)
-    setNewDeal(false)
-    setBlackjackFlash(false)
-    setHadBlackjack(false)
-    setPendingBust(false)
-    setPendingBlackjack(false)
-    setNextCard(null)
-    setPlayerHand([])
-    setDealerHand([])
-    setChips(STARTING_CHIPS)
-    chipsRef.current = STARTING_CHIPS
-    setBet(10)
-    betRef.current = 10
-    setGameOver(false)
-    setGameWon(false)
-    setSeason('')
-    dealerRef.current = []
-    playerRef.current = []
-    deckRef.current = []
+    setGameStarted(false); setPhase('idle'); setResult(null); setReveal(false)
+    setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false)
+    setPendingBust(false); setPendingBlackjack(false); setNextCard(null)
+    setPlayerHand([]); setDealerHand([]); setSeason('')
+    setChips(STARTING_CHIPS); chipsRef.current = STARTING_CHIPS
+    setBet(10); betRef.current = 10
+    setGameOver(false); setGameWon(false)
+    dealerRef.current = []; playerRef.current = []; deckRef.current = []
   }
 
-  // ── Start a new hand: fetch category + deck, move to betting phase ────────────
   async function startHand() {
     if (seasons.length === 0 || busy) return
-    setBusy(true)
-    setResult(null)
-    setReveal(false)
-    setBusting(false)
-    setNewDeal(false)
-    setBlackjackFlash(false)
-    setHadBlackjack(false)
-    setPendingBust(false)
-    setPendingBlackjack(false)
-    setNextCard(null)
+    setBusy(true); setResult(null); setReveal(false); setBusting(false)
+    setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false)
+    setPendingBust(false); setPendingBlackjack(false); setNextCard(null)
     hadBlackjackRef.current = false
-    setPlayerHand([])
-    setDealerHand([])
-    dealerRef.current = []
-    playerRef.current = []
-    preP1Ref.current = null
-    preP2Ref.current = null
-    preD1Ref.current = null
-    preD2Ref.current = null
+    setPlayerHand([]); setDealerHand([])
+    dealerRef.current = []; playerRef.current = []
+    preP1Ref.current = null; preP2Ref.current = null
+    preD1Ref.current = null; preD2Ref.current = null
 
     const newStat: StatType = Math.random() < 0.25
       ? 'club_seasons'
@@ -266,21 +262,16 @@ export default function Blackjack() {
       fetchUrl = `/api/blackjack?stat=${newStat}&season=${newSeason}`
     }
 
-    const res  = await fetch(fetchUrl)
+    const res = await fetch(fetchUrl)
     const raw: RawCard[] = await res.json()
     if (!Array.isArray(raw) || raw.length < 4) { setBusy(false); return }
 
     const shuffled = shuffle(raw)
-
     let p1Idx = 0, p2Idx = -1
     outer:
-    for (let i = 0; i < Math.min(shuffled.length, 40); i++) {
-      for (let j = i + 1; j < Math.min(shuffled.length, 40); j++) {
-        if (shuffled[i].value + shuffled[j].value <= 21) {
-          p1Idx = i; p2Idx = j; break outer
-        }
-      }
-    }
+    for (let i = 0; i < Math.min(shuffled.length, 40); i++)
+      for (let j = i + 1; j < Math.min(shuffled.length, 40); j++)
+        if (shuffled[i].value + shuffled[j].value <= 21) { p1Idx = i; p2Idx = j; break outer }
     if (p2Idx === -1) { p1Idx = 0; p2Idx = 1 }
 
     const mk = (c: RawCard, idx: number, fd = false): GameCard =>
@@ -293,230 +284,135 @@ export default function Blackjack() {
 
     let d1Idx = 0, d2Idx = -1
     outerD:
-    for (let i = 0; i < Math.min(afterPlayer.length, 40); i++) {
-      for (let j = i + 1; j < Math.min(afterPlayer.length, 40); j++) {
-        if (afterPlayer[i].value + afterPlayer[j].value <= 21) {
-          d1Idx = i; d2Idx = j; break outerD
-        }
-      }
-    }
+    for (let i = 0; i < Math.min(afterPlayer.length, 40); i++)
+      for (let j = i + 1; j < Math.min(afterPlayer.length, 40); j++)
+        if (afterPlayer[i].value + afterPlayer[j].value <= 21) { d1Idx = i; d2Idx = j; break outerD }
     if (d2Idx === -1) { d1Idx = 0; d2Idx = 1 }
 
     const dealerSet = new Set([d1Idx, d2Idx])
-    const d1 = mk(afterPlayer[d1Idx], 2)
-    const d2 = mk(afterPlayer[d2Idx], 3, true)
     deckRef.current = afterPlayer.filter((_, i) => !dealerSet.has(i)).map((c, i) => mk(c, i + 4))
+    preP1Ref.current = p1; preP2Ref.current = p2
+    preD1Ref.current = mk(afterPlayer[d1Idx], 2)
+    preD2Ref.current = mk(afterPlayer[d2Idx], 3, true)
 
-    preP1Ref.current = p1
-    preP2Ref.current = p2
-    preD1Ref.current = d1
-    preD2Ref.current = d2
+    const cur = chipsRef.current
+    const capped = Math.min(betRef.current, cur)
+    const final  = capped >= 10 ? capped : cur
+    setBet(final); betRef.current = final
 
-    // Clamp bet to available chips
-    const currentChips = chipsRef.current
-    const cappedBet = Math.min(betRef.current, currentChips)
-    const finalBet = cappedBet >= 10 ? cappedBet : currentChips
-    setBet(finalBet)
-    betRef.current = finalBet
-
-    setBusy(false)
-    setPhase('betting')
+    setBusy(false); setPhase('betting')
   }
 
-  // ── Deal cards after bet is placed ────────────────────────────────────────────
   function dealCards() {
     if (phase !== 'betting' || busy) return
-    const p1 = preP1Ref.current
-    const p2 = preP2Ref.current
-    const d1 = preD1Ref.current
-    const d2 = preD2Ref.current
+    const p1 = preP1Ref.current, p2 = preP2Ref.current
+    const d1 = preD1Ref.current, d2 = preD2Ref.current
     if (!p1 || !p2 || !d1 || !d2) return
 
     setBusy(true)
     setNextCard(deckRef.current[0] || null)
 
-    setTimeout(() => {
-      playerRef.current = [{ ...p1, animIn: true }]
-      setPlayerHand([...playerRef.current])
-    }, 0)
-    setTimeout(() => {
-      dealerRef.current = [{ ...d1, animIn: true }]
-      setDealerHand([...dealerRef.current])
-    }, 600)
-    setTimeout(() => {
-      playerRef.current = [...playerRef.current, { ...p2, animIn: true }]
-      setPlayerHand([...playerRef.current])
-    }, 900)
+    setTimeout(() => { playerRef.current = [{ ...p1, animIn: true }]; setPlayerHand([...playerRef.current]) }, 0)
+    setTimeout(() => { dealerRef.current = [{ ...d1, animIn: true }]; setDealerHand([...dealerRef.current]) }, 600)
+    setTimeout(() => { playerRef.current = [...playerRef.current, { ...p2, animIn: true }]; setPlayerHand([...playerRef.current]) }, 900)
     setTimeout(() => {
       dealerRef.current = [...dealerRef.current, { ...d2, animIn: true }]
       setDealerHand([...dealerRef.current])
       setBusy(false)
-
-      const pTotal = p1.value + p2.value
-      if (pTotal === 21) {
-        setHadBlackjack(true)
-        hadBlackjackRef.current = true
+      if (p1.value + p2.value === 21) {
+        setHadBlackjack(true); hadBlackjackRef.current = true
         setPendingBlackjack(true)
-        setPhase('player')
-      } else {
-        setPhase('player')
       }
+      setPhase('player')
     }, 1350)
   }
 
-  // ── Hit ───────────────────────────────────────────────────────────────────────
   function hit() {
     if (phase !== 'player' || busy || deckRef.current.length === 0) return
     setPendingBlackjack(false)
     const card = deckRef.current[0]
     deckRef.current = deckRef.current.slice(1)
     setNextCard(deckRef.current[0] || null)
-    const newCard: GameCard = { ...card, animIn: true }
-    const newHand = [...playerRef.current, newCard]
-    playerRef.current = newHand
-    setPlayerHand([...newHand])
-
+    const newHand = [...playerRef.current, { ...card, animIn: true }]
+    playerRef.current = newHand; setPlayerHand([...newHand])
     const total = allTotal(newHand)
-    if (total > 21) {
-      setPendingBust(true)
-    } else if (total === 21) {
-      setPendingBlackjack(true)
-    }
+    if (total > 21) setPendingBust(true)
+    else if (total === 21) setPendingBlackjack(true)
   }
 
-  // ── Bust flow ─────────────────────────────────────────────────────────────────
   function triggerBust() {
-    setPhase('dealer')
-    setBusting(true)
+    setPhase('dealer'); setBusting(true)
     setTimeout(() => {
       setBusting(false)
-      const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
-      dealerRef.current = revealed
-      setDealerHand([...revealed])
+      const rev = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+      dealerRef.current = rev; setDealerHand([...rev])
       setTimeout(() => playDealer(), 700)
     }, 1600)
   }
 
-  // ── Stand ─────────────────────────────────────────────────────────────────────
   function stand() {
     if (phase !== 'player' || busy) return
-    if (pendingBust) {
-      setPendingBust(false)
-      setTimeout(() => triggerBust(), 0)
-      return
-    }
+    if (pendingBust) { setPendingBust(false); setTimeout(() => triggerBust(), 0); return }
     if (pendingBlackjack) {
-      setPendingBlackjack(false)
-      setPhase('dealer')
-      setBlackjackFlash(true)
+      setPendingBlackjack(false); setPhase('dealer'); setBlackjackFlash(true)
       setTimeout(() => {
         setBlackjackFlash(false)
-        const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
-        dealerRef.current = revealed
-        setDealerHand([...revealed])
+        const rev = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+        dealerRef.current = rev; setDealerHand([...rev])
         setTimeout(() => playDealer(), 700)
       }, 1600)
       return
     }
     setPhase('dealer')
-    const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
-    dealerRef.current = revealed
-    setDealerHand([...revealed])
+    const rev = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+    dealerRef.current = rev; setDealerHand([...rev])
     setTimeout(() => playDealer(), 600)
   }
 
   function playDealer() {
-    const current = dealerRef.current
-    const t = allTotal(current)
-    if (t >= 17 || deckRef.current.length === 0) {
-      endHand(current, playerRef.current)
-      return
-    }
-    const card = deckRef.current[0]
-    deckRef.current = deckRef.current.slice(1)
-    const newCard: GameCard = { ...card, faceDown: false, animIn: true }
-    const newHand = [...current, newCard]
-    dealerRef.current = newHand
-    setDealerHand([...newHand])
+    const cur = dealerRef.current
+    if (allTotal(cur) >= 17 || deckRef.current.length === 0) { endHand(cur, playerRef.current); return }
+    const card = deckRef.current[0]; deckRef.current = deckRef.current.slice(1)
+    const next = [...cur, { ...card, faceDown: false, animIn: true }]
+    dealerRef.current = next; setDealerHand([...next])
     setTimeout(playDealer, 1100)
   }
 
-  // ── Resolve hand — update chips ───────────────────────────────────────────────
   function endHand(dHand: GameCard[], pHand: GameCard[]) {
-    const pTotal  = allTotal(pHand)
-    const dTotal  = allTotal(dHand)
-    const pBusted = pTotal > 21
-    const dBusted = dTotal > 21
-
-    const r: Result = pBusted ? 'lose'
-      : dBusted || pTotal > dTotal ? 'win'
-      : pTotal < dTotal ? 'lose'
-      : 'push'
-
-    const revealedDealer = dHand.map(c => ({ ...c, faceDown: false }))
-    dealerRef.current = revealedDealer
-    setDealerHand([...revealedDealer])
-    setReveal(true)
-    setResult(r)
-    setPhase('result')
-
-    const currentBet = betRef.current
+    const pT = allTotal(pHand), dT = allTotal(dHand)
+    const r: Result = pT > 21 ? 'lose' : dT > 21 || pT > dT ? 'win' : pT < dT ? 'lose' : 'push'
+    const rev = dHand.map(c => ({ ...c, faceDown: false }))
+    dealerRef.current = rev; setDealerHand([...rev])
+    setReveal(true); setResult(r); setPhase('result')
+    const cb = betRef.current
     setChips(prev => {
-      const next = r === 'win' ? prev + currentBet
-        : r === 'lose' ? prev - currentBet
-        : prev
+      const next = r === 'win' ? prev + cb : r === 'lose' ? prev - cb : prev
       chipsRef.current = next
-      if (next >= GOAL_CHIPS) {
-        setTimeout(() => setGameWon(true), 900)
-      } else if (next <= 0) {
-        setTimeout(() => setGameOver(true), 900)
-      }
+      if (next >= GOAL_CHIPS) setTimeout(() => setGameWon(true), 900)
+      else if (next <= 0)     setTimeout(() => setGameOver(true), 900)
       return next
     })
-
     setTimeout(() => setNewDeal(true), 400)
   }
 
-  // ── Derived ───────────────────────────────────────────────────────────────────
   const playerTotal  = allTotal(playerRef.current)
   const dealerBusted = phase === 'result' && allTotal(dealerRef.current) > 21
   const playerBusted = playerTotal > 21
   const chipsColor   = chips > STARTING_CHIPS ? '#4ade80' : chips < STARTING_CHIPS ? '#f87171' : '#f59e0b'
 
-  // ─── Render ──────────────────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f1e', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 16px 40px', gap: 16 }}>
 
       <style>{`
-        @keyframes bust-in {
-          0%   { transform: scale(0.3) rotate(-8deg); opacity: 0; }
-          60%  { transform: scale(1.1) rotate(2deg);  opacity: 1; }
-          100% { transform: scale(1)   rotate(0deg);  opacity: 1; }
-        }
-        @keyframes pulse-deal {
-          0%, 100% { box-shadow: 0 4px 20px rgba(245,158,11,0.4); transform: scale(1); }
-          50%       { box-shadow: 0 4px 40px rgba(245,158,11,0.9); transform: scale(1.05); }
-        }
-        @keyframes fade-bust {
-          0%   { opacity: 0; }
-          15%  { opacity: 1; }
-          75%  { opacity: 1; }
-          100% { opacity: 0; }
-        }
-        @keyframes bj-in {
-          0%   { transform: scale(0.3) rotate(8deg);  opacity: 0; }
-          60%  { transform: scale(1.1) rotate(-2deg); opacity: 1; }
-          100% { transform: scale(1)   rotate(0deg);  opacity: 1; }
-        }
-        @keyframes fade-bj {
-          0%   { opacity: 0; }
-          15%  { opacity: 1; }
-          75%  { opacity: 1; }
-          100% { opacity: 0; }
-        }
+        @keyframes bust-in  { 0%{transform:scale(0.3) rotate(-8deg);opacity:0} 60%{transform:scale(1.1) rotate(2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+        @keyframes bj-in    { 0%{transform:scale(0.3) rotate(8deg);opacity:0}  60%{transform:scale(1.1) rotate(-2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
+        @keyframes fade-bust{ 0%{opacity:0} 15%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
+        @keyframes fade-bj  { 0%{opacity:0} 15%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
+        @keyframes pulse-deal{ 0%,100%{box-shadow:0 4px 20px rgba(245,158,11,0.4);transform:scale(1)} 50%{box-shadow:0 4px 40px rgba(245,158,11,0.9);transform:scale(1.05)} }
+        @keyframes chip-toss{ 0%{transform:translateY(50px) rotate(22deg) scale(0.5);opacity:0} 58%{transform:translateY(-5px) rotate(-6deg) scale(1.1);opacity:1} 78%{transform:translateY(3px) rotate(2deg) scale(0.97)} 100%{transform:translateY(0) rotate(0deg) scale(1);opacity:1} }
       `}</style>
 
-      {/* ── Entry screen ───────────────────────────────────────────────────────── */}
+      {/* ── Entry screen ──────────────────────────────────────────────────────── */}
       {!gameStarted && (
         <div style={{ maxWidth: 420, width: '100%', textAlign: 'center', marginTop: 32 }}>
           <div style={{ fontSize: 12, color: '#4ade80', letterSpacing: 4, fontWeight: 700, marginBottom: 8 }}>♠ ♥ ♦ ♣</div>
@@ -524,130 +420,80 @@ export default function Blackjack() {
             Topbins <span style={{ color: '#f59e0b' }}>Casino</span>
           </h1>
           <p style={{ color: '#8899bb', margin: '0 0 20px', fontSize: 13, lineHeight: 1.6 }}>
-            The top 52 players from a random season and stat form the deck.<br/>
-            Card values are hidden — use your football knowledge to decide when to hit or stand.<br/>
+            The top 52 players from a random stat & season form the deck.<br/>
+            Values are hidden — use your knowledge to decide when to hit or stand.<br/>
             <strong style={{ color: '#f59e0b' }}>Start with {STARTING_CHIPS} chips · Reach {GOAL_CHIPS} to win</strong>
           </p>
           <input
-            value={username}
-            onChange={e => saveUsername(e.target.value)}
-            placeholder="Enter your name (optional)"
-            maxLength={20}
-            style={{
-              padding: '10px 18px', borderRadius: 20, fontSize: 13, marginBottom: 16,
-              background: '#111827', border: '1px solid #374151',
-              color: 'white', outline: 'none', width: '100%', textAlign: 'center',
-              boxSizing: 'border-box',
-            }}
+            value={username} onChange={e => saveUsername(e.target.value)}
+            placeholder="Enter your name (optional)" maxLength={20}
+            style={{ padding: '10px 18px', borderRadius: 20, fontSize: 13, marginBottom: 16, background: '#111827', border: '1px solid #374151', color: 'white', outline: 'none', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}
           />
           <button
-            onClick={() => {
-              setChips(STARTING_CHIPS)
-              chipsRef.current = STARTING_CHIPS
-              setBet(10)
-              betRef.current = 10
-              setGameOver(false)
-              setGameWon(false)
-              setPhase('idle')
-              setGameStarted(true)
-            }}
-            style={{
-              width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer',
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              border: 'none', color: '#111', fontSize: 17, fontWeight: 800,
-              boxShadow: '0 4px 24px rgba(245,158,11,0.4)',
-            }}
+            onClick={() => { setChips(STARTING_CHIPS); chipsRef.current = STARTING_CHIPS; setBet(10); betRef.current = 10; setGameOver(false); setGameWon(false); setPhase('idle'); setGameStarted(true) }}
+            style={{ width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#111', fontSize: 17, fontWeight: 800, boxShadow: '0 4px 24px rgba(245,158,11,0.4)' }}
           >
             Start Game · {STARTING_CHIPS} chips
           </button>
         </div>
       )}
 
-      {/* ── Game view ──────────────────────────────────────────────────────────── */}
+      {/* ── Game ──────────────────────────────────────────────────────────────── */}
       {gameStarted && (
         <>
-          {/* ── Win overlay ───────────────────────────────────────────────────── */}
+          {/* Win overlay */}
           {gameWon && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
               <div style={{ textAlign: 'center', padding: '40px 32px', maxWidth: 360, background: '#111827', borderRadius: 24, border: '2px solid #f59e0b' }}>
                 <div style={{ fontSize: 72, marginBottom: 12 }}>🏆</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: '#f59e0b', marginBottom: 8 }}>You Won!</div>
-                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>
-                  You reached {chips} chips.<br/>Goal of {GOAL_CHIPS} achieved!
-                </div>
-                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#111' }}>
-                  Play Again
-                </button>
+                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>You reached {chips} chips.<br/>Goal of {GOAL_CHIPS} achieved!</div>
+                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#111' }}>Play Again</button>
               </div>
             </div>
           )}
 
-          {/* ── Bust overlay ──────────────────────────────────────────────────── */}
+          {/* Game over overlay */}
           {gameOver && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
               <div style={{ textAlign: 'center', padding: '40px 32px', maxWidth: 360, background: '#111827', borderRadius: 24, border: '2px solid #ef4444' }}>
                 <div style={{ fontSize: 72, marginBottom: 12 }}>💀</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: '#ef4444', marginBottom: 8 }}>Broke!</div>
-                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>
-                  You ran out of chips.<br/>Better luck next time.
-                </div>
-                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #ef4444, #b91c1c)', border: 'none', color: 'white' }}>
-                  Play Again
-                </button>
+                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>You ran out of chips.<br/>Better luck next time.</div>
+                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #ef4444, #b91c1c)', border: 'none', color: 'white' }}>Play Again</button>
               </div>
             </div>
           )}
 
-          {/* ── Top nav ───────────────────────────────────────────────────────── */}
+          {/* Nav */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 540 }}>
-            <button onClick={resetGame}
-              style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>
-              ← Quit
-            </button>
-            <div style={{ padding: '5px 16px', borderRadius: 20, background: '#1f2937', border: `1px solid ${chipsColor}33`, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <button onClick={resetGame} style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>← Quit</button>
+            <div style={{ padding: '5px 16px', borderRadius: 20, background: '#1f2937', border: `1px solid ${chipsColor}44`, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>🪙</span>
               <span style={{ fontWeight: 800, color: chipsColor }}>{chips}</span>
               <span style={{ color: '#4b5563', fontSize: 11 }}>/ {GOAL_CHIPS}</span>
             </div>
-            {/* Progress bar */}
             <div style={{ flex: 1, minWidth: 80, maxWidth: 140, height: 6, background: '#1f2937', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, (chips / GOAL_CHIPS) * 100)}%`, background: `linear-gradient(90deg, #f59e0b, ${chipsColor})`, borderRadius: 3, transition: 'width 0.5s ease' }} />
+              <div style={{ height: '100%', width: `${Math.min(100, (chips / GOAL_CHIPS) * 100)}%`, background: `linear-gradient(90deg, #f59e0b, ${chipsColor})`, borderRadius: 3, transition: 'width 0.5s ease' }}/>
             </div>
           </div>
 
-          {/* ── Casino table ──────────────────────────────────────────────────── */}
-          <div style={{
-            width: '100%', maxWidth: 450,
-            background: 'linear-gradient(135deg, #c9a84c 0%, #f0d060 40%, #c9a84c 70%, #a07828 100%)',
-            borderRadius: 150, padding: 7,
-            boxShadow: '0 16px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)',
-            position: 'relative',
-          }}>
+          {/* Table */}
+          <div style={{ width: '100%', maxWidth: 450, background: 'linear-gradient(135deg,#c9a84c 0%,#f0d060 40%,#c9a84c 70%,#a07828 100%)', borderRadius: 150, padding: 7, boxShadow: '0 16px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.08)', position: 'relative' }}>
             {/* Felt */}
-            <div style={{
-              borderRadius: 142, overflow: 'hidden',
-              background: 'radial-gradient(ellipse at 50% 30%, #236b35 0%, #1a5428 60%, #163f20 100%)',
-              padding: '18px 24px',
-              boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)',
-              height: 390, display: 'flex', flexDirection: 'column', gap: 0,
-              position: 'relative',
-            }}>
+            <div style={{ borderRadius: 142, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%,#236b35 0%,#1a5428 60%,#163f20 100%)', padding: '18px 24px', boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)', height: 390, display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
 
               {/* Bust flash */}
               {busting && (
                 <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(140,0,0,0.65)', animation: 'fade-bust 1.6s ease-in-out forwards', pointerEvents: 'none', borderRadius: 142 }}>
-                  <div style={{ fontSize: 72, fontWeight: 900, color: 'white', textShadow: '0 0 40px #ff4444, 0 4px 8px rgba(0,0,0,0.6)', letterSpacing: 6, animation: 'bust-in 0.4s cubic-bezier(.22,.68,0,1.3) forwards' }}>
-                    BUST!
-                  </div>
+                  <div style={{ fontSize: 72, fontWeight: 900, color: 'white', textShadow: '0 0 40px #ff4444,0 4px 8px rgba(0,0,0,0.6)', letterSpacing: 6, animation: 'bust-in 0.4s cubic-bezier(.22,.68,0,1.3) forwards' }}>BUST!</div>
                 </div>
               )}
 
               {/* Blackjack flash */}
               {blackjackFlash && (
                 <div style={{ position: 'absolute', inset: 0, zIndex: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,80,20,0.70)', animation: 'fade-bj 1.6s ease-in-out forwards', pointerEvents: 'none', borderRadius: 142 }}>
-                  <div style={{ fontSize: 52, fontWeight: 900, color: '#f59e0b', textShadow: '0 0 40px #fde68a, 0 4px 8px rgba(0,0,0,0.6)', letterSpacing: 4, animation: 'bj-in 0.4s cubic-bezier(.22,.68,0,1.3) forwards' }}>
-                    BLACKJACK!
-                  </div>
+                  <div style={{ fontSize: 52, fontWeight: 900, color: '#f59e0b', textShadow: '0 0 40px #fde68a,0 4px 8px rgba(0,0,0,0.6)', letterSpacing: 4, animation: 'bj-in 0.4s cubic-bezier(.22,.68,0,1.3) forwards' }}>BLACKJACK!</div>
                 </div>
               )}
 
@@ -664,7 +510,7 @@ export default function Blackjack() {
                 <div style={{ display: 'flex', justifyContent: 'center', height: 128, alignItems: 'flex-start' }}>
                   {dealerHand.map((c, i) => (
                     <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
-                      <PlayingCard card={c} stat={stat} reveal={reveal} />
+                      <PlayingCard card={c} stat={stat} reveal={reveal}/>
                     </div>
                   ))}
                 </div>
@@ -672,30 +518,26 @@ export default function Blackjack() {
 
               {/* Side logos */}
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center center', opacity: 0.45, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-                <TbMiniLogo size={22} />
-                <div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
+                <TbMiniLogo size={22}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
               </div>
               <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center center', opacity: 0.45, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-                <TbMiniLogo size={22} />
-                <div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
+                <TbMiniLogo size={22}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
               </div>
 
-              {/* Centre: stat label + New Hand button */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4px 0', position: 'relative' }}>
+              {/* Centre: stat label + bet chips side by side */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '4px 0', position: 'relative' }}>
                 {phase === 'result' && newDeal && (
-                  <button onClick={startHand} style={{ position: 'absolute', zIndex: 20, padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: '3px solid rgba(255,255,255,0.3)', color: '#111', animation: 'pulse-deal 1.2s ease-in-out infinite', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                  <button onClick={startHand} style={{ position: 'absolute', zIndex: 20, padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: '3px solid rgba(255,255,255,0.3)', color: '#111', animation: 'pulse-deal 1.2s ease-in-out infinite', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
                     New Hand
                   </button>
                 )}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '7px 18px', border: '1px solid rgba(255,255,255,0.07)', opacity: phase === 'result' && newDeal ? 0.25 : 1, textAlign: 'center' }}>
+
+                {/* Stat label */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '7px 18px', border: '1px solid rgba(255,255,255,0.07)', opacity: phase === 'result' && newDeal ? 0.2 : 1, textAlign: 'center', flexShrink: 0 }}>
                   {season ? (
                     <>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: '#f59e0b', lineHeight: 1.1, letterSpacing: -0.3 }}>
-                        {STAT_ICON[stat]} {STAT_LABEL[stat]}
-                      </div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600, letterSpacing: 1 }}>
-                        {season}
-                      </div>
+                      <div style={{ fontSize: 17, fontWeight: 900, color: '#f59e0b', lineHeight: 1.1, letterSpacing: -0.3 }}>{STAT_ICON[stat]} {STAT_LABEL[stat]}</div>
+                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600, letterSpacing: 1 }}>{season}</div>
                     </>
                   ) : (
                     <>
@@ -704,6 +546,13 @@ export default function Blackjack() {
                     </>
                   )}
                 </div>
+
+                {/* Chip stack — mounts when entering player phase, animation fires on mount */}
+                {(phase === 'player' || phase === 'dealer' || phase === 'result') && (
+                  <div style={{ animation: 'chip-toss 0.55s cubic-bezier(.22,.68,0,1.3) forwards', opacity: phase === 'result' && newDeal ? 0.5 : 1 }}>
+                    <ChipStack bet={bet} chipSize={32}/>
+                  </div>
+                )}
               </div>
 
               {/* Player row */}
@@ -711,7 +560,7 @@ export default function Blackjack() {
                 <div style={{ display: 'flex', justifyContent: 'center', height: 128, alignItems: 'flex-start' }}>
                   {playerHand.map((c, i) => (
                     <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
-                      <PlayingCard card={c} stat={stat} reveal={reveal} />
+                      <PlayingCard card={c} stat={stat} reveal={reveal}/>
                     </div>
                   ))}
                 </div>
@@ -726,32 +575,30 @@ export default function Blackjack() {
               </div>
             </div>
 
-            {/* Next card — shown to right of table during player phase */}
-            {phase === 'player' && nextCard && !pendingBlackjack && (
+            {/* Next card — right of table, always shown during player phase */}
+            {phase === 'player' && nextCard && (
               <div style={{ position: 'absolute', right: -94, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                 <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(129,140,248,0.7)', letterSpacing: 2.5, whiteSpace: 'nowrap' }}>NEXT CARD</div>
                 <div style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.55))' }}>
-                  <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} reveal={false} />
+                  <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} reveal={false}/>
                 </div>
               </div>
             )}
           </div>
 
-          {/* ── Action area ───────────────────────────────────────────────────── */}
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', minHeight: 54 }}>
+          {/* Action area */}
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
 
-            {/* Idle: initial deal prompt */}
             {phase === 'idle' && !busy && (
-              <button onClick={startHand} style={{ padding: '13px 52px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#111', boxShadow: '0 4px 20px rgba(245,158,11,0.4)' }}>
+              <button onClick={startHand} style={{ padding: '13px 52px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111', boxShadow: '0 4px 20px rgba(245,158,11,0.4)' }}>
                 New Hand
               </button>
             )}
 
-            {/* Betting: chip selector + deal button */}
             {phase === 'betting' && !busy && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#8899bb', letterSpacing: 2 }}>PLACE YOUR BET</div>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                   {chips < 10 ? (
                     <div style={{ fontSize: 13, color: '#f87171', fontWeight: 700 }}>All in — {chips} chips</div>
                   ) : (
@@ -759,51 +606,34 @@ export default function Blackjack() {
                       const disabled = amount > chips
                       const selected = bet === amount
                       return (
-                        <button
+                        <div
                           key={amount}
                           onClick={() => { if (!disabled) { setBet(amount); betRef.current = amount } }}
-                          style={{
-                            width: 46, height: 46, borderRadius: '50%',
-                            cursor: disabled ? 'not-allowed' : 'pointer',
-                            fontWeight: 800, fontSize: 13,
-                            background: selected ? '#f59e0b' : disabled ? '#111827' : '#1f2937',
-                            border: selected ? '3px solid #fde68a' : `2px solid ${disabled ? '#1f2937' : '#374151'}`,
-                            color: selected ? '#111' : disabled ? '#374151' : 'white',
-                            transform: selected ? 'scale(1.12)' : 'scale(1)',
-                            transition: 'all 0.15s',
-                            boxShadow: selected ? '0 0 18px rgba(245,158,11,0.65)' : 'none',
-                          }}
+                          style={{ cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.25 : 1, transform: selected ? 'translateY(-10px) scale(1.18)' : 'translateY(0) scale(1)', transition: 'all 0.2s cubic-bezier(.22,.68,0,1.3)', filter: selected ? 'drop-shadow(0 6px 14px rgba(245,158,11,0.75))' : 'none' }}
                         >
-                          {amount}
-                        </button>
+                          <ChipSingle amount={amount} size={52}/>
+                        </div>
                       )
                     })
                   )}
                 </div>
-                <button onClick={dealCards} style={{ padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#111', boxShadow: '0 4px 20px rgba(245,158,11,0.4)' }}>
+                <button onClick={dealCards} style={{ padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111', boxShadow: '0 4px 20px rgba(245,158,11,0.4)' }}>
                   Deal Cards · {bet} chip{bet !== 1 ? 's' : ''}
                 </button>
               </div>
             )}
 
-            {/* Player: hit + stand */}
             {phase === 'player' && !busy && !busting && (
               <>
-                <button onClick={hit} style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #dc2626, #b91c1c)', border: 'none', color: 'white', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}>
-                  Hit
-                </button>
-                <button onClick={stand} style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #374151, #1f2937)', border: '2px solid #4b5563', color: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>
-                  Stand
-                </button>
+                <button onClick={hit} style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', color: 'white', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}>Hit</button>
+                <button onClick={stand} style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#374151,#1f2937)', border: '2px solid #4b5563', color: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>Stand</button>
               </>
             )}
 
-            {/* Dealer playing */}
             {phase === 'dealer' && !busting && (
               <div style={{ fontSize: 14, color: '#8899bb', fontStyle: 'italic' }}>Dealer playing…</div>
             )}
 
-            {/* Result */}
             {phase === 'result' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <div style={{ padding: '10px 28px', borderRadius: 50, background: result === 'win' ? 'rgba(21,128,61,0.35)' : result === 'lose' ? 'rgba(185,28,28,0.35)' : 'rgba(71,85,105,0.35)', border: `2px solid ${result === 'win' ? '#22c55e' : result === 'lose' ? '#ef4444' : '#64748b'}`, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8', fontSize: 17, fontWeight: 900 }}>
@@ -812,9 +642,7 @@ export default function Blackjack() {
                 <div style={{ fontSize: 14, fontWeight: 700, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8' }}>
                   {result === 'win' ? `+${bet} chips` : result === 'lose' ? `-${bet} chips` : 'No change'}
                 </div>
-                {hadBlackjack && (
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', letterSpacing: 2 }}>♠ BLACKJACK ♠</div>
-                )}
+                {hadBlackjack && <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', letterSpacing: 2 }}>♠ BLACKJACK ♠</div>}
               </div>
             )}
           </div>
