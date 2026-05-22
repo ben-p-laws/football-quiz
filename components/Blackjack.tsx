@@ -417,7 +417,9 @@ export default function Blackjack() {
         @keyframes fade-bust{ 0%{opacity:0} 15%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
         @keyframes fade-bj  { 0%{opacity:0} 15%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
         @keyframes pulse-deal{ 0%,100%{box-shadow:0 4px 20px rgba(245,158,11,0.4);transform:translate(-50%,-50%) scale(1)} 50%{box-shadow:0 4px 40px rgba(245,158,11,0.9);transform:translate(-50%,-50%) scale(1.05)} }
-        @keyframes chip-land{ 0%{transform:translateX(-24px) scale(0.4) rotate(-18deg);opacity:0} 58%{transform:translateX(3px) scale(1.12) rotate(4deg);opacity:1} 78%{transform:translateX(-1px) scale(0.96) rotate(-1deg)} 100%{transform:translateX(0) scale(1) rotate(0deg);opacity:1} }
+        @keyframes chip-land{ 0%{transform:translateY(-44px) scale(0.5) rotate(14deg);opacity:0} 58%{transform:translateY(4px) scale(1.1) rotate(-3deg);opacity:1} 78%{transform:translateY(-2px) scale(0.97) rotate(1deg)} 100%{transform:translateY(0) scale(1) rotate(0deg);opacity:1} }
+        .bj-overlay { position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:1000; }
+        @media (min-width:901px) { .bj-overlay { left:180px; } }
       `}</style>
 
       {/* ── Entry screen ──────────────────────────────────────────────────────── */}
@@ -451,7 +453,7 @@ export default function Blackjack() {
         <>
           {/* Win overlay */}
           {gameWon && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="bj-overlay">
               <div style={{ textAlign: 'center', padding: '40px 32px', maxWidth: 360, background: '#111827', borderRadius: 24, border: '2px solid #f59e0b' }}>
                 <div style={{ fontSize: 72, marginBottom: 12 }}>🏆</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: '#f59e0b', marginBottom: 8 }}>You Won!</div>
@@ -463,7 +465,7 @@ export default function Blackjack() {
 
           {/* Game over overlay — broken chip icon instead of skull */}
           {gameOver && (
-            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+            <div className="bj-overlay">
               <div style={{ textAlign: 'center', padding: '40px 32px', maxWidth: 360, background: '#111827', borderRadius: 24, border: '2px solid #ef4444' }}>
                 <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
                   <BrokenChipIcon size={80}/>
@@ -494,7 +496,7 @@ export default function Blackjack() {
           <div style={{ width: '100%', maxWidth: 450, background: 'linear-gradient(135deg,#c9a84c 0%,#f0d060 40%,#c9a84c 70%,#a07828 100%)', borderRadius: 150, padding: 7, boxShadow: '0 16px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.08)', position: 'relative' }}>
 
             {/* Felt */}
-            <div style={{ borderRadius: 142, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%,#236b35 0%,#1a5428 60%,#163f20 100%)', padding: '18px 24px', boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)', height: 390, display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
+            <div style={{ borderRadius: 142, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%,#236b35 0%,#1a5428 60%,#163f20 100%)', padding: '18px 24px', boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)', height: 450, display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
 
               {/* Bust flash */}
               {busting && (
@@ -509,6 +511,20 @@ export default function Blackjack() {
                   <div style={{ fontSize: 52, fontWeight: 900, color: '#f59e0b', textShadow: '0 0 40px #fde68a,0 4px 8px rgba(0,0,0,0.6)', letterSpacing: 4, animation: 'bj-in 0.4s cubic-bezier(.22,.68,0,1.3) forwards' }}>BLACKJACK!</div>
                 </div>
               )}
+
+              {/* Casino header — top arc of felt */}
+              <div style={{ position: 'absolute', top: 9, left: 0, right: 0, zIndex: 2, textAlign: 'center', pointerEvents: 'none' }}>
+                <div style={{ fontSize: 7.5, fontWeight: 900, color: 'rgba(255,255,255,0.28)', letterSpacing: 3.5, fontFamily: 'Arial Black, sans-serif' }}>♠ TOPBINS CASINO BLACKJACK ♠</div>
+                <div style={{ fontSize: 6, color: 'rgba(255,255,255,0.16)', letterSpacing: 2, marginTop: 2 }}>BLACKJACK PAYS 3:2  •  DEALER STANDS ON ALL 17s</div>
+              </div>
+
+              {/* Side logos — left only, right has "INSURANCE PAYS 2:1" */}
+              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center center', opacity: 0.38, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                <TbMiniLogo size={20}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
+              </div>
+              <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center center', opacity: 0.28, zIndex: 1, whiteSpace: 'nowrap' }}>
+                <div style={{ fontSize: 6.5, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2 }}>INSURANCE PAYS 2:1</div>
+              </div>
 
               {/* Dealer row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -529,61 +545,8 @@ export default function Blackjack() {
                 </div>
               </div>
 
-              {/* Side logos */}
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center center', opacity: 0.45, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-                <TbMiniLogo size={22}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
-              </div>
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center center', opacity: 0.45, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-                <TbMiniLogo size={22}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
-              </div>
-
-              {/* Stat label — centred in the middle flex area */}
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                {/* New Hand button — centred absolutely so it never shifts the label */}
-                {phase === 'result' && newDeal && (
-                  <button onClick={startHand} style={{ position: 'absolute', top: '50%', left: '50%', zIndex: 20, padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: '3px solid rgba(255,255,255,0.3)', color: '#111', animation: 'pulse-deal 1.2s ease-in-out infinite', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
-                    New Hand
-                  </button>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '7px 18px', border: '1px solid rgba(255,255,255,0.07)', opacity: phase === 'result' && newDeal ? 0.2 : 1, textAlign: 'center' }}>
-                  {season ? (
-                    <>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: '#f59e0b', lineHeight: 1.1, letterSpacing: -0.3 }}>{STAT_ICON[stat]} {STAT_LABEL[stat]}</div>
-                      <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', fontWeight: 600, letterSpacing: 1 }}>{season}</div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.35)', letterSpacing: 3 }}>TOPBINS CASINO</div>
-                      <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.18)', letterSpacing: 2 }}>♠  BLACKJACK  ♠</div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Bet chip stack — slides in from the left when cards are dealt, no vertical movement */}
-              {(phase === 'player' || phase === 'dealer') && (
-                <div style={{ position: 'absolute', top: '50%', left: '26%', transform: 'translateY(-50%)', zIndex: 5 }}>
-                  <div style={{ animation: 'chip-land 0.55s cubic-bezier(.22,.68,0,1.3) forwards' }}>
-                    <ChipStack bet={bet} chipSize={28}/>
-                  </div>
-                </div>
-              )}
-
-              {/* Bankroll chip stack — bottom-right of felt, shows player's chip count */}
-              {phase !== 'idle' && (
-                <div style={{ position: 'absolute', bottom: 100, right: 28, zIndex: 7, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-                  <div style={{ fontSize: 6.5, fontWeight: 700, color: 'rgba(255,255,255,0.38)', letterSpacing: 1.5, whiteSpace: 'nowrap' }}>YOUR CHIPS</div>
-                  <div style={{ position: 'relative', width: 22, height: 22 + (bankrollCount - 1) * 4 }}>
-                    {Array.from({ length: bankrollCount }).map((_, i) => (
-                      <div key={i} style={{ position: 'absolute', bottom: i * 4, left: 0 }}>
-                        <ChipSingle amount={50} size={22}/>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 10, fontWeight: 900, color: chipsColor, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{chips}</div>
-                </div>
-              )}
+              {/* Middle spacer — all middle content is absolutely positioned */}
+              <div style={{ flex: 1 }}/>
 
               {/* Player row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -603,6 +566,58 @@ export default function Blackjack() {
                   )}
                 </div>
               </div>
+
+              {/* Stat label — absolute, upper-middle of felt */}
+              <div style={{ position: 'absolute', top: '42%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 3, textAlign: 'center', pointerEvents: 'none', opacity: phase === 'result' && newDeal ? 0.15 : 1, transition: 'opacity 0.3s', whiteSpace: 'nowrap' }}>
+                {season ? (
+                  <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: 40, padding: '5px 16px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                    <div style={{ fontSize: 15, fontWeight: 900, color: '#f59e0b', lineHeight: 1.15, letterSpacing: -0.3 }}>{STAT_ICON[stat]} {STAT_LABEL[stat]}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.42)', fontWeight: 600, letterSpacing: 1 }}>{season}</div>
+                  </div>
+                ) : (
+                  <div style={{ background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '5px 16px', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div style={{ fontSize: 9, fontWeight: 900, color: 'rgba(255,255,255,0.3)', letterSpacing: 3 }}>TOPBINS CASINO</div>
+                    <div style={{ fontSize: 7, color: 'rgba(255,255,255,0.15)', letterSpacing: 2 }}>♠  BLACKJACK  ♠</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bet circle — permanent casino-table betting spot */}
+              <div style={{ position: 'absolute', top: '56%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 1, width: 92, height: 52, border: '1.5px dashed rgba(255,255,255,0.22)', borderRadius: '50%', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {(phase === 'idle' || phase === 'betting') && (
+                  <span style={{ fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,0.22)', letterSpacing: 2.5, fontFamily: 'Arial Black, sans-serif' }}>BET</span>
+                )}
+              </div>
+
+              {/* Bet chip stack — lands in the circle when hand begins */}
+              {phase !== 'idle' && phase !== 'betting' && (
+                <div style={{ position: 'absolute', top: '56%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 5 }}>
+                  <div style={{ animation: phase === 'player' ? 'chip-land 0.55s cubic-bezier(.22,.68,0,1.3) forwards' : 'none' }}>
+                    <ChipStack bet={bet} chipSize={28}/>
+                  </div>
+                </div>
+              )}
+
+              {/* New Hand button — absolute so it never disturbs the layout */}
+              {phase === 'result' && newDeal && (
+                <button onClick={startHand} style={{ position: 'absolute', top: '49%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 20, padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: '3px solid rgba(255,255,255,0.3)', color: '#111', animation: 'pulse-deal 1.2s ease-in-out infinite', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                  New Hand
+                </button>
+              )}
+
+              {/* Bankroll chip stack — deep in the bottom-right corner */}
+              {phase !== 'idle' && (
+                <div style={{ position: 'absolute', bottom: 72, right: 22, zIndex: 7, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <div style={{ position: 'relative', width: 22, height: 22 + (bankrollCount - 1) * 4 }}>
+                    {Array.from({ length: bankrollCount }).map((_, i) => (
+                      <div key={i} style={{ position: 'absolute', bottom: i * 4, left: 0 }}>
+                        <ChipSingle amount={50} size={22}/>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: chipsColor, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{chips}</div>
+                </div>
+              )}
             </div>
 
             {/* Next card — right of table */}
