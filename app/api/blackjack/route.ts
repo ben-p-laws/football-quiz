@@ -29,21 +29,6 @@ const STAT_COLS: Record<string, string> = {
 //   WHERE year_id IS NOT NULL
 //   ORDER BY year_id DESC;
 // $$;
-//
-// 2) Club seasons stat (only single-club rows — no commas in teams_played_for):
-// CREATE OR REPLACE FUNCTION get_club_seasons()
-// RETURNS TABLE(player text, team text, value bigint) LANGUAGE sql STABLE AS $$
-//   SELECT name_display::text,
-//          TRIM(teams_played_for::text)::text,
-//          COUNT(*)::bigint
-//   FROM player_seasons
-//   WHERE teams_played_for IS NOT NULL
-//     AND teams_played_for != ''
-//     AND teams_played_for NOT LIKE '%,%'
-//   GROUP BY name_display, TRIM(teams_played_for::text)
-//   HAVING COUNT(*) >= 2
-//   ORDER BY COUNT(*) DESC LIMIT 200;
-// $$;
 // ─────────────────────────────────────────────────────────────────────────────
 
 function getClient() {
@@ -60,6 +45,32 @@ function shuffleArr<T>(a: T[]): T[] {
     [b[i], b[j]] = [b[j], b[i]]
   }
   return b
+}
+
+type Card = { player: string; team: string; value: number }
+
+// Pick targetPerBucket cards from each value bucket 2–11, fill to targetTotal from overflow.
+function bucketSample(items: Card[], targetPerBucket: number, targetTotal: number): Card[] {
+  const buckets: Record<number, Card[]> = {}
+  for (let v = 2; v <= 11; v++) buckets[v] = []
+  for (const item of items) {
+    if (item.value >= 2 && item.value <= 11) buckets[item.value].push(item)
+  }
+
+  const selected: Card[] = []
+  const pool: Card[] = []
+
+  for (let v = 2; v <= 11; v++) {
+    const shuffled = shuffleArr(buckets[v])
+    selected.push(...shuffled.slice(0, targetPerBucket))
+    if (shuffled.length > targetPerBucket) pool.push(...shuffled.slice(targetPerBucket))
+  }
+
+  if (selected.length < targetTotal && pool.length > 0) {
+    selected.push(...shuffleArr(pool).slice(0, targetTotal - selected.length))
+  }
+
+  return selected.slice(0, targetTotal)
 }
 
 export async function GET(req: NextRequest) {
@@ -98,42 +109,27 @@ export async function GET(req: NextRequest) {
   const season = searchParams.get('season')
 
   // ── Club seasons stat ────────────────────────────────────────────────────────
+  // 10 players per value 2–11 = 100-card deck for perfectly even distribution.
   if (stat === 'club_seasons') {
-    // Try RPC function first (see SQL comment above)
-    const { data: rpcData, error: rpcErr } = await sb.rpc('get_club_seasons')
-    if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cards = shuffleArr((rpcData as any[]).map((r: any) => ({
-        player: String(r.player || ''),
-        team:   String(r.team || ''),
-        value:  Number(r.value),
-      }))).slice(0, 52)
-      return NextResponse.json(cards)
-    }
-    // Fallback: JS aggregation — fetch all rows to count seasons per player+club
     const { data: rawData } = await sb
       .from('player_seasons')
       .select('name_display, teams_played_for')
       .limit(50000)
-    const counts: Record<string, { player: string; team: string; value: number }> = {}
+
+    const counts: Record<string, Card> = {}
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const row of (rawData || []) as any[]) {
       const player  = String(row.name_display || '').trim()
       const rawTeam = String(row.teams_played_for || '').trim()
-      // Skip rows with multiple clubs (career-list format or mid-season transfers)
-      // so count = seasons at that specific club, not total career seasons
+      // Skip rows with multiple clubs (career-list or mid-season transfers)
       if (!player || !rawTeam || rawTeam.includes(',')) continue
       const key = `${player}|||${rawTeam}`
       if (!counts[key]) counts[key] = { player, team: rawTeam, value: 0 }
       counts[key].value++
     }
-    // Take top 200 by season count (mirrors the RPC), then shuffle for randomness
-    const cards = shuffleArr(
-      Object.values(counts)
-        .filter(c => c.value >= 2)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 200)
-    ).slice(0, 52)
+
+    const allCards = Object.values(counts).filter(c => c.value >= 2 && c.value <= 11)
+    const cards = bucketSample(allCards, 10, 100)
     return NextResponse.json(cards)
   }
 
@@ -142,23 +138,26 @@ export async function GET(req: NextRequest) {
   }
 
   const col = STAT_COLS[stat]
+
+  // ── Regular stats: ~5 players per value 2–11, fill to 52 from overflow ──────
   const { data, error } = await sb
     .from('player_seasons')
     .select(`name_display, teams_played_for, ${col}`)
     .eq('year_id', season)
-    .gt(col, 0)
-    .order(col, { ascending: false })
-    .limit(52)
+    .gte(col, 2)
+    .lte(col, 11)
+    .limit(5000)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const cards = (data || []).map((row: any) => ({
-    player: row.name_display as string,
-    team:   ((row.teams_played_for as string) || '').split(',')[0].trim(),
-    value:  row[col] as number,
+  const allCards: Card[] = (data || []).map((row: any) => ({
+    player: String(row.name_display),
+    team:   (String(row.teams_played_for || '')).split(',')[0].trim(),
+    value:  Number(row[col]),
   }))
 
+  const cards = bucketSample(allCards, 5, 52)
   return NextResponse.json(cards)
 }
 
