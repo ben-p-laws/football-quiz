@@ -705,12 +705,14 @@ export default function Blackjack() {
                 </div>
               </div>
 
-              {/* Side logos */}
-              <div style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.55, zIndex: 1 }}>
-                <TbMiniLogo size={32} />
+              {/* Side logos + TOPBINS CASINO text */}
+              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center center', opacity: 0.45, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                <TbMiniLogo size={22} />
+                <div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
               </div>
-              <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', opacity: 0.55, zIndex: 1 }}>
-                <TbMiniLogo size={32} />
+              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center center', opacity: 0.45, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                <TbMiniLogo size={22} />
+                <div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
               </div>
 
               {/* Centre stat + New Hand overlay */}
@@ -775,22 +777,20 @@ export default function Blackjack() {
                     </span>
                   )}
                 </div>
+                {/* Expert mode: next card preview — on the table, value hidden */}
+                {mode === 'expert' && phase === 'player' && nextCard && !pendingBlackjack && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                    <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(129,140,248,0.65)', letterSpacing: 2.5 }}>NEXT CARD</div>
+                    <div style={{ position: 'relative', height: 99 }}>
+                      <div style={{ transform: 'scale(0.8)', transformOrigin: 'top center', filter: 'drop-shadow(0 0 8px rgba(129,140,248,0.45))' }}>
+                        <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} mode="hard" reveal={false} />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
-
-          {/* Expert mode: next card preview */}
-          {mode === 'expert' && phase === 'player' && nextCard && !pendingBlackjack && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(129,140,248,0.7)', letterSpacing: 3 }}>
-                NEXT CARD IF YOU HIT
-              </div>
-              <div style={{ transform: 'scale(0.88)', transformOrigin: 'top center',
-                filter: 'drop-shadow(0 0 8px rgba(129,140,248,0.4))' }}>
-                <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} mode="easy" reveal={true} />
-              </div>
-            </div>
-          )}
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', minHeight: 54 }}>
