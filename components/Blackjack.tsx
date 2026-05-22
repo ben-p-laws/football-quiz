@@ -86,7 +86,7 @@ function ChipSingle({ amount, size = 44 }: { amount: number; size?: number }) {
   )
 }
 
-// Stacked chips for felt display
+// Stacked bet chips for felt
 function ChipStack({ bet, chipSize = 30 }: { bet: number; chipSize?: number }) {
   const count  = Math.round(bet / 10)
   const offset = Math.round(chipSize * 0.15)
@@ -95,10 +95,24 @@ function ChipStack({ bet, chipSize = 30 }: { bet: number; chipSize?: number }) {
     <div style={{ position: 'relative', width: chipSize, height: h, flexShrink: 0 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{ position: 'absolute', bottom: i * offset, left: 0 }}>
-          <ChipSingle amount={bet} size={chipSize} />
+          <ChipSingle amount={bet} size={chipSize}/>
         </div>
       ))}
     </div>
+  )
+}
+
+// Broken chip icon for game-over modal
+function BrokenChipIcon({ size = 80 }: { size?: number }) {
+  const r = size / 2
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <circle cx={r} cy={r} r={r - 2} fill="#1f2937" stroke="#ef4444" strokeWidth="2"/>
+      <circle cx={r} cy={r} r={r * 0.72} fill="none" stroke="#ef4444" strokeWidth={r * 0.14} strokeDasharray={`${r * 0.4} ${r * 0.22}`} opacity="0.7"/>
+      <circle cx={r} cy={r} r={r * 0.38} fill="#1f2937" stroke="#ef4444" strokeWidth="1.5"/>
+      <line x1={r * 0.55} y1={r * 0.55} x2={r * 1.45} y2={r * 1.45} stroke="#ef4444" strokeWidth={r * 0.12} strokeLinecap="round"/>
+      <line x1={r * 1.45} y1={r * 0.55} x2={r * 0.55} y2={r * 1.45} stroke="#ef4444" strokeWidth={r * 0.12} strokeLinecap="round"/>
+    </svg>
   )
 }
 
@@ -156,7 +170,7 @@ function PlayingCard({ card, stat, reveal }: { card: GameCard; stat: StatType; r
       opacity: card.animIn ? 1 : 0,
       transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
     }}>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.11, pointerEvents: 'none', zIndex: 0 }}>
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }}>
         <TbMiniLogo size={50}/>
       </div>
       <div style={{ position: 'absolute', top: 6, left: 7, lineHeight: 1, zIndex: 1 }}>
@@ -221,8 +235,7 @@ export default function Blackjack() {
   }, [])
 
   const saveUsername = useCallback((name: string) => {
-    setUsername(name)
-    localStorage.setItem('bj_username', name)
+    setUsername(name); localStorage.setItem('bj_username', name)
   }, [])
 
   function resetGame() {
@@ -254,12 +267,10 @@ export default function Blackjack() {
 
     let fetchUrl: string
     if (newStat === 'club_seasons') {
-      setSeason('All Time')
-      fetchUrl = '/api/blackjack?stat=club_seasons'
+      setSeason('All Time'); fetchUrl = '/api/blackjack?stat=club_seasons'
     } else {
-      const newSeason = seasons[Math.floor(Math.random() * seasons.length)]
-      setSeason(newSeason)
-      fetchUrl = `/api/blackjack?stat=${newStat}&season=${newSeason}`
+      const s = seasons[Math.floor(Math.random() * seasons.length)]
+      setSeason(s); fetchUrl = `/api/blackjack?stat=${newStat}&season=${s}`
     }
 
     const res = await fetch(fetchUrl)
@@ -279,8 +290,8 @@ export default function Blackjack() {
 
     const playerSet   = new Set([p1Idx, p2Idx])
     const afterPlayer = shuffled.filter((_, i) => !playerSet.has(i))
-    const p1 = mk(shuffled[p1Idx], 0)
-    const p2 = mk(shuffled[p2Idx], 1)
+    preP1Ref.current = mk(shuffled[p1Idx], 0)
+    preP2Ref.current = mk(shuffled[p2Idx], 1)
 
     let d1Idx = 0, d2Idx = -1
     outerD:
@@ -290,10 +301,9 @@ export default function Blackjack() {
     if (d2Idx === -1) { d1Idx = 0; d2Idx = 1 }
 
     const dealerSet = new Set([d1Idx, d2Idx])
-    deckRef.current = afterPlayer.filter((_, i) => !dealerSet.has(i)).map((c, i) => mk(c, i + 4))
-    preP1Ref.current = p1; preP2Ref.current = p2
     preD1Ref.current = mk(afterPlayer[d1Idx], 2)
     preD2Ref.current = mk(afterPlayer[d2Idx], 3, true)
+    deckRef.current  = afterPlayer.filter((_, i) => !dealerSet.has(i)).map((c, i) => mk(c, i + 4))
 
     const cur = chipsRef.current
     const capped = Math.min(betRef.current, cur)
@@ -308,10 +318,8 @@ export default function Blackjack() {
     const p1 = preP1Ref.current, p2 = preP2Ref.current
     const d1 = preD1Ref.current, d2 = preD2Ref.current
     if (!p1 || !p2 || !d1 || !d2) return
-
     setBusy(true)
     setNextCard(deckRef.current[0] || null)
-
     setTimeout(() => { playerRef.current = [{ ...p1, animIn: true }]; setPlayerHand([...playerRef.current]) }, 0)
     setTimeout(() => { dealerRef.current = [{ ...d1, animIn: true }]; setDealerHand([...dealerRef.current]) }, 600)
     setTimeout(() => { playerRef.current = [...playerRef.current, { ...p2, animIn: true }]; setPlayerHand([...playerRef.current]) }, 900)
@@ -320,8 +328,7 @@ export default function Blackjack() {
       setDealerHand([...dealerRef.current])
       setBusy(false)
       if (p1.value + p2.value === 21) {
-        setHadBlackjack(true); hadBlackjackRef.current = true
-        setPendingBlackjack(true)
+        setHadBlackjack(true); hadBlackjackRef.current = true; setPendingBlackjack(true)
       }
       setPhase('player')
     }, 1350)
@@ -330,8 +337,7 @@ export default function Blackjack() {
   function hit() {
     if (phase !== 'player' || busy || deckRef.current.length === 0) return
     setPendingBlackjack(false)
-    const card = deckRef.current[0]
-    deckRef.current = deckRef.current.slice(1)
+    const card = deckRef.current[0]; deckRef.current = deckRef.current.slice(1)
     setNextCard(deckRef.current[0] || null)
     const newHand = [...playerRef.current, { ...card, animIn: true }]
     playerRef.current = newHand; setPlayerHand([...newHand])
@@ -399,6 +405,8 @@ export default function Blackjack() {
   const dealerBusted = phase === 'result' && allTotal(dealerRef.current) > 21
   const playerBusted = playerTotal > 21
   const chipsColor   = chips > STARTING_CHIPS ? '#4ade80' : chips < STARTING_CHIPS ? '#f87171' : '#f59e0b'
+  // Bankroll visual chip count: 1 chip at start (50), 5 chips at goal (250)
+  const bankrollCount = Math.max(1, Math.min(5, Math.round(chips / 50)))
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f1e', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 16px 40px', gap: 16 }}>
@@ -408,8 +416,8 @@ export default function Blackjack() {
         @keyframes bj-in    { 0%{transform:scale(0.3) rotate(8deg);opacity:0}  60%{transform:scale(1.1) rotate(-2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
         @keyframes fade-bust{ 0%{opacity:0} 15%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
         @keyframes fade-bj  { 0%{opacity:0} 15%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
-        @keyframes pulse-deal{ 0%,100%{box-shadow:0 4px 20px rgba(245,158,11,0.4);transform:scale(1)} 50%{box-shadow:0 4px 40px rgba(245,158,11,0.9);transform:scale(1.05)} }
-        @keyframes chip-toss{ 0%{transform:translateY(50px) rotate(22deg) scale(0.5);opacity:0} 58%{transform:translateY(-5px) rotate(-6deg) scale(1.1);opacity:1} 78%{transform:translateY(3px) rotate(2deg) scale(0.97)} 100%{transform:translateY(0) rotate(0deg) scale(1);opacity:1} }
+        @keyframes pulse-deal{ 0%,100%{box-shadow:0 4px 20px rgba(245,158,11,0.4);transform:translate(-50%,-50%) scale(1)} 50%{box-shadow:0 4px 40px rgba(245,158,11,0.9);transform:translate(-50%,-50%) scale(1.05)} }
+        @keyframes chip-land{ 0%{transform:translateX(-24px) scale(0.4) rotate(-18deg);opacity:0} 58%{transform:translateX(3px) scale(1.12) rotate(4deg);opacity:1} 78%{transform:translateX(-1px) scale(0.96) rotate(-1deg)} 100%{transform:translateX(0) scale(1) rotate(0deg);opacity:1} }
       `}</style>
 
       {/* ── Entry screen ──────────────────────────────────────────────────────── */}
@@ -431,7 +439,7 @@ export default function Blackjack() {
           />
           <button
             onClick={() => { setChips(STARTING_CHIPS); chipsRef.current = STARTING_CHIPS; setBet(10); betRef.current = 10; setGameOver(false); setGameWon(false); setPhase('idle'); setGameStarted(true) }}
-            style={{ width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#111', fontSize: 17, fontWeight: 800, boxShadow: '0 4px 24px rgba(245,158,11,0.4)' }}
+            style={{ width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111', fontSize: 17, fontWeight: 800, boxShadow: '0 4px 24px rgba(245,158,11,0.4)' }}
           >
             Start Game · {STARTING_CHIPS} chips
           </button>
@@ -448,19 +456,23 @@ export default function Blackjack() {
                 <div style={{ fontSize: 72, marginBottom: 12 }}>🏆</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: '#f59e0b', marginBottom: 8 }}>You Won!</div>
                 <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>You reached {chips} chips.<br/>Goal of {GOAL_CHIPS} achieved!</div>
-                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', color: '#111' }}>Play Again</button>
+                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111' }}>Play Again</button>
               </div>
             </div>
           )}
 
-          {/* Game over overlay */}
+          {/* Game over overlay — broken chip icon instead of skull */}
           {gameOver && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.88)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
               <div style={{ textAlign: 'center', padding: '40px 32px', maxWidth: 360, background: '#111827', borderRadius: 24, border: '2px solid #ef4444' }}>
-                <div style={{ fontSize: 72, marginBottom: 12 }}>💀</div>
-                <div style={{ fontSize: 36, fontWeight: 900, color: '#ef4444', marginBottom: 8 }}>Broke!</div>
-                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>You ran out of chips.<br/>Better luck next time.</div>
-                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg, #ef4444, #b91c1c)', border: 'none', color: 'white' }}>Play Again</button>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                  <BrokenChipIcon size={80}/>
+                </div>
+                <div style={{ fontSize: 36, fontWeight: 900, color: '#ef4444', marginBottom: 8 }}>Out of Chips</div>
+                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>
+                  The house wins this time.<br/>Better luck next time.
+                </div>
+                <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#ef4444,#b91c1c)', border: 'none', color: 'white' }}>Play Again</button>
               </div>
             </div>
           )}
@@ -474,12 +486,13 @@ export default function Blackjack() {
               <span style={{ color: '#4b5563', fontSize: 11 }}>/ {GOAL_CHIPS}</span>
             </div>
             <div style={{ flex: 1, minWidth: 80, maxWidth: 140, height: 6, background: '#1f2937', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, (chips / GOAL_CHIPS) * 100)}%`, background: `linear-gradient(90deg, #f59e0b, ${chipsColor})`, borderRadius: 3, transition: 'width 0.5s ease' }}/>
+              <div style={{ height: '100%', width: `${Math.min(100, (chips / GOAL_CHIPS) * 100)}%`, background: `linear-gradient(90deg,#f59e0b,${chipsColor})`, borderRadius: 3, transition: 'width 0.5s ease' }}/>
             </div>
           </div>
 
           {/* Table */}
           <div style={{ width: '100%', maxWidth: 450, background: 'linear-gradient(135deg,#c9a84c 0%,#f0d060 40%,#c9a84c 70%,#a07828 100%)', borderRadius: 150, padding: 7, boxShadow: '0 16px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.08)', position: 'relative' }}>
+
             {/* Felt */}
             <div style={{ borderRadius: 142, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%,#236b35 0%,#1a5428 60%,#163f20 100%)', padding: '18px 24px', boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)', height: 390, display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
 
@@ -524,16 +537,16 @@ export default function Blackjack() {
                 <TbMiniLogo size={22}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
               </div>
 
-              {/* Centre: stat label + bet chips side by side */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 14, padding: '4px 0', position: 'relative' }}>
+              {/* Stat label — centred in the middle flex area */}
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                {/* New Hand button — centred absolutely so it never shifts the label */}
                 {phase === 'result' && newDeal && (
-                  <button onClick={startHand} style={{ position: 'absolute', zIndex: 20, padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: '3px solid rgba(255,255,255,0.3)', color: '#111', animation: 'pulse-deal 1.2s ease-in-out infinite', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
+                  <button onClick={startHand} style={{ position: 'absolute', top: '50%', left: '50%', zIndex: 20, padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: '3px solid rgba(255,255,255,0.3)', color: '#111', animation: 'pulse-deal 1.2s ease-in-out infinite', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}>
                     New Hand
                   </button>
                 )}
 
-                {/* Stat label */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '7px 18px', border: '1px solid rgba(255,255,255,0.07)', opacity: phase === 'result' && newDeal ? 0.2 : 1, textAlign: 'center', flexShrink: 0 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, background: 'rgba(0,0,0,0.18)', borderRadius: 40, padding: '7px 18px', border: '1px solid rgba(255,255,255,0.07)', opacity: phase === 'result' && newDeal ? 0.2 : 1, textAlign: 'center' }}>
                   {season ? (
                     <>
                       <div style={{ fontSize: 17, fontWeight: 900, color: '#f59e0b', lineHeight: 1.1, letterSpacing: -0.3 }}>{STAT_ICON[stat]} {STAT_LABEL[stat]}</div>
@@ -546,14 +559,31 @@ export default function Blackjack() {
                     </>
                   )}
                 </div>
-
-                {/* Chip stack — mounts when entering player phase, animation fires on mount */}
-                {(phase === 'player' || phase === 'dealer' || phase === 'result') && (
-                  <div style={{ animation: 'chip-toss 0.55s cubic-bezier(.22,.68,0,1.3) forwards', opacity: phase === 'result' && newDeal ? 0.5 : 1 }}>
-                    <ChipStack bet={bet} chipSize={32}/>
-                  </div>
-                )}
               </div>
+
+              {/* Bet chip stack — slides in from the left when cards are dealt, no vertical movement */}
+              {(phase === 'player' || phase === 'dealer') && (
+                <div style={{ position: 'absolute', top: '50%', left: '26%', transform: 'translateY(-50%)', zIndex: 5 }}>
+                  <div style={{ animation: 'chip-land 0.55s cubic-bezier(.22,.68,0,1.3) forwards' }}>
+                    <ChipStack bet={bet} chipSize={28}/>
+                  </div>
+                </div>
+              )}
+
+              {/* Bankroll chip stack — bottom-right of felt, shows player's chip count */}
+              {phase !== 'idle' && (
+                <div style={{ position: 'absolute', bottom: 100, right: 28, zIndex: 7, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                  <div style={{ fontSize: 6.5, fontWeight: 700, color: 'rgba(255,255,255,0.38)', letterSpacing: 1.5, whiteSpace: 'nowrap' }}>YOUR CHIPS</div>
+                  <div style={{ position: 'relative', width: 22, height: 22 + (bankrollCount - 1) * 4 }}>
+                    {Array.from({ length: bankrollCount }).map((_, i) => (
+                      <div key={i} style={{ position: 'absolute', bottom: i * 4, left: 0 }}>
+                        <ChipSingle amount={50} size={22}/>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: chipsColor, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{chips}</div>
+                </div>
+              )}
 
               {/* Player row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -575,7 +605,7 @@ export default function Blackjack() {
               </div>
             </div>
 
-            {/* Next card — right of table, always shown during player phase */}
+            {/* Next card — right of table */}
             {phase === 'player' && nextCard && (
               <div style={{ position: 'absolute', right: -94, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                 <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(129,140,248,0.7)', letterSpacing: 2.5, whiteSpace: 'nowrap' }}>NEXT CARD</div>
@@ -606,11 +636,8 @@ export default function Blackjack() {
                       const disabled = amount > chips
                       const selected = bet === amount
                       return (
-                        <div
-                          key={amount}
-                          onClick={() => { if (!disabled) { setBet(amount); betRef.current = amount } }}
-                          style={{ cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.25 : 1, transform: selected ? 'translateY(-10px) scale(1.18)' : 'translateY(0) scale(1)', transition: 'all 0.2s cubic-bezier(.22,.68,0,1.3)', filter: selected ? 'drop-shadow(0 6px 14px rgba(245,158,11,0.75))' : 'none' }}
-                        >
+                        <div key={amount} onClick={() => { if (!disabled) { setBet(amount); betRef.current = amount } }}
+                          style={{ cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.25 : 1, transform: selected ? 'translateY(-10px) scale(1.18)' : 'translateY(0) scale(1)', transition: 'all 0.2s cubic-bezier(.22,.68,0,1.3)', filter: selected ? 'drop-shadow(0 6px 14px rgba(245,158,11,0.75))' : 'none' }}>
                           <ChipSingle amount={amount} size={52}/>
                         </div>
                       )
@@ -637,7 +664,7 @@ export default function Blackjack() {
             {phase === 'result' && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
                 <div style={{ padding: '10px 28px', borderRadius: 50, background: result === 'win' ? 'rgba(21,128,61,0.35)' : result === 'lose' ? 'rgba(185,28,28,0.35)' : 'rgba(71,85,105,0.35)', border: `2px solid ${result === 'win' ? '#22c55e' : result === 'lose' ? '#ef4444' : '#64748b'}`, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8', fontSize: 17, fontWeight: 900 }}>
-                  {result === 'win' ? '🎉 Win!' : result === 'lose' ? '💀 Lose' : '🤝 Push'}
+                  {result === 'win' ? '🎉 Win!' : result === 'lose' ? '✕ Lose' : '🤝 Push'}
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8' }}>
                   {result === 'win' ? `+${bet} chips` : result === 'lose' ? `-${bet} chips` : 'No change'}
