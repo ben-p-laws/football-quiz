@@ -32,12 +32,21 @@ const CHIP_CFG: Record<number, { bg: string; stripe: string; text: string }> = {
 const STARTING_CHIPS = 50
 const GOAL_CHIPS     = 250
 
+const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
+
 // ─── SVG helpers ───────────────────────────────────────────────────────────────
-function TbBadge({ size = 13 }: { size?: number }) {
+function TbBadge({ size = 13, dark = false }: { size?: number; dark?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none">
-      <rect width="32" height="32" rx="7" fill="#0a0f1e"/>
-      <text x="2" y="23" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="18" fill="white">T</text>
+      <rect width="32" height="32" rx="7" fill={dark ? '#0a0f1e' : 'white'} stroke={dark ? 'none' : '#ccc'} strokeWidth="1"/>
+      {dark ? (
+        <text x="2" y="23" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="18" fill="white">T</text>
+      ) : (
+        <>
+          <text x="2" y="23" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="18" fill="none" stroke="#111" strokeWidth="3" strokeLinejoin="round">T</text>
+          <text x="2" y="23" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="18" fill="white">T</text>
+        </>
+      )}
       <text x="17" y="23" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="18" fill="#dc2626">B</text>
     </svg>
   )
@@ -139,25 +148,24 @@ function makeChange(amount: number): number[] {
 }
 
 // ─── Playing card ───────────────────────────────────────────────────────────────
-function PlayingCard({ card, stat, reveal }: { card: GameCard; stat: StatType; reveal: boolean }) {
-  const showValue = !card.faceDown && reveal
+function PlayingCard({ card, stat, showValue }: { card: GameCard; stat: StatType; showValue: boolean }) {
 
   if (card.faceDown) {
     return (
       <div style={{
-        width: 82, height: 124, borderRadius: 8, flexShrink: 0,
+        width: 82, height: 112, borderRadius: 8, flexShrink: 0,
         background: '#0a0f1e', border: '2px solid #dc2626',
         boxShadow: '0 6px 24px rgba(0,0,0,0.6)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        transform: card.animIn ? 'translateY(0) rotate(-1deg)' : 'translateY(-120px)',
+        transform: card.animIn ? 'translateY(0) rotate(-1deg)' : 'translateY(-112px)',
         opacity: card.animIn ? 1 : 0,
         transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
         position: 'relative', overflow: 'hidden',
       }}>
-        <svg style={{ position: 'absolute', inset: 0 }} width="82" height="124">
-          <line x1="20" y1="0" x2="20" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
-          <line x1="40" y1="0" x2="40" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
-          <line x1="60" y1="0" x2="60" y2="124" stroke="#1e2d4a" strokeWidth="1"/>
+        <svg style={{ position: 'absolute', inset: 0 }} width="82" height="112">
+          <line x1="20" y1="0" x2="20" y2="112" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="40" y1="0" x2="40" y2="112" stroke="#1e2d4a" strokeWidth="1"/>
+          <line x1="60" y1="0" x2="60" y2="112" stroke="#1e2d4a" strokeWidth="1"/>
           <line x1="0" y1="25" x2="82" y2="25" stroke="#1e2d4a" strokeWidth="1"/>
           <line x1="0" y1="50" x2="82" y2="50" stroke="#1e2d4a" strokeWidth="1"/>
           <line x1="0" y1="75" x2="82" y2="75" stroke="#1e2d4a" strokeWidth="1"/>
@@ -165,38 +173,37 @@ function PlayingCard({ card, stat, reveal }: { card: GameCard; stat: StatType; r
         </svg>
         <div style={{ position: 'absolute', inset: 5, border: '1px solid rgba(220,38,38,0.3)', borderRadius: 4 }}/>
         <div style={{ position: 'relative', zIndex: 1 }}><TbMiniLogo size={38}/></div>
-        <div style={{ position: 'absolute', top: 6, left: 6, zIndex: 1 }}><TbBadge size={11}/></div>
-        <div style={{ position: 'absolute', bottom: 6, right: 6, transform: 'rotate(180deg)', zIndex: 1 }}><TbBadge size={11}/></div>
+        <div style={{ position: 'absolute', top: 6, left: 6, zIndex: 1 }}><TbBadge size={11} dark/></div>
+        <div style={{ position: 'absolute', bottom: 6, right: 6, transform: 'rotate(180deg)', zIndex: 1 }}><TbBadge size={11} dark/></div>
       </div>
     )
   }
 
   return (
     <div style={{
-      width: 82, height: 124, borderRadius: 8, flexShrink: 0,
-      background: 'white', border: '1px solid #d1d5db',
+      width: 82, height: 112, borderRadius: 8, flexShrink: 0,
+      background: '#f7f4ef', border: '1px solid #d1d5db',
       boxShadow: '0 6px 24px rgba(0,0,0,0.5)',
       position: 'relative', overflow: 'hidden',
-      transform: card.animIn ? 'translateY(0)' : 'translateY(-120px)',
+      transform: card.animIn ? 'translateY(0)' : 'translateY(-112px)',
       opacity: card.animIn ? 1 : 0,
       transition: 'transform 0.45s cubic-bezier(.22,.68,0,1.2), opacity 0.3s ease',
     }}>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }}>
-        <TbMiniLogo size={50}/>
+      <div style={{ position: 'absolute', top: 4, left: 4, zIndex: 1, lineHeight: 1 }}>
+        {showValue
+          ? <><div style={{ fontSize: 15, fontWeight: 900, color: '#dc2626', lineHeight: 1 }}>{card.value}</div><div style={{ fontSize: 8, lineHeight: 1 }}>{STAT_ICON[stat]}</div></>
+          : <div style={{ fontSize: 15, fontWeight: 900, color: '#dc2626', lineHeight: 1 }}>?</div>
+        }
       </div>
-      <div style={{ position: 'absolute', top: 4, left: 6, lineHeight: 1, zIndex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 8, lineHeight: 1 }}>{STAT_ICON[stat]}</div>
-      </div>
-      <div style={{ position: 'absolute', top: 4, right: 4, zIndex: 1 }}><TbBadge size={12}/></div>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 58, textAlign: 'center', zIndex: 1, overflow: 'hidden', maxHeight: 72 }}>
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 50, textAlign: 'center', zIndex: 1, overflow: 'hidden', maxHeight: 64 }}>
         <div style={{ fontSize: 10, fontWeight: 800, color: '#111', lineHeight: 1.25, wordBreak: 'break-word' }}>{card.player}</div>
         <div style={{ fontSize: 8, fontWeight: 700, color: '#374151', lineHeight: 1.25, marginTop: 2, wordBreak: 'break-word' }}>{card.team}</div>
       </div>
-      <div style={{ position: 'absolute', bottom: 4, left: 4, transform: 'rotate(180deg)', zIndex: 1 }}><TbBadge size={12}/></div>
-      <div style={{ position: 'absolute', bottom: 4, right: 6, transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
-        <div style={{ fontSize: 15, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 8, lineHeight: 1 }}>{STAT_ICON[stat]}</div>
+      <div style={{ position: 'absolute', bottom: 4, right: 4, transform: 'rotate(180deg)', zIndex: 1, lineHeight: 1 }}>
+        {showValue
+          ? <><div style={{ fontSize: 15, fontWeight: 900, color: '#dc2626', lineHeight: 1 }}>{card.value}</div><div style={{ fontSize: 8, lineHeight: 1 }}>{STAT_ICON[stat]}</div></>
+          : <div style={{ fontSize: 15, fontWeight: 900, color: '#dc2626', lineHeight: 1 }}>?</div>
+        }
       </div>
     </div>
   )
@@ -226,6 +233,7 @@ export default function Blackjack() {
   const [pendingBust,      setPendingBust]      = useState(false)
   const [pendingBlackjack, setPendingBlackjack] = useState(false)
   const [nextCard,         setNextCard]         = useState<GameCard | null>(null)
+  const [playerRevealIdx,  setPlayerRevealIdx]  = useState(-1)
 
   const dealerRef       = useRef<GameCard[]>([])
   const deckRef         = useRef<GameCard[]>([])
@@ -244,6 +252,14 @@ export default function Blackjack() {
     if (saved) setUsername(saved)
   }, [])
 
+  // Skip idle — go straight to betting when game starts
+  useEffect(() => {
+    if (gameStarted && phase === 'idle' && seasons.length > 0 && !busy) {
+      void startHand()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameStarted, phase, seasons.length])
+
   const saveUsername = useCallback((name: string) => {
     setUsername(name); localStorage.setItem('bj_username', name)
   }, [])
@@ -251,7 +267,7 @@ export default function Blackjack() {
   function resetGame() {
     setGameStarted(false); setPhase('idle'); setResult(null); setReveal(false)
     setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false)
-    setPendingBust(false); setPendingBlackjack(false); setNextCard(null)
+    setPendingBust(false); setPendingBlackjack(false); setNextCard(null); setPlayerRevealIdx(-1)
     setPlayerHand([]); setDealerHand([]); setSeason('')
     setChips(STARTING_CHIPS); chipsRef.current = STARTING_CHIPS
     setBet(10); betRef.current = 10
@@ -320,6 +336,7 @@ export default function Blackjack() {
     const final  = capped >= 10 ? capped : cur
     setBet(final); betRef.current = final
 
+    setPlayerRevealIdx(-1)
     setBusy(false); setPhase('betting')
   }
 
@@ -369,11 +386,31 @@ export default function Blackjack() {
     }, 1600)
   }
 
-  function stand() {
+  async function stand() {
     if (phase !== 'player' || busy) return
-    if (pendingBust) { setPendingBust(false); setTimeout(() => triggerBust(), 0); return }
-    if (pendingBlackjack) {
-      setPendingBlackjack(false); setPhase('dealer'); setBlackjackFlash(true)
+    setBusy(true)
+    const isPendingBust = pendingBust
+    const isPendingBJ   = pendingBlackjack
+
+    // Reveal player cards one by one
+    for (let i = 0; i < playerRef.current.length; i++) {
+      setPlayerRevealIdx(i)
+      await delay(450)
+    }
+    await delay(400) // pause to read sum
+
+    setReveal(true)
+    setBusy(false)
+
+    if (isPendingBust) {
+      setPendingBust(false)
+      triggerBust()
+      return
+    }
+    if (isPendingBJ) {
+      setPendingBlackjack(false)
+      setPhase('dealer')
+      setBlackjackFlash(true)
       setTimeout(() => {
         setBlackjackFlash(false)
         const rev = dealerRef.current.map(c => ({ ...c, faceDown: false }))
@@ -428,7 +465,7 @@ export default function Blackjack() {
   const chipsColor = chips > STARTING_CHIPS ? '#4ade80' : chips < STARTING_CHIPS ? '#f87171' : '#f59e0b'
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0a0f1e', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 16px 40px', gap: 16 }}>
+    <div style={{ minHeight: 'calc(100dvh - 56px)', background: '#0a0f1e', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '8px 16px 8px', gap: 10 }}>
 
       <style>{`
         @keyframes bust-in  { 0%{transform:scale(0.3) rotate(-8deg);opacity:0} 60%{transform:scale(1.1) rotate(2deg);opacity:1} 100%{transform:scale(1) rotate(0deg);opacity:1} }
@@ -515,7 +552,7 @@ export default function Blackjack() {
           <div style={{ width: '100%', maxWidth: 450, background: 'linear-gradient(135deg,#c9a84c 0%,#f0d060 40%,#c9a84c 70%,#a07828 100%)', borderRadius: 150, padding: 7, boxShadow: '0 16px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.08)', position: 'relative' }}>
 
             {/* Felt */}
-            <div style={{ borderRadius: 142, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%,#236b35 0%,#1a5428 60%,#163f20 100%)', padding: '18px 24px', boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)', height: 450, display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
+            <div style={{ borderRadius: 142, overflow: 'hidden', background: 'radial-gradient(ellipse at 50% 30%,#236b35 0%,#1a5428 60%,#163f20 100%)', padding: '14px 24px', boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)', height: 390, display: 'flex', flexDirection: 'column', gap: 0, position: 'relative' }}>
 
               {/* Bust flash */}
               {busting && (
@@ -531,30 +568,21 @@ export default function Blackjack() {
                 </div>
               )}
 
-              {/* Casino header — top arc of felt */}
-              <div style={{ position: 'absolute', top: 9, left: 0, right: 0, zIndex: 2, textAlign: 'center', pointerEvents: 'none' }}>
-                <div style={{ fontSize: 7.5, fontWeight: 900, color: 'rgba(255,255,255,0.28)', letterSpacing: 3.5, fontFamily: 'Arial Black, sans-serif' }}>♠ TOPBINS CASINO BLACKJACK ♠</div>
-              </div>
-
-              {/* Left side logo only */}
-              <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center center', opacity: 0.38, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-                <TbMiniLogo size={20}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
-              </div>
 
               {/* Dealer row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 3 }}>DEALER</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.75)', letterSpacing: 3, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>DEALER</span>
                   {phase === 'result' && dealerHand.length > 0 && reveal && (
                     <span style={{ fontSize: 12, fontWeight: 800, padding: '1px 9px', borderRadius: 20, background: 'rgba(0,0,0,0.35)', color: dealerBusted ? '#f87171' : 'rgba(255,255,255,0.85)' }}>
                       {dealerBusted ? `BUST ${allTotal(dealerRef.current)}` : allTotal(dealerRef.current)}
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', height: 128, alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', height: 116, alignItems: 'flex-start' }}>
                   {dealerHand.map((c, i) => (
                     <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
-                      <PlayingCard card={c} stat={stat} reveal={reveal}/>
+                      <PlayingCard card={c} stat={stat} showValue={!c.faceDown && reveal}/>
                     </div>
                   ))}
                 </div>
@@ -565,16 +593,16 @@ export default function Blackjack() {
 
               {/* Player row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'center', height: 128, alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', height: 116, alignItems: 'flex-start' }}>
                   {playerHand.map((c, i) => (
                     <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
-                      <PlayingCard card={c} stat={stat} reveal={reveal}/>
+                      <PlayingCard card={c} stat={stat} showValue={!c.faceDown && (reveal || i <= playerRevealIdx)}/>
                     </div>
                   ))}
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: 3 }}>YOU</span>
-                  {playerHand.length > 0 && reveal && (
+                  <span style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,0.75)', letterSpacing: 3, textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}>YOU</span>
+                  {playerHand.length > 0 && (reveal || playerRevealIdx >= playerHand.length - 1) && (
                     <span style={{ fontSize: 12, fontWeight: 800, padding: '1px 9px', borderRadius: 20, background: 'rgba(0,0,0,0.35)', color: playerBusted ? '#f87171' : playerTotal === 21 ? '#4ade80' : 'rgba(255,255,255,0.85)' }}>
                       {playerBusted ? `BUST ${playerTotal}` : playerTotal === 21 ? '21 🎉' : playerTotal}
                     </span>
@@ -582,8 +610,8 @@ export default function Blackjack() {
                 </div>
               </div>
 
-              {/* Stat label — absolute, upper-middle of felt */}
-              <div style={{ position: 'absolute', top: '42%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 3, textAlign: 'center', pointerEvents: 'none', opacity: phase === 'result' && newDeal ? 0.15 : 1, transition: 'opacity 0.3s', whiteSpace: 'nowrap' }}>
+              {/* Stat label — absolute, exactly centred */}
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 3, textAlign: 'center', pointerEvents: 'none', opacity: phase === 'result' && newDeal ? 0.15 : 1, transition: 'opacity 0.3s', whiteSpace: 'nowrap' }}>
                 {season ? (
                   <div style={{ background: 'rgba(0,0,0,0.22)', borderRadius: 40, padding: '5px 16px', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <div style={{ fontSize: 15, fontWeight: 900, color: '#f59e0b', lineHeight: 1.15, letterSpacing: -0.3 }}>{STAT_ICON[stat]} {STAT_LABEL[stat]}</div>
@@ -597,16 +625,16 @@ export default function Blackjack() {
                 )}
               </div>
 
-              {/* Bet circle — permanent casino-table betting spot */}
-              <div style={{ position: 'absolute', top: '56%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 1, width: 92, height: 52, border: '1.5px dashed rgba(255,255,255,0.22)', borderRadius: '50%', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* Bet circle — left whitespace of oval */}
+              <div style={{ position: 'absolute', top: '50%', left: '17%', transform: 'translate(-50%,-50%)', zIndex: 1, width: 52, height: 52, border: '1.5px dashed rgba(255,255,255,0.22)', borderRadius: '50%', pointerEvents: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {(phase === 'idle' || phase === 'betting') && (
-                  <span style={{ fontSize: 8, fontWeight: 900, color: 'rgba(255,255,255,0.22)', letterSpacing: 2.5, fontFamily: 'Arial Black, sans-serif' }}>BET</span>
+                  <span style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.22)', letterSpacing: 2, fontFamily: 'Arial Black, sans-serif' }}>BET</span>
                 )}
               </div>
 
-              {/* Bet chip — one chip of the selected denomination lands in the circle */}
+              {/* Bet chip — left whitespace of oval */}
               {phase !== 'idle' && phase !== 'betting' && (
-                <div style={{ position: 'absolute', top: '56%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 5 }}>
+                <div style={{ position: 'absolute', top: '50%', left: '17%', transform: 'translate(-50%,-50%)', zIndex: 5 }}>
                   <div style={{ animation: phase === 'player' ? 'chip-land 0.55s cubic-bezier(.22,.68,0,1.3) forwards' : 'none' }}>
                     <ChipSingle amount={bet} size={46}/>
                   </div>
@@ -644,7 +672,7 @@ export default function Blackjack() {
               <div style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                 <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(129,140,248,0.7)', letterSpacing: 2.5, whiteSpace: 'nowrap' }}>NEXT CARD</div>
                 <div style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.55))' }}>
-                  <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} reveal={false}/>
+                  <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} showValue={reveal}/>
                 </div>
               </div>
             )}
@@ -652,12 +680,6 @@ export default function Blackjack() {
 
           {/* Action area */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
-
-            {phase === 'idle' && !busy && (
-              <button onClick={startHand} style={{ padding: '13px 52px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111', boxShadow: '0 4px 20px rgba(245,158,11,0.4)' }}>
-                New Hand
-              </button>
-            )}
 
             {phase === 'betting' && !busy && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -686,8 +708,8 @@ export default function Blackjack() {
 
             {phase === 'player' && !busy && !busting && (
               <>
-                <button onClick={hit} style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', color: 'white', boxShadow: '0 4px 20px rgba(220,38,38,0.4)' }}>Hit</button>
-                <button onClick={stand} style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#374151,#1f2937)', border: '2px solid #4b5563', color: 'white', boxShadow: '0 4px 16px rgba(0,0,0,0.3)' }}>Stand</button>
+                <button onClick={hit}   style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#16a34a,#15803d)', border: 'none', color: 'white', boxShadow: '0 4px 20px rgba(22,163,74,0.4)', minWidth: 140 }}>Hit</button>
+                <button onClick={stand} style={{ padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: 'none', color: 'white', boxShadow: '0 4px 20px rgba(220,38,38,0.4)', minWidth: 140 }}>Stand</button>
               </>
             )}
 
