@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 type StatType = 'goals' | 'assists' | 'yellow_cards' | 'clean_sheets' | 'club_seasons'
-type Mode     = 'easy' | 'hard'
+type Mode     = 'easy' | 'hard' | 'expert'
 type Phase    = 'idle' | 'player' | 'dealer' | 'result'
 type Result   = 'win' | 'lose' | 'push'
 
@@ -210,6 +210,7 @@ export default function Blackjack() {
   const [hadBlackjack,   setHadBlackjack]   = useState(false)
   const [pendingBust,      setPendingBust]      = useState(false)
   const [pendingBlackjack, setPendingBlackjack] = useState(false)
+  const [nextCard,         setNextCard]         = useState<GameCard | null>(null)
 
   const dealerRef       = useRef<GameCard[]>([])
   const deckRef         = useRef<GameCard[]>([])
@@ -245,6 +246,7 @@ export default function Blackjack() {
     setHadBlackjack(false)
     setPendingBust(false)
     setPendingBlackjack(false)
+    setNextCard(null)
     hadBlackjackRef.current = false
     setPlayerHand([])
     setDealerHand([])
@@ -308,6 +310,7 @@ export default function Blackjack() {
     const d1 = mk(afterPlayer[d1Idx], 2)
     const d2 = mk(afterPlayer[d2Idx], 3, true)
     deckRef.current = afterPlayer.filter((_, i) => !dealerSet.has(i)).map((c, i) => mk(c, i + 4))
+    if (mode === 'expert') setNextCard(deckRef.current[0] || null)
 
     // Animate deal: p1 → d1 → p2 → d2(face-down)
     setTimeout(() => {
@@ -351,6 +354,7 @@ export default function Blackjack() {
     if (phase !== 'player' || busy || deckRef.current.length === 0) return
     const card = deckRef.current[0]
     deckRef.current = deckRef.current.slice(1)
+    if (mode === 'expert') setNextCard(deckRef.current[0] || null)
     const newCard: GameCard = { ...card, animIn: true }
     const newHand = [...playerRef.current, newCard]
     playerRef.current = newHand
@@ -547,7 +551,7 @@ export default function Blackjack() {
               boxSizing: 'border-box',
             }}
           />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 24 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
             <button onClick={() => setMode('easy')} style={{
               padding: '24px 12px', borderRadius: 14, cursor: 'pointer',
               background: 'linear-gradient(135deg, #14532d, #166534)',
@@ -567,6 +571,17 @@ export default function Blackjack() {
               <div style={{ fontSize: 11, color: '#fca5a5', marginTop: 5 }}>Stats hidden — revealed at end</div>
             </button>
           </div>
+          <button onClick={() => setMode('expert')} style={{
+            width: '100%', padding: '20px 12px', borderRadius: 14, cursor: 'pointer',
+            background: 'linear-gradient(135deg, #1e1b4b, #312e81)',
+            border: '2px solid #818cf8', color: 'white', marginBottom: 24,
+          }}>
+            <div style={{ fontSize: 28, marginBottom: 6 }}>🔮</div>
+            <div style={{ fontSize: 17, fontWeight: 800 }}>Expert</div>
+            <div style={{ fontSize: 11, color: '#a5b4fc', marginTop: 5 }}>
+              Stats hidden — but the next card is always shown. Use your knowledge.
+            </div>
+          </button>
           {leaderboard.length > 0 && (
             <div style={{ background: '#111827', borderRadius: 12, padding: 16, textAlign: 'left' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', marginBottom: 10, letterSpacing: 1 }}>HALL OF FAME</div>
@@ -586,12 +601,12 @@ export default function Blackjack() {
         <>
           {/* Top nav chips */}
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 540 }}>
-            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false); setPendingBust(false); setPendingBlackjack(false); setPlayerHand([]); setDealerHand([]) }}
+            <button onClick={() => { setMode(null); setPhase('idle'); setResult(null); setReveal(false); setBusting(false); setNewDeal(false); setBlackjackFlash(false); setHadBlackjack(false); setPendingBust(false); setPendingBlackjack(false); setNextCard(null); setPlayerHand([]); setDealerHand([]) }}
               style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>
               ← Menu
             </button>
             <div style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', fontSize: 12, color: '#cbd5e1' }}>
-              {mode === 'easy' ? '🃏 Easy' : '🂠 Hard'}
+              {mode === 'easy' ? '🃏 Easy' : mode === 'hard' ? '🂠 Hard' : '🔮 Expert'}
             </div>
             <div style={{ padding: '5px 12px', borderRadius: 20, background: streak > 0 ? '#78350f' : '#1f2937', border: `1px solid ${streak > 0 ? '#f59e0b' : '#374151'}`, fontSize: 12, color: streak > 0 ? '#fde68a' : '#8899bb' }}>
               🔥 {streak} {bestStreak > 0 ? `· Best: ${bestStreak}` : ''}
@@ -763,6 +778,19 @@ export default function Blackjack() {
               </div>
             </div>
           </div>
+
+          {/* Expert mode: next card preview */}
+          {mode === 'expert' && phase === 'player' && nextCard && !pendingBlackjack && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(129,140,248,0.7)', letterSpacing: 3 }}>
+                NEXT CARD IF YOU HIT
+              </div>
+              <div style={{ transform: 'scale(0.88)', transformOrigin: 'top center',
+                filter: 'drop-shadow(0 0 8px rgba(129,140,248,0.4))' }}>
+                <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} mode="easy" reveal={true} />
+              </div>
+            </div>
+          )}
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', minHeight: 54 }}>
