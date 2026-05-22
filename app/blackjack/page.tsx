@@ -1,13 +1,93 @@
 import NavBar from '@/components/NavBar'
-import Blackjack from '@/components/Blackjack'
+import Link from 'next/link'
 
-export const metadata = { title: 'Blackjack – TopBins' }
+export const metadata = { title: 'Casino – TopBins' }
 
-export default function BlackjackPage() {
+const GAMES = [
+  {
+    label: 'Blackjack',
+    icon: '🃏',
+    href: '/blackjack/play',
+    desc: 'Beat the dealer with football stats',
+    live: true,
+  },
+  {
+    label: 'Poker',
+    icon: '♠️',
+    href: null,
+    desc: 'Coming soon',
+    live: false,
+  },
+  {
+    label: 'Roulette',
+    icon: '🎡',
+    href: null,
+    desc: 'Coming soon',
+    live: false,
+  },
+  {
+    label: 'Craps',
+    icon: '🎲',
+    href: null,
+    desc: 'Coming soon',
+    live: false,
+  },
+]
+
+export default function CasinoLobbyPage() {
   return (
     <>
       <NavBar />
-      <Blackjack />
+      <main style={{ minHeight: 'calc(100dvh - 56px)', background: '#0a0f1e', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}>
+        <div style={{ fontSize: 12, color: '#f59e0b', letterSpacing: 4, fontWeight: 700, marginBottom: 8 }}>♠ ♥ ♦ ♣</div>
+        <h1 style={{ fontSize: 34, fontWeight: 900, margin: '0 0 6px', letterSpacing: -1 }}>
+          Topbins <span style={{ color: '#f59e0b' }}>Casino</span>
+        </h1>
+        <p style={{ color: '#8899bb', margin: '0 0 36px', fontSize: 13 }}>Choose your game</p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, width: '100%', maxWidth: 480 }}>
+          {GAMES.map(game => {
+            const card = (
+              <div style={{
+                background: game.live ? 'linear-gradient(135deg,#111827,#1e2d4a)' : '#0d1424',
+                border: `1px solid ${game.live ? '#1e3a5f' : '#141e30'}`,
+                borderRadius: 16,
+                padding: '28px 20px',
+                textAlign: 'center',
+                opacity: game.live ? 1 : 0.45,
+                cursor: game.live ? 'pointer' : 'default',
+                transition: 'transform 0.15s, box-shadow 0.15s',
+                boxShadow: game.live ? '0 4px 24px rgba(0,0,0,0.4)' : 'none',
+                position: 'relative' as const,
+              }}>
+                <div style={{ fontSize: 40, marginBottom: 10 }}>{game.icon}</div>
+                <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{game.label}</div>
+                <div style={{ fontSize: 11, color: game.live ? '#8899bb' : '#4a5568', lineHeight: 1.4 }}>{game.desc}</div>
+                {!game.live && (
+                  <div style={{ marginTop: 10, fontSize: 10, fontWeight: 700, letterSpacing: 2, color: '#4a5568' }}>COMING SOON</div>
+                )}
+              </div>
+            )
+
+            return game.href ? (
+              <Link key={game.label} href={game.href} style={{ textDecoration: 'none', color: 'inherit' }}
+                className="casino-tile">
+                {card}
+              </Link>
+            ) : (
+              <div key={game.label}>{card}</div>
+            )
+          })}
+        </div>
+
+        <style>{`
+          .casino-tile > div:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 32px rgba(245,158,11,0.2) !important;
+            border-color: #f59e0b !important;
+          }
+        `}</style>
+      </main>
     </>
   )
 }
