@@ -501,18 +501,32 @@ export default function Blackjack() {
       {!gameStarted && (
         <div style={{ maxWidth: 420, width: '100%', textAlign: 'center', marginTop: 32 }}>
           <div style={{ fontSize: 12, color: '#4ade80', letterSpacing: 4, fontWeight: 700, marginBottom: 8 }}>♠ ♥ ♦ ♣</div>
-          <h1 style={{ fontSize: 34, fontWeight: 900, margin: '0 0 6px', letterSpacing: -1 }}>
-            Topbins <span style={{ color: '#f59e0b' }}>Casino</span>
+          <h1 style={{ fontSize: 34, fontWeight: 900, margin: '0 0 20px', letterSpacing: -1 }}>
+            Topbins <span style={{ color: '#f59e0b' }}>Blackjack</span>
           </h1>
-          <p style={{ color: '#8899bb', margin: '0 0 20px', fontSize: 13, lineHeight: 1.6 }}>
-            The top 52 players from a random stat & season form the deck.<br/>
-            Values are hidden — use your knowledge to decide when to hit or stand.<br/>
-            <strong style={{ color: '#f59e0b' }}>Start with ${STARTING_CHIPS} · Reach ${GOAL_CHIPS} to win</strong>
-          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, textAlign: 'left' }}>
+            {[
+              { icon: '🃏', title: 'The deck', body: `Each hand, 52 players from a random stat & season are used. Each player's stat value is their card value.` },
+              { icon: '❓', title: 'Values are hidden', body: 'Card values start as a red ? — use your football knowledge to judge whether to hit or stand.' },
+              { icon: '💵', title: 'Place your stake', body: 'Your stake is placed after the category is revealed — more confidence in the category, bigger stake.' },
+              { icon: '👀', title: 'Next card is visible', body: "The next card's player is shown face-up — use your judgement to hit or stand." },
+              { icon: '🎯', title: 'Get closest to 21', body: 'Beat the dealer without going over 21. Standard blackjack rules apply.' },
+              { icon: '💰', title: 'Goal', body: `Start with $${STARTING_CHIPS}. Reach $${GOAL_CHIPS} to win — go bust and it's game over.` },
+            ].map(({ icon, title, body }) => (
+              <div key={title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                <div style={{ fontSize: 13, color: '#8899bb', lineHeight: 1.5 }}>
+                  <span style={{ fontWeight: 700, color: 'white' }}>{title} — </span>{body}
+                </div>
+              </div>
+            ))}
+          </div>
+
           <input
             value={username} onChange={e => saveUsername(e.target.value)}
             placeholder="Enter your name (optional)" maxLength={20}
-            style={{ padding: '10px 18px', borderRadius: 20, fontSize: 13, marginBottom: 16, background: '#111827', border: '1px solid #374151', color: 'white', outline: 'none', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}
+            style={{ padding: '10px 18px', borderRadius: 20, fontSize: 13, marginBottom: 12, background: '#111827', border: '1px solid #374151', color: 'white', outline: 'none', width: '100%', textAlign: 'center', boxSizing: 'border-box' }}
           />
           <button
             onClick={() => { setChips(STARTING_CHIPS); chipsRef.current = STARTING_CHIPS; setBet(10); betRef.current = 10; setGameOver(false); setGameWon(false); setPhase('idle'); setGameStarted(true) }}

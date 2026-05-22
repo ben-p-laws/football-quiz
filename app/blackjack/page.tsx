@@ -15,21 +15,21 @@ const GAMES = [
     label: 'Poker',
     icon: '♠️',
     href: null,
-    desc: 'Coming soon',
+    desc: null,
     live: false,
   },
   {
     label: 'Roulette',
     icon: '🎡',
     href: null,
-    desc: 'Coming soon',
+    desc: null,
     live: false,
   },
   {
     label: 'Craps',
     icon: '🎲',
     href: null,
-    desc: 'Coming soon',
+    desc: null,
     live: false,
   },
 ]
@@ -50,32 +50,38 @@ export default function CasinoLobbyPage() {
             const card = (
               <div style={{
                 background: game.live ? 'linear-gradient(135deg,#111827,#1e2d4a)' : '#0d1424',
-                border: `1px solid ${game.live ? '#1e3a5f' : '#141e30'}`,
+                border: `1px solid ${game.live ? '#1e3a5f' : '#3d5270'}`,
                 borderRadius: 16,
                 padding: '28px 20px',
                 textAlign: 'center',
-                opacity: game.live ? 1 : 0.45,
+                opacity: game.live ? 1 : 0.65,
                 cursor: game.live ? 'pointer' : 'default',
                 transition: 'transform 0.15s, box-shadow 0.15s',
                 boxShadow: game.live ? '0 4px 24px rgba(0,0,0,0.4)' : 'none',
                 position: 'relative' as const,
+                height: '100%',
+                boxSizing: 'border-box' as const,
+                display: 'flex',
+                flexDirection: 'column' as const,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}>
                 <div style={{ fontSize: 40, marginBottom: 10 }}>{game.icon}</div>
                 <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4 }}>{game.label}</div>
-                <div style={{ fontSize: 11, color: game.live ? '#8899bb' : '#4a5568', lineHeight: 1.4 }}>{game.desc}</div>
+                {game.desc && <div style={{ fontSize: 11, color: '#8899bb', lineHeight: 1.4 }}>{game.desc}</div>}
                 {!game.live && (
-                  <div style={{ marginTop: 10, fontSize: 10, fontWeight: 700, letterSpacing: 2, color: '#4a5568' }}>COMING SOON</div>
+                  <div style={{ marginTop: 8, fontSize: 10, fontWeight: 700, letterSpacing: 2, color: '#6b7fa3' }}>COMING SOON</div>
                 )}
               </div>
             )
 
             return game.href ? (
-              <Link key={game.label} href={game.href} style={{ textDecoration: 'none', color: 'inherit' }}
+              <Link key={game.label} href={game.href} style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
                 className="casino-tile">
                 {card}
               </Link>
             ) : (
-              <div key={game.label}>{card}</div>
+              <div key={game.label} style={{ display: 'block' }}>{card}</div>
             )
           })}
         </div>
