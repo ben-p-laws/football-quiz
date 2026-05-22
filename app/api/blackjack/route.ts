@@ -101,28 +101,17 @@ export async function GET(req: NextRequest) {
   const season = searchParams.get('season')
 
   // ── Club seasons stat ────────────────────────────────────────────────────────
-  // 10 players per value 2–11 = 100-card deck for perfectly even distribution.
+  // SQL RPC does GROUP BY + HAVING + window-function bucketing (10 per value 2–11).
+  // JS aggregation with a row limit was giving wrong counts for long-serving players.
   if (stat === 'club_seasons') {
-    const { data: rawData } = await sb
-      .from('player_seasons')
-      .select('name_display, teams_played_for')
-      .limit(50000)
-
-    const counts: Record<string, Card> = {}
+    const { data: rpcData, error: rpcErr } = await sb.rpc('get_club_seasons_bucketed')
+    if (rpcErr) return NextResponse.json({ error: rpcErr.message }, { status: 500 })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for (const row of (rawData || []) as any[]) {
-      const player  = String(row.name_display || '').trim()
-      const rawTeam = String(row.teams_played_for || '').trim()
-      // Skip rows with multiple clubs (career-list or mid-season transfers)
-      if (!player || !rawTeam || rawTeam.includes(',')) continue
-      const key = `${player}|||${rawTeam}`
-      if (!counts[key]) counts[key] = { player, team: rawTeam, value: 0 }
-      counts[key].value++
-    }
-
-    // Strict 2–11 only. Players with 12+ seasons are excluded.
-    const allCards = Object.values(counts).filter(c => c.value >= 2 && c.value <= 11)
-    const cards = bucketSample(allCards, 10)
+    const cards = shuffleArr((rpcData as any[]).map((r: any) => ({
+      player: String(r.player),
+      team:   String(r.team),
+      value:  Number(r.value),
+    })))
     return NextResponse.json(cards)
   }
 
