@@ -637,7 +637,7 @@ export default function Blackjack() {
               background: 'radial-gradient(ellipse at 50% 30%, #236b35 0%, #1a5428 60%, #163f20 100%)',
               padding: '18px 24px',
               boxShadow: 'inset 0 3px 12px rgba(0,0,0,0.5)',
-              minHeight: 330, display: 'flex', flexDirection: 'column', gap: 0,
+              height: 390, display: 'flex', flexDirection: 'column', gap: 0,
               position: 'relative',
             }}>
 
@@ -702,7 +702,7 @@ export default function Blackjack() {
                     </span>
                   )}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'center', minHeight: 128, alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', height: 128, alignItems: 'flex-start' }}>
                   {dealerHand.map((c, i) => (
                     <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
                       <PlayingCard card={c} stat={stat} mode={mode} reveal={reveal} />
@@ -764,7 +764,7 @@ export default function Blackjack() {
 
               {/* Player row */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'center', minHeight: 128, alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', height: 128, alignItems: 'flex-start' }}>
                   {playerHand.map((c, i) => (
                     <div key={c.id} style={{ marginLeft: i === 0 ? 0 : -18, zIndex: i, position: 'relative' }}>
                       <PlayingCard card={c} stat={stat} mode={mode} reveal={reveal} />
