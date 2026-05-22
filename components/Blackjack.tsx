@@ -391,8 +391,11 @@ export default function Blackjack() {
     dealerRef.current = rev; setDealerHand([...rev])
     setReveal(true); setResult(r); setPhase('result')
     const cb = betRef.current
+    // Natural blackjack (first two cards = 21, player wins) pays 3:2
+    const naturalBJ = r === 'win' && hadBlackjackRef.current && pHand.length === 2
+    const winAmount  = naturalBJ ? Math.floor(cb * 1.5) : cb
     setChips(prev => {
-      const next = r === 'win' ? prev + cb : r === 'lose' ? prev - cb : prev
+      const next = r === 'win' ? prev + winAmount : r === 'lose' ? prev - cb : prev
       chipsRef.current = next
       if (next >= GOAL_CHIPS) setTimeout(() => setGameWon(true), 900)
       else if (next <= 0)     setTimeout(() => setGameOver(true), 900)
@@ -515,15 +518,11 @@ export default function Blackjack() {
               {/* Casino header — top arc of felt */}
               <div style={{ position: 'absolute', top: 9, left: 0, right: 0, zIndex: 2, textAlign: 'center', pointerEvents: 'none' }}>
                 <div style={{ fontSize: 7.5, fontWeight: 900, color: 'rgba(255,255,255,0.28)', letterSpacing: 3.5, fontFamily: 'Arial Black, sans-serif' }}>♠ TOPBINS CASINO BLACKJACK ♠</div>
-                <div style={{ fontSize: 6, color: 'rgba(255,255,255,0.16)', letterSpacing: 2, marginTop: 2 }}>BLACKJACK PAYS 3:2  •  DEALER STANDS ON ALL 17s</div>
               </div>
 
-              {/* Side logos — left only, right has "INSURANCE PAYS 2:1" */}
+              {/* Left side logo only */}
               <div style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%) rotate(-90deg)', transformOrigin: 'center center', opacity: 0.38, zIndex: 1, display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                 <TbMiniLogo size={20}/><div style={{ fontSize: 7, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2.5 }}>TOPBINS CASINO</div>
-              </div>
-              <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%) rotate(90deg)', transformOrigin: 'center center', opacity: 0.28, zIndex: 1, whiteSpace: 'nowrap' }}>
-                <div style={{ fontSize: 6.5, fontWeight: 900, color: 'rgba(255,255,255,0.7)', letterSpacing: 2 }}>INSURANCE PAYS 2:1</div>
               </div>
 
               {/* Dealer row */}
@@ -681,10 +680,18 @@ export default function Blackjack() {
                 <div style={{ padding: '10px 28px', borderRadius: 50, background: result === 'win' ? 'rgba(21,128,61,0.35)' : result === 'lose' ? 'rgba(185,28,28,0.35)' : 'rgba(71,85,105,0.35)', border: `2px solid ${result === 'win' ? '#22c55e' : result === 'lose' ? '#ef4444' : '#64748b'}`, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8', fontSize: 17, fontWeight: 900 }}>
                   {result === 'win' ? '🎉 Win!' : result === 'lose' ? '✕ Lose' : '🤝 Push'}
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8' }}>
-                  {result === 'win' ? `+${bet} chips` : result === 'lose' ? `-${bet} chips` : 'No change'}
-                </div>
-                {hadBlackjack && <div style={{ fontSize: 13, fontWeight: 700, color: '#f59e0b', letterSpacing: 2 }}>♠ BLACKJACK ♠</div>}
+                {(() => {
+                  const naturalBJ = result === 'win' && hadBlackjack && playerHand.length === 2
+                  const displayWin = naturalBJ ? Math.floor(bet * 1.5) : bet
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8' }}>
+                        {result === 'win' ? `+${displayWin} chips` : result === 'lose' ? `-${bet} chips` : 'No change'}
+                      </div>
+                      {naturalBJ && <div style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', letterSpacing: 2 }}>♠ BLACKJACK · 3:2 ♠</div>}
+                    </div>
+                  )
+                })()}
               </div>
             )}
           </div>
