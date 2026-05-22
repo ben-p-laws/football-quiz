@@ -505,20 +505,17 @@ export default function Blackjack() {
             Topbins <span style={{ color: '#f59e0b' }}>Blackjack</span>
           </h1>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24, textAlign: 'left' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 24, textAlign: 'left' }}>
             {[
-              { icon: '🃏', title: 'The deck', body: `Each hand, 52 players from a random stat & season are used. Each player's stat value is their card value.` },
-              { icon: '❓', title: 'Values are hidden', body: 'Card values start as a red ? — use your football knowledge to judge whether to hit or stand.' },
-              { icon: '💵', title: 'Place your stake', body: 'Your stake is placed after the category is revealed — more confidence in the category, bigger stake.' },
-              { icon: '👀', title: 'Next card is visible', body: "The next card's player is shown face-up — use your judgement to hit or stand." },
-              { icon: '🎯', title: 'Get closest to 21', body: 'Beat the dealer without going over 21. Standard blackjack rules apply.' },
-              { icon: '💰', title: 'Goal', body: `Start with $${STARTING_CHIPS}. Reach $${GOAL_CHIPS} to win — go bust and it's game over.` },
-            ].map(({ icon, title, body }) => (
-              <div key={title} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 16, flexShrink: 0, marginTop: 1 }}>{icon}</span>
-                <div style={{ fontSize: 13, color: '#8899bb', lineHeight: 1.5 }}>
-                  <span style={{ fontWeight: 700, color: 'white' }}>{title} — </span>{body}
-                </div>
+              { icon: '🎯', line: 'Beat the dealer to 21 without going bust — standard blackjack rules.' },
+              { icon: '🃏', line: 'Each hand uses the top 52 players from a random stat & season as the deck — each player\'s stat is their card value.' },
+              { icon: '💵', line: 'Stake is placed after the category is revealed — bet bigger when you know the stat well.' },
+              { icon: '❓', line: 'Card values are hidden until you stand — but the next card\'s player is always visible to help you decide.' },
+              { icon: '🏆', line: `Start with $${STARTING_CHIPS}. Reach $${GOAL_CHIPS} to win. Go bust and it's game over.` },
+            ].map(({ icon, line }) => (
+              <div key={line} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 15, flexShrink: 0, marginTop: 1 }}>{icon}</span>
+                <div style={{ fontSize: 13, color: '#8899bb', lineHeight: 1.5 }}>{line}</div>
               </div>
             ))}
           </div>
@@ -569,15 +566,16 @@ export default function Blackjack() {
           )}
 
           {/* Nav */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'center', width: '100%', maxWidth: 540 }}>
-            <button onClick={resetGame} style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>← Quit</button>
-            <div style={{ padding: '5px 16px', borderRadius: 20, background: '#1f2937', border: `1px solid ${chipsColor}44`, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>🪙</span>
-              <span style={{ fontWeight: 800, color: chipsColor }}>${chips}</span>
-              <span style={{ color: '#4b5563', fontSize: 11 }}>/ ${GOAL_CHIPS}</span>
-            </div>
-            <div style={{ flex: 1, minWidth: 80, maxWidth: 140, height: 6, background: '#1f2937', borderRadius: 3, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${Math.min(100, (chips / GOAL_CHIPS) * 100)}%`, background: `linear-gradient(90deg,#f59e0b,${chipsColor})`, borderRadius: 3, transition: 'width 0.5s ease' }}/>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', width: '100%', maxWidth: 540 }}>
+            <button onClick={resetGame} style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>← Quit</button>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: chipsColor }}>${chips}</span>
+                <span style={{ fontSize: 11, color: '#4b5563', fontWeight: 600 }}>target ${GOAL_CHIPS}</span>
+              </div>
+              <div style={{ height: 7, background: '#1f2937', borderRadius: 4, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (chips / GOAL_CHIPS) * 100)}%`, background: `linear-gradient(90deg,#f59e0b,${chipsColor})`, borderRadius: 4, transition: 'width 0.5s ease' }}/>
+              </div>
             </div>
           </div>
 
