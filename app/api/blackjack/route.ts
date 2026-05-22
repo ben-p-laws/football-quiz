@@ -49,29 +49,20 @@ function shuffleArr<T>(a: T[]): T[] {
 
 type Card = { player: string; team: string; value: number }
 
-// Pick targetPerBucket cards from each value bucket 2–11, fill to targetTotal from overflow.
-function bucketSample(items: Card[], targetPerBucket: number, targetTotal: number): Card[] {
+// Pick up to targetPerBucket cards from each exact value bucket 2–11.
+// Values outside 2–11 are ignored. No overflow filling between buckets.
+function bucketSample(items: Card[], targetPerBucket: number): Card[] {
   const buckets: Record<number, Card[]> = {}
   for (let v = 2; v <= 11; v++) buckets[v] = []
   for (const item of items) {
-    const v = Math.min(Math.max(item.value, 2), 11)
-    buckets[v].push({ ...item, value: v })
+    if (item.value >= 2 && item.value <= 11) buckets[item.value].push(item)
   }
 
   const selected: Card[] = []
-  const pool: Card[] = []
-
   for (let v = 2; v <= 11; v++) {
-    const shuffled = shuffleArr(buckets[v])
-    selected.push(...shuffled.slice(0, targetPerBucket))
-    if (shuffled.length > targetPerBucket) pool.push(...shuffled.slice(targetPerBucket))
+    selected.push(...shuffleArr(buckets[v]).slice(0, targetPerBucket))
   }
-
-  if (selected.length < targetTotal && pool.length > 0) {
-    selected.push(...shuffleArr(pool).slice(0, targetTotal - selected.length))
-  }
-
-  return selected.slice(0, targetTotal)
+  return shuffleArr(selected)
 }
 
 export async function GET(req: NextRequest) {
@@ -129,12 +120,9 @@ export async function GET(req: NextRequest) {
       counts[key].value++
     }
 
-    // Keep all players with 2+ seasons; clamp to 11 so long-serving players
-    // (12, 15, 20 seasons) fill the Ace bucket rather than being excluded.
-    const allCards = Object.values(counts)
-      .filter(c => c.value >= 2)
-      .map(c => ({ ...c, value: Math.min(c.value, 11) }))
-    const cards = bucketSample(allCards, 10, 100)
+    // Strict 2–11 only. Players with 12+ seasons are excluded.
+    const allCards = Object.values(counts).filter(c => c.value >= 2 && c.value <= 11)
+    const cards = bucketSample(allCards, 10)
     return NextResponse.json(cards)
   }
 
@@ -162,7 +150,7 @@ export async function GET(req: NextRequest) {
     value:  Number(row[col]),
   }))
 
-  const cards = bucketSample(allCards, 5, 52)
+  const cards = bucketSample(allCards, 5)
   return NextResponse.json(cards)
 }
 
