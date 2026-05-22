@@ -10,11 +10,11 @@ const LINKS = [
   { label: 'Around the World',     href: '/around-the-world' },
   { label: 'Bingo',                href: '/bingo' },
   { label: 'Stat Clash',           href: '/stat-clash' },
+  { label: 'Casino',               href: '/blackjack' },
   { label: 'Tenable',              href: '/tenables' },
   { label: 'Grid',                 href: '/grid' },
   { label: 'Teammates',            href: '/teammates' },
   { label: 'Countdown',            href: '/countdown' },
-  { label: 'Blackjack',            href: '/blackjack' },
 ]
 
 const LOGO = (

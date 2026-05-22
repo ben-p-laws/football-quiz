@@ -439,9 +439,6 @@ export default function Blackjack() {
         @keyframes chip-land{ 0%{transform:translateY(-44px) scale(0.5) rotate(14deg);opacity:0} 58%{transform:translateY(4px) scale(1.1) rotate(-3deg);opacity:1} 78%{transform:translateY(-2px) scale(0.97) rotate(1deg)} 100%{transform:translateY(0) scale(1) rotate(0deg);opacity:1} }
         .bj-overlay { position:fixed; top:0; right:0; bottom:0; left:0; background:rgba(0,0,0,0.88); display:flex; align-items:center; justify-content:center; z-index:1000; }
         @media (min-width:901px) { .bj-overlay { left:180px; } }
-        .bj-table-area { display:flex; align-items:center; gap:12px; justify-content:center; width:100%; max-width:560px; }
-        .bj-next-card { display:flex; flex-direction:column; align-items:center; gap:5px; flex-shrink:0; }
-        @media (max-width:540px) { .bj-table-area { flex-direction:column; } }
       `}</style>
 
       {/* ── Entry screen ──────────────────────────────────────────────────────── */}
@@ -514,8 +511,6 @@ export default function Blackjack() {
             </div>
           </div>
 
-          {/* Table + Next card wrapper */}
-          <div className="bj-table-area">
           {/* Table */}
           <div style={{ width: '100%', maxWidth: 450, background: 'linear-gradient(135deg,#c9a84c 0%,#f0d060 40%,#c9a84c 70%,#a07828 100%)', borderRadius: 150, padding: 7, boxShadow: '0 16px 60px rgba(0,0,0,0.7),0 0 0 1px rgba(255,255,255,0.08)', position: 'relative' }}>
 
@@ -644,18 +639,16 @@ export default function Blackjack() {
               })()}
             </div>
 
-          </div>
-
-            {/* Next card — beside table on desktop, below on mobile */}
+            {/* Next card — on table, right side */}
             {phase === 'player' && nextCard && (
-              <div className="bj-next-card">
+              <div style={{ position: 'absolute', right: 18, top: '50%', transform: 'translateY(-50%)', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
                 <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(129,140,248,0.7)', letterSpacing: 2.5, whiteSpace: 'nowrap' }}>NEXT CARD</div>
                 <div style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.55))' }}>
                   <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} reveal={false}/>
                 </div>
               </div>
             )}
-          </div>{/* end bj-table-area */}
+          </div>
 
           {/* Action area */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
