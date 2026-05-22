@@ -334,15 +334,21 @@ export default function Blackjack() {
       if (pTotal === 21) {
         setHadBlackjack(true)
         hadBlackjackRef.current = true
-        setPhase('dealer')
-        setBlackjackFlash(true)
-        setTimeout(() => {
-          setBlackjackFlash(false)
-          const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
-          dealerRef.current = revealed
-          setDealerHand([...revealed])
-          setTimeout(() => playDealer(), 700)
-        }, 1600)
+        if (mode === 'easy') {
+          setPhase('dealer')
+          setBlackjackFlash(true)
+          setTimeout(() => {
+            setBlackjackFlash(false)
+            const revealed = dealerRef.current.map(c => ({ ...c, faceDown: false }))
+            dealerRef.current = revealed
+            setDealerHand([...revealed])
+            setTimeout(() => playDealer(), 700)
+          }, 1600)
+        } else {
+          // Hard/Expert: let the player figure out they have 21 and click Stand
+          setPendingBlackjack(true)
+          setPhase('player')
+        }
       } else {
         setPhase('player')
       }
