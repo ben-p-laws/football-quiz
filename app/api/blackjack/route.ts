@@ -54,7 +54,8 @@ function bucketSample(items: Card[], targetPerBucket: number, targetTotal: numbe
   const buckets: Record<number, Card[]> = {}
   for (let v = 2; v <= 11; v++) buckets[v] = []
   for (const item of items) {
-    if (item.value >= 2 && item.value <= 11) buckets[item.value].push(item)
+    const v = Math.min(Math.max(item.value, 2), 11)
+    buckets[v].push({ ...item, value: v })
   }
 
   const selected: Card[] = []
@@ -128,7 +129,11 @@ export async function GET(req: NextRequest) {
       counts[key].value++
     }
 
-    const allCards = Object.values(counts).filter(c => c.value >= 2 && c.value <= 11)
+    // Keep all players with 2+ seasons; clamp to 11 so long-serving players
+    // (12, 15, 20 seasons) fill the Ace bucket rather than being excluded.
+    const allCards = Object.values(counts)
+      .filter(c => c.value >= 2)
+      .map(c => ({ ...c, value: Math.min(c.value, 11) }))
     const cards = bucketSample(allCards, 10, 100)
     return NextResponse.json(cards)
   }
