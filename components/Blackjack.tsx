@@ -127,6 +127,17 @@ function shuffle<T>(a: T[]): T[] {
 }
 function allTotal(cards: GameCard[]): number { return cards.reduce((s, c) => s + c.value, 0) }
 
+// Break a chip balance into denominations (greedy, largest first, floor to $10)
+function makeChange(amount: number): number[] {
+  const denoms = [50, 40, 30, 20, 10]
+  const result: number[] = []
+  let rem = Math.floor(amount / 10) * 10
+  for (const d of denoms) {
+    while (rem >= d && result.length < 10) { result.push(d); rem -= d }
+  }
+  return result
+}
+
 // ─── Playing card ───────────────────────────────────────────────────────────────
 function PlayingCard({ card, stat, reveal }: { card: GameCard; stat: StatType; reveal: boolean }) {
   const showValue = !card.faceDown && reveal
@@ -173,20 +184,19 @@ function PlayingCard({ card, stat, reveal }: { card: GameCard; stat: StatType; r
       <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.08, pointerEvents: 'none', zIndex: 0 }}>
         <TbMiniLogo size={50}/>
       </div>
-      <div style={{ position: 'absolute', top: 6, left: 7, lineHeight: 1, zIndex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
+      <div style={{ position: 'absolute', top: 4, left: 6, lineHeight: 1, zIndex: 1 }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
+        <div style={{ fontSize: 8, lineHeight: 1 }}>{STAT_ICON[stat]}</div>
       </div>
-      <div style={{ position: 'absolute', top: 5, right: 5, zIndex: 1 }}><TbBadge size={13}/></div>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 62, textAlign: 'center', zIndex: 1 }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#111', lineHeight: 1.2, wordBreak: 'break-word' }}>{card.player}</div>
-        <div style={{ fontSize: 9, fontWeight: 700, color: '#1f2937', lineHeight: 1.2, marginTop: 2 }}>{card.team}</div>
-        {!showValue && <div style={{ fontSize: 16, fontWeight: 900, color: '#9ca3af', marginTop: 3 }}>?</div>}
+      <div style={{ position: 'absolute', top: 4, right: 4, zIndex: 1 }}><TbBadge size={12}/></div>
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 58, textAlign: 'center', zIndex: 1, overflow: 'hidden', maxHeight: 72 }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: '#111', lineHeight: 1.25, wordBreak: 'break-word' }}>{card.player}</div>
+        <div style={{ fontSize: 8, fontWeight: 700, color: '#374151', lineHeight: 1.25, marginTop: 2, wordBreak: 'break-word' }}>{card.team}</div>
       </div>
-      <div style={{ position: 'absolute', bottom: 5, left: 5, transform: 'rotate(180deg)', zIndex: 1 }}><TbBadge size={13}/></div>
-      <div style={{ position: 'absolute', bottom: 6, right: 7, transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
-        <div style={{ fontSize: 16, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
-        <div style={{ fontSize: 9 }}>{STAT_ICON[stat]}</div>
+      <div style={{ position: 'absolute', bottom: 4, left: 4, transform: 'rotate(180deg)', zIndex: 1 }}><TbBadge size={12}/></div>
+      <div style={{ position: 'absolute', bottom: 4, right: 6, transform: 'rotate(180deg)', lineHeight: 1, zIndex: 1 }}>
+        <div style={{ fontSize: 15, fontWeight: 900, color: '#111' }}>{showValue ? card.value : '?'}</div>
+        <div style={{ fontSize: 8, lineHeight: 1 }}>{STAT_ICON[stat]}</div>
       </div>
     </div>
   )
@@ -319,6 +329,9 @@ export default function Blackjack() {
     const d1 = preD1Ref.current, d2 = preD2Ref.current
     if (!p1 || !p2 || !d1 || !d2) return
     setBusy(true)
+    // Deduct bet immediately — chips "go on the table" as soon as cards are dealt
+    const cb = betRef.current
+    setChips(prev => { const next = prev - cb; chipsRef.current = next; return next })
     setNextCard(deckRef.current[0] || null)
     setTimeout(() => { playerRef.current = [{ ...p1, animIn: true }]; setPlayerHand([...playerRef.current]) }, 0)
     setTimeout(() => { dealerRef.current = [{ ...d1, animIn: true }]; setDealerHand([...dealerRef.current]) }, 600)
@@ -391,11 +404,16 @@ export default function Blackjack() {
     dealerRef.current = rev; setDealerHand([...rev])
     setReveal(true); setResult(r); setPhase('result')
     const cb = betRef.current
-    // Natural blackjack (first two cards = 21, player wins) pays 3:2
+    // Bet was already deducted in dealCards(); return chips based on outcome
     const naturalBJ = r === 'win' && hadBlackjackRef.current && pHand.length === 2
-    const winAmount  = naturalBJ ? Math.floor(cb * 1.5) : cb
+    // Win: return original bet + winnings (3:2 for natural BJ)
+    // Push: return original bet only
+    // Lose: nothing returned (already deducted)
+    const returnAmount = r === 'win'
+      ? naturalBJ ? cb + Math.floor(cb * 1.5) : cb * 2
+      : r === 'push' ? cb : 0
     setChips(prev => {
-      const next = r === 'win' ? prev + winAmount : r === 'lose' ? prev - cb : prev
+      const next = prev + returnAmount
       chipsRef.current = next
       if (next >= GOAL_CHIPS) setTimeout(() => setGameWon(true), 900)
       else if (next <= 0)     setTimeout(() => setGameOver(true), 900)
@@ -407,9 +425,7 @@ export default function Blackjack() {
   const playerTotal  = allTotal(playerRef.current)
   const dealerBusted = phase === 'result' && allTotal(dealerRef.current) > 21
   const playerBusted = playerTotal > 21
-  const chipsColor   = chips > STARTING_CHIPS ? '#4ade80' : chips < STARTING_CHIPS ? '#f87171' : '#f59e0b'
-  // Bankroll visual chip count: 1 chip at start (50), 5 chips at goal (250)
-  const bankrollCount = Math.max(1, Math.min(5, Math.round(chips / 50)))
+  const chipsColor = chips > STARTING_CHIPS ? '#4ade80' : chips < STARTING_CHIPS ? '#f87171' : '#f59e0b'
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a0f1e', color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px 16px 40px', gap: 16 }}>
@@ -604,19 +620,23 @@ export default function Blackjack() {
                 </button>
               )}
 
-              {/* Bankroll chip stack — deep in the bottom-right corner */}
-              {phase !== 'idle' && (
-                <div style={{ position: 'absolute', bottom: 72, right: 22, zIndex: 7, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <div style={{ position: 'relative', width: 22, height: 22 + (bankrollCount - 1) * 4 }}>
-                    {Array.from({ length: bankrollCount }).map((_, i) => (
-                      <div key={i} style={{ position: 'absolute', bottom: i * 4, left: 0 }}>
-                        <ChipSingle amount={50} size={22}/>
-                      </div>
-                    ))}
+              {/* Bankroll chip stack — actual denominations adding up to balance */}
+              {phase !== 'idle' && chips > 0 && (() => {
+                const stack = makeChange(chips)
+                const chipSz = 22, offset = 4
+                return (
+                  <div style={{ position: 'absolute', bottom: 72, right: 22, zIndex: 7, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <div style={{ position: 'relative', width: chipSz, height: chipSz + (stack.length - 1) * offset }}>
+                      {stack.map((denom, i) => (
+                        <div key={i} style={{ position: 'absolute', bottom: i * offset, left: 0 }}>
+                          <ChipSingle amount={denom} size={chipSz}/>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 900, color: chipsColor, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>${chips}</div>
                   </div>
-                  <div style={{ fontSize: 10, fontWeight: 900, color: chipsColor, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>${chips}</div>
-                </div>
-              )}
+                )
+              })()}
             </div>
 
             {/* Next card — right of table */}
@@ -681,7 +701,7 @@ export default function Blackjack() {
                   {result === 'win' ? '🎉 Win!' : result === 'lose' ? '✕ Lose' : '🤝 Push'}
                 </div>
                 {(() => {
-                  const naturalBJ = result === 'win' && hadBlackjack && playerHand.length === 2
+                  const naturalBJ  = result === 'win' && hadBlackjack && playerHand.length === 2
                   const displayWin = naturalBJ ? Math.floor(bet * 1.5) : bet
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
