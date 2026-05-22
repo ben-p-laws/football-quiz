@@ -777,19 +777,21 @@ export default function Blackjack() {
                     </span>
                   )}
                 </div>
-                {/* Expert mode: next card preview — on the table, value hidden */}
-                {mode === 'expert' && phase === 'player' && nextCard && !pendingBlackjack && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                    <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(129,140,248,0.65)', letterSpacing: 2.5 }}>NEXT CARD</div>
-                    <div style={{ position: 'relative', height: 99 }}>
-                      <div style={{ transform: 'scale(0.8)', transformOrigin: 'top center', filter: 'drop-shadow(0 0 8px rgba(129,140,248,0.45))' }}>
-                        <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} mode="hard" reveal={false} />
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Expert mode: next card — absolutely positioned to the right of the table */}
+            {mode === 'expert' && phase === 'player' && nextCard && !pendingBlackjack && (
+              <div style={{
+                position: 'absolute', right: -94, top: '50%', transform: 'translateY(-50%)',
+                zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+              }}>
+                <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(129,140,248,0.7)', letterSpacing: 2.5, whiteSpace: 'nowrap' }}>NEXT CARD</div>
+                <div style={{ filter: 'drop-shadow(0 0 10px rgba(129,140,248,0.55))' }}>
+                  <PlayingCard card={{ ...nextCard, faceDown: false, animIn: true }} stat={stat} mode="hard" reveal={false} />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action buttons */}

@@ -30,15 +30,17 @@ const STAT_COLS: Record<string, string> = {
 //   ORDER BY year_id DESC;
 // $$;
 //
-// 2) Club seasons stat:
+// 2) Club seasons stat (only single-club rows — no commas in teams_played_for):
 // CREATE OR REPLACE FUNCTION get_club_seasons()
 // RETURNS TABLE(player text, team text, value bigint) LANGUAGE sql STABLE AS $$
 //   SELECT name_display::text,
-//          TRIM(SPLIT_PART(teams_played_for::text, ',', 1))::text,
+//          TRIM(teams_played_for::text)::text,
 //          COUNT(*)::bigint
 //   FROM player_seasons
-//   WHERE teams_played_for IS NOT NULL AND teams_played_for != ''
-//   GROUP BY name_display, TRIM(SPLIT_PART(teams_played_for::text, ',', 1))
+//   WHERE teams_played_for IS NOT NULL
+//     AND teams_played_for != ''
+//     AND teams_played_for NOT LIKE '%,%'
+//   GROUP BY name_display, TRIM(teams_played_for::text)
 //   HAVING COUNT(*) >= 2
 //   ORDER BY COUNT(*) DESC LIMIT 200;
 // $$;
@@ -116,11 +118,13 @@ export async function GET(req: NextRequest) {
     const counts: Record<string, { player: string; team: string; value: number }> = {}
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     for (const row of (rawData || []) as any[]) {
-      const player = String(row.name_display || '').trim()
-      const team   = String(row.teams_played_for || '').split(',')[0].trim()
-      if (!player || !team) continue
-      const key = `${player}|||${team}`
-      if (!counts[key]) counts[key] = { player, team, value: 0 }
+      const player  = String(row.name_display || '').trim()
+      const rawTeam = String(row.teams_played_for || '').trim()
+      // Skip rows with multiple clubs (career-list format or mid-season transfers)
+      // so count = seasons at that specific club, not total career seasons
+      if (!player || !rawTeam || rawTeam.includes(',')) continue
+      const key = `${player}|||${rawTeam}`
+      if (!counts[key]) counts[key] = { player, team: rawTeam, value: 0 }
       counts[key].value++
     }
     // Take top 200 by season count (mirrors the RPC), then shuffle for randomness
