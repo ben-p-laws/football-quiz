@@ -728,7 +728,7 @@ async function upsertHandicap(){
   if(!hcp || !username || !deviceId) return
   fetch('/api/golf-handicap',{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({deviceId, username, handicapIndex:hcp.index, tier:hcp.tier, totalRounds:hcp.totalRounds}),
+    body:JSON.stringify({deviceId, username, handicapIndex:hcp.index, tier:hcp.tier, totalRounds:hcp.totalRounds, rounds:hcp.top5}),
   }).catch(()=>{})
 }
 
@@ -774,20 +774,22 @@ function setCachedHcp(index:number, totalRounds:number){
   if(typeof window!=='undefined') localStorage.setItem(HCP_CACHE_KEY, JSON.stringify({index, totalRounds}))
 }
 
-// Seed synthetic rounds from a linked device's handicap so new rounds blend in correctly.
-// Each synthetic round has normalisedScore = -index (reproducing the cached handicap exactly).
-// Real rounds played after linking will push the calculation forward naturally.
-function seedRoundsFromCache(index:number, totalRounds:number){
-  if(typeof window==='undefined') return
-  const existing:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
-  if(existing.length > 0) return // don't overwrite rounds already on this device
-  const syntheticNorm = -index // normalisedScore that reproduces the index
-  const count = Math.min(Math.max(totalRounds, 1), 5)
-  // strokes = par + syntheticNorm (18-hole, par 72)
-  const syntheticRounds:GolfRound[] = Array.from({length:count}, ()=>({
-    date:'2000-01-01', holes:18, strokes:72+syntheticNorm, par:72,
-  }))
-  localStorage.setItem('golf_rounds', JSON.stringify(syntheticRounds))
+const SERVER_ROUNDS_KEY = 'golf_rounds_server'
+function getServerRounds():GolfRound[]{
+  if(typeof window==='undefined') return []
+  try{ return JSON.parse(localStorage.getItem(SERVER_ROUNDS_KEY)?? '[]') }catch{ return [] }
+}
+function setServerRounds(rounds:GolfRound[]){
+  if(typeof window!=='undefined') localStorage.setItem(SERVER_ROUNDS_KEY, JSON.stringify(rounds))
+}
+
+async function syncServerRounds(){
+  const deviceId = getDeviceId()
+  if(!deviceId) return
+  try{
+    const d = await fetch(`/api/golf-handicap?deviceId=${deviceId}`).then(r=>r.json())
+    if(d.entry?.rounds?.length) setServerRounds(d.entry.rounds)
+  }catch{}
 }
 
 const DECAY_RATE = 0.15 // index points lost per missed day
@@ -826,18 +828,25 @@ function getDecayDays(rounds:GolfRound[]):number{
 
 function getHandicapData():HandicapData|null{
   if(typeof window==='undefined') return null
-  const rounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
-  if(rounds.length >= 5){
-    const sorted = [...rounds].sort((a,b)=>normalisedScore(a)-normalisedScore(b))
+  const localRounds:GolfRound[] = JSON.parse(localStorage.getItem('golf_rounds')?? '[]')
+  const serverRounds = getServerRounds()
+  // Merge and deduplicate by content
+  const seen = new Set<string>()
+  const allRounds = [...localRounds, ...serverRounds].filter(r=>{
+    const key=`${r.date}|${r.holes}|${r.strokes}|${r.par}`
+    if(seen.has(key)) return false
+    seen.add(key); return true
+  })
+  if(allRounds.length >= 5){
+    const sorted = [...allRounds].sort((a,b)=>normalisedScore(a)-normalisedScore(b))
     const top5 = sorted.slice(0,5)
     const avg = top5.reduce((s,r)=>s+normalisedScore(r),0)/5
-    const base = Math.round(-avg*10)/10  // flip: over par → negative index, under par → positive
-    const decay = getDecayDays(rounds) * DECAY_RATE
+    const base = Math.round(-avg*10)/10
+    const decay = getDecayDays(allRounds) * DECAY_RATE
     const rounded = Math.round((base - decay)*10)/10
     const [tier,color] = getHandicapTier(rounded)
-    return { index:rounded, tier, color, top5, totalRounds:rounds.length }
+    return { index:rounded, tier, color, top5, totalRounds:allRounds.length }
   }
-  // fall back to server-synced cache (e.g. after device linking)
   return getCachedHcp()
 }
 
@@ -1028,6 +1037,8 @@ export default function FootballGolf(){
     badLieSeason.current = s
     fetch(`/api/football-golf?season=${s}`).then(r=>r.json()).then(d=>setBadLiePlayerData(d.players||{})).catch(()=>{})
   },[])
+
+  useEffect(()=>{ void syncServerRounds() },[])
 
   useEffect(()=>()=>{ if(animFrameRef.current) cancelAnimationFrame(animFrameRef.current) },[])
 
@@ -3285,10 +3296,15 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
       body:JSON.stringify({action:'claim',code:linkInput.toUpperCase(),newDeviceId:getDeviceId()})}).then(r=>r.json())
     if(res.error){ setLinkMsg(res.error); return }
     setDeviceId(res.primaryDeviceId)
-    // fetch and cache the linked device's handicap so it shows immediately
+    // fetch linked device's handicap + actual rounds so new device uses real history
     fetch('/api/golf-handicap?deviceId='+res.primaryDeviceId)
       .then(r=>r.json())
-      .then(d=>{ if(d.entry?.handicap_index!=null){ setCachedHcp(d.entry.handicap_index, d.entry.total_rounds); seedRoundsFromCache(d.entry.handicap_index, d.entry.total_rounds) } })
+      .then(d=>{
+        if(d.entry?.handicap_index!=null){
+          setCachedHcp(d.entry.handicap_index, d.entry.total_rounds)
+          if(d.entry.rounds?.length) setServerRounds(d.entry.rounds)
+        }
+      })
       .catch(()=>{})
     setLinkMsg('✓ Devices linked! Reload to see your synced handicap.')
     setLinkMode('off')

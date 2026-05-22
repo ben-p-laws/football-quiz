@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   if (deviceId) {
     const { data: entry } = await db
       .from('golf_handicap')
-      .select('username, handicap_index, tier, total_rounds')
+      .select('username, handicap_index, tier, total_rounds, rounds')
       .eq('device_id', deviceId)
       .maybeSingle()
     if (!entry) return NextResponse.json({ entry: null, rank: null })
@@ -42,20 +42,23 @@ export async function GET(req: Request) {
   return NextResponse.json({ leaderboard: data ?? [] })
 }
 
-// POST { deviceId, username, handicapIndex, tier, totalRounds }
+// POST { deviceId, username, handicapIndex, tier, totalRounds, rounds? }
 export async function POST(req: Request) {
-  const { deviceId, username, handicapIndex, tier, totalRounds } = await req.json()
+  const { deviceId, username, handicapIndex, tier, totalRounds, rounds } = await req.json()
   if (!deviceId || !username) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const db = getClient()
-  const { error } = await db.from('golf_handicap').upsert({
+  const payload: Record<string, unknown> = {
     device_id: deviceId,
     username,
     handicap_index: handicapIndex,
     tier,
     total_rounds: totalRounds,
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'device_id' })
+  }
+  if (rounds !== undefined) payload.rounds = rounds
+
+  const { error } = await db.from('golf_handicap').upsert(payload, { onConflict: 'device_id' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
