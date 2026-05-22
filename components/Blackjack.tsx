@@ -34,6 +34,25 @@ const GOAL_CHIPS     = 250
 
 const delay = (ms: number) => new Promise<void>(r => setTimeout(r, ms))
 
+function weightedPickSeason(seasons: string[]): string {
+  const now = new Date().getFullYear()
+  const weights = seasons.map(s => {
+    const yr = parseInt(s.match(/\d{4}/)?.[0] ?? '0', 10)
+    const age = now - (yr + 1) // use end year of season
+    if (age <= 4)  return 2.5
+    if (age <= 14) return 1.5
+    if (age <= 24) return 1.0
+    return 0.4
+  })
+  const total = weights.reduce((a, b) => a + b, 0)
+  let r = Math.random() * total
+  for (let i = 0; i < seasons.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return seasons[i]
+  }
+  return seasons[seasons.length - 1]
+}
+
 // ─── SVG helpers ───────────────────────────────────────────────────────────────
 function TbBadge({ size = 13, dark = false }: { size?: number; dark?: boolean }) {
   return (
@@ -295,7 +314,7 @@ export default function Blackjack() {
     if (newStat === 'club_seasons') {
       setSeason('All Time'); fetchUrl = '/api/blackjack?stat=club_seasons'
     } else {
-      const s = seasons[Math.floor(Math.random() * seasons.length)]
+      const s = weightedPickSeason(seasons)
       setSeason(s); fetchUrl = `/api/blackjack?stat=${newStat}&season=${s}`
     }
 
