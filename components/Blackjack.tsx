@@ -435,7 +435,7 @@ export default function Blackjack() {
           <p style={{ color: '#8899bb', margin: '0 0 20px', fontSize: 13, lineHeight: 1.6 }}>
             The top 52 players from a random stat & season form the deck.<br/>
             Values are hidden — use your knowledge to decide when to hit or stand.<br/>
-            <strong style={{ color: '#f59e0b' }}>Start with {STARTING_CHIPS} chips · Reach {GOAL_CHIPS} to win</strong>
+            <strong style={{ color: '#f59e0b' }}>Start with ${STARTING_CHIPS} · Reach ${GOAL_CHIPS} to win</strong>
           </p>
           <input
             value={username} onChange={e => saveUsername(e.target.value)}
@@ -446,7 +446,7 @@ export default function Blackjack() {
             onClick={() => { setChips(STARTING_CHIPS); chipsRef.current = STARTING_CHIPS; setBet(10); betRef.current = 10; setGameOver(false); setGameWon(false); setPhase('idle'); setGameStarted(true) }}
             style={{ width: '100%', padding: '16px', borderRadius: 14, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111', fontSize: 17, fontWeight: 800, boxShadow: '0 4px 24px rgba(245,158,11,0.4)' }}
           >
-            Start Game · {STARTING_CHIPS} chips
+            Start Game · ${STARTING_CHIPS}
           </button>
         </div>
       )}
@@ -460,7 +460,7 @@ export default function Blackjack() {
               <div style={{ textAlign: 'center', padding: '40px 32px', maxWidth: 360, background: '#111827', borderRadius: 24, border: '2px solid #f59e0b' }}>
                 <div style={{ fontSize: 72, marginBottom: 12 }}>🏆</div>
                 <div style={{ fontSize: 36, fontWeight: 900, color: '#f59e0b', marginBottom: 8 }}>You Won!</div>
-                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>You reached {chips} chips.<br/>Goal of {GOAL_CHIPS} achieved!</div>
+                <div style={{ fontSize: 15, color: '#cbd5e1', marginBottom: 24, lineHeight: 1.6 }}>You reached ${chips}.<br/>Goal of ${GOAL_CHIPS} achieved!</div>
                 <button onClick={resetGame} style={{ padding: '14px 48px', borderRadius: 50, fontSize: 16, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111' }}>Play Again</button>
               </div>
             </div>
@@ -487,8 +487,8 @@ export default function Blackjack() {
             <button onClick={resetGame} style={{ padding: '5px 12px', borderRadius: 20, background: '#1f2937', border: '1px solid #374151', color: '#8899bb', cursor: 'pointer', fontSize: 12 }}>← Quit</button>
             <div style={{ padding: '5px 16px', borderRadius: 20, background: '#1f2937', border: `1px solid ${chipsColor}44`, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>🪙</span>
-              <span style={{ fontWeight: 800, color: chipsColor }}>{chips}</span>
-              <span style={{ color: '#4b5563', fontSize: 11 }}>/ {GOAL_CHIPS}</span>
+              <span style={{ fontWeight: 800, color: chipsColor }}>${chips}</span>
+              <span style={{ color: '#4b5563', fontSize: 11 }}>/ ${GOAL_CHIPS}</span>
             </div>
             <div style={{ flex: 1, minWidth: 80, maxWidth: 140, height: 6, background: '#1f2937', borderRadius: 3, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(100, (chips / GOAL_CHIPS) * 100)}%`, background: `linear-gradient(90deg,#f59e0b,${chipsColor})`, borderRadius: 3, transition: 'width 0.5s ease' }}/>
@@ -588,11 +588,11 @@ export default function Blackjack() {
                 )}
               </div>
 
-              {/* Bet chip stack — lands in the circle when hand begins */}
+              {/* Bet chip — one chip of the selected denomination lands in the circle */}
               {phase !== 'idle' && phase !== 'betting' && (
                 <div style={{ position: 'absolute', top: '56%', left: '50%', transform: 'translate(-50%,-50%)', zIndex: 5 }}>
                   <div style={{ animation: phase === 'player' ? 'chip-land 0.55s cubic-bezier(.22,.68,0,1.3) forwards' : 'none' }}>
-                    <ChipStack bet={bet} chipSize={28}/>
+                    <ChipSingle amount={bet} size={46}/>
                   </div>
                 </div>
               )}
@@ -614,7 +614,7 @@ export default function Blackjack() {
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: 10, fontWeight: 900, color: chipsColor, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>{chips}</div>
+                  <div style={{ fontSize: 10, fontWeight: 900, color: chipsColor, textShadow: '0 1px 4px rgba(0,0,0,0.6)' }}>${chips}</div>
                 </div>
               )}
             </div>
@@ -644,7 +644,7 @@ export default function Blackjack() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#8899bb', letterSpacing: 2 }}>PLACE YOUR BET</div>
                 <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
                   {chips < 10 ? (
-                    <div style={{ fontSize: 13, color: '#f87171', fontWeight: 700 }}>All in — {chips} chips</div>
+                    <div style={{ fontSize: 13, color: '#f87171', fontWeight: 700 }}>All in — ${chips}</div>
                   ) : (
                     CHIP_AMOUNTS.map(amount => {
                       const disabled = amount > chips
@@ -659,7 +659,7 @@ export default function Blackjack() {
                   )}
                 </div>
                 <button onClick={dealCards} style={{ padding: '12px 40px', borderRadius: 50, fontSize: 15, fontWeight: 800, cursor: 'pointer', background: 'linear-gradient(135deg,#f59e0b,#d97706)', border: 'none', color: '#111', boxShadow: '0 4px 20px rgba(245,158,11,0.4)' }}>
-                  Deal Cards · {bet} chip{bet !== 1 ? 's' : ''}
+                  Deal Cards · ${bet}
                 </button>
               </div>
             )}
@@ -686,7 +686,7 @@ export default function Blackjack() {
                   return (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
                       <div style={{ fontSize: 14, fontWeight: 700, color: result === 'win' ? '#4ade80' : result === 'lose' ? '#f87171' : '#94a3b8' }}>
-                        {result === 'win' ? `+${displayWin} chips` : result === 'lose' ? `-${bet} chips` : 'No change'}
+                        {result === 'win' ? `+$${displayWin}` : result === 'lose' ? `-$${bet}` : 'No change'}
                       </div>
                       {naturalBJ && <div style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b', letterSpacing: 2 }}>♠ BLACKJACK · 3:2 ♠</div>}
                     </div>
