@@ -358,6 +358,7 @@ export default function Blackjack() {
   // ── Hit ───────────────────────────────────────────────────────────────────────
   function hit() {
     if (phase !== 'player' || busy || deckRef.current.length === 0) return
+    setPendingBlackjack(false)
     const card = deckRef.current[0]
     deckRef.current = deckRef.current.slice(1)
     if (mode === 'expert') setNextCard(deckRef.current[0] || null)
@@ -816,15 +817,12 @@ export default function Blackjack() {
 
             {phase === 'player' && !busy && !busting && (
               <>
-                <button onClick={hit} disabled={pendingBlackjack} style={{
+                <button onClick={hit} style={{
                   padding: '13px 44px', borderRadius: 50, fontSize: 16, fontWeight: 800,
-                  cursor: pendingBlackjack ? 'not-allowed' : 'pointer',
-                  background: pendingBlackjack
-                    ? 'linear-gradient(135deg, #6b7280, #4b5563)'
-                    : 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                  cursor: 'pointer',
+                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
                   border: 'none', color: 'white',
                   boxShadow: '0 4px 20px rgba(220,38,38,0.4)',
-                  opacity: pendingBlackjack ? 0.5 : 1,
                 }}>
                   Hit
                 </button>
