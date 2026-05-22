@@ -507,10 +507,10 @@ export default function Blackjack() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 9, marginBottom: 24, textAlign: 'left' }}>
             {[
-              { icon: '🎯', line: 'Beat the dealer to 21 without going bust — standard blackjack rules.' },
-              { icon: '🃏', line: 'Each hand uses the top 52 players from a random stat & season as the deck — each player\'s stat is their card value.' },
-              { icon: '💵', line: 'Stake is placed after the category is revealed — bet bigger when you know the stat well.' },
-              { icon: '❓', line: 'Card values are hidden until you stand — but the next card\'s player is always visible to help you decide.' },
+              { icon: '🎯', line: 'Beat the dealer to 21 without going bust. Standard blackjack rules.' },
+              { icon: '🃏', line: 'Each hand uses 52 players from a random stat & season as the deck. Each player\'s stat is their card value.' },
+              { icon: '💵', line: 'Stake is placed after the category is revealed. Bet bigger when you know the stat well.' },
+              { icon: '❓', line: 'Card values are hidden until you stand, but the next card\'s player is always visible to help you decide.' },
               { icon: '🏆', line: `Start with $${STARTING_CHIPS}. Reach $${GOAL_CHIPS} to win. Go bust and it's game over.` },
             ].map(({ icon, line }) => (
               <div key={line} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
