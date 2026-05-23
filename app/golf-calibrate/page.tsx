@@ -8,15 +8,39 @@ type FracPt = [number, number] // [xFrac, yFrac] 0-1
 
 type HazardCalib = { start: number; end: number } // yards from tee
 
+type RouteCalib = {
+  waypoints: FracPt[]
+  hazards: HazardCalib[]
+  bunkers: HazardCalib[]
+}
+
+type BranchCalib = {
+  routeA: RouteCalib
+  routeB: RouteCalib
+  midFork: {
+    yardStart: number
+    yardEnd: number
+    subL: RouteCalib
+    subR: RouteCalib
+  } | null
+}
+
 type HoleCalib = {
   tee: FracPt | null
   green: FracPt | null
   waypoints: FracPt[]
   hazards: HazardCalib[]
   bunkers: HazardCalib[]
+  branch: BranchCalib | null
 }
 
-const EMPTY_CALIB = (): HoleCalib => ({ tee: null, green: null, waypoints: [], hazards: [], bunkers: [] })
+const EMPTY_ROUTE = (): RouteCalib => ({ waypoints: [], hazards: [], bunkers: [] })
+const EMPTY_CALIB = (): HoleCalib => ({ tee: null, green: null, waypoints: [], hazards: [], bunkers: [], branch: null })
+
+type RouteSlot = 'main' | 'A' | 'B' | 'subL' | 'subR'
+
+const ROUTE_LABELS: Record<RouteSlot, string> = { main: 'Main', A: 'Route A', B: 'Route B', subL: 'Sub L', subR: 'Sub R' }
+const ROUTE_COLORS: Record<RouteSlot, string> = { main: '#ffffff', A: '#60a5fa', B: '#f97316', subL: '#a78bfa', subR: '#22d3ee' }
 
 // ── Saved positions per course ────────────────────────────────────────────────
 
@@ -184,7 +208,7 @@ export default function GolfCalibratePage() {
       for (let h = 1; h <= count; h++) {
         const s = saved[h]
         init[h] = s
-          ? { tee: s.teeFrac, green: s.greenFrac, waypoints: s.waypointFracs ?? [], hazards: [], bunkers: [] }
+          ? { tee: s.teeFrac, green: s.greenFrac, waypoints: s.waypointFracs ?? [], hazards: [], bunkers: [], branch: null }
           : EMPTY_CALIB()
       }
       return init
@@ -196,12 +220,69 @@ export default function GolfCalibratePage() {
     }
   })
   const [pendingStart, setPendingStart] = useState<number | null>(null)
+  const [activeRoute, setActiveRoute] = useState<RouteSlot>('main')
   const imgRef = useRef<HTMLImageElement>(null)
   const [imgSize, setImgSize] = useState({ w: 0, h: 0 })
 
   const calib = calibByCourse[course]
   const setCalib = (updater: (prev: Record<number, HoleCalib>) => Record<number, HoleCalib>) => {
     setCalibByCourse(p => ({ ...p, [course]: updater(p[course]) }))
+  }
+
+  // ── Branch helpers ──
+  const getRoute = (c: HoleCalib | undefined, slot: RouteSlot): RouteCalib => {
+    if (!c) return EMPTY_ROUTE()
+    if (slot === 'main') return { waypoints: c.waypoints, hazards: c.hazards, bunkers: c.bunkers }
+    if (!c.branch) return EMPTY_ROUTE()
+    if (slot === 'A') return c.branch.routeA
+    if (slot === 'B') return c.branch.routeB
+    if (!c.branch.midFork) return EMPTY_ROUTE()
+    if (slot === 'subL') return c.branch.midFork.subL
+    return c.branch.midFork.subR
+  }
+  const updateRoute = (c: HoleCalib, slot: RouteSlot, fn: (r: RouteCalib) => RouteCalib): HoleCalib => {
+    if (slot === 'main') { const r = fn({ waypoints: c.waypoints, hazards: c.hazards, bunkers: c.bunkers }); return { ...c, ...r } }
+    if (!c.branch) return c
+    if (slot === 'A') return { ...c, branch: { ...c.branch, routeA: fn(c.branch.routeA) } }
+    if (slot === 'B') return { ...c, branch: { ...c.branch, routeB: fn(c.branch.routeB) } }
+    if (!c.branch.midFork) return c
+    if (slot === 'subL') return { ...c, branch: { ...c.branch, midFork: { ...c.branch.midFork, subL: fn(c.branch.midFork.subL) } } }
+    return { ...c, branch: { ...c.branch, midFork: { ...c.branch.midFork, subR: fn(c.branch.midFork.subR) } } }
+  }
+  const enableBranch = () => {
+    setCalib(p => {
+      const c = p[hole] ?? EMPTY_CALIB()
+      if (c.branch) return p
+      // Seed Route A with the existing main waypoints/hazards so the user has a starting line
+      const seedA: RouteCalib = { waypoints: [...c.waypoints], hazards: [...c.hazards], bunkers: [...c.bunkers] }
+      const seedB: RouteCalib = EMPTY_ROUTE()
+      return { ...p, [hole]: { ...c, branch: { routeA: seedA, routeB: seedB, midFork: null } } }
+    })
+    setActiveRoute('A')
+  }
+  const disableBranch = () => {
+    setCalib(p => ({ ...p, [hole]: { ...p[hole], branch: null } }))
+    setActiveRoute('main')
+  }
+  const enableMidFork = () => {
+    setCalib(p => {
+      const c = p[hole]; if (!c?.branch) return p
+      if (c.branch.midFork) return p
+      return { ...p, [hole]: { ...c, branch: { ...c.branch, midFork: { yardStart: Math.round(distance * 0.45), yardEnd: Math.round(distance * 0.60), subL: EMPTY_ROUTE(), subR: EMPTY_ROUTE() } } } }
+    })
+  }
+  const disableMidFork = () => {
+    setCalib(p => {
+      const c = p[hole]; if (!c?.branch) return p
+      return { ...p, [hole]: { ...c, branch: { ...c.branch, midFork: null } } }
+    })
+    if (activeRoute === 'subL' || activeRoute === 'subR') setActiveRoute('A')
+  }
+  const setMidYards = (which: 'yardStart' | 'yardEnd', val: number) => {
+    setCalib(p => {
+      const c = p[hole]; if (!c?.branch?.midFork) return p
+      return { ...p, [hole]: { ...c, branch: { ...c.branch, midFork: { ...c.branch.midFork, [which]: val } } } }
+    })
   }
 
   useEffect(() => {
@@ -216,10 +297,21 @@ export default function GolfCalibratePage() {
 
   const current = calib[hole] ?? EMPTY_CALIB()
   const savedPositions = getSavedPositions(course)
-  const pos = calib[hole]?.tee ? { teeFrac: calib[hole].tee!, greenFrac: calib[hole].green!, waypointFracs: calib[hole].waypoints } : savedPositions[hole]
-  const pathPts = pos && pos.teeFrac && pos.greenFrac && imgSize.w > 0 ? buildPathPts(pos, imgSize.w, imgSize.h) : null
   const distance = getDistances(course)[hole] ?? 400
   const varNames = getVarNames(course)
+  const branchOn = !!current.branch
+  const validSlots: RouteSlot[] = branchOn
+    ? (current.branch!.midFork ? ['A','B','subL','subR'] : ['A','B'])
+    : ['main']
+  const slot: RouteSlot = validSlots.includes(activeRoute) ? activeRoute : (validSlots[0] ?? 'main')
+  const activeRouteData = getRoute(current, slot)
+
+  // Build pathPts for the currently active route — used for hazard/bunker yardage projection
+  const activePos = current.tee && current.green
+    ? { teeFrac: current.tee, greenFrac: current.green, waypointFracs: activeRouteData.waypoints }
+    : (savedPositions[hole] ?? null)
+  const pathPts = activePos && activePos.teeFrac && activePos.greenFrac && imgSize.w > 0
+    ? buildPathPts(activePos, imgSize.w, imgSize.h) : null
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const img = imgRef.current
@@ -232,13 +324,13 @@ export default function GolfCalibratePage() {
     const fracPt: FracPt = [Math.round(xFrac * 1000) / 1000, Math.round(yFrac * 1000) / 1000]
 
     if (mode === 'tee') {
-      setCalib(p => ({ ...p, [hole]: { ...p[hole], tee: fracPt } }))
+      setCalib(p => ({ ...p, [hole]: { ...(p[hole] ?? EMPTY_CALIB()), tee: fracPt } }))
       setMode('green')
     } else if (mode === 'green') {
-      setCalib(p => ({ ...p, [hole]: { ...p[hole], green: fracPt } }))
+      setCalib(p => ({ ...p, [hole]: { ...(p[hole] ?? EMPTY_CALIB()), green: fracPt } }))
       setMode('waypoint')
     } else if (mode === 'waypoint') {
-      setCalib(p => ({ ...p, [hole]: { ...p[hole], waypoints: [...(p[hole]?.waypoints ?? []), fracPt] } }))
+      setCalib(p => ({ ...p, [hole]: updateRoute(p[hole] ?? EMPTY_CALIB(), slot, r => ({ ...r, waypoints: [...r.waypoints, fracPt] })) }))
     } else if (mode === 'hazard' || mode === 'bunker') {
       if (!pathPts) return
       const t = projectToPath(xPx, yPx, pathPts)
@@ -249,22 +341,21 @@ export default function GolfCalibratePage() {
         const start = Math.min(pendingStart, yards)
         const end = Math.max(pendingStart, yards)
         setPendingStart(null)
-        if (mode === 'hazard') {
-          setCalib(p => ({ ...p, [hole]: { ...p[hole], hazards: [...(p[hole]?.hazards ?? []), { start, end }] } }))
-        } else {
-          setCalib(p => ({ ...p, [hole]: { ...p[hole], bunkers: [...(p[hole]?.bunkers ?? []), { start, end }] } }))
-        }
+        setCalib(p => ({ ...p, [hole]: updateRoute(p[hole] ?? EMPTY_CALIB(), slot, r => mode === 'hazard'
+          ? ({ ...r, hazards: [...r.hazards, { start, end }] })
+          : ({ ...r, bunkers: [...r.bunkers, { start, end }] }))
+        }))
       }
     }
-  }, [hole, mode, pathPts, distance, pendingStart])
+  }, [hole, mode, pathPts, distance, pendingStart, slot])
 
   const onImgLoad = () => {
     const img = imgRef.current
     if (img) setImgSize({ w: img.getBoundingClientRect().width, h: img.getBoundingClientRect().height })
   }
 
-  const clearWaypoints = () => setCalib(p => ({ ...p, [hole]: { ...p[hole], waypoints: [] } }))
-  const clearHazards = () => { setCalib(p => ({ ...p, [hole]: { ...p[hole], hazards: [], bunkers: [] } })); setPendingStart(null) }
+  const clearWaypoints = () => setCalib(p => ({ ...p, [hole]: updateRoute(p[hole] ?? EMPTY_CALIB(), slot, r => ({ ...r, waypoints: [] })) }))
+  const clearHazards = () => { setCalib(p => ({ ...p, [hole]: updateRoute(p[hole] ?? EMPTY_CALIB(), slot, r => ({ ...r, hazards: [], bunkers: [] })) })); setPendingStart(null) }
   const cancelPending = () => setPendingStart(null)
 
   const outputPositionsJS = () => {
@@ -295,25 +386,79 @@ export default function GolfCalibratePage() {
       : '// No hazards calibrated yet'
   }
 
+  const fmtRoute = (id: string, label: string, r: RouteCalib) => {
+    const wp = r.waypoints.map(w => `[${w[0]},${w[1]}]`).join(',')
+    const hz = r.hazards.map(z => `{start:${z.start},end:${z.end}}`).join(',')
+    const bk = r.bunkers.map(z => `{start:${z.start},end:${z.end}}`).join(',')
+    return `      {id:'${id}',label:'${label}',waypointFracs:[${wp}],hazards:[${hz}],bunkers:[${bk}]}`
+  }
+  const outputBranchesJS = () => {
+    const lines: string[] = []
+    for (let h = 1; h <= holeCount; h++) {
+      const c = calib[h]
+      if (!c?.branch || !c.tee || !c.green) continue
+      const tf = `[${c.tee[0]},${c.tee[1]}]`
+      const gf = `[${c.green[0]},${c.green[1]}]`
+      const teeRoutes = [
+        fmtRoute('A', 'Route A', c.branch.routeA),
+        fmtRoute('B', 'Route B', c.branch.routeB),
+      ].join(',\n')
+      let midForkBlock = ''
+      if (c.branch.midFork) {
+        const mf = c.branch.midFork
+        const subs = [
+          fmtRoute('L', 'Sub L', mf.subL),
+          fmtRoute('R', 'Sub R', mf.subR),
+        ].join(',\n')
+        midForkBlock = `,\n    midFork:{triggerYardRange:[${mf.yardStart},${mf.yardEnd}],subRoutes:[\n${subs}\n    ]}`
+      }
+      lines.push(`  ${h}: {\n    teeFrac:${tf}, greenFrac:${gf},\n    teeRoutes:[\n${teeRoutes}\n    ]${midForkBlock}\n  },`)
+    }
+    return lines.length
+      ? `const WII_GOLF_BRANCHES = {\n${lines.join('\n')}\n}`
+      : '// No branched holes yet'
+  }
+
   const copyPositions = () => navigator.clipboard.writeText(outputPositionsJS())
   const copyHazards = () => navigator.clipboard.writeText(outputHazardsJS())
+  const copyBranches = () => navigator.clipboard.writeText(outputBranchesJS())
 
-  // Render hazard/bunker markers on the image as positioned dots at their yard distance along the path
+  // Render hazard/bunker markers along the active route's path
   const hazardMarkers: { label: string; t: number; color: string }[] = []
-  current.hazards?.forEach((z, i) => {
+  activeRouteData.hazards.forEach((z, i) => {
     if (!pathPts) return
     hazardMarkers.push(
       { label: `W${i + 1}`, t: z.start / distance, color: MODE_COLORS.hazard },
       { label: `W${i + 1}`, t: z.end / distance, color: MODE_COLORS.hazard },
     )
   })
-  current.bunkers?.forEach((b, i) => {
+  activeRouteData.bunkers.forEach((b, i) => {
     if (!pathPts) return
     hazardMarkers.push(
       { label: `B${i + 1}`, t: b.start / distance, color: MODE_COLORS.bunker },
       { label: `B${i + 1}`, t: b.end / distance, color: MODE_COLORS.bunker },
     )
   })
+
+  // Build per-route pathPts for rendering all routes (active + ghost)
+  const routesToDraw: { slot: RouteSlot; pts: Pt[]; color: string; isActive: boolean }[] = []
+  if (current.tee && current.green && imgSize.w > 0) {
+    if (branchOn) {
+      const r = current.branch!
+      const aPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.routeA.waypoints }
+      const bPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.routeB.waypoints }
+      routesToDraw.push({ slot:'A', pts: buildPathPts(aPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.A, isActive: slot === 'A' })
+      routesToDraw.push({ slot:'B', pts: buildPathPts(bPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.B, isActive: slot === 'B' })
+      if (r.midFork) {
+        const lPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.midFork.subL.waypoints }
+        const rPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.midFork.subR.waypoints }
+        routesToDraw.push({ slot:'subL', pts: buildPathPts(lPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.subL, isActive: slot === 'subL' })
+        routesToDraw.push({ slot:'subR', pts: buildPathPts(rPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.subR, isActive: slot === 'subR' })
+      }
+    } else if (pathPts) {
+      routesToDraw.push({ slot:'main', pts: pathPts, color: ROUTE_COLORS.main, isActive: true })
+    }
+  }
 
   const holeCount = getCourseHoleCount(course)
   const calibrated = Object.keys(calib).filter(k => calib[+k]?.tee && calib[+k]?.green).length
@@ -361,7 +506,53 @@ export default function GolfCalibratePage() {
           {(mode === 'hazard' || mode === 'bunker') && <button onClick={clearHazards} style={{ ...btnS, background: '#dc2626', fontSize: 11 }}>Clear hazards</button>}
           <button onClick={copyPositions} style={{ ...btnS, background: '#7c3aed', fontSize: 11 }}>Copy positions</button>
           <button onClick={copyHazards} style={{ ...btnS, background: '#059669', fontSize: 11 }}>Copy hazards</button>
+          {branchOn && <button onClick={copyBranches} style={{ ...btnS, background: '#ea580c', fontSize: 11 }}>Copy branches</button>}
         </div>
+      </div>
+
+      {/* Branch-mode toolbar */}
+      <div style={{ background: '#0f1a2e', borderBottom: '1px solid #1e2d4a', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button onClick={branchOn ? disableBranch : enableBranch}
+          style={{ ...btnS, width: 'auto', background: branchOn ? '#ea580c' : '#1e2d4a', fontSize: 11 }}>
+          {branchOn ? '🌿 Branch ON' : '🌿 Enable branch'}
+        </button>
+
+        {branchOn && (
+          <>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {validSlots.map(rs => (
+                <button key={rs} onClick={() => { setActiveRoute(rs); setPendingStart(null) }}
+                  style={{ ...btnS, width: 'auto', background: slot === rs ? ROUTE_COLORS[rs] : '#1e2d4a',
+                    color: slot === rs ? '#0a0f1e' : 'white',
+                    border: `2px solid ${ROUTE_COLORS[rs]}`, fontSize: 11, fontWeight: 800 }}>
+                  {ROUTE_LABELS[rs]}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ width: 1, height: 22, background: '#1e2d4a' }} />
+
+            {!current.branch?.midFork ? (
+              <button onClick={enableMidFork} style={{ ...btnS, width: 'auto', background: '#1e2d4a', fontSize: 11 }}>+ Enable mid-fork</button>
+            ) : (
+              <>
+                <div style={{ fontSize: 11, color: '#facc15', fontWeight: 700 }}>Mid-fork yards:</div>
+                <input type="number" value={current.branch.midFork.yardStart} min={0} max={distance}
+                  onChange={e => setMidYards('yardStart', Math.max(0, Math.min(distance, Number(e.target.value) || 0)))}
+                  style={{ width: 70, background: '#0a0f1e', color: 'white', border: '1px solid #1e2d4a', borderRadius: 6, padding: '4px 8px', fontSize: 12, fontFamily: 'inherit' }} />
+                <span style={{ fontSize: 11, color: '#8899bb' }}>–</span>
+                <input type="number" value={current.branch.midFork.yardEnd} min={0} max={distance}
+                  onChange={e => setMidYards('yardEnd', Math.max(0, Math.min(distance, Number(e.target.value) || 0)))}
+                  style={{ width: 70, background: '#0a0f1e', color: 'white', border: '1px solid #1e2d4a', borderRadius: 6, padding: '4px 8px', fontSize: 12, fontFamily: 'inherit' }} />
+                <button onClick={disableMidFork} style={{ ...btnS, width: 'auto', background: '#dc2626', fontSize: 11 }}>Remove fork</button>
+              </>
+            )}
+
+            <div style={{ marginLeft: 'auto', fontSize: 11, color: ROUTE_COLORS[slot], fontWeight: 700 }}>
+              Editing: {ROUTE_LABELS[slot]} ({activeRouteData.waypoints.length} wpts · {activeRouteData.hazards.length} water · {activeRouteData.bunkers.length} bunkers)
+            </div>
+          </>
+        )}
       </div>
 
       {/* Pending instruction */}
@@ -389,36 +580,47 @@ export default function GolfCalibratePage() {
               draggable={false}
             />
 
-            {/* SVG overlay: path line + hazard markers */}
-            {pathPts && imgSize.w > 0 && (
+            {/* SVG overlay: paths for all routes + hazard markers for active route */}
+            {imgSize.w > 0 && (
               <svg style={{ position: 'absolute', inset: 0, pointerEvents: 'none', width: imgSize.w, height: imgSize.h }}>
-                {/* Dashed fairway path */}
-                <polyline
-                  points={samplePath(pathPts)}
-                  stroke="rgba(255,255,255,0.55)"
-                  strokeWidth={2}
-                  fill="none"
-                  strokeDasharray="5 4"
-                  strokeLinecap="round"
-                />
-                {/* Hazard range lines */}
-                {current.hazards?.map((z, i) => {
+                {routesToDraw.map(rt => (
+                  <polyline key={rt.slot}
+                    points={samplePath(rt.pts)}
+                    stroke={rt.color}
+                    strokeWidth={rt.isActive ? 3 : 2}
+                    fill="none"
+                    strokeDasharray={rt.isActive ? '6 3' : '3 5'}
+                    strokeLinecap="round"
+                    opacity={rt.isActive ? 0.95 : 0.45}
+                  />
+                ))}
+                {/* Active-route hazard range lines */}
+                {pathPts && activeRouteData.hazards.map((z, i) => {
                   const p0 = pathPxAt(z.start / distance, pathPts)
                   const p1 = pathPxAt(z.end / distance, pathPts)
-                  return <line key={i} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke={MODE_COLORS.hazard} strokeWidth={4} strokeLinecap="round" opacity={0.8} />
+                  return <line key={`h${i}`} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke={MODE_COLORS.hazard} strokeWidth={4} strokeLinecap="round" opacity={0.8} />
                 })}
-                {current.bunkers?.map((b, i) => {
+                {pathPts && activeRouteData.bunkers.map((b, i) => {
                   const p0 = pathPxAt(b.start / distance, pathPts)
                   const p1 = pathPxAt(b.end / distance, pathPts)
-                  return <line key={i} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke={MODE_COLORS.bunker} strokeWidth={4} strokeLinecap="round" opacity={0.8} />
+                  return <line key={`b${i}`} x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke={MODE_COLORS.bunker} strokeWidth={4} strokeLinecap="round" opacity={0.8} />
                 })}
+                {/* Mid-fork trigger band on Route A's path */}
+                {branchOn && current.branch?.midFork && (() => {
+                  const aPts = routesToDraw.find(r => r.slot === 'A')?.pts
+                  if (!aPts) return null
+                  const mf = current.branch.midFork
+                  const p0 = pathPxAt(mf.yardStart / distance, aPts)
+                  const p1 = pathPxAt(mf.yardEnd / distance, aPts)
+                  return <line x1={p0.x} y1={p0.y} x2={p1.x} y2={p1.y} stroke="#facc15" strokeWidth={6} strokeLinecap="round" opacity={0.85} />
+                })()}
               </svg>
             )}
 
-            {/* Dot markers: tee, green, waypoints */}
+            {/* Dot markers: tee, green, waypoints (active route) */}
             {current.tee && <Dot frac={current.tee} color={MODE_COLORS.tee} label="T" />}
             {current.green && <Dot frac={current.green} color={MODE_COLORS.green} label="G" />}
-            {(current.waypoints ?? []).map((w, i) => <Dot key={i} frac={w} color={MODE_COLORS.waypoint} label={String(i + 1)} />)}
+            {activeRouteData.waypoints.map((w, i) => <Dot key={i} frac={w} color={ROUTE_COLORS[slot]} label={String(i + 1)} />)}
 
             {/* Dot markers for hazard endpoints */}
             {pathPts && hazardMarkers.map((m, i) => {
@@ -445,21 +647,26 @@ export default function GolfCalibratePage() {
           <div style={{ fontFamily: 'monospace', background: '#0a0f1e', borderRadius: 8, padding: 10, lineHeight: 1.7 }}>
             <div style={{ color: '#f97316' }}>tee: {current.tee ? current.tee.join(', ') : '—'}</div>
             <div style={{ color: '#22c55e' }}>green: {current.green ? current.green.join(', ') : '—'}</div>
-            <div style={{ color: '#60a5fa' }}>wpts: {current.waypoints?.length ? current.waypoints.map(w => `[${w.join(',')}]`).join(' ') : '—'}</div>
-            {current.hazards?.length
-              ? current.hazards.map((z, i) => <div key={i} style={{ color: '#3b82f6', marginTop: i === 0 ? 4 : 0 }}>water {i + 1}: {z.start}–{z.end} yds</div>)
+            <div style={{ color: ROUTE_COLORS[slot] }}>wpts ({ROUTE_LABELS[slot]}): {activeRouteData.waypoints.length ? activeRouteData.waypoints.map(w => `[${w.join(',')}]`).join(' ') : '—'}</div>
+            {activeRouteData.hazards.length
+              ? activeRouteData.hazards.map((z, i) => <div key={i} style={{ color: '#3b82f6', marginTop: i === 0 ? 4 : 0 }}>water {i + 1}: {z.start}–{z.end} yds</div>)
               : <div style={{ color: '#3b82f6', marginTop: 4 }}>water: —</div>
             }
-            {current.bunkers?.map((b, i) => (
+            {activeRouteData.bunkers.map((b, i) => (
               <div key={i} style={{ color: '#f59e0b' }}>bunker {i + 1}: {b.start}–{b.end} yds</div>
             ))}
+            {branchOn && current.branch?.midFork && (
+              <div style={{ color: '#facc15', marginTop: 6 }}>mid-fork trigger: {current.branch.midFork.yardStart}–{current.branch.midFork.yardEnd} yds</div>
+            )}
           </div>
 
-          <div style={{ fontWeight: 800, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Hazards output</div>
-          <pre style={{ fontFamily: 'monospace', background: '#0a0f1e', borderRadius: 8, padding: 10, whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#a5f3fc', margin: 0 }}>
-            {outputHazardsJS()}
+          <div style={{ fontWeight: 800, color: '#8899bb', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>{branchOn ? 'Branches output' : 'Hazards output'}</div>
+          <pre style={{ fontFamily: 'monospace', background: '#0a0f1e', borderRadius: 8, padding: 10, whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#a5f3fc', margin: 0, fontSize: 10 }}>
+            {branchOn ? outputBranchesJS() : outputHazardsJS()}
           </pre>
-          <button onClick={copyHazards} style={{ ...btnS, background: '#059669', padding: '8px 0' }}>📋 Copy hazards JS</button>
+          {branchOn
+            ? <button onClick={copyBranches} style={{ ...btnS, background: '#ea580c', padding: '8px 0' }}>📋 Copy branches JS</button>
+            : <button onClick={copyHazards} style={{ ...btnS, background: '#059669', padding: '8px 0' }}>📋 Copy hazards JS</button>}
           <button onClick={copyPositions} style={{ ...btnS, background: '#7c3aed', padding: '8px 0' }}>📋 Copy positions JS</button>
 
           {/* Hole jump grid */}
