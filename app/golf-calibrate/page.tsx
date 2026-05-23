@@ -306,12 +306,32 @@ export default function GolfCalibratePage() {
   const slot: RouteSlot = validSlots.includes(activeRoute) ? activeRoute : (validSlots[0] ?? 'main')
   const activeRouteData = getRoute(current, slot)
 
+  // For sub-routes the path STARTS at the mid-fork point on Route A, not at the tee
+  const isSubSlot = slot === 'subL' || slot === 'subR'
+  const subStartYards = current.branch?.midFork
+    ? Math.round((current.branch.midFork.yardStart + current.branch.midFork.yardEnd) / 2)
+    : 0
+  const forkPointFrac: FracPt | null = (() => {
+    if (!isSubSlot || !current.branch?.midFork || !current.tee || !current.green || imgSize.w === 0) return null
+    const routeAPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: current.branch.routeA.waypoints }
+    const routeAPts = buildPathPts(routeAPos, imgSize.w, imgSize.h)
+    const t = subStartYards / distance
+    const p = pathPxAt(t, routeAPts)
+    return [Math.round((p.x / imgSize.w) * 1000) / 1000, Math.round((p.y / imgSize.h) * 1000) / 1000]
+  })()
+
   // Build pathPts for the currently active route — used for hazard/bunker yardage projection
   const activePos = current.tee && current.green
-    ? { teeFrac: current.tee, greenFrac: current.green, waypointFracs: activeRouteData.waypoints }
+    ? (isSubSlot && forkPointFrac
+        ? { teeFrac: forkPointFrac, greenFrac: current.green, waypointFracs: activeRouteData.waypoints }
+        : { teeFrac: current.tee, greenFrac: current.green, waypointFracs: activeRouteData.waypoints })
     : (savedPositions[hole] ?? null)
   const pathPts = activePos && activePos.teeFrac && activePos.greenFrac && imgSize.w > 0
     ? buildPathPts(activePos, imgSize.w, imgSize.h) : null
+
+  // For sub-routes: clicks project onto a path that represents only [subStart..distance] yards
+  const yardsAtT = (t: number): number => isSubSlot ? Math.round(subStartYards + t * (distance - subStartYards)) : Math.round(t * distance)
+  const tAtYards = (yards: number): number => isSubSlot ? Math.max(0, Math.min(1, (yards - subStartYards) / Math.max(1, distance - subStartYards))) : Math.max(0, Math.min(1, yards / distance))
 
   const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const img = imgRef.current
@@ -334,7 +354,7 @@ export default function GolfCalibratePage() {
     } else if (mode === 'hazard' || mode === 'bunker') {
       if (!pathPts) return
       const t = projectToPath(xPx, yPx, pathPts)
-      const yards = Math.round(t * distance)
+      const yards = yardsAtT(t)
       if (pendingStart === null) {
         setPendingStart(yards)
       } else {
@@ -347,7 +367,7 @@ export default function GolfCalibratePage() {
         }))
       }
     }
-  }, [hole, mode, pathPts, distance, pendingStart, slot])
+  }, [hole, mode, pathPts, distance, pendingStart, slot, isSubSlot, subStartYards])
 
   const onImgLoad = () => {
     const img = imgRef.current
@@ -428,30 +448,35 @@ export default function GolfCalibratePage() {
   activeRouteData.hazards.forEach((z, i) => {
     if (!pathPts) return
     hazardMarkers.push(
-      { label: `W${i + 1}`, t: z.start / distance, color: MODE_COLORS.hazard },
-      { label: `W${i + 1}`, t: z.end / distance, color: MODE_COLORS.hazard },
+      { label: `W${i + 1}`, t: tAtYards(z.start), color: MODE_COLORS.hazard },
+      { label: `W${i + 1}`, t: tAtYards(z.end), color: MODE_COLORS.hazard },
     )
   })
   activeRouteData.bunkers.forEach((b, i) => {
     if (!pathPts) return
     hazardMarkers.push(
-      { label: `B${i + 1}`, t: b.start / distance, color: MODE_COLORS.bunker },
-      { label: `B${i + 1}`, t: b.end / distance, color: MODE_COLORS.bunker },
+      { label: `B${i + 1}`, t: tAtYards(b.start), color: MODE_COLORS.bunker },
+      { label: `B${i + 1}`, t: tAtYards(b.end), color: MODE_COLORS.bunker },
     )
   })
 
-  // Build per-route pathPts for rendering all routes (active + ghost)
+  // Build per-route pathPts for rendering all routes (active + ghost). Sub-routes anchor at the fork point.
   const routesToDraw: { slot: RouteSlot; pts: Pt[]; color: string; isActive: boolean }[] = []
   if (current.tee && current.green && imgSize.w > 0) {
     if (branchOn) {
       const r = current.branch!
       const aPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.routeA.waypoints }
       const bPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.routeB.waypoints }
-      routesToDraw.push({ slot:'A', pts: buildPathPts(aPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.A, isActive: slot === 'A' })
-      routesToDraw.push({ slot:'B', pts: buildPathPts(bPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.B, isActive: slot === 'B' })
+      const aPts = buildPathPts(aPos, imgSize.w, imgSize.h)
+      const bPts = buildPathPts(bPos, imgSize.w, imgSize.h)
+      routesToDraw.push({ slot:'A', pts: aPts, color: ROUTE_COLORS.A, isActive: slot === 'A' })
+      routesToDraw.push({ slot:'B', pts: bPts, color: ROUTE_COLORS.B, isActive: slot === 'B' })
       if (r.midFork) {
-        const lPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.midFork.subL.waypoints }
-        const rPos = { teeFrac: current.tee, greenFrac: current.green, waypointFracs: r.midFork.subR.waypoints }
+        const tMid = ((r.midFork.yardStart + r.midFork.yardEnd) / 2) / distance
+        const forkPx = pathPxAt(tMid, aPts)
+        const forkFrac: FracPt = [forkPx.x / imgSize.w, forkPx.y / imgSize.h]
+        const lPos = { teeFrac: forkFrac, greenFrac: current.green, waypointFracs: r.midFork.subL.waypoints }
+        const rPos = { teeFrac: forkFrac, greenFrac: current.green, waypointFracs: r.midFork.subR.waypoints }
         routesToDraw.push({ slot:'subL', pts: buildPathPts(lPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.subL, isActive: slot === 'subL' })
         routesToDraw.push({ slot:'subR', pts: buildPathPts(rPos, imgSize.w, imgSize.h), color: ROUTE_COLORS.subR, isActive: slot === 'subR' })
       }
