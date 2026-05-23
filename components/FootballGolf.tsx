@@ -3174,6 +3174,8 @@ const WII_GOLF_YSCALE: Record<number, number> = {
   5: 100/(650/1536),  // 236.3 — cropped to 650px wide
   6: 100/(310/674),   // 217.4 — cropped to 310px wide
   7: 100/(830/1536),  // 185.1 — cropped to 830px wide
+  8: 100/(1024/1536), // 150.0
+  9: 100/(962/1634),  // 169.9
 }
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
   1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
@@ -3183,6 +3185,8 @@ const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[nu
   5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
   6: {teeFrac:[0.332,0.892], greenFrac:[0.645,0.173], waypointFracs:[[0.490,0.42]]},
   7: {teeFrac:[0.390,0.868], greenFrac:[0.788,0.273], waypointFracs:[[0.180,0.255],[0.418,0.109]]},
+  8: {teeFrac:[0.410,0.810], greenFrac:[0.510,0.110], waypointFracs:[[0.430,0.450]]},
+  9: {teeFrac:[0.170,0.850], greenFrac:[0.470,0.080], waypointFracs:[[0.490,0.580],[0.730,0.300]]},
 }
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
   1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
@@ -3217,7 +3221,7 @@ const REAL_COURSES = [
 ]
 
 function courseHoleCount(courseId: string) {
-  if (courseId === 'wii-golf') return 7
+  if (courseId === 'wii-golf') return 9
   return 18
 }
 
