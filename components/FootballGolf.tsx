@@ -460,30 +460,61 @@ function bezierSegmentD(pts:Pt[]): string {
   return `M ${pts[0].x},${pts[0].y} C ${pts[1].x},${pts[1].y} ${pts[2].x},${pts[2].y} ${pts[3].x},${pts[3].y}`
 }
 
+// Catmull-Rom interpolation that PASSES THROUGH every control point (unlike bezier where
+// interior points are pull-toward control points). Used for branched holes where the user
+// expects the path to visit each calibrated waypoint exactly.
+function catmullRomAt(t:number, pts:Pt[]): Pt {
+  if (pts.length < 2) return pts[0] ?? {x:0, y:0}
+  if (pts.length === 2) return {x:(1-t)*pts[0].x+t*pts[1].x, y:(1-t)*pts[0].y+t*pts[1].y}
+  const segs = pts.length - 1
+  let seg = Math.floor(t * segs); if (seg >= segs) seg = segs - 1; if (seg < 0) seg = 0
+  const localT = t * segs - seg
+  const p0 = pts[Math.max(0, seg-1)], p1 = pts[seg], p2 = pts[seg+1], p3 = pts[Math.min(pts.length-1, seg+2)]
+  const t2 = localT*localT, t3 = t2*localT
+  return {
+    x: 0.5 * (2*p1.x + (-p0.x+p2.x)*localT + (2*p0.x-5*p1.x+4*p2.x-p3.x)*t2 + (-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+    y: 0.5 * (2*p1.y + (-p0.y+p2.y)*localT + (2*p0.y-5*p1.y+4*p2.y-p3.y)*t2 + (-p0.y+3*p1.y-3*p2.y+p3.y)*t3),
+  }
+}
+
+function catmullRomToD(pts:Pt[]): string {
+  if (pts.length < 2) return ''
+  if (pts.length === 2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`
+  let d = `M ${pts[0].x},${pts[0].y}`
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i-1)], p1 = pts[i], p2 = pts[i+1], p3 = pts[Math.min(pts.length-1, i+2)]
+    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
+    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
+    d += ` C ${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`
+  }
+  return d
+}
+
 function pathToD(pts:Pt[], postFork?: HolePath['postFork']): string {
-  const d0 = bezierSegmentD(pts)
-  if (!postFork) return d0
-  return d0 + ' ' + bezierSegmentD(postFork.pts)
+  if (postFork) return catmullRomToD(pts) + ' ' + catmullRomToD(postFork.pts)
+  return bezierSegmentD(pts)
 }
 
 function yardToSVG(yards:number, total:number, path:HolePath): Pt {
   if (path.postFork) {
+    // Piecewise paths use Catmull-Rom so the curve actually visits each calibrated waypoint.
     const {atYards, pts: postPts} = path.postFork
     if (yards <= atYards) {
       const t = atYards > 0 ? Math.max(0, Math.min(1, yards / atYards)) : 0
-      return bezierAt(t, path.pts)
+      return catmullRomAt(t, path.pts)
     } else if (yards <= total) {
       const span = Math.max(1, total - atYards)
       const t = Math.max(0, Math.min(1, (yards - atYards) / span))
-      return bezierAt(t, postPts)
+      return catmullRomAt(t, postPts)
     }
-    // Past the pin — extrapolate along post-fork end tangent
-    const start = postPts[0], end = postPts[postPts.length-1]
+    // Past the pin — extrapolate along the last sub-segment's direction
+    const end = postPts[postPts.length-1], prev = postPts[postPts.length-2]
+    const dx = end.x - prev.x, dy = end.y - prev.y
+    const len = Math.sqrt(dx*dx + dy*dy) || 1
+    const start = postPts[0]
     const svgSpan = Math.sqrt((end.x-start.x)**2+(end.y-start.y)**2)||131
-    const tan = bezierTangent(1, postPts)
-    const tanLen = Math.sqrt(tan.x*tan.x+tan.y*tan.y)||1
     const extra = (yards - total) / Math.max(1, total - atYards) * svgSpan
-    return {x: end.x + tan.x/tanLen * extra, y: end.y + tan.y/tanLen * extra}
+    return {x: end.x + dx/len * extra, y: end.y + dy/len * extra}
   }
   if(yards <= total) return bezierAt(Math.max(0, yards/total), path.pts)
   // extrapolate past the hole along the end tangent
@@ -500,17 +531,20 @@ function holeXY(path:HolePath): Pt {
 }
 
 function fairwayNormal(yards:number, total:number, path:HolePath): {lx:number;ly:number;rx:number;ry:number} {
-  // For piecewise paths, normal uses the active segment
-  let activePts = path.pts, activeT: number
+  // Piecewise paths use Catmull-Rom (no closed-form tangent helper here),
+  // so derive the tangent numerically — works for both bezier and Catmull-Rom paths.
   if (path.postFork) {
-    const {atYards, pts: postPts} = path.postFork
-    if (yards > atYards) { activePts = postPts; activeT = Math.max(0.01, Math.min(0.99, (yards - atYards) / Math.max(1, total - atYards))) }
-    else activeT = atYards > 0 ? Math.max(0.01, Math.min(0.99, yards / atYards)) : 0.01
-  } else {
-    activeT = Math.max(0.01, Math.min(0.99, yards/total))
+    const eps = Math.max(1, total * 0.01)
+    const y1 = Math.max(0, Math.min(total - eps, yards))
+    const p1 = yardToSVG(y1, total, path)
+    const p2 = yardToSVG(y1 + eps, total, path)
+    const dx = p2.x - p1.x, dy = p2.y - p1.y
+    const len = Math.sqrt(dx*dx+dy*dy)||1
+    const nx = -dy/len, ny = dx/len
+    return {lx:nx, ly:ny, rx:-nx, ry:-ny}
   }
-  const t = activeT
-  const tang = bezierTangent(t, activePts)
+  const t = Math.max(0.01, Math.min(0.99, yards/total))
+  const tang = bezierTangent(t, path.pts)
   const len = Math.sqrt(tang.x*tang.x+tang.y*tang.y)
   const nx=-tang.y/len, ny=tang.x/len
   return {lx:nx, ly:ny, rx:-nx, ry:-ny}
@@ -2950,7 +2984,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {!imageUrl && <rect x={0} y={-10} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>}
         {!imageUrl && !hole.isIsland && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
         {/* Real course: faint path line so ball trajectory is visible */}
-        {imageUrl && <path d={fairwayD} stroke="rgba(255,255,255,0.25)" strokeWidth={2} fill="none" strokeLinecap="round" strokeDasharray="4 4"/>}
+        {imageUrl && <path d={fairwayD} stroke={effectivePath.postFork ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)"} strokeWidth={effectivePath.postFork ? 3.2 : 2} fill="none" strokeLinecap="round" strokeDasharray="4 4"/>}
 {!imageUrl && !hole.isIsland && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
           const midPos   = yardToSVG(midYards,hole.distance,hole.path)
@@ -4193,8 +4227,19 @@ function bezierFracAt(t: number, pts: [number,number][]): [number,number] {
 
 function sampleCurveFracs(pts: [number,number][], n = 80): [number,number][] {
   if (pts.length <= 4) return Array.from({length: n+1}, (_, i) => bezierFracAt(i/n, pts))
-  // Fall back to polyline for >4 control points
   return pts
+}
+
+// Catmull-Rom variant that PASSES THROUGH every waypoint — used for sub-route picker curves
+// so the drawn line actually visits the islands the user calibrated.
+function catmullRomFracAt(t: number, pts: [number,number][]): [number,number] {
+  const xy = pts.map(([x,y]) => ({x, y}))
+  const r = catmullRomAt(t, xy)
+  return [r.x, r.y]
+}
+function sampleCatmullFracs(pts: [number,number][], n = 80): [number,number][] {
+  if (pts.length < 2) return pts
+  return Array.from({length: n+1}, (_, i) => catmullRomFracAt(i/n, pts))
 }
 
 function lerpAlongPolyline(pts: [number,number][], t: number): [number,number] {
@@ -4245,8 +4290,11 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
     const from = type === 'tee' ? branch.teeFrac : startFrac
     return [from, ...r.waypointFracs, branch.greenFrac]
   }
+  // Sub-route curves use Catmull-Rom so the visualization actually visits the waypoints;
+  // tee-route curves stay on cubic bezier (matches non-branched real-course behavior).
+  const sampleFor = (pts: [number,number][]) => type === 'sub' ? sampleCatmullFracs(pts, 80) : sampleCurveFracs(pts, 80)
   const pathPolyFor = (r: typeof a) =>
-    sampleCurveFracs(ctrlPtsFor(r), 80).map(([x,y]) => `${x*1000},${y*1000}`).join(' ')
+    sampleFor(ctrlPtsFor(r)).map(([x,y]) => `${x*1000},${y*1000}`).join(' ')
 
   // Hazard/bunker pill rendering: each pill sits at the mid of the hazard along its route's bezier
   const routeStartYards = type === 'tee'
@@ -4255,13 +4303,14 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
   const routeLengthYards = hole.distance - routeStartYards
   const yardsToT = (yards: number) => routeLengthYards > 0 ? Math.max(0, Math.min(1, (yards - routeStartYards) / routeLengthYards)) : 0
 
+  const pointAt = (t: number, ctrl: [number,number][]) => type === 'sub' ? catmullRomFracAt(t, ctrl) : bezierFracAt(t, ctrl)
   const renderRoutePills = (r: typeof a, color: string) => {
     const ctrl = ctrlPtsFor(r)
     const pills: React.ReactElement[] = []
     r.hazards.forEach((h, i) => {
       const t = yardsToT((h.start + h.end) / 2)
       if (t <= 0 || t >= 1) return
-      const [x, y] = bezierFracAt(t, ctrl)
+      const [x, y] = pointAt(t, ctrl)
       const label = `${h.start}–${h.end}`
       const w = 140, hgt = 38
       pills.push(
@@ -4274,7 +4323,7 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
     r.bunkers.forEach((b, i) => {
       const t = yardsToT((b.start + b.end) / 2)
       if (t <= 0 || t >= 1) return
-      const [x, y] = bezierFracAt(t, ctrl)
+      const [x, y] = pointAt(t, ctrl)
       const label = `${b.start}–${b.end}`
       const w = 140, hgt = 38
       pills.push(
