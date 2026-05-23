@@ -3186,8 +3186,29 @@ const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[nu
   6: {teeFrac:[0.332,0.892], greenFrac:[0.645,0.173], waypointFracs:[[0.490,0.42]]},
   7: {teeFrac:[0.390,0.868], greenFrac:[0.788,0.273], waypointFracs:[[0.180,0.255],[0.418,0.109]]},
   8: {teeFrac:[0.450,0.807], greenFrac:[0.639,0.163], waypointFracs:[[0.574,0.568],[0.626,0.365]]},
-  9: {teeFrac:[0.170,0.850], greenFrac:[0.470,0.080], waypointFracs:[[0.490,0.580],[0.730,0.300]]},
+  9: {teeFrac:[0.272,0.875], greenFrac:[0.486,0.106], waypointFracs:[[0.878,0.557]]},
 }
+type BranchRoute = { id: string; label: string; waypointFracs: [number,number][]; hazards: {start:number;end:number}[]; bunkers: {start:number;end:number}[] }
+type BranchSpec = {
+  teeFrac: [number,number]; greenFrac: [number,number]
+  teeRoutes: BranchRoute[]
+  midFork?: { triggerYardRange: [number,number]; subRoutes: BranchRoute[] }
+}
+
+const WII_GOLF_BRANCHES: Record<number, BranchSpec> = {
+  9: {
+    teeFrac:[0.272,0.875], greenFrac:[0.486,0.106],
+    teeRoutes:[
+      {id:'A',label:'Route A',waypointFracs:[[0.878,0.557]],hazards:[{start:111,end:174},{start:291,end:425}],bunkers:[]},
+      {id:'B',label:'Route B',waypointFracs:[[0.345,0.356]],hazards:[{start:111,end:223},{start:328,end:391}],bunkers:[{start:228,end:243}]},
+    ],
+    midFork:{triggerYardRange:[189,279],subRoutes:[
+      {id:'L',label:'Sub L',waypointFracs:[],hazards:[{start:284,end:418}],bunkers:[]},
+      {id:'R',label:'Sub R',waypointFracs:[[0.964,0.359],[0.808,0.157]],hazards:[{start:281,end:309},{start:382,end:423}],bunkers:[]},
+    ]},
+  },
+}
+
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
   1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
   2: {hazards:[{start:27,end:82}], bunkers:[{start:113,end:121}]},

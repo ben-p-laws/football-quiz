@@ -105,7 +105,7 @@ const SAVED_POSITIONS_WII: Record<number, { teeFrac: FracPt; greenFrac: FracPt; 
   6: {teeFrac:[0.332,0.892], greenFrac:[0.645,0.173], waypointFracs:[[0.490,0.42]]},
   7: {teeFrac:[0.390,0.868], greenFrac:[0.788,0.273], waypointFracs:[[0.180,0.255],[0.418,0.109]]},
   8: {teeFrac:[0.450,0.807], greenFrac:[0.639,0.163], waypointFracs:[[0.574,0.568],[0.626,0.365]]},
-  9: {teeFrac:[0.170,0.850], greenFrac:[0.470,0.080], waypointFracs:[[0.490,0.580],[0.730,0.300]]},
+  9: {teeFrac:[0.272,0.875], greenFrac:[0.486,0.106], waypointFracs:[[0.878,0.557]]},
 }
 const HOLE_DISTANCES_WII: Record<number, number> = {
   1: 370, 2: 134, 3: 465,
