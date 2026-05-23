@@ -2441,6 +2441,26 @@ export default function FootballGolf(){
           </div>
         )}
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)',position:'relative'}}>
+          {/* Branch picker modal — forced overlay across full game row (centered card, question shown inline) */}
+          {branchPicker && currentHole && WII_GOLF_BRANCHES[currentHole.number] && (() => {
+            const br = WII_GOLF_BRANCHES[currentHole.number]
+            const teeR = branchChoice.teeRoute ? br.teeRoutes.find(r => r.id === branchChoice.teeRoute) : null
+            const ballFrac: [number,number] | null = (branchPicker === 'sub' && teeR)
+              ? lerpAlongPolyline([br.teeFrac, ...teeR.waypointFracs, br.greenFrac], (currentHole.distance - remaining) / currentHole.distance)
+              : null
+            return (
+              <BranchPickerModal
+                hole={currentHole}
+                type={branchPicker}
+                branch={br}
+                teeRouteId={branchChoice.teeRoute}
+                ballPosFrac={ballFrac}
+                questionStat={question?.statLabel}
+                questionFilter={question ? makeFilterLabel(question) : undefined}
+                onPick={branchPicker === 'tee' ? pickTeeRoute : pickSubRoute}
+              />
+            )
+          })()}
           {/* Shot animation overlay — expands CourseView across full game row */}
           {shotOverlay && currentHole && (
             <div style={{position:'absolute',inset:0,zIndex:10,background:'#0a0f1e',display:'flex',flexDirection:'column'}}>
@@ -2665,27 +2685,7 @@ export default function FootballGolf(){
           </div>
 
           {/* Right panel — course */}
-          <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px',position:'relative'}}>
-            {/* Branch picker modal — forced overlay over course panel only (question stays visible on the left) */}
-            {branchPicker && currentHole && WII_GOLF_BRANCHES[currentHole.number] && (() => {
-              const br = WII_GOLF_BRANCHES[currentHole.number]
-              const teeR = branchChoice.teeRoute ? br.teeRoutes.find(r => r.id === branchChoice.teeRoute) : null
-              const ballFrac: [number,number] | null = (branchPicker === 'sub' && teeR)
-                ? lerpAlongPolyline([br.teeFrac, ...teeR.waypointFracs, br.greenFrac], (currentHole.distance - remaining) / currentHole.distance)
-                : null
-              return (
-                <BranchPickerModal
-                  hole={currentHole}
-                  type={branchPicker}
-                  branch={br}
-                  teeRouteId={branchChoice.teeRoute}
-                  ballPosFrac={ballFrac}
-                  questionStat={question?.statLabel}
-                  questionFilter={question ? makeFilterLabel(question) : undefined}
-                  onPick={branchPicker === 'tee' ? pickTeeRoute : pickSubRoute}
-                />
-              )
-            })()}
+          <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
             <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
@@ -2837,7 +2837,16 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const ballR   = imageUrl ? 3.5 : 3.2
 
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:36,overflow:'hidden',position:'relative',background:imageUrl?'#0a0f1e':undefined}}>
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
+      <div style={{
+        position:'relative', display:'flex', flexDirection:'column',
+        borderRadius: 36, overflow:'hidden',
+        background: imageUrl?'#0a0f1e':undefined,
+        ...(imageUrl && realYScale ? {
+          aspectRatio: `100 / ${realYScale}`,
+          height:'100%', maxWidth:'100%', maxHeight:'100%',
+        } : { flex:1, width:'100%' }),
+      }}>
 
       {/* Real course photo */}
       {imageUrl && (
@@ -3066,6 +3075,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           )
         })}
       </svg>
+      </div>
     </div>
   )
 }
