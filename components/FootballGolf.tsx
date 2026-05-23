@@ -1134,6 +1134,59 @@ export default function FootballGolf(){
   },[h2hOppTurnShot])
 
   const currentHole  = holes[holeIdx]
+
+  // ── Branch routing (Wii Golf hole 9) ──
+  const [branchChoice, setBranchChoice] = useState<BranchChoice>({})
+  const [branchPicker, setBranchPicker] = useState<'tee'|'sub'|null>(null)
+  const wiiActiveLookup = (courseMode==='real' && selectedCourse==='wii-golf' && currentHole)
+    ? { ...WII_GOLF_POSITIONS, [currentHole.number]: getWiiEffectiveGeometry(currentHole.number, branchChoice) ?? WII_GOLF_POSITIONS[currentHole.number] }
+    : WII_GOLF_POSITIONS
+
+  // Reset + open tee picker when entering a branched hole
+  useEffect(() => {
+    if (!currentHole || courseMode !== 'real' || selectedCourse !== 'wii-golf' || dailyMode) { setBranchPicker(null); setBranchChoice({}); return }
+    setBranchChoice({})
+    setBranchPicker(WII_GOLF_BRANCHES[currentHole.number] ? 'tee' : null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [holeIdx, currentHole?.number, courseMode, selectedCourse, dailyMode])
+
+  // Mid-fork detection: Route A only, fire when ball lands in trigger range
+  useEffect(() => {
+    if (!currentHole) return
+    const branch = getWiiBranch(currentHole.number)
+    if (!branch?.midFork) return
+    if (branchChoice.teeRoute !== 'A') return
+    if (branchChoice.subRoute) return
+    if (branchPicker) return
+    if (remaining <= 0 || remaining >= currentHole.distance) return
+    const ballPos = currentHole.distance - remaining
+    const [s, e] = branch.midFork.triggerYardRange
+    if (ballPos >= s && ballPos <= e) setBranchPicker('sub')
+  }, [remaining, currentHole, branchChoice, branchPicker])
+
+  const pickTeeRoute = (routeId: string) => {
+    if (!currentHole) return
+    const branch = WII_GOLF_BRANCHES[currentHole.number]; if (!branch) return
+    const route = branch.teeRoutes.find(r => r.id === routeId); if (!route) return
+    setBranchChoice({ teeRoute: routeId })
+    setBranchPicker(null)
+    setHoles(hs => hs.map((h, i) => i === holeIdx ? { ...h, hazards: [...route.hazards], bunkers: [...route.bunkers] } : h))
+  }
+
+  const pickSubRoute = (subId: string) => {
+    if (!currentHole) return
+    const branch = WII_GOLF_BRANCHES[currentHole.number]; if (!branch?.midFork) return
+    const teeRoute = branch.teeRoutes.find(r => r.id === branchChoice.teeRoute)
+    const sub = branch.midFork.subRoutes.find(r => r.id === subId)
+    if (!teeRoute || !sub) return
+    const cut = wiiSubStartYards(branch)
+    const mergedHaz = teeRoute.hazards.filter(h => h.end <= cut).concat(sub.hazards)
+    const mergedBnk = teeRoute.bunkers.filter(b => b.end <= cut).concat(sub.bunkers)
+    setBranchChoice(c => ({ ...c, subRoute: subId }))
+    setBranchPicker(null)
+    setHoles(hs => hs.map((h, i) => i === holeIdx ? { ...h, hazards: mergedHaz, bunkers: mergedBnk } : h))
+  }
+
   const club         = remaining>0 ? getClub(remaining) : 'driver'
   const [,clubMax]   = CLUB_RANGES[club]
   const completedScores = scores.filter(s=>s!==null) as number[]
@@ -2388,6 +2441,24 @@ export default function FootballGolf(){
           </div>
         )}
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)',position:'relative'}}>
+          {/* Branch picker modal — forced overlay for routed holes */}
+          {branchPicker && currentHole && WII_GOLF_BRANCHES[currentHole.number] && (() => {
+            const br = WII_GOLF_BRANCHES[currentHole.number]
+            const teeR = branchChoice.teeRoute ? br.teeRoutes.find(r => r.id === branchChoice.teeRoute) : null
+            const ballFrac: [number,number] | null = (branchPicker === 'sub' && teeR)
+              ? lerpAlongPolyline([br.teeFrac, ...teeR.waypointFracs, br.greenFrac], (currentHole.distance - remaining) / currentHole.distance)
+              : null
+            return (
+              <BranchPickerModal
+                hole={currentHole}
+                type={branchPicker}
+                branch={br}
+                teeRouteId={branchChoice.teeRoute}
+                ballPosFrac={ballFrac}
+                onPick={branchPicker === 'tee' ? pickTeeRoute : pickSubRoute}
+              />
+            )
+          })()}
           {/* Shot animation overlay — expands CourseView across full game row */}
           {shotOverlay && currentHole && (
             <div style={{position:'absolute',inset:0,zIndex:10,background:'#0a0f1e',display:'flex',flexDirection:'column'}}>
@@ -2406,9 +2477,9 @@ export default function FootballGolf(){
                 ) : undefined}
                 imageRotation={courseMode==='real' && !dailyMode ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
                 realYScale={courseMode==='real' && !dailyMode ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined}
-                realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
-                realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
-                realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
+                realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining) : undefined}
                 myBallColor={h2hStep==='playing'?(h2hIsHost.current?'#3b82f6':'#fbbf24'):undefined}
                 oppBallColor={h2hStep==='playing'?(h2hIsHost.current?'#fbbf24':'#3b82f6'):undefined}
@@ -2634,9 +2705,9 @@ export default function FootballGolf(){
                 ) : undefined}
                 imageRotation={courseMode==='real' && !dailyMode ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
                 realYScale={courseMode==='real' && !dailyMode ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined}
-                realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
-                realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
-                realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?WII_GOLF_POSITIONS:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
+                realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
+                realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
@@ -3193,6 +3264,48 @@ type BranchSpec = {
   teeFrac: [number,number]; greenFrac: [number,number]
   teeRoutes: BranchRoute[]
   midFork?: { triggerYardRange: [number,number]; subRoutes: BranchRoute[] }
+}
+
+type BranchChoice = { teeRoute?: string; subRoute?: string }
+
+function getWiiBranch(holeNum: number): BranchSpec | undefined { return WII_GOLF_BRANCHES[holeNum] }
+
+function wiiSubStartYards(branch: BranchSpec): number {
+  if (!branch.midFork) return 0
+  return Math.round((branch.midFork.triggerYardRange[0] + branch.midFork.triggerYardRange[1]) / 2)
+}
+
+function getWiiEffectiveGeometry(holeNum: number, choice: BranchChoice): { teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][] } | undefined {
+  const branch = WII_GOLF_BRANCHES[holeNum]
+  if (!branch || !choice.teeRoute) return WII_GOLF_POSITIONS[holeNum]
+  const tee = branch.teeRoutes.find(r => r.id === choice.teeRoute)
+  if (!tee) return WII_GOLF_POSITIONS[holeNum]
+  let waypointFracs: [number,number][] = [...tee.waypointFracs]
+  if (choice.subRoute && branch.midFork) {
+    const sub = branch.midFork.subRoutes.find(r => r.id === choice.subRoute)
+    if (sub) waypointFracs = [...tee.waypointFracs, ...sub.waypointFracs]
+  }
+  return { teeFrac: branch.teeFrac, greenFrac: branch.greenFrac, waypointFracs }
+}
+
+function getWiiEffectiveHazards(holeNum: number, choice: BranchChoice): { hazards: {start:number;end:number}[]; bunkers: {start:number;end:number}[] } {
+  const branch = WII_GOLF_BRANCHES[holeNum]
+  if (!branch || !choice.teeRoute) {
+    const fb = WII_GOLF_HAZARDS[holeNum]
+    return { hazards: fb?.hazards ?? [], bunkers: fb?.bunkers ?? [] }
+  }
+  const tee = branch.teeRoutes.find(r => r.id === choice.teeRoute)
+  if (!tee) return { hazards: [], bunkers: [] }
+  let hazards = [...tee.hazards]; let bunkers = [...tee.bunkers]
+  if (choice.subRoute && branch.midFork) {
+    const sub = branch.midFork.subRoutes.find(r => r.id === choice.subRoute)
+    if (sub) {
+      const cut = wiiSubStartYards(branch)
+      hazards = hazards.filter(h => h.end <= cut).concat(sub.hazards)
+      bunkers = bunkers.filter(b => b.end <= cut).concat(sub.bunkers)
+    }
+  }
+  return { hazards, bunkers }
 }
 
 const WII_GOLF_BRANCHES: Record<number, BranchSpec> = {
@@ -3964,6 +4077,84 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
       <button onClick={onRestart} style={{background:'#dc2626',color:'white',border:'none',borderRadius:12,padding:'13px 48px',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
         Play Again
       </button>
+    </div>
+  )
+}
+
+function lerpAlongPolyline(pts: [number,number][], t: number): [number,number] {
+  if (pts.length < 2) return pts[0] ?? [0.5, 0.5]
+  const segs: number[] = []
+  let totalLen = 0
+  for (let i = 0; i < pts.length - 1; i++) {
+    const dx = pts[i+1][0]-pts[i][0], dy = pts[i+1][1]-pts[i][1]
+    const len = Math.hypot(dx, dy); segs.push(len); totalLen += len
+  }
+  if (totalLen === 0) return pts[0]
+  const target = t * totalLen
+  let acc = 0
+  for (let i = 0; i < segs.length; i++) {
+    if (acc + segs[i] >= target) {
+      const r = segs[i] === 0 ? 0 : (target - acc) / segs[i]
+      return [pts[i][0] + r*(pts[i+1][0]-pts[i][0]), pts[i][1] + r*(pts[i+1][1]-pts[i][1])]
+    }
+    acc += segs[i]
+  }
+  return pts[pts.length - 1]
+}
+
+function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, onPick}:{
+  hole: Hole; type: 'tee'|'sub'; branch: BranchSpec; teeRouteId?: string; ballPosFrac?: [number,number] | null;
+  onPick: (id: string) => void
+}) {
+  const routes = type === 'tee' ? branch.teeRoutes : (branch.midFork?.subRoutes ?? [])
+  if (routes.length < 2) return null
+  const [a, b] = [routes[0], routes[1]]
+  const imageUrl = `/holes/wii-golf/wii-golf-${hole.number}.png`
+
+  // For sub picker, paths start at the ball's current position (or fork-point estimate as fallback)
+  let startFrac: [number,number] = branch.teeFrac
+  if (type === 'sub') {
+    if (ballPosFrac) startFrac = ballPosFrac
+    else if (branch.midFork && teeRouteId) {
+      const teeR = branch.teeRoutes.find(r => r.id === teeRouteId)
+      if (teeR) {
+        const poly: [number,number][] = [branch.teeFrac, ...teeR.waypointFracs, branch.greenFrac]
+        const mid = (branch.midFork.triggerYardRange[0] + branch.midFork.triggerYardRange[1]) / 2
+        startFrac = lerpAlongPolyline(poly, mid / hole.distance)
+      }
+    }
+  }
+
+  const pathPolyFor = (r: typeof a) => {
+    const from = type === 'tee' ? branch.teeFrac : startFrac
+    const list: [number,number][] = [from, ...r.waypointFracs, branch.greenFrac]
+    return list.map(([x,y]) => `${x*1000},${y*1000}`).join(' ')
+  }
+
+  return (
+    <div style={{position:'absolute', inset:0, zIndex:50, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
+      <div style={{background:'#0a0f1e', borderRadius:18, padding:18, maxWidth:460, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)'}}>
+        <div style={{fontSize:17, fontWeight:900, color:'white', textAlign:'center', marginBottom:4}}>
+          {type === 'tee' ? '🛣️ Pick your route' : '🌿 Fork in the road!'}
+        </div>
+        <div style={{fontSize:11, color:'rgba(255,255,255,0.55)', textAlign:'center', marginBottom:12}}>
+          {type === 'tee' ? `Hole ${hole.number} — choose a line from the tee` : 'You landed on the trigger island — pick your way'}
+        </div>
+        <div style={{position:'relative', width:'100%', maxWidth:300, margin:'0 auto', aspectRatio:'962/1634', background:'#000', borderRadius:10, overflow:'hidden'}}>
+          <img src={imageUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} draggable={false} />
+          <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none'}}>
+            <polyline points={pathPolyFor(a)} stroke="#60a5fa" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
+            <polyline points={pathPolyFor(b)} stroke="#f97316" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
+            {type === 'sub' && startFrac && (
+              <circle cx={startFrac[0]*1000} cy={startFrac[1]*1000} r={18} fill="#fbbf24" stroke="white" strokeWidth={4}/>
+            )}
+          </svg>
+        </div>
+        <div style={{display:'flex', gap:10, marginTop:14}}>
+          <button onClick={()=>onPick(a.id)} style={{flex:1, background:'#60a5fa', color:'#0a0f1e', border:'none', borderRadius:10, padding:'14px 0', fontSize:14, fontWeight:900, fontFamily:'inherit', cursor:'pointer'}}>{a.label}</button>
+          <button onClick={()=>onPick(b.id)} style={{flex:1, background:'#f97316', color:'#0a0f1e', border:'none', borderRadius:10, padding:'14px 0', fontSize:14, fontWeight:900, fontFamily:'inherit', cursor:'pointer'}}>{b.label}</button>
+        </div>
+      </div>
     </div>
   )
 }
