@@ -2446,7 +2446,7 @@ export default function FootballGolf(){
             const br = WII_GOLF_BRANCHES[currentHole.number]
             const teeR = branchChoice.teeRoute ? br.teeRoutes.find(r => r.id === branchChoice.teeRoute) : null
             const ballFrac: [number,number] | null = (branchPicker === 'sub' && teeR)
-              ? lerpAlongPolyline([br.teeFrac, ...teeR.waypointFracs, br.greenFrac], (currentHole.distance - remaining) / currentHole.distance)
+              ? bezierFracAt((currentHole.distance - remaining) / currentHole.distance, [br.teeFrac, ...teeR.waypointFracs, br.greenFrac])
               : null
             return (
               <BranchPickerModal
@@ -2836,16 +2836,36 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const bDouble = imageUrl ? 22 : 13
   const ballR   = imageUrl ? 3.5 : 3.2
 
+  // Measure parent and compute inner photo size so rounded corners follow the actual image edges
+  const outerRef = useRef<HTMLDivElement>(null)
+  const [innerSize, setInnerSize] = useState<{w:number;h:number}|null>(null)
+  useEffect(() => {
+    if (!outerRef.current || !imageUrl || !realYScale) { setInnerSize(null); return }
+    const el = outerRef.current
+    const aspectWH = 100 / realYScale
+    const update = () => {
+      const w = el.clientWidth, h = el.clientHeight
+      if (w === 0 || h === 0) return
+      const widthIfHeightBound = h * aspectWH
+      if (widthIfHeightBound <= w) setInnerSize({ w: Math.round(widthIfHeightBound), h: Math.round(h) })
+      else setInnerSize({ w: Math.round(w), h: Math.round(w / aspectWH) })
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [imageUrl, realYScale])
+
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
+    <div ref={outerRef} style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',position:'relative'}}>
       <div style={{
         position:'relative', display:'flex', flexDirection:'column',
         borderRadius: 36, overflow:'hidden',
         background: imageUrl?'#0a0f1e':undefined,
-        ...(imageUrl && realYScale ? {
-          aspectRatio: `100 / ${realYScale}`,
-          height:'100%', maxWidth:'100%', maxHeight:'100%',
-        } : { flex:1, width:'100%' }),
+        ...(imageUrl ? (innerSize
+          ? { width: innerSize.w, height: innerSize.h, flex:'0 0 auto' }
+          : { width:'100%', height:'100%' })
+          : { flex:1, width:'100%' }),
       }}>
 
       {/* Real course photo */}
@@ -3324,8 +3344,8 @@ const WII_GOLF_BRANCHES: Record<number, BranchSpec> = {
   9: {
     teeFrac:[0.272,0.875], greenFrac:[0.486,0.106],
     teeRoutes:[
-      {id:'A',label:'Route A',waypointFracs:[[0.878,0.557]],hazards:[{start:111,end:174},{start:291,end:425}],bunkers:[]},
-      {id:'B',label:'Route B',waypointFracs:[[0.345,0.356]],hazards:[{start:111,end:223},{start:328,end:391}],bunkers:[{start:228,end:243}]},
+      {id:'A',label:'Aggressive',waypointFracs:[[0.878,0.557]],hazards:[{start:111,end:174},{start:291,end:425}],bunkers:[]},
+      {id:'B',label:'Safe',waypointFracs:[[0.345,0.356]],hazards:[{start:111,end:223},{start:328,end:391}],bunkers:[{start:228,end:243}]},
     ],
     midFork:{triggerYardRange:[189,279],subRoutes:[
       {id:'L',label:'Sub L',waypointFracs:[],hazards:[{start:284,end:418}],bunkers:[]},
@@ -4157,10 +4177,50 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
     }
   }
 
-  const pathPolyFor = (r: typeof a) => {
+  const ctrlPtsFor = (r: typeof a): [number,number][] => {
     const from = type === 'tee' ? branch.teeFrac : startFrac
-    const ctrl: [number,number][] = [from, ...r.waypointFracs, branch.greenFrac]
-    return sampleCurveFracs(ctrl, 80).map(([x,y]) => `${x*1000},${y*1000}`).join(' ')
+    return [from, ...r.waypointFracs, branch.greenFrac]
+  }
+  const pathPolyFor = (r: typeof a) =>
+    sampleCurveFracs(ctrlPtsFor(r), 80).map(([x,y]) => `${x*1000},${y*1000}`).join(' ')
+
+  // Hazard/bunker pill rendering: each pill sits at the mid of the hazard along its route's bezier
+  const routeStartYards = type === 'tee'
+    ? 0
+    : (branch.midFork ? Math.round((branch.midFork.triggerYardRange[0] + branch.midFork.triggerYardRange[1]) / 2) : 0)
+  const routeLengthYards = hole.distance - routeStartYards
+  const yardsToT = (yards: number) => routeLengthYards > 0 ? Math.max(0, Math.min(1, (yards - routeStartYards) / routeLengthYards)) : 0
+
+  const renderRoutePills = (r: typeof a, color: string) => {
+    const ctrl = ctrlPtsFor(r)
+    const pills: React.ReactElement[] = []
+    r.hazards.forEach((h, i) => {
+      const t = yardsToT((h.start + h.end) / 2)
+      if (t <= 0 || t >= 1) return
+      const [x, y] = bezierFracAt(t, ctrl)
+      const label = `${h.start}–${h.end}`
+      const w = 140, hgt = 38
+      pills.push(
+        <g key={`h${i}`}>
+          <rect x={x*1000 - w/2} y={y*1000 - hgt/2} width={w} height={hgt} rx={hgt/2} fill="rgba(23,50,110,0.95)" stroke={color} strokeWidth={3}/>
+          <text x={x*1000} y={y*1000 + 8} fontSize={22} fill="#bfdbfe" textAnchor="middle" fontWeight="bold">🌊 {label}</text>
+        </g>
+      )
+    })
+    r.bunkers.forEach((b, i) => {
+      const t = yardsToT((b.start + b.end) / 2)
+      if (t <= 0 || t >= 1) return
+      const [x, y] = bezierFracAt(t, ctrl)
+      const label = `${b.start}–${b.end}`
+      const w = 140, hgt = 38
+      pills.push(
+        <g key={`b${i}`}>
+          <rect x={x*1000 - w/2} y={y*1000 - hgt/2} width={w} height={hgt} rx={hgt/2} fill="rgba(210,170,80,0.95)" stroke={color} strokeWidth={3}/>
+          <text x={x*1000} y={y*1000 + 8} fontSize={22} fill="#3a2000" textAnchor="middle" fontWeight="bold">🏖️ {label}</text>
+        </g>
+      )
+    })
+    return pills
   }
 
   return (
@@ -4193,6 +4253,8 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
           <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none'}}>
             <polyline points={pathPolyFor(a)} stroke="#60a5fa" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
             <polyline points={pathPolyFor(b)} stroke="#f97316" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
+            {renderRoutePills(a, '#60a5fa')}
+            {renderRoutePills(b, '#f97316')}
             {type === 'sub' && startFrac && (
               <circle cx={startFrac[0]*1000} cy={startFrac[1]*1000} r={18} fill="#fbbf24" stroke="white" strokeWidth={4}/>
             )}
