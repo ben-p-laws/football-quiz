@@ -430,7 +430,9 @@ type Tee = 'Blue'|'White'|'Red'
 type Pt  = {x:number; y:number}
 // HolePath: 2pts = straight line, 3pts = quadratic bezier, 4pts = cubic bezier
 // Tee is always pts[0] (y≈148), green is always pts[last] (y≈17)
-type HolePath = {pts: Pt[]}
+// Optional postFork: piecewise second segment, used when a hole's path branches mid-round
+//   (e.g. Wii Golf hole 9 sub-route picks). pts covers yards [0, atYards], postFork.pts covers [atYards, total]
+type HolePath = {pts: Pt[]; postFork?: {atYards: number; pts: Pt[]}}
 
 function bezierAt(t:number, pts:Pt[]): Pt {
   const u=1-t
@@ -452,13 +454,37 @@ function bezierTangent(t:number, pts:Pt[]): Pt {
   }
 }
 
-function pathToD(pts:Pt[]): string {
+function bezierSegmentD(pts:Pt[]): string {
   if(pts.length===2) return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`
   if(pts.length===3) return `M ${pts[0].x},${pts[0].y} Q ${pts[1].x},${pts[1].y} ${pts[2].x},${pts[2].y}`
   return `M ${pts[0].x},${pts[0].y} C ${pts[1].x},${pts[1].y} ${pts[2].x},${pts[2].y} ${pts[3].x},${pts[3].y}`
 }
 
+function pathToD(pts:Pt[], postFork?: HolePath['postFork']): string {
+  const d0 = bezierSegmentD(pts)
+  if (!postFork) return d0
+  return d0 + ' ' + bezierSegmentD(postFork.pts)
+}
+
 function yardToSVG(yards:number, total:number, path:HolePath): Pt {
+  if (path.postFork) {
+    const {atYards, pts: postPts} = path.postFork
+    if (yards <= atYards) {
+      const t = atYards > 0 ? Math.max(0, Math.min(1, yards / atYards)) : 0
+      return bezierAt(t, path.pts)
+    } else if (yards <= total) {
+      const span = Math.max(1, total - atYards)
+      const t = Math.max(0, Math.min(1, (yards - atYards) / span))
+      return bezierAt(t, postPts)
+    }
+    // Past the pin — extrapolate along post-fork end tangent
+    const start = postPts[0], end = postPts[postPts.length-1]
+    const svgSpan = Math.sqrt((end.x-start.x)**2+(end.y-start.y)**2)||131
+    const tan = bezierTangent(1, postPts)
+    const tanLen = Math.sqrt(tan.x*tan.x+tan.y*tan.y)||1
+    const extra = (yards - total) / Math.max(1, total - atYards) * svgSpan
+    return {x: end.x + tan.x/tanLen * extra, y: end.y + tan.y/tanLen * extra}
+  }
   if(yards <= total) return bezierAt(Math.max(0, yards/total), path.pts)
   // extrapolate past the hole along the end tangent
   const start = path.pts[0], end = path.pts[path.pts.length-1]
@@ -470,12 +496,21 @@ function yardToSVG(yards:number, total:number, path:HolePath): Pt {
 }
 
 function holeXY(path:HolePath): Pt {
-  return bezierAt(1, path.pts)
+  return bezierAt(1, path.postFork ? path.postFork.pts : path.pts)
 }
 
 function fairwayNormal(yards:number, total:number, path:HolePath): {lx:number;ly:number;rx:number;ry:number} {
-  const t = Math.max(0.01, Math.min(0.99, yards/total))
-  const tang = bezierTangent(t, path.pts)
+  // For piecewise paths, normal uses the active segment
+  let activePts = path.pts, activeT: number
+  if (path.postFork) {
+    const {atYards, pts: postPts} = path.postFork
+    if (yards > atYards) { activePts = postPts; activeT = Math.max(0.01, Math.min(0.99, (yards - atYards) / Math.max(1, total - atYards))) }
+    else activeT = atYards > 0 ? Math.max(0.01, Math.min(0.99, yards / atYards)) : 0.01
+  } else {
+    activeT = Math.max(0.01, Math.min(0.99, yards/total))
+  }
+  const t = activeT
+  const tang = bezierTangent(t, activePts)
   const len = Math.sqrt(tang.x*tang.x+tang.y*tang.y)
   const nx=-tang.y/len, ny=tang.x/len
   return {lx:nx, ly:ny, rx:-nx, ry:-ny}
@@ -1141,6 +1176,19 @@ export default function FootballGolf(){
   const wiiActiveLookup = (courseMode==='real' && selectedCourse==='wii-golf' && currentHole)
     ? { ...WII_GOLF_POSITIONS, [currentHole.number]: getWiiEffectiveGeometry(currentHole.number, branchChoice) ?? WII_GOLF_POSITIONS[currentHole.number] }
     : WII_GOLF_POSITIONS
+
+  // For sub-picked branched holes, compute the post-fork SVG segment to feed to CourseView
+  const wiiRealPostFork = (() => {
+    if (courseMode !== 'real' || selectedCourse !== 'wii-golf' || !currentHole) return undefined
+    const data = getWiiPostForkFracs(currentHole.number, branchChoice, currentHole.distance)
+    if (!data) return undefined
+    const ys = WII_GOLF_YSCALE[currentHole.number] ?? 260
+    return {
+      atYards: data.atYards,
+      fork: fracToSVG(data.forkFrac, ys),
+      waypoints: data.waypointFracs.map(f => fracToSVG(f, ys)),
+    }
+  })()
 
   // Reset + open tee picker when entering a branched hole
   useEffect(() => {
@@ -2482,6 +2530,7 @@ export default function FootballGolf(){
                 realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
                 realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
                 realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
+                realPostFork={selectedCourse==='wii-golf' && !dailyMode ? wiiRealPostFork : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining) : undefined}
                 myBallColor={h2hStep==='playing'?(h2hIsHost.current?'#3b82f6':'#fbbf24'):undefined}
                 oppBallColor={h2hStep==='playing'?(h2hIsHost.current?'#fbbf24':'#3b82f6'):undefined}
@@ -2802,17 +2851,22 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false}:{
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,realPostFork,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false}:{
   hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean
-  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
+  realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; realPostFork?:{atYards:number; fork:{x:number;y:number}; waypoints?:{x:number;y:number}[]}; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Real course: build path directly from calibrated tee → waypoints → green
   // Generated course: use PEBBLE_BEACH path as-is
-  const effectivePath = useMemo(()=>{
+  const effectivePath = useMemo<HolePath>(()=>{
     if(!realTeePos||!realGreenPos) return hole.path
+    if (realPostFork) {
+      const prePts = [realTeePos, ...(realWaypoints ?? []), realPostFork.fork]
+      const postPts = [realPostFork.fork, ...(realPostFork.waypoints ?? []), realGreenPos]
+      return {pts: prePts, postFork: {atYards: realPostFork.atYards, pts: postPts}}
+    }
     const pts = [realTeePos, ...(realWaypoints ?? []), realGreenPos]
     return {pts}
-  },[hole.path,realTeePos,realGreenPos,realWaypoints])
+  },[hole.path,realTeePos,realGreenPos,realWaypoints,realPostFork])
 
   // displayBallPos is yards-from-tee; past-pin if > hole.distance
   const ballTeePosForLabels = Math.min(displayBallPos, hole.distance)
@@ -2826,7 +2880,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const teePos  = yardToSVG(0, hole.distance, effectivePath)
   const holePos = holeXY(effectivePath)
   const endAngle = pathEndAngle(effectivePath)
-  const fairwayD = pathToD(effectivePath.pts)
+  const fairwayD = pathToD(effectivePath.pts, effectivePath.postFork)
 
   const rot = imageRotation ?? 0
   const labelFs = imageUrl ? 8 : 4.5
@@ -3312,12 +3366,22 @@ function getWiiEffectiveGeometry(holeNum: number, choice: BranchChoice): { teeFr
   if (!branch || !choice.teeRoute) return WII_GOLF_POSITIONS[holeNum]
   const tee = branch.teeRoutes.find(r => r.id === choice.teeRoute)
   if (!tee) return WII_GOLF_POSITIONS[holeNum]
-  let waypointFracs: [number,number][] = [...tee.waypointFracs]
-  if (choice.subRoute && branch.midFork) {
-    const sub = branch.midFork.subRoutes.find(r => r.id === choice.subRoute)
-    if (sub) waypointFracs = [...tee.waypointFracs, ...sub.waypointFracs]
-  }
-  return { teeFrac: branch.teeFrac, greenFrac: branch.greenFrac, waypointFracs }
+  // NOTE: sub-route waypoints are NOT merged here — they're handled piecewise via a postFork path segment
+  return { teeFrac: branch.teeFrac, greenFrac: branch.greenFrac, waypointFracs: tee.waypointFracs }
+}
+
+// When sub-route is picked, return the post-fork segment data (in image fraction coords).
+// totalYards is the full hole distance (e.g. 455). Fork position is bezier point at atYards/totalYards along the tee route.
+function getWiiPostForkFracs(holeNum: number, choice: BranchChoice, totalYards: number): { atYards: number; forkFrac: [number,number]; waypointFracs: [number,number][] } | undefined {
+  const branch = WII_GOLF_BRANCHES[holeNum]
+  if (!branch?.midFork || !choice.teeRoute || !choice.subRoute) return undefined
+  const tee = branch.teeRoutes.find(r => r.id === choice.teeRoute)
+  const sub = branch.midFork.subRoutes.find(r => r.id === choice.subRoute)
+  if (!tee || !sub) return undefined
+  const atYards = wiiSubStartYards(branch)
+  const ctrl: [number,number][] = [branch.teeFrac, ...tee.waypointFracs, branch.greenFrac]
+  const forkFrac = bezierFracAt(atYards / Math.max(1, totalYards), ctrl)
+  return { atYards, forkFrac, waypointFracs: sub.waypointFracs }
 }
 
 function getWiiEffectiveHazards(holeNum: number, choice: BranchChoice): { hazards: {start:number;end:number}[]; bunkers: {start:number;end:number}[] } {
@@ -3348,8 +3412,8 @@ const WII_GOLF_BRANCHES: Record<number, BranchSpec> = {
       {id:'B',label:'Safe',waypointFracs:[[0.345,0.356]],hazards:[{start:111,end:223},{start:328,end:391}],bunkers:[{start:228,end:243}]},
     ],
     midFork:{triggerYardRange:[189,279],subRoutes:[
-      {id:'L',label:'Sub L',waypointFracs:[],hazards:[{start:284,end:418}],bunkers:[]},
-      {id:'R',label:'Sub R',waypointFracs:[[0.964,0.359],[0.808,0.157]],hazards:[{start:281,end:309},{start:382,end:423}],bunkers:[]},
+      {id:'L',label:'Aggressive',waypointFracs:[],hazards:[{start:284,end:418}],bunkers:[]},
+      {id:'R',label:'Safe',waypointFracs:[[0.964,0.359],[0.808,0.157]],hazards:[{start:281,end:309},{start:382,end:423}],bunkers:[]},
     ]},
   },
 }
@@ -4225,7 +4289,7 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
 
   return (
     <div style={{position:'absolute', inset:0, zIndex:50, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16}}>
-      <div style={{background:'#0a0f1e', borderRadius:18, padding:16, maxWidth:380, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:10, maxHeight:'95vh', overflowY:'auto'}}>
+      <div style={{background:'#0a0f1e', borderRadius:18, padding:16, maxWidth:520, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:10, maxHeight:'95vh', overflowY:'auto'}}>
         <div>
           <div style={{fontSize:16, fontWeight:900, color:'white', textAlign:'center'}}>
             {type === 'tee' ? '🛣️ Pick your route' : '🌿 Fork in the road!'}
@@ -4248,7 +4312,7 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
           </div>
         )}
 
-        <div style={{position:'relative', width:'100%', maxWidth:260, margin:'0 auto', aspectRatio:'962/1634', background:'#000', borderRadius:14, overflow:'hidden'}}>
+        <div style={{position:'relative', width:'100%', maxWidth:360, margin:'0 auto', aspectRatio:'962/1634', background:'#000', borderRadius:14, overflow:'hidden'}}>
           <img src={imageUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} draggable={false} />
           <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none'}}>
             <polyline points={pathPolyFor(a)} stroke="#60a5fa" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
