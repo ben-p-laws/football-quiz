@@ -2441,24 +2441,6 @@ export default function FootballGolf(){
           </div>
         )}
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)',position:'relative'}}>
-          {/* Branch picker modal — forced overlay for routed holes */}
-          {branchPicker && currentHole && WII_GOLF_BRANCHES[currentHole.number] && (() => {
-            const br = WII_GOLF_BRANCHES[currentHole.number]
-            const teeR = branchChoice.teeRoute ? br.teeRoutes.find(r => r.id === branchChoice.teeRoute) : null
-            const ballFrac: [number,number] | null = (branchPicker === 'sub' && teeR)
-              ? lerpAlongPolyline([br.teeFrac, ...teeR.waypointFracs, br.greenFrac], (currentHole.distance - remaining) / currentHole.distance)
-              : null
-            return (
-              <BranchPickerModal
-                hole={currentHole}
-                type={branchPicker}
-                branch={br}
-                teeRouteId={branchChoice.teeRoute}
-                ballPosFrac={ballFrac}
-                onPick={branchPicker === 'tee' ? pickTeeRoute : pickSubRoute}
-              />
-            )
-          })()}
           {/* Shot animation overlay — expands CourseView across full game row */}
           {shotOverlay && currentHole && (
             <div style={{position:'absolute',inset:0,zIndex:10,background:'#0a0f1e',display:'flex',flexDirection:'column'}}>
@@ -2683,7 +2665,27 @@ export default function FootballGolf(){
           </div>
 
           {/* Right panel — course */}
-          <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
+          <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px',position:'relative'}}>
+            {/* Branch picker modal — forced overlay over course panel only (question stays visible on the left) */}
+            {branchPicker && currentHole && WII_GOLF_BRANCHES[currentHole.number] && (() => {
+              const br = WII_GOLF_BRANCHES[currentHole.number]
+              const teeR = branchChoice.teeRoute ? br.teeRoutes.find(r => r.id === branchChoice.teeRoute) : null
+              const ballFrac: [number,number] | null = (branchPicker === 'sub' && teeR)
+                ? lerpAlongPolyline([br.teeFrac, ...teeR.waypointFracs, br.greenFrac], (currentHole.distance - remaining) / currentHole.distance)
+                : null
+              return (
+                <BranchPickerModal
+                  hole={currentHole}
+                  type={branchPicker}
+                  branch={br}
+                  teeRouteId={branchChoice.teeRoute}
+                  ballPosFrac={ballFrac}
+                  questionStat={question?.statLabel}
+                  questionFilter={question ? makeFilterLabel(question) : undefined}
+                  onPick={branchPicker === 'tee' ? pickTeeRoute : pickSubRoute}
+                />
+              )
+            })()}
             <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
               <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
               <div style={{height:16}}/>
@@ -2697,7 +2699,7 @@ export default function FootballGolf(){
                 arcOffset={arcOffset}
                 isAnimating={isAnimating}
                 strokes={strokes}
-                maxRangePos={!pastPin && club==='driver' && remaining > clubMax ? ballPos + clubMax : undefined}
+                maxRangePos={!pastPin && club==='driver' && remaining > clubMax && !(selectedCourse==='wii-golf' && currentHole && WII_GOLF_BRANCHES[currentHole.number]) ? ballPos + clubMax : undefined}
                 imageUrl={courseMode==='real' && !dailyMode ? (
                   selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` :
                   selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
@@ -2835,7 +2837,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
   const ballR   = imageUrl ? 3.5 : 3.2
 
   return (
-    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:28,overflow:'hidden',position:'relative',background:imageUrl?'#0a0f1e':undefined}}>
+    <div style={{userSelect:'none',height:'100%',display:'flex',flexDirection:'column',borderRadius:36,overflow:'hidden',position:'relative',background:imageUrl?'#0a0f1e':undefined}}>
 
       {/* Real course photo */}
       {imageUrl && (
@@ -3039,7 +3041,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           const rangeText = distToNear > 0 ? `${distToNear}–${distToFar}` : `–${distToFar}`
           const fs = labelFs * 0.85
           const pw = imageUrl ? 40 : 20; const ph = imageUrl ? 10 : 5
-          const px = mid.x - pw - 6; const py = mid.y - ph/2
+          const px = mid.x > 50 ? mid.x - pw - 6 : mid.x + 6; const py = mid.y - ph/2
           return (
             <g key={hi}>
               <rect x={px} y={py} width={pw} height={ph} rx={ph/2} fill="rgba(23,50,110,0.88)" stroke="#60a5fa" strokeWidth={0.9}/>
@@ -4081,6 +4083,26 @@ function DoneScreen({holes,scores,numHoles,onRestart}:{holes:Hole[];scores:numbe
   )
 }
 
+function bezierFracAt(t: number, pts: [number,number][]): [number,number] {
+  const u = 1 - t
+  if (pts.length === 2) return [u*pts[0][0]+t*pts[1][0], u*pts[0][1]+t*pts[1][1]]
+  if (pts.length === 3) return [u*u*pts[0][0]+2*u*t*pts[1][0]+t*t*pts[2][0], u*u*pts[0][1]+2*u*t*pts[1][1]+t*t*pts[2][1]]
+  if (pts.length >= 4) {
+    const [p0,p1,p2,p3] = pts
+    return [
+      u*u*u*p0[0]+3*u*u*t*p1[0]+3*u*t*t*p2[0]+t*t*t*p3[0],
+      u*u*u*p0[1]+3*u*u*t*p1[1]+3*u*t*t*p2[1]+t*t*t*p3[1],
+    ]
+  }
+  return pts[0] ?? [0.5,0.5]
+}
+
+function sampleCurveFracs(pts: [number,number][], n = 80): [number,number][] {
+  if (pts.length <= 4) return Array.from({length: n+1}, (_, i) => bezierFracAt(i/n, pts))
+  // Fall back to polyline for >4 control points
+  return pts
+}
+
 function lerpAlongPolyline(pts: [number,number][], t: number): [number,number] {
   if (pts.length < 2) return pts[0] ?? [0.5, 0.5]
   const segs: number[] = []
@@ -4102,8 +4124,9 @@ function lerpAlongPolyline(pts: [number,number][], t: number): [number,number] {
   return pts[pts.length - 1]
 }
 
-function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, onPick}:{
+function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questionStat, questionFilter, onPick}:{
   hole: Hole; type: 'tee'|'sub'; branch: BranchSpec; teeRouteId?: string; ballPosFrac?: [number,number] | null;
+  questionStat?: string; questionFilter?: string
   onPick: (id: string) => void
 }) {
   const routes = type === 'tee' ? branch.teeRoutes : (branch.midFork?.subRoutes ?? [])
@@ -4111,7 +4134,6 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, onPick}
   const [a, b] = [routes[0], routes[1]]
   const imageUrl = `/holes/wii-golf/wii-golf-${hole.number}.png`
 
-  // For sub picker, paths start at the ball's current position (or fork-point estimate as fallback)
   let startFrac: [number,number] = branch.teeFrac
   if (type === 'sub') {
     if (ballPosFrac) startFrac = ballPosFrac
@@ -4127,20 +4149,36 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, onPick}
 
   const pathPolyFor = (r: typeof a) => {
     const from = type === 'tee' ? branch.teeFrac : startFrac
-    const list: [number,number][] = [from, ...r.waypointFracs, branch.greenFrac]
-    return list.map(([x,y]) => `${x*1000},${y*1000}`).join(' ')
+    const ctrl: [number,number][] = [from, ...r.waypointFracs, branch.greenFrac]
+    return sampleCurveFracs(ctrl, 80).map(([x,y]) => `${x*1000},${y*1000}`).join(' ')
   }
 
   return (
-    <div style={{position:'absolute', inset:0, zIndex:50, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:20}}>
-      <div style={{background:'#0a0f1e', borderRadius:18, padding:18, maxWidth:460, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)'}}>
-        <div style={{fontSize:17, fontWeight:900, color:'white', textAlign:'center', marginBottom:4}}>
-          {type === 'tee' ? '🛣️ Pick your route' : '🌿 Fork in the road!'}
+    <div style={{position:'absolute', inset:0, zIndex:50, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16}}>
+      <div style={{background:'#0a0f1e', borderRadius:18, padding:16, maxWidth:380, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:10, maxHeight:'95vh', overflowY:'auto'}}>
+        <div>
+          <div style={{fontSize:16, fontWeight:900, color:'white', textAlign:'center'}}>
+            {type === 'tee' ? '🛣️ Pick your route' : '🌿 Fork in the road!'}
+          </div>
+          <div style={{fontSize:10, color:'rgba(255,255,255,0.55)', textAlign:'center', marginTop:2}}>
+            {type === 'tee' ? `Hole ${hole.number} — choose a line from the tee` : 'Pick your way from this island'}
+          </div>
         </div>
-        <div style={{fontSize:11, color:'rgba(255,255,255,0.55)', textAlign:'center', marginBottom:12}}>
-          {type === 'tee' ? `Hole ${hole.number} — choose a line from the tee` : 'You landed on the trigger island — pick your way'}
-        </div>
-        <div style={{position:'relative', width:'100%', maxWidth:300, margin:'0 auto', aspectRatio:'962/1634', background:'#000', borderRadius:10, overflow:'hidden'}}>
+
+        {(questionStat || questionFilter) && (
+          <div style={{display:'flex', gap:6}}>
+            <div style={{flex:1, background:'#1e2d4a', border:'1px solid rgba(255,255,255,0.12)', borderRadius:8, padding:'5px 6px', textAlign:'center'}}>
+              <div style={{fontSize:8, fontWeight:700, color:'#6b7fa3', textTransform:'uppercase', letterSpacing:'0.06em'}}>Next stat</div>
+              <div style={{fontSize:11, fontWeight:800, color:'white', lineHeight:1.2, marginTop:2}}>{questionStat ?? '—'}</div>
+            </div>
+            <div style={{flex:1, background:'#1e2d4a', border:'1px solid rgba(255,255,255,0.12)', borderRadius:8, padding:'5px 6px', textAlign:'center'}}>
+              <div style={{fontSize:8, fontWeight:700, color:'#6b7fa3', textTransform:'uppercase', letterSpacing:'0.06em'}}>Filter</div>
+              <div style={{fontSize:11, fontWeight:600, color:'white', lineHeight:1.2, marginTop:2}}>{questionFilter ?? '—'}</div>
+            </div>
+          </div>
+        )}
+
+        <div style={{position:'relative', width:'100%', maxWidth:260, margin:'0 auto', aspectRatio:'962/1634', background:'#000', borderRadius:14, overflow:'hidden'}}>
           <img src={imageUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} draggable={false} />
           <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none'}}>
             <polyline points={pathPolyFor(a)} stroke="#60a5fa" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
@@ -4150,9 +4188,9 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, onPick}
             )}
           </svg>
         </div>
-        <div style={{display:'flex', gap:10, marginTop:14}}>
-          <button onClick={()=>onPick(a.id)} style={{flex:1, background:'#60a5fa', color:'#0a0f1e', border:'none', borderRadius:10, padding:'14px 0', fontSize:14, fontWeight:900, fontFamily:'inherit', cursor:'pointer'}}>{a.label}</button>
-          <button onClick={()=>onPick(b.id)} style={{flex:1, background:'#f97316', color:'#0a0f1e', border:'none', borderRadius:10, padding:'14px 0', fontSize:14, fontWeight:900, fontFamily:'inherit', cursor:'pointer'}}>{b.label}</button>
+        <div style={{display:'flex', gap:10}}>
+          <button onClick={()=>onPick(a.id)} style={{flex:1, background:'#60a5fa', color:'#0a0f1e', border:'none', borderRadius:10, padding:'13px 0', fontSize:14, fontWeight:900, fontFamily:'inherit', cursor:'pointer'}}>{a.label}</button>
+          <button onClick={()=>onPick(b.id)} style={{flex:1, background:'#f97316', color:'#0a0f1e', border:'none', borderRadius:10, padding:'13px 0', fontSize:14, fontWeight:900, fontFamily:'inherit', cursor:'pointer'}}>{b.label}</button>
         </div>
       </div>
     </div>
