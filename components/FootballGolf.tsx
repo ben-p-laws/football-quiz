@@ -4312,8 +4312,10 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
           </div>
         )}
 
-        <div style={{position:'relative', width:'100%', maxWidth:360, margin:'0 auto', aspectRatio:'962/1634', background:'#000', borderRadius:14, overflow:'hidden'}}>
-          <img src={imageUrl} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}} draggable={false} />
+        <div style={{position:'relative', width:'100%', maxWidth:360, margin:'0 auto', background:'#000', borderRadius:14, overflow:'hidden'}}>
+          {/* Aspect-ratio spacer: padding-top % is relative to width, so this forces 962:1634 portrait */}
+          <div style={{paddingTop:`${(1634/962*100).toFixed(3)}%`}}/>
+          <img src={imageUrl} alt="" style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain'}} draggable={false} />
           <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style={{position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none'}}>
             <polyline points={pathPolyFor(a)} stroke="#60a5fa" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
             <polyline points={pathPolyFor(b)} stroke="#f97316" strokeWidth={14} fill="none" strokeDasharray="20 12" strokeLinecap="round" opacity={0.95}/>
