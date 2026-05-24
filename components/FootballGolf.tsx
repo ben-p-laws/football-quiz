@@ -1250,8 +1250,11 @@ export default function FootballGolf(){
     if (branchPicker) return
     if (remaining <= 0 || remaining >= currentHole.distance) return
     const ballPos = currentHole.distance - remaining
-    const [s, e] = branch.midFork.triggerYardRange
-    if (ballPos >= s && ballPos <= e) setBranchPicker('sub')
+    const [s, ] = branch.midFork.triggerYardRange
+    // Fire as long as the ball is past the trigger start and there's still meaningful distance
+    // left to play (>= 60 yds) — more forgiving than the strict [start, end] band so a long
+    // tee shot that overshoots the trigger island still gets the sub-route choice.
+    if (ballPos >= s && ballPos <= currentHole.distance - 60) setBranchPicker('sub')
   }, [remaining, currentHole, branchChoice, branchPicker])
 
   const pickTeeRoute = (routeId: string) => {
@@ -2801,6 +2804,7 @@ export default function FootballGolf(){
                 realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
                 realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
                 realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
+                realPostFork={selectedCourse==='wii-golf' && !dailyMode ? wiiRealPostFork : undefined}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
@@ -4357,8 +4361,8 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
   }
 
   return (
-    <div style={{position:'absolute', inset:0, zIndex:50, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16}}>
-      <div style={{background:'#0a0f1e', borderRadius:18, padding:14, maxWidth:440, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:8, maxHeight:'92vh', overflowY:'auto'}}>
+    <div style={{position:'absolute', inset:0, zIndex:50, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(8px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'12px 16px', overflowY:'auto'}}>
+      <div style={{background:'#0a0f1e', borderRadius:18, padding:14, maxWidth:440, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:8}}>
         <div>
           <div style={{fontSize:16, fontWeight:900, color:'white', textAlign:'center'}}>
             {type === 'tee' ? '🛣️ Pick your route' : '🌿 Fork in the road!'}
