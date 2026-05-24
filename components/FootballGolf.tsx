@@ -463,6 +463,11 @@ function bezierSegmentD(pts:Pt[]): string {
 // Catmull-Rom interpolation that PASSES THROUGH every control point (unlike bezier where
 // interior points are pull-toward control points). Used for branched holes where the user
 // expects the path to visit each calibrated waypoint exactly.
+// Tension factor (0..1): scales how strongly the curve sweeps past each waypoint.
+// 1 = standard Catmull-Rom (can overshoot when waypoints are near edges or unevenly spaced).
+// 0.5 = tighter curve, less overshoot, still passes through every waypoint.
+const CR_TENSION = 0.5
+
 function catmullRomAt(t:number, pts:Pt[]): Pt {
   if (pts.length < 2) return pts[0] ?? {x:0, y:0}
   if (pts.length === 2) return {x:(1-t)*pts[0].x+t*pts[1].x, y:(1-t)*pts[0].y+t*pts[1].y}
@@ -470,10 +475,13 @@ function catmullRomAt(t:number, pts:Pt[]): Pt {
   let seg = Math.floor(t * segs); if (seg >= segs) seg = segs - 1; if (seg < 0) seg = 0
   const localT = t * segs - seg
   const p0 = pts[Math.max(0, seg-1)], p1 = pts[seg], p2 = pts[seg+1], p3 = pts[Math.min(pts.length-1, seg+2)]
-  const t2 = localT*localT, t3 = t2*localT
+  // Cubic Bezier with tension-scaled Catmull-Rom control points
+  const c1x = p1.x + CR_TENSION * (p2.x - p0.x) / 6, c1y = p1.y + CR_TENSION * (p2.y - p0.y) / 6
+  const c2x = p2.x - CR_TENSION * (p3.x - p1.x) / 6, c2y = p2.y - CR_TENSION * (p3.y - p1.y) / 6
+  const u = 1 - localT
   return {
-    x: 0.5 * (2*p1.x + (-p0.x+p2.x)*localT + (2*p0.x-5*p1.x+4*p2.x-p3.x)*t2 + (-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
-    y: 0.5 * (2*p1.y + (-p0.y+p2.y)*localT + (2*p0.y-5*p1.y+4*p2.y-p3.y)*t2 + (-p0.y+3*p1.y-3*p2.y+p3.y)*t3),
+    x: u*u*u*p1.x + 3*u*u*localT*c1x + 3*u*localT*localT*c2x + localT*localT*localT*p2.x,
+    y: u*u*u*p1.y + 3*u*u*localT*c1y + 3*u*localT*localT*c2y + localT*localT*localT*p2.y,
   }
 }
 
@@ -483,8 +491,8 @@ function catmullRomToD(pts:Pt[]): string {
   let d = `M ${pts[0].x},${pts[0].y}`
   for (let i = 0; i < pts.length - 1; i++) {
     const p0 = pts[Math.max(0, i-1)], p1 = pts[i], p2 = pts[i+1], p3 = pts[Math.min(pts.length-1, i+2)]
-    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6
-    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6
+    const c1x = p1.x + CR_TENSION * (p2.x - p0.x) / 6, c1y = p1.y + CR_TENSION * (p2.y - p0.y) / 6
+    const c2x = p2.x - CR_TENSION * (p3.x - p1.x) / 6, c2y = p2.y - CR_TENSION * (p3.y - p1.y) / 6
     d += ` C ${c1x},${c1y} ${c2x},${c2y} ${p2.x},${p2.y}`
   }
   return d
@@ -2984,7 +2992,19 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         {!imageUrl && <rect x={0} y={-10} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>}
         {!imageUrl && !hole.isIsland && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
         {/* Real course: faint path line so ball trajectory is visible */}
-        {imageUrl && <path d={fairwayD} stroke={effectivePath.postFork ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.25)"} strokeWidth={effectivePath.postFork ? 3.2 : 2} fill="none" strokeLinecap="round" strokeDasharray="4 4"/>}
+        {imageUrl && effectivePath.postFork && (() => {
+          // Draw the active sub-route segment (fork → green) with a bright cyan line so the new path is unmistakable.
+          // The pre-fork segment stays subtle since the player has already traveled that part.
+          const preD = bezierSegmentD(effectivePath.pts)
+          const postD = catmullRomToD(effectivePath.postFork.pts)
+          return (
+            <>
+              <path d={preD} stroke="rgba(255,255,255,0.3)" strokeWidth={2} fill="none" strokeLinecap="round" strokeDasharray="4 4"/>
+              <path d={postD} stroke="#22d3ee" strokeWidth={4} fill="none" strokeLinecap="round" strokeDasharray="6 4" opacity={0.92}/>
+            </>
+          )
+        })()}
+        {imageUrl && !effectivePath.postFork && <path d={fairwayD} stroke="rgba(255,255,255,0.25)" strokeWidth={2} fill="none" strokeLinecap="round" strokeDasharray="4 4"/>}
 {!imageUrl && !hole.isIsland && hole.bunkers.map((b,i)=>{
           const midYards = (b.start+b.end)/2
           const midPos   = yardToSVG(midYards,hole.distance,hole.path)
@@ -4338,7 +4358,7 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
 
   return (
     <div style={{position:'absolute', inset:0, zIndex:50, background:'rgba(0,0,0,0.88)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:16}}>
-      <div style={{background:'#0a0f1e', borderRadius:18, padding:16, maxWidth:520, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:10, maxHeight:'95vh', overflowY:'auto'}}>
+      <div style={{background:'#0a0f1e', borderRadius:18, padding:14, maxWidth:440, width:'100%', border:'2px solid #1e2d4a', boxShadow:'0 24px 48px rgba(0,0,0,0.5)', display:'flex', flexDirection:'column', gap:8, maxHeight:'92vh', overflowY:'auto'}}>
         <div>
           <div style={{fontSize:16, fontWeight:900, color:'white', textAlign:'center'}}>
             {type === 'tee' ? '🛣️ Pick your route' : '🌿 Fork in the road!'}
@@ -4361,7 +4381,7 @@ function BranchPickerModal({hole, type, branch, teeRouteId, ballPosFrac, questio
           </div>
         )}
 
-        <div style={{position:'relative', width:'100%', maxWidth:360, margin:'0 auto', background:'#000', borderRadius:14, overflow:'hidden'}}>
+        <div style={{position:'relative', width:'100%', maxWidth:280, margin:'0 auto', background:'#000', borderRadius:14, overflow:'hidden'}}>
           {/* Aspect-ratio spacer: padding-top % is relative to width, so this forces 962:1634 portrait */}
           <div style={{paddingTop:`${(1634/962*100).toFixed(3)}%`}}/>
           <img src={imageUrl} alt="" style={{position:'absolute', inset:0, width:'100%', height:'100%', objectFit:'contain'}} draggable={false} />
