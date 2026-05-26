@@ -2735,7 +2735,7 @@ export default function FootballGolf(){
 
               </div>
             ) : (
-              <div style={{border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px 8px 8px',display:'flex',flexDirection:'column',gap:6,overflow:'hidden'}}>
+              <div style={{border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px 8px 8px',display:'flex',flexDirection:'column',gap:6}}>
                 <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',padding:'2px 4px 0'}}>Pick up to 3 players</div>
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
                 {[0,1,2].map((idx,i)=>(
@@ -3365,14 +3365,14 @@ function PlayerInputRow({idx,value,confirmed,suggestions,active=true,onChange,on
   onChange:(v:string)=>void;onConfirm:(n:string)=>void;onClear:()=>void
 }){
   return(
-    <div style={{position:'relative',minWidth:0}}>
-      <div style={{display:'flex',gap:6,alignItems:'center',minWidth:0}}>
+    <div style={{position:'relative'}}>
+      <div style={{display:'flex',gap:6,alignItems:'center'}}>
         <input
           type="text"
           placeholder={idx===0?'Player 1 (required)':`Player ${idx+1} (optional)`}
           value={value} onChange={e=>onChange(e.target.value)} autoComplete="off"
           className={active?'fg-input-active':'fg-input-inactive'}
-          style={{flex:1,background:confirmed?'rgba(34,197,94,0.12)':'transparent',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.12)'}`,borderRadius:8,padding:'9px 12px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
+          style={{flex:1,minWidth:0,background:confirmed?'rgba(34,197,94,0.12)':'transparent',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.12)'}`,borderRadius:8,padding:'9px 12px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
         />
         {(value||confirmed)&&(
           <button onClick={onClear} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>×</button>
