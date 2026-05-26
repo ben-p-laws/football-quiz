@@ -2576,6 +2576,7 @@ export default function FootballGolf(){
                 realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
                 realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
                 realPostFork={selectedCourse==='wii-golf' && !dailyMode ? wiiRealPostFork : undefined}
+                imageZoom={courseMode==='real' && !dailyMode && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining) : undefined}
                 myBallColor={h2hStep==='playing'?(h2hIsHost.current?'#3b82f6':'#fbbf24'):undefined}
                 oppBallColor={h2hStep==='playing'?(h2hIsHost.current?'#fbbf24':'#3b82f6'):undefined}
@@ -2791,6 +2792,7 @@ export default function FootballGolf(){
                 realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260) : undefined}
                 realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, selectedCourse==='augusta'?AUGUSTA_YSCALE[currentHole.number]:selectedCourse==='wii-golf'?WII_GOLF_YSCALE[currentHole.number]:260)) : undefined}
                 realPostFork={selectedCourse==='wii-golf' && !dailyMode ? wiiRealPostFork : undefined}
+                imageZoom={courseMode==='real' && !dailyMode && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
                 oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null
                   ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining)
                   : undefined}
@@ -2883,8 +2885,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,realYScale,realTeePos,realGreenPos,realWaypoints,realPostFork,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,imageZoom=1,realYScale,realTeePos,realGreenPos,realWaypoints,realPostFork,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; imageZoom?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean
   realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; realPostFork?:{atYards:number; fork:{x:number;y:number}; waypoints?:{x:number;y:number}[]}; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Real course: build path directly from calibrated tee → waypoints → green
@@ -2960,7 +2962,8 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
           position:'absolute', inset:0,
           width:'100%', height:'100%',
           objectFit: useCover ? 'cover' : 'contain', objectPosition:'center',
-          ...(rot ? {transform:`rotate(${rot}deg)`} : {}),
+          transform:`rotate(${rot}deg) scale(${imageZoom})`,
+          transformOrigin:'center center',
         }}/>
       )}
       {/* Minimal scrim — just enough to keep labels readable without darkening bunkers */}
@@ -3423,7 +3426,7 @@ const HOLE_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number
 }
 // Wii Golf images have varying aspect ratios — yScale = 100/(w/h)
 const WII_GOLF_YSCALE: Record<number, number> = {
-  1: 100/(246/627),   // 254.9 — portrait
+  1: 220,             // portrait HD — zoomed
   2: 100/(398/538),   // 135.2
   3: 100/(629/1443),  // 229.4 — portrait
   4: 100/(200/715),   // 357.5 — cropped to 200px wide
@@ -3433,8 +3436,11 @@ const WII_GOLF_YSCALE: Record<number, number> = {
   8: 100/(1024/1536), // 150.0
   9: 100/(962/1634),  // 169.9
 }
+const WII_GOLF_IMAGEZOOM: Record<number, number> = {
+  1: 1.55,
+}
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
-  1: {teeFrac:[0.502,0.946], greenFrac:[0.506,0.134], waypointFracs:[[0.351,0.436]]},
+  1: {teeFrac:[0.491,0.896], greenFrac:[0.506,0.114], waypointFracs:[[0.351,0.436]]},
   2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
   3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
   4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
@@ -3518,7 +3524,7 @@ const WII_GOLF_BRANCHES: Record<number, BranchSpec> = {
 }
 
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number}[] }> = {
-  1: {bunkers:[{start:185,end:236},{start:332,end:347}]},
+  1: {bunkers:[{start:179,end:233}]},
   2: {hazards:[{start:27,end:82}], bunkers:[{start:113,end:121}]},
   4: {bunkers:[{start:115,end:124}]},
   5: {bunkers:[{start:134,end:144}]},
