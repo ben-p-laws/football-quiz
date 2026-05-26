@@ -2541,8 +2541,9 @@ export default function FootballGolf(){
         )}
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)',position:'relative'}}>
           {/* Faded hole background — anchored top-right, full height, with SVG overlays */}
-          {courseMode==='real' && !dailyMode && currentHole && (() => {
-            const bgYScale = selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260
+          {!dailyMode && currentHole && (() => {
+            const isReal = courseMode === 'real'
+            const bgYScale = isReal ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : 250
             return (
               <div style={{position:'absolute',top:0,right:0,height:'100%',aspectRatio:`${100/bgYScale}`,pointerEvents:'none',zIndex:0}}>
                 <CourseView
@@ -2553,16 +2554,16 @@ export default function FootballGolf(){
                   isAnimating={isAnimating}
                   strokes={strokes}
                   maxRangePos={!pastPin && club==='driver' && remaining > clubMax && !(selectedCourse==='wii-golf' && currentHole && WII_GOLF_BRANCHES[currentHole.number]) ? ballPos + clubMax : undefined}
-                  imageUrl={selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` : selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`}
-                  imageRotation={PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0}
-                  realYScale={bgYScale}
-                  realTeePos={fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, bgYScale)}
-                  realGreenPos={fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, bgYScale)}
-                  realWaypoints={((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, bgYScale))}
-                  realPostFork={selectedCourse==='wii-golf' ? wiiRealPostFork : undefined}
-                  imageZoom={selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
-                  imageShiftX={selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTX[currentHole.number] ?? 0) : 0}
-                  imageShiftY={selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTY[currentHole.number] ?? 0) : 0}
+                  imageUrl={isReal ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` : selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
+                  imageRotation={isReal ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
+                  realYScale={isReal ? bgYScale : undefined}
+                  realTeePos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, bgYScale) : undefined}
+                  realGreenPos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, bgYScale) : undefined}
+                  realWaypoints={isReal ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, bgYScale)) : undefined}
+                  realPostFork={isReal && selectedCourse==='wii-golf' ? wiiRealPostFork : undefined}
+                  imageZoom={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
+                  imageShiftX={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTX[currentHole.number] ?? 0) : 0}
+                  imageShiftY={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTY[currentHole.number] ?? 0) : 0}
                   noBg
                 />
               </div>
@@ -2976,7 +2977,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
       {/* Minimal scrim — just enough to keep labels readable without darkening bunkers */}
       {imageUrl && <div style={{position:'absolute',inset:0,background:'rgba(0,0,0,0.05)',pointerEvents:'none'}}/>}
 
-      <svg width="100%" height="100%" viewBox={imageUrl ? `0 0 100 ${realYScale??260}` : "0 -10 100 165"} preserveAspectRatio={imageUrl ? (useCover ? "xMidYMid slice" : "xMidYMid meet") : (useMeet ? "xMidYMid meet" : "xMidYMid slice")} style={{display:'block',flex:1,position:'relative'}}>
+      <svg width="100%" height="100%" viewBox={imageUrl ? `0 0 100 ${realYScale??260}` : noBg ? "15 -10 70 165" : "0 -10 100 165"} preserveAspectRatio={imageUrl ? (useCover ? "xMidYMid slice" : "xMidYMid meet") : (useMeet ? "xMidYMid meet" : "xMidYMid slice")} style={{display:'block',flex:1,position:'relative'}}>
         <defs>
           <linearGradient id="fairway" x1="0" y1="35" x2="0" y2="255" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#1a4a1a"/>
@@ -2989,7 +2990,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         </defs>
 
         {/* Generated-course-only: rough background + fairway + bunker fills */}
-        {!imageUrl && <rect x={0} y={-10} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>}
+        {!imageUrl && !noBg && <rect x={0} y={-10} width={100} height={175} fill="#0f2e0f" opacity={0.6}/>}
         {!imageUrl && !hole.isIsland && <path d={fairwayD} stroke="url(#fairway)" strokeWidth={24} fill="none" strokeLinecap="butt"/>}
         {/* Real course: faint path line so ball trajectory is visible */}
         {imageUrl && effectivePath.postFork && (() => {
