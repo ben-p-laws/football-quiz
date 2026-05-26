@@ -2636,7 +2636,7 @@ export default function FootballGolf(){
               const filterText = makeFilterLabel(question)
               const showBy = !filterText.startsWith('in ') && !filterText.startsWith('All ')
               return (
-                <div style={{border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'8px 12px',textAlign:'left',flexShrink:0,fontSize:17,lineHeight:1.3}}>
+                <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:'8px 12px',textAlign:'left',flexShrink:0,fontSize:17,lineHeight:1.3}}>
                   <span style={{fontWeight:800,color:'white'}}>{question.statLabel}</span>
                   {showBy && <span style={{fontWeight:600,color:'white'}}> by </span>}
                   <span style={{fontWeight:600,color:'white'}}>{showBy ? filterText : ` ${filterText}`}</span>
@@ -2779,7 +2779,7 @@ export default function FootballGolf(){
           <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'12px 8px 8px',gap:8}}>
             {/* Header: overall score + rules button — same height as scorecard */}
             <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexShrink:0,height:72,paddingTop:6}}>
-              <div>
+              <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
                 <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>Overall</div>
                 <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:h2hStep==='playing'?'white':vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'}}>
                   {h2hStep==='playing' ? (matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`) : (vsParStr??'E')}
@@ -3372,7 +3372,7 @@ function PlayerInputRow({idx,value,confirmed,suggestions,active=true,onChange,on
           placeholder={idx===0?'Player 1 (required)':`Player ${idx+1} (optional)`}
           value={value} onChange={e=>onChange(e.target.value)} autoComplete="off"
           className={active?'fg-input-active':'fg-input-inactive'}
-          style={{flex:1,minWidth:0,background:confirmed?'rgba(34,197,94,0.12)':'transparent',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.12)'}`,borderRadius:8,padding:'9px 12px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
+          style={{flex:1,minWidth:0,background:confirmed?'rgba(34,197,94,0.12)':'transparent',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.12)'}`,borderRadius:8,padding:'9px 12px',fontSize:13,fontWeight:700,color:'white',fontFamily:'inherit'}}
         />
         {(value||confirmed)&&(
           <button onClick={onClear} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>×</button>
