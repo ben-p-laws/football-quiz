@@ -2594,7 +2594,7 @@ export default function FootballGolf(){
 
           {/* Left panel */}
           <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
-            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} />
+            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} course={selectedCourse} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
@@ -3234,34 +3234,60 @@ function ScoreCell({score,par}:{score:number;par:number}){
   )
 }
 
-function Scorecard({holes,scores,currentIdx}:{
-  holes:Hole[];scores:(number|null)[];currentIdx:number
+const COURSE_LOGOS: Record<string,string> = {
+  'augusta':     '/course-logos/augusta.png',
+  'pebble-beach':'/course-logos/pebble-beach.png',
+  'wii-golf':    '/course-logos/wii-golf.png',
+}
+
+function Scorecard({holes,scores,currentIdx,course}:{
+  holes:Hole[];scores:(number|null)[];currentIdx:number;course?:string
 }){
-  const col=(i:number)=>({width:26,textAlign:'center' as const,flexShrink:0,background:i===currentIdx?'rgba(220,38,38,0.15)':'transparent',borderRadius:4,padding:'2px 0'})
+  const ROW_H = 20
+  const COL_W = 28
+  const LABEL_W = 46
+  const rowBorder = '1px solid rgba(255,255,255,0.07)'
+  const logoSrc = course ? COURSE_LOGOS[course] : undefined
+  const GRID_H = ROW_H * 3
   return(
-    <div style={{padding:'8px 0',overflowX:'auto'}}>
-      <div style={{display:'flex',alignItems:'stretch',gap:4,minWidth:'max-content'}}>
+    <div style={{padding:'6px 0',display:'flex',alignItems:'center',gap:8,overflowX:'auto'}}>
+      {logoSrc && (
+        <div style={{width:GRID_H,height:GRID_H,borderRadius:'50%',background:'white',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',padding:4}}>
+          <img src={logoSrc} alt={course} style={{width:'100%',height:'100%',objectFit:'contain'}} />
+        </div>
+      )}
+      <div style={{display:'flex',minWidth:'max-content',overflowX:'auto'}}>
 
         {/* Label column */}
-        <div style={{width:32,display:'flex',flexDirection:'column',gap:4,justifyContent:'space-around',paddingTop:2}}>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:16,lineHeight:'16px'}}>Hole</div>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:16,lineHeight:'16px'}}>Par</div>
-          <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textAlign:'right',paddingRight:4,height:18,lineHeight:'18px'}}>Score</div>
+        <div style={{width:LABEL_W,flexShrink:0}}>
+          <div style={{height:ROW_H,display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:6,fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.4)',borderBottom:rowBorder}}>HOLE</div>
+          <div style={{height:ROW_H,display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:6,fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.4)',borderBottom:rowBorder}}>PAR</div>
+          <div style={{height:ROW_H,display:'flex',alignItems:'center',justifyContent:'flex-end',paddingRight:6,fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.4)'}}>SCORE</div>
         </div>
 
         {/* Hole columns */}
-        {holes.map((h,i)=>(
-          <div key={i} style={col(i)}>
-            <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.number}</div>
-            <div style={{fontSize:10,fontWeight:700,color:'white',height:16,lineHeight:'16px'}}>{h.par}</div>
-            <div style={{height:18,display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {scores[i]==null
-                ? <div style={{width:4,height:4,borderRadius:'50%',background:'rgba(255,255,255,0.15)'}}/>
-                : <ScoreCell score={scores[i]!} par={h.par}/>
-              }
+        {holes.map((h,i)=>{
+          const isCurrent = i === currentIdx
+          return(
+            <div key={i} style={{width:COL_W,flexShrink:0,borderLeft:'1px solid rgba(255,255,255,0.07)'}}>
+              {/* Hole number */}
+              <div style={{height:ROW_H,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:isCurrent?900:600,color:isCurrent?'white':'rgba(255,255,255,0.55)',borderBottom:rowBorder,borderTop:isCurrent?'2px solid rgba(255,255,255,0.5)':'2px solid transparent'}}>
+                {h.number}
+              </div>
+              {/* Par */}
+              <div style={{height:ROW_H,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:500,color:'rgba(255,255,255,0.45)',borderBottom:rowBorder}}>
+                {h.par}
+              </div>
+              {/* Score */}
+              <div style={{height:ROW_H,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                {scores[i]==null
+                  ? <div style={{width:4,height:4,borderRadius:'50%',background:'rgba(255,255,255,0.12)'}}/>
+                  : <ScoreCell score={scores[i]!} par={h.par}/>
+                }
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
       </div>
     </div>
@@ -3705,7 +3731,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
   const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
   return(
-    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'12px 20px',overflowY:'auto'}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'24px 20px 20px',overflowY:'auto'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
 
       {/* Title */}
