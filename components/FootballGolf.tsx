@@ -3482,11 +3482,12 @@ const WII_GOLF_YSCALE: Record<number, number> = {
 }
 const WII_GOLF_IMAGEZOOM: Record<number, number> = {
   1: 1.55,
+  3: 1.5,
 }
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
   1: {teeFrac:[0.491,0.896], greenFrac:[0.506,0.114], waypointFracs:[[0.351,0.436]]},
   2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
-  3: {teeFrac:[0.238,0.909], greenFrac:[0.253,0.078], waypointFracs:[[0.918,0.62],[0.774,0.276]]},
+  3: {teeFrac:[0.283,0.89], greenFrac:[0.374,0.117], waypointFracs:[[0.822,0.627],[0.692,0.351]]},
   4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
   5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
   6: {teeFrac:[0.332,0.892], greenFrac:[0.645,0.173], waypointFracs:[[0.490,0.42]]},
