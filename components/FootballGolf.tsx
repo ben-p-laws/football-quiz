@@ -2610,7 +2610,7 @@ export default function FootballGolf(){
                 return (
                   <>
                     <div style={{display:'flex',alignItems:'baseline',gap:6,flexWrap:'wrap'}}>
-                      <span style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1}}>Shot {strokes+1} · {remaining} yds to pin</span>
+                      <span style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1}}>Shot {strokes+1} · {remaining} yds</span>
                       {inBunker && <span style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>🏖️ In bunker</span>}
                     </div>
                     {club==='driver' && (
