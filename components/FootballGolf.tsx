@@ -2735,7 +2735,7 @@ export default function FootballGolf(){
 
               </div>
             ) : (
-              <div style={{border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px 8px 8px',display:'flex',flexDirection:'column',gap:6}}>
+              <div style={{border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px 8px 8px',display:'flex',flexDirection:'column',gap:6,overflow:'hidden'}}>
                 <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',padding:'2px 4px 0'}}>Pick up to 3 players</div>
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
                 {[0,1,2].map((idx,i)=>(
@@ -3365,8 +3365,8 @@ function PlayerInputRow({idx,value,confirmed,suggestions,active=true,onChange,on
   onChange:(v:string)=>void;onConfirm:(n:string)=>void;onClear:()=>void
 }){
   return(
-    <div style={{position:'relative'}}>
-      <div style={{display:'flex',gap:6,alignItems:'center'}}>
+    <div style={{position:'relative',minWidth:0}}>
+      <div style={{display:'flex',gap:6,alignItems:'center',minWidth:0}}>
         <input
           type="text"
           placeholder={idx===0?'Player 1 (required)':`Player ${idx+1} (optional)`}
