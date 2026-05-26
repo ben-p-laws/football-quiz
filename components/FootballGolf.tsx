@@ -2540,37 +2540,6 @@ export default function FootballGolf(){
           </div>
         )}
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)',position:'relative'}}>
-          {/* Faded hole background — anchored top-right, full height, with SVG overlays */}
-          {currentHole && (() => {
-            const isReal = courseMode === 'real' && !dailyMode
-            const bgYScale = isReal ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : 250
-            return (
-              <div style={{position:'absolute',top:0,right:0,height:'100%',aspectRatio:`${100/bgYScale}`,pointerEvents:'none',zIndex:0}}>
-                <CourseView
-                  hole={currentHole}
-                  displayBallPos={displayPos}
-                  preAnimBallPos={preAnimBallPos}
-                  arcOffset={arcOffset}
-                  isAnimating={isAnimating}
-                  strokes={strokes}
-                  maxRangePos={!pastPin && club==='driver' && remaining > clubMax && !(selectedCourse==='wii-golf' && currentHole && WII_GOLF_BRANCHES[currentHole.number]) ? ballPos + clubMax : undefined}
-                  imageUrl={isReal ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` : selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
-                  imageRotation={isReal ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
-                  realYScale={isReal ? bgYScale : undefined}
-                  realTeePos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, bgYScale) : undefined}
-                  realGreenPos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, bgYScale) : undefined}
-                  realWaypoints={isReal ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, bgYScale)) : undefined}
-                  realPostFork={isReal && selectedCourse==='wii-golf' ? wiiRealPostFork : undefined}
-                  imageZoom={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
-                  imageShiftX={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTX[currentHole.number] ?? 0) : 0}
-                  imageShiftY={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTY[currentHole.number] ?? 0) : 0}
-                  noBg
-                />
-              </div>
-            )
-          })()}
-          {/* Rules button — absolute top-right */}
-          <button onClick={()=>setShowRules(true)} style={{position:'absolute',top:12,right:12,width:22,height:22,borderRadius:'50%',background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:12,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',zIndex:5}}>?</button>
           {/* Branch picker modal — forced overlay across full game row (centered card, question shown inline) */}
           {branchPicker && currentHole && WII_GOLF_BRANCHES[currentHole.number] && (() => {
             const br = WII_GOLF_BRANCHES[currentHole.number]
@@ -2637,7 +2606,7 @@ export default function FootballGolf(){
 
           {/* Left panel */}
           <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0,position:'relative',zIndex:1}}>
-            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} course={courseMode === 'real' ? selectedCourse : 'random'} vsPar={vsPar} vsParStr={vsParStr} h2hHoleResults={h2hStep==='playing'?h2hHoleResults:undefined} matchScore={h2hStep==='playing'?matchScore:undefined} />
+            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} course={courseMode === 'real' ? selectedCourse : 'random'} h2hHoleResults={h2hStep==='playing'?h2hHoleResults:undefined} />
             {/* Hole info */}
             <div style={{display:'flex',flexDirection:'column',gap:4,padding:'2px 0 4px',borderBottom:'1px solid rgba(255,255,255,0.07)',paddingBottom:10}}>
               <div style={{display:'flex',alignItems:'center'}}>
@@ -2791,7 +2760,7 @@ export default function FootballGolf(){
                     onClick={submitShot}
                     disabled={confirmedPlayers.every(p=>!p)||isAnimating}
                     style={{
-                      width:'50%',background:confirmedPlayers.every(p=>!p)||isAnimating?'transparent':'#dc2626',
+                      width:'100%',background:confirmedPlayers.every(p=>!p)||isAnimating?'transparent':'#dc2626',
                       color:'white',border:confirmedPlayers.every(p=>!p)||isAnimating?'1px solid rgba(255,255,255,0.15)':'none',borderRadius:8,padding:'12px 0',
                       fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
                       transition:'background 0.2s',display:'block',
@@ -2806,8 +2775,49 @@ export default function FootballGolf(){
             </div>{/* end bottom section */}
           </div>
 
-          {/* Spacer — preserves original left panel width */}
-          <div style={{flex:7,minWidth:0,pointerEvents:'none'}} />
+          {/* Right panel — overall score + hole view */}
+          <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'12px 8px 8px',gap:8}}>
+            {/* Header: overall score + rules button — same height as scorecard */}
+            <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexShrink:0,height:72,paddingTop:6}}>
+              <div>
+                <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>Overall</div>
+                <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:h2hStep==='playing'?'white':vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'}}>
+                  {h2hStep==='playing' ? (matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`) : (vsParStr??'E')}
+                </div>
+              </div>
+              <button onClick={()=>setShowRules(true)} style={{background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:12,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',width:22,height:22,borderRadius:'50%',flexShrink:0}}>?</button>
+            </div>
+            {/* Hole view */}
+            {currentHole && (()=>{
+              const isReal = courseMode==='real' && !dailyMode
+              const cvYScale = isReal ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined
+              return (
+                <div style={{flex:1,minHeight:0,position:'relative'}}>
+                  <CourseView
+                    hole={currentHole}
+                    displayBallPos={displayPos}
+                    preAnimBallPos={preAnimBallPos}
+                    arcOffset={arcOffset}
+                    isAnimating={isAnimating}
+                    strokes={strokes}
+                    maxRangePos={!pastPin && club==='driver' && remaining > clubMax && !(selectedCourse==='wii-golf' && currentHole && WII_GOLF_BRANCHES[currentHole.number]) ? ballPos + clubMax : undefined}
+                    imageUrl={isReal ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` : selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
+                    imageRotation={isReal ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
+                    realYScale={cvYScale}
+                    realTeePos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, cvYScale!) : undefined}
+                    realGreenPos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, cvYScale!) : undefined}
+                    realWaypoints={isReal ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, cvYScale!)) : undefined}
+                    realPostFork={isReal && selectedCourse==='wii-golf' ? wiiRealPostFork : undefined}
+                    imageZoom={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
+                    imageShiftX={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTX[currentHole.number] ?? 0) : 0}
+                    imageShiftY={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTY[currentHole.number] ?? 0) : 0}
+                    useMeet={!isReal}
+                    noBg
+                  />
+                </div>
+              )
+            })()}
+          </div>
 
         </div>
       </div>
@@ -3270,13 +3280,12 @@ const TB_LOGO_SVG = (
   </svg>
 )
 
-function Scorecard({holes,scores,currentIdx,course,vsPar,vsParStr,h2hHoleResults,matchScore}:{
-  holes:Hole[];scores:(number|null)[];currentIdx:number;course?:string;vsPar?:number;vsParStr?:string;h2hHoleResults?:('W'|'L'|'H')[];matchScore?:number
+function Scorecard({holes,scores,currentIdx,course,h2hHoleResults}:{
+  holes:Hole[];scores:(number|null)[];currentIdx:number;course?:string;h2hHoleResults?:('W'|'L'|'H')[]
 }){
   const ROW_H = 20
   const COL_W = 28
   const LABEL_W = 46
-  const OVERALL_W = 40
   const rowBorder = '1px solid rgba(255,255,255,0.07)'
   const logoSrc = course ? COURSE_LOGOS[course] : undefined
   const GRID_H = ROW_H * 3
@@ -3344,23 +3353,6 @@ function Scorecard({holes,scores,currentIdx,course,vsPar,vsParStr,h2hHoleResults
           })}
         </div>
 
-        {/* Overall score column */}
-        {(vsParStr !== undefined || matchScore !== undefined) && (
-          <div style={{width:OVERALL_W,flexShrink:0,borderLeft:'1px solid rgba(255,255,255,0.18)',display:'flex',flexDirection:'column'}}>
-            <div style={{height:ROW_H,display:'flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.4)',borderBottom:rowBorder,letterSpacing:'0.04em'}}>OVR</div>
-            <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {matchScore !== undefined ? (
-                <span style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'white',textAlign:'center',lineHeight:1.1}}>
-                  {matchScore===0?'AS':matchScore>0?`${matchScore}UP`:`${Math.abs(matchScore)}DN`}
-                </span>
-              ) : (
-                <span style={{fontSize:18,fontWeight:900,color:vsPar!<0?'#22c55e':vsPar!>0?'#ef4444':'white'}}>
-                  {vsParStr}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )
