@@ -2561,6 +2561,8 @@ export default function FootballGolf(){
                   realWaypoints={((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, bgYScale))}
                   realPostFork={selectedCourse==='wii-golf' ? wiiRealPostFork : undefined}
                   imageZoom={selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
+                  imageShiftX={selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTX[currentHole.number] ?? 0) : 0}
+                  imageShiftY={selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTY[currentHole.number] ?? 0) : 0}
                   noBg
                 />
               </div>
@@ -2613,6 +2615,8 @@ export default function FootballGolf(){
                   realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, animYScale!)) : undefined}
                   realPostFork={selectedCourse==='wii-golf' && !dailyMode ? wiiRealPostFork : undefined}
                   imageZoom={courseMode==='real' && !dailyMode && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
+                  imageShiftX={courseMode==='real' && !dailyMode && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTX[currentHole.number] ?? 0) : 0}
+                  imageShiftY={courseMode==='real' && !dailyMode && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTY[currentHole.number] ?? 0) : 0}
                   oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining) : undefined}
                   myBallColor={h2hStep==='playing'?(h2hIsHost.current?'#3b82f6':'#fbbf24'):undefined}
                   oppBallColor={h2hStep==='playing'?(h2hIsHost.current?'#fbbf24':'#3b82f6'):undefined}
@@ -2887,8 +2891,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,imageZoom=1,realYScale,realTeePos,realGreenPos,realWaypoints,realPostFork,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false,noBg=false}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; imageZoom?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean; noBg?:boolean
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,imageZoom=1,imageShiftX=0,imageShiftY=0,realYScale,realTeePos,realGreenPos,realWaypoints,realPostFork,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false,noBg=false}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; imageZoom?:number; imageShiftX?:number; imageShiftY?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean; noBg?:boolean
   realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; realPostFork?:{atYards:number; fork:{x:number;y:number}; waypoints?:{x:number;y:number}[]}; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Real course: build path directly from calibrated tee → waypoints → green
@@ -2952,6 +2956,7 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         position:'relative', display:'flex', flexDirection:'column',
         borderRadius: 36, overflow:'hidden',
         background: imageUrl&&!noBg?'#0a0f1e':undefined,
+        transform: (imageShiftX||imageShiftY) ? `translate(${imageShiftX}%,${imageShiftY}%)` : undefined,
         ...(imageUrl ? (innerSize
           ? { width: innerSize.w, height: innerSize.h, flex:'0 0 auto' }
           : { width:'100%', height:'100%' })
@@ -3489,8 +3494,14 @@ const WII_GOLF_IMAGEZOOM: Record<number, number> = {
   1: 1.55,
   3: 1.5,
 }
+const WII_GOLF_IMAGESHIFTX: Record<number, number> = {
+  1: 8,
+}
+const WII_GOLF_IMAGESHIFTY: Record<number, number> = {
+  1: 4,
+}
 const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[number,number]; waypointFracs?:[number,number][]}> = {
-  1: {teeFrac:[0.491,0.896], greenFrac:[0.506,0.114], waypointFracs:[[0.351,0.436]]},
+  1: {teeFrac:[0.491,0.896], greenFrac:[0.510,0.118], waypointFracs:[[0.351,0.436]]},
   2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
   3: {teeFrac:[0.173,0.881], greenFrac:[0.310,0.127], waypointFracs:[[0.822,0.627],[0.692,0.351]]},
   4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
