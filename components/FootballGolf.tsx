@@ -2541,8 +2541,8 @@ export default function FootballGolf(){
         )}
         <div style={{display:'flex',alignItems:'stretch',height:'calc(50dvh + 172px)',position:'relative'}}>
           {/* Faded hole background — anchored top-right, full height, with SVG overlays */}
-          {!dailyMode && currentHole && (() => {
-            const isReal = courseMode === 'real'
+          {currentHole && (() => {
+            const isReal = courseMode === 'real' && !dailyMode
             const bgYScale = isReal ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : 250
             return (
               <div style={{position:'absolute',top:0,right:0,height:'100%',aspectRatio:`${100/bgYScale}`,pointerEvents:'none',zIndex:0}}>
