@@ -3372,7 +3372,7 @@ function PlayerInputRow({idx,value,confirmed,suggestions,active=true,onChange,on
           placeholder={idx===0?'Player 1 (required)':`Player ${idx+1} (optional)`}
           value={value} onChange={e=>onChange(e.target.value)} autoComplete="off"
           className={active?'fg-input-active':'fg-input-inactive'}
-          style={{flex:1,minWidth:0,background:confirmed?'rgba(34,197,94,0.12)':'transparent',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.12)'}`,borderRadius:8,padding:'9px 12px',fontSize:13,fontWeight:700,color:'white',fontFamily:'inherit'}}
+          style={{flex:1,minWidth:0,background:confirmed?'rgba(34,197,94,0.12)':'transparent',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.12)'}`,borderRadius:8,padding:'9px 12px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
         />
         {(value||confirmed)&&(
           <button onClick={onClear} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>×</button>
