@@ -3906,7 +3906,7 @@ function DailySetupScreen({onPlay,onBack}:{onPlay:(name:string)=>void;onBack:()=
     onPlay(n)
   }
   return(
-    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
       <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
       <div style={{textAlign:'center'}}>
@@ -4037,7 +4037,7 @@ function DailyRoundSetupScreen({onPlay,onBack}:{onPlay:(name:string)=>void;onBac
     onPlay(n)
   }
   return(
-    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:24,fontFamily:"'DM Sans',sans-serif",padding:'16px 24px'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
       <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
       <div style={{textAlign:'center'}}>
