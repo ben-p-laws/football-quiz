@@ -566,7 +566,7 @@ function pathEndAngle(path:HolePath): number {
 // ── Course data ───────────────────────────────────────────────────────────────
 
 type Hazard  = { start:number; end:number }
-type Bunker  = { start:number; end:number }
+type Bunker  = { start:number; end:number; side?:'left'|'right' }
 type Hole    = { number:number; par:number; distance:number; hazards:Hazard[]; bunkers:Bunker[]; path:HolePath; isIsland?:boolean; dropZoneYards?:number }
 type HoleDef = { number:number; par:number; yardages:Record<Tee,number>; path:HolePath; hazardFrac:{startFrac:number;endFrac:number}|null; bunkerCount:number }
 
