@@ -98,7 +98,7 @@ function seasonLabel(y: number): string { return `${String(y).slice(2)}/${String
 function getStatLabel(key: StatKey): string {
   const base: Record<string, string> = {
     goals:'Goals', assists:'Assists', goals_assists:'Goals + Assists',
-    appearances:'Appearances', apps_minus_goals:'Appearances − Goals',
+    appearances:'Appearances', apps_minus_goals:'Appearances minus Goals',
     yellow_cards:'Yellow Cards', clean_sheets:'Clean Sheets',
   }
   if (base[key as string]) return base[key as string]
@@ -2595,67 +2595,45 @@ export default function FootballGolf(){
           {/* Left panel */}
           <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
             <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} course={courseMode === 'real' ? selectedCourse : 'random'} />
-            <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
+            {/* Hole info */}
+            <div style={{display:'flex',flexDirection:'column',gap:4,padding:'2px 0 4px',borderBottom:'1px solid rgba(255,255,255,0.07)',paddingBottom:10}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
                   Hole {currentHole.number} · Par {currentHole.par}
                 </div>
-                <div style={{display:'flex',alignItems:'center',gap:6}}>
-                  <div style={{fontSize:13,fontWeight:800,color:'white',background:'#1e2d4a',borderRadius:6,padding:'2px 8px'}}>
-                    Shot {strokes + 1}
-                  </div>
-                  <button onClick={()=>setShowRules(true)} style={{width:24,height:24,borderRadius:'50%',background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:13,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',flexShrink:0}}>?</button>
-                </div>
-              </div>
-              <div style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1.1}}>
-                {remaining} yards to pin
+                <button onClick={()=>setShowRules(true)} style={{width:22,height:22,borderRadius:'50%',background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:12,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',flexShrink:0}}>?</button>
               </div>
               {(()=>{
                 const approachPos = pastPin ? -1 : currentHole.distance - remaining
                 const inBunker = !pastPin && currentHole.bunkers.some(b => approachPos >= b.start && approachPos <= b.end)
                 return (
                   <>
-                    <div style={{fontSize:16,fontWeight:700,color:'rgba(255,255,255,0.7)'}}>
-                      {CLUB_LABEL[club]}{club==='driver'?` · max ${clubMax} yds`:''}
-                      {inBunker && <span style={{color:'#f59e0b'}}> · 🏖️ In bunker</span>}
+                    <div style={{display:'flex',alignItems:'baseline',gap:6,flexWrap:'wrap'}}>
+                      <span style={{fontSize:22,fontWeight:900,color:'white',lineHeight:1}}>Shot {strokes+1} · {remaining} yds to pin</span>
+                      {inBunker && <span style={{fontSize:13,fontWeight:700,color:'#f59e0b'}}>🏖️ In bunker</span>}
                     </div>
+                    {club==='driver' && (
+                      <div style={{fontSize:12,fontWeight:700,color:'#f59e0b'}}>Max {clubMax} yds</div>
+                    )}
                   </>
                 )
               })()}
             </div>
 
-            {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
-            <div style={{flex:1,display:'flex',flexDirection:'column',gap:10,minHeight:0}}>
-
-            {/* Category — two side-by-side boxes, fixed height so layout never shifts */}
+            {/* Stat + Filter strip */}
             {question&&(()=>{
               const filterText = makeFilterLabel(question)
-              const boxStyle: React.CSSProperties = {
-                flex:1, background:'#1e2d4a', border:'1px solid rgba(255,255,255,0.12)',
-                borderRadius:10, padding:'5px 8px', height:68, display:'flex',
-                flexDirection:'column', alignItems:'center', overflow:'hidden', flexShrink:0,
-              }
-              const labelStyle: React.CSSProperties = {
-                fontSize:9, fontWeight:700, color:'#6b7fa3', textTransform:'uppercase',
-                letterSpacing:'0.06em', textAlign:'center', flexShrink:0,
-              }
               return (
-                <div style={{display:'flex',gap:8,flexShrink:0}}>
-                  <div style={boxStyle}>
-                    <div style={labelStyle}>Stat</div>
-                    <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',width:'100%'}}>
-                      <div style={{fontSize:13,fontWeight:800,color:'white',lineHeight:1.2,textAlign:'center'}}>{question.statLabel}</div>
-                    </div>
-                  </div>
-                  <div style={boxStyle}>
-                    <div style={labelStyle}>Filter</div>
-                    <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center',width:'100%'}}>
-                      <div style={{fontSize:13,fontWeight:600,color:'white',lineHeight:1.2,textAlign:'center'}}>{filterText}</div>
-                    </div>
-                  </div>
+                <div style={{background:'#111827',border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'8px 12px',textAlign:'center',flexShrink:0,fontSize:17,lineHeight:1.3}}>
+                  <span style={{fontWeight:800,color:'white'}}>{question.statLabel}</span>
+                  <span style={{fontWeight:600,color:'white'}}> by </span>
+                  <span style={{fontWeight:600,color:'white'}}>{filterText}</span>
                 </div>
               )
             })()}
+
+            {/* Bottom section — flex:1 so left panel height stays constant regardless of content */}
+            <div style={{flex:1,display:'flex',flexDirection:'column',gap:8,minHeight:0}}>
 
             {/* Bunker MC question → lie result → shot result */}
             {bunkerLieResult ? (
@@ -2745,34 +2723,40 @@ export default function FootballGolf(){
 
               </div>
             ) : (
-              <>
+              <div style={{background:'#0d1424',border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px 8px 8px',display:'flex',flexDirection:'column',gap:6}}>
+                <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',padding:'2px 4px 0'}}>Pick up to 3 players</div>
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
-                {[0,1,2].map(idx=>(
-                  <PlayerInputRow
-                    key={idx} idx={idx} value={playerInputs[idx]}
-                    confirmed={!!confirmedPlayers[idx]} suggestions={suggestions[idx]}
-                    onChange={val=>onInputChange(idx,val)} onConfirm={name=>confirmSuggestion(idx,name)}
-                    onClear={()=>{
-                      setPlayerInputs(prev=>{const n=[...prev];n[idx]='';return n})
-                      setConfirmedPlayers(prev=>{const n=[...prev];n[idx]=null;return n})
-                      setSuggestions(prev=>{const n=[...prev];n[idx]=[];return n})
-                    }}
-                  />
+                {[0,1,2].map((idx,i)=>(
+                  <div key={idx}>
+                    {i>0&&<div style={{height:'1px',background:'rgba(255,255,255,0.05)',margin:'0 0 6px'}}/>}
+                    <PlayerInputRow
+                      idx={idx} value={playerInputs[idx]}
+                      confirmed={!!confirmedPlayers[idx]} suggestions={suggestions[idx]}
+                      onChange={val=>onInputChange(idx,val)} onConfirm={name=>confirmSuggestion(idx,name)}
+                      onClear={()=>{
+                        setPlayerInputs(prev=>{const n=[...prev];n[idx]='';return n})
+                        setConfirmedPlayers(prev=>{const n=[...prev];n[idx]=null;return n})
+                        setSuggestions(prev=>{const n=[...prev];n[idx]=[];return n})
+                      }}
+                    />
+                  </div>
                 ))}
-                {inputError&&<div style={{fontSize:12,color:'#dc2626',fontWeight:700}}>{inputError}</div>}
-                <button
-                  onClick={submitShot}
-                  disabled={confirmedPlayers.every(p=>!p)||isAnimating}
-                  style={{
-                    background:confirmedPlayers.every(p=>!p)||isAnimating?'#1a2540':'#dc2626',
-                    color:'white',border:'none',borderRadius:10,padding:'13px 0',
-                    fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
-                    transition:'background 0.2s',marginTop:2,
-                  }}
-                >
-                  {isAnimating?'⛳ In flight…':'⛳ Take Shot'}
-                </button>
-              </>
+                {inputError&&<div style={{fontSize:12,color:'#dc2626',fontWeight:700,padding:'0 4px'}}>{inputError}</div>}
+                <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',paddingTop:6,marginTop:2}}>
+                  <button
+                    onClick={submitShot}
+                    disabled={confirmedPlayers.every(p=>!p)||isAnimating}
+                    style={{
+                      width:'100%',background:confirmedPlayers.every(p=>!p)||isAnimating?'#1a2540':'#dc2626',
+                      color:'white',border:'none',borderRadius:8,padding:'12px 0',
+                      fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
+                      transition:'background 0.2s',
+                    }}
+                  >
+                    {isAnimating?'⛳ In flight…':'⛳ Take Shot'}
+                  </button>
+                </div>
+              </div>
             )}
 
             </div>{/* end bottom section */}
