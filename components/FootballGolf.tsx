@@ -2594,7 +2594,7 @@ export default function FootballGolf(){
 
           {/* Left panel */}
           <div style={{flex:13,padding:'12px 8px 20px',display:'flex',flexDirection:'column',gap:10,minWidth:0}}>
-            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} course={selectedCourse} />
+            <Scorecard holes={holes} scores={scores} currentIdx={holeIdx} course={courseMode === 'real' ? selectedCourse : 'random'} />
             <div style={{display:'flex',flexDirection:'column',gap:6,padding:'2px 0 4px'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
                 <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.5)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
@@ -2780,10 +2780,12 @@ export default function FootballGolf(){
 
           {/* Right panel — course */}
           <div style={{flex:7,minWidth:0,display:'flex',flexDirection:'column',padding:'0 0 20px'}}>
-            <div style={{padding:'8px 0',textAlign:'center',display:'flex',flexDirection:'column',gap:4,paddingTop:10}}>
-              <div style={{fontSize:8,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.06em',height:16,lineHeight:'16px'}}>Overall</div>
-              <div style={{height:16}}/>
-              <div style={{fontSize:22,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white',height:18,lineHeight:'18px'}}>{vsParStr}</div>
+            <div style={{padding:'18px 0 10px',textAlign:'center',display:'flex',flexDirection:'column',alignItems:'center',gap:2}}>
+              <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0em'}}>Score</div>
+              <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'}}>{vsParStr}</div>
+              {completedScores.length > 0 && (
+                <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',fontWeight:600}}>{totalStrokes} strokes · {completedScores.length}/{holes.length} holes</div>
+              )}
             </div>
             <div style={{flex:1,minHeight:0,marginTop:22}}>
               <CourseView
@@ -3240,6 +3242,33 @@ const COURSE_LOGOS: Record<string,string> = {
   'wii-golf':    '/course-logos/wii-golf.png',
 }
 
+const TB_LOGO_SVG = (
+  <svg width="100%" height="100%" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="32" height="32" rx="7" fill="#0a0f1e"/>
+    <rect x="0" y="0" width="28" height="4" fill="#e2e8f0"/>
+    <rect x="24" y="4" width="4" height="28" fill="#e2e8f0"/>
+    <line x1="4"  y1="4" x2="2"  y2="32" stroke="#334155" strokeWidth="0.8"/>
+    <line x1="9"  y1="4" x2="7"  y2="32" stroke="#334155" strokeWidth="0.8"/>
+    <line x1="14" y1="4" x2="12" y2="32" stroke="#334155" strokeWidth="0.8"/>
+    <line x1="19" y1="4" x2="17" y2="32" stroke="#334155" strokeWidth="0.8"/>
+    <line x1="0" y1="9"  x2="24" y2="9"  stroke="#334155" strokeWidth="0.8"/>
+    <line x1="0" y1="14" x2="24" y2="14" stroke="#334155" strokeWidth="0.8"/>
+    <line x1="0" y1="19" x2="24" y2="19" stroke="#334155" strokeWidth="0.8"/>
+    <line x1="0" y1="24" x2="24" y2="24" stroke="#334155" strokeWidth="0.8"/>
+    <circle cx="17" cy="15" r="6.2" fill="white"/>
+    <circle cx="17" cy="15" r="7.2" fill="none" stroke="#dc2626" strokeWidth="1.5" opacity="0.5"/>
+    <defs>
+      <clipPath id="sc-ball-clip"><circle cx="17" cy="15" r="6.1"/></clipPath>
+      <path id="sc-cl-star" d="M0,-4 L0.95,-1.31 L3.8,-1.24 L1.53,0.5 L2.35,3.24 L0,1.6 L-2.35,3.24 L-1.53,0.5 L-3.8,-1.24 L-0.95,-1.31 Z" fill="#dc2626"/>
+    </defs>
+    <g clipPath="url(#sc-ball-clip)">
+      <use href="#sc-cl-star" transform="translate(16.5,12.5)"/>
+      <use href="#sc-cl-star" transform="translate(13,17.5)"/>
+      <use href="#sc-cl-star" transform="translate(21,17.5)"/>
+    </g>
+  </svg>
+)
+
 function Scorecard({holes,scores,currentIdx,course}:{
   holes:Hole[];scores:(number|null)[];currentIdx:number;course?:string
 }){
@@ -3251,11 +3280,13 @@ function Scorecard({holes,scores,currentIdx,course}:{
   const GRID_H = ROW_H * 3
   return(
     <div style={{padding:'6px 0',display:'flex',alignItems:'center',gap:8,overflowX:'auto'}}>
-      {logoSrc && (
+      {course === 'random' ? (
+        <div style={{width:GRID_H,height:GRID_H,flexShrink:0}}>{TB_LOGO_SVG}</div>
+      ) : logoSrc ? (
         <div style={{width:GRID_H,height:GRID_H,borderRadius:'50%',background:'white',flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',padding:4}}>
           <img src={logoSrc} alt={course} style={{width:'100%',height:'100%',objectFit:'contain'}} />
         </div>
-      )}
+      ) : null}
       <div style={{display:'flex',minWidth:'max-content',overflowX:'auto'}}>
 
         {/* Label column */}
