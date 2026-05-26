@@ -124,23 +124,23 @@ export default function LandingPage() {
           onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
           onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
           onClick={() => router.push('/football-golf')}>
-          <div style={s.cardHead}>
-            <div style={s.cardTitle}>Football Golf</div>
-            <div style={s.cardDesc}>Pick up to 3 players to set the distance · 3 to 18 holes</div>
+          <div style={{ ...s.cardHead, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+            <div>
+              <div style={s.cardTitle}>Football Golf</div>
+              <div style={s.cardDesc}>Pick up to 3 players based on the stat</div>
+            </div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 3, marginRight: 36 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/course-logos/augusta.png" alt="Augusta" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
           </div>
           <div style={{ ...s.preview, display: 'flex', gap: 10 }}>
             {/* Left: game info */}
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 5, paddingTop: 2 }}>
-              <div style={{ fontSize: 13, fontWeight: 900, color: 'white' }}>Par 4 · 337 yds to pin</div>
-              <div style={{ display: 'flex', gap: 5 }}>
-                <div style={{ flex: 1, background: '#1e2d4a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '5px 7px' }}>
-                  <div style={{ fontSize: 7, color: '#6b7fa3', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 1 }}>Stat</div>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: 'white' }}>Goals</div>
-                </div>
-                <div style={{ flex: 1, background: '#1e2d4a', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, padding: '5px 7px' }}>
-                  <div style={{ fontSize: 7, color: '#6b7fa3', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 1 }}>Filter</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: 'white' }}>Dutch players</div>
-                </div>
+              <div style={{ fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Augusta National · Hole 12</div>
+              <div style={{ fontSize: 13, fontWeight: 900, color: 'white' }}>Par 3 · 155 yds to pin</div>
+              <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '7px 10px', textAlign: 'center', fontSize: 11, lineHeight: 1.3, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontWeight: 700, color: 'white' }}>Goals by Dutch players</span>
               </div>
               {[
                 { name: 'Ruud Van Nistelrooy', locked: true },
@@ -155,7 +155,21 @@ export default function LandingPage() {
             {/* Right: real hole image — cropped to fit card, showing green + fairway */}
             <div style={{ width: '40%', flexShrink: 0, borderRadius: 10, overflow: 'hidden', alignSelf: 'stretch', position: 'relative' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/holes/hole_01.png" alt="Hole 1 preview" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block', transform: 'scale(1.18)', transformOrigin: 'center center' }} />
+              <img src="/holes/augusta/hole_12.png" alt="Augusta Hole 12" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block', transform: 'scale(1.0)', transformOrigin: 'center center' }} />
+              {/* Pin */}
+              <div style={{ position: 'absolute', left: '50%', top: '27%', transform: 'translate(-50%,-100%)', pointerEvents: 'none' }}>
+                <svg width="14" height="28" viewBox="0 0 14 28">
+                  <line x1="7" y1="0" x2="7" y2="26" stroke="white" strokeWidth="1.5"/>
+                  <polygon points="7,0 14,5 7,10" fill="#dc2626"/>
+                  <circle cx="7" cy="27" r="3" fill="rgba(0,0,0,0.4)"/>
+                </svg>
+              </div>
+              {/* Ball */}
+              <div style={{ position: 'absolute', left: '55%', top: '84%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12">
+                  <circle cx="6" cy="6" r="5" fill="white" stroke="rgba(0,0,0,0.3)" strokeWidth="0.8"/>
+                </svg>
+              </div>
             </div>
           </div>
           <div style={s.cta}><span style={s.ctaText}>Play Football Golf →</span></div>
