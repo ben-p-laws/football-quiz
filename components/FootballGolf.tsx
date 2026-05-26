@@ -2384,7 +2384,10 @@ export default function FootballGolf(){
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');
         * { box-sizing:border-box; }
-        input::placeholder { color:rgba(255,255,255,0.3); }
+        input::placeholder { color:rgba(255,255,255,0.35); }
+        .fg-input-active::placeholder { color:white; }
+        .fg-input-inactive::placeholder { color:rgba(255,255,255,0.35); }
+        input:focus::placeholder { color:transparent; }
         input:focus { outline:none; }
         @keyframes clubSwing {
           0%   { transform: rotate(52deg); }
@@ -2659,7 +2662,7 @@ export default function FootballGolf(){
               const filterText = makeFilterLabel(question)
               const showBy = !filterText.startsWith('in ') && !filterText.startsWith('All ')
               return (
-                <div style={{border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'8px 12px',textAlign:'center',flexShrink:0,fontSize:17,lineHeight:1.3}}>
+                <div style={{border:'1px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'8px 12px',textAlign:'left',flexShrink:0,fontSize:17,lineHeight:1.3}}>
                   <span style={{fontWeight:800,color:'white'}}>{question.statLabel}</span>
                   {showBy && <span style={{fontWeight:600,color:'white'}}> by </span>}
                   <span style={{fontWeight:600,color:'white'}}>{showBy ? filterText : ` ${filterText}`}</span>
@@ -2767,6 +2770,7 @@ export default function FootballGolf(){
                     <PlayerInputRow
                       idx={idx} value={playerInputs[idx]}
                       confirmed={!!confirmedPlayers[idx]} suggestions={suggestions[idx]}
+                      active={idx===0||!!confirmedPlayers[idx-1]}
                       onChange={val=>onInputChange(idx,val)} onConfirm={name=>confirmSuggestion(idx,name)}
                       onClear={()=>{
                         setPlayerInputs(prev=>{const n=[...prev];n[idx]='';return n})
@@ -2782,10 +2786,10 @@ export default function FootballGolf(){
                     onClick={submitShot}
                     disabled={confirmedPlayers.every(p=>!p)||isAnimating}
                     style={{
-                      width:'100%',background:confirmedPlayers.every(p=>!p)||isAnimating?'#1a2540':'#dc2626',
-                      color:'white',border:'none',borderRadius:8,padding:'12px 0',
+                      width:'50%',background:confirmedPlayers.every(p=>!p)||isAnimating?'transparent':'#dc2626',
+                      color:'white',border:confirmedPlayers.every(p=>!p)||isAnimating?'1px solid rgba(255,255,255,0.15)':'none',borderRadius:8,padding:'12px 0',
                       fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
-                      transition:'background 0.2s',
+                      transition:'background 0.2s',display:'block',
                     }}
                   >
                     {isAnimating?'⛳ In flight…':'⛳ Take Shot'}
@@ -3358,8 +3362,8 @@ function Scorecard({holes,scores,currentIdx,course,vsPar,vsParStr,h2hHoleResults
 
 // ── Player input row ───────────────────────────────────────────────────────────
 
-function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onClear}:{
-  idx:number;value:string;confirmed:boolean;suggestions:string[]
+function PlayerInputRow({idx,value,confirmed,suggestions,active=true,onChange,onConfirm,onClear}:{
+  idx:number;value:string;confirmed:boolean;suggestions:string[];active?:boolean
   onChange:(v:string)=>void;onConfirm:(n:string)=>void;onClear:()=>void
 }){
   return(
@@ -3369,7 +3373,8 @@ function PlayerInputRow({idx,value,confirmed,suggestions,onChange,onConfirm,onCl
           type="text"
           placeholder={idx===0?'Player 1 (required)':`Player ${idx+1} (optional)`}
           value={value} onChange={e=>onChange(e.target.value)} autoComplete="off"
-          style={{flex:1,background:confirmed?'rgba(34,197,94,0.12)':'#1e2d4a',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'transparent'}`,borderRadius:8,padding:'9px 12px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
+          className={active?'fg-input-active':'fg-input-inactive'}
+          style={{flex:1,background:confirmed?'rgba(34,197,94,0.12)':'transparent',border:`1.5px solid ${confirmed?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.12)'}`,borderRadius:8,padding:'9px 12px',fontSize:16,fontWeight:700,color:'white',fontFamily:'inherit'}}
         />
         {(value||confirmed)&&(
           <button onClick={onClear} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',padding:'4px 6px',lineHeight:1}}>×</button>
