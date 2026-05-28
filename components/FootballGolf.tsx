@@ -2582,6 +2582,7 @@ export default function FootballGolf(){
                   realYScale={animYScale}
                   realTeePos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, animYScale!) : undefined}
                   realGreenPos={courseMode==='real' && !dailyMode ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, animYScale!) : undefined}
+                  hidePin={selectedCourse==='wii-golf' && WII_GOLF_HIDEPIN.has(currentHole.number)}
                   realWaypoints={courseMode==='real' && !dailyMode ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, animYScale!)) : undefined}
                   realPostFork={selectedCourse==='wii-golf' && !dailyMode ? wiiRealPostFork : undefined}
                   imageZoom={courseMode==='real' && !dailyMode && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
@@ -2806,6 +2807,7 @@ export default function FootballGolf(){
                     realYScale={cvYScale}
                     realTeePos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, cvYScale!) : undefined}
                     realGreenPos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].greenFrac, cvYScale!) : undefined}
+                    hidePin={isReal && selectedCourse==='wii-golf' && WII_GOLF_HIDEPIN.has(currentHole.number)}
                     realWaypoints={isReal ? ((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].waypointFracs ?? []).map(f=>fracToSVG(f, cvYScale!)) : undefined}
                     realPostFork={isReal && selectedCourse==='wii-golf' ? wiiRealPostFork : undefined}
                     imageZoom={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGEZOOM[currentHole.number] ?? 1) : 1}
@@ -2902,8 +2904,8 @@ function GimmePanel({remaining,onAccept}:{remaining:number;onAccept:()=>void}){
 
 // ── Course view ────────────────────────────────────────────────────────────────
 
-function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,imageZoom=1,imageShiftX=0,imageShiftY=0,realYScale,realTeePos,realGreenPos,realWaypoints,realPostFork,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false,noBg=false}:{
-  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; imageZoom?:number; imageShiftX?:number; imageShiftY?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean; noBg?:boolean
+function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,strokes,maxRangePos,imageUrl,imageRotation,imageZoom=1,imageShiftX=0,imageShiftY=0,realYScale,realTeePos,realGreenPos,realWaypoints,realPostFork,oppBallPos,myBallColor,oppBallColor,useCover=false,useMeet=false,noBg=false,hidePin=false}:{
+  hole:Hole; displayBallPos:number; preAnimBallPos:number; arcOffset:number; isAnimating:boolean; strokes:number; maxRangePos?:number; imageUrl?:string; imageRotation?:number; imageZoom?:number; imageShiftX?:number; imageShiftY?:number; realYScale?:number; useCover?:boolean; useMeet?:boolean; noBg?:boolean; hidePin?:boolean
   realTeePos?:{x:number;y:number}; realGreenPos?:{x:number;y:number}; realWaypoints?:{x:number;y:number}[]; realPostFork?:{atYards:number; fork:{x:number;y:number}; waypoints?:{x:number;y:number}[]}; oppBallPos?:number; myBallColor?:string; oppBallColor?:string
 }){
   // Real course: build path directly from calibrated tee → waypoints → green
@@ -3140,9 +3142,11 @@ function CourseView({hole,displayBallPos,preAnimBallPos,arcOffset,isAnimating,st
         </>}
 
         {/* Flag — always shown so players know where the pin sits in the SVG */}
+        {!hidePin && <>
         <circle cx={holePos.x} cy={holePos.y} r={2.8} fill="#0a0f1e"/>
         <line x1={holePos.x} y1={holePos.y} x2={holePos.x} y2={holePos.y-17} stroke="rgba(255,255,255,0.7)" strokeWidth={0.7}/>
         <polygon points={`${holePos.x},${holePos.y-17} ${holePos.x+11},${holePos.y-13} ${holePos.x},${holePos.y-8}`} fill="#dc2626"/>
+        </>}
 
 
         {/* Swing animation — grip to the right, shaft sweeps from tee-side through ball toward hole */}
@@ -3476,13 +3480,14 @@ const WII_GOLF_YSCALE: Record<number, number> = {
   1: 220,             // portrait HD — zoomed
   2: 100/(398/538),   // 135.2
   3: 100/(629/1443),  // 229.4 — portrait
-  4: 100/(200/715),   // 357.5 — cropped to 200px wide
+  4: 100/(546/1609),  // 294.7
   5: 100/(650/1536),  // 236.3 — cropped to 650px wide
   6: 100/(310/674),   // 217.4 — cropped to 310px wide
   7: 100/(830/1536),  // 185.1 — cropped to 830px wide
   8: 100/(1024/1536), // 150.0
   9: 100/(962/1634),  // 169.9
 }
+const WII_GOLF_HIDEPIN = new Set([4])
 const WII_GOLF_IMAGEZOOM: Record<number, number> = {
   1: 1.55,
   3: 1.5,
