@@ -324,7 +324,7 @@ export default function LandingPage() {
             onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
             onClick={() => router.push('/blackjack')}>
             <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Blackjack</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Casino</div>
               <div style={{ fontSize: 10, color: '#8899bb' }}>Top 52 players as cards · beat the dealer to 21</div>
             </div>
             <div style={{ padding: '0 10px 8px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -343,7 +343,7 @@ export default function LandingPage() {
                 <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, fontWeight: 700 }}>TOPBINS CASINO</div>
               </div>
             </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Blackjack →</span></div>
+            <div style={s.ctaSm}><span style={s.ctaText}>Play Casino →</span></div>
           </div>
 
           {/* ---- COUNTDOWN (moved up) ---- */}
