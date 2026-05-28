@@ -3580,7 +3580,7 @@ const WII_GOLF_BRANCHES: Record<number, BranchSpec> = {
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number;side?:'left'|'right'}[] }> = {
   1: {bunkers:[{start:179,end:233}]},
   2: {hazards:[{start:27,end:82}], bunkers:[{start:113,end:121,side:'right'}]},
-  4: {bunkers:[{start:113,end:124}]},
+  4: {bunkers:[{start:115,end:124}]},
   5: {bunkers:[{start:134,end:144}]},
   6: {hazards:[{start:31,end:108},{start:268,end:297}], bunkers:[{start:308,end:320}]},
   7: {bunkers:[{start:295,end:312}]},
