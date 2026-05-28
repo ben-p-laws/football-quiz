@@ -3497,7 +3497,7 @@ const WII_GOLF_POSITIONS: Record<number, {teeFrac:[number,number]; greenFrac:[nu
   1: {teeFrac:[0.491,0.896], greenFrac:[0.510,0.118], waypointFracs:[[0.351,0.436]]},
   2: {teeFrac:[0.247,0.848], greenFrac:[0.609,0.277], waypointFracs:[[0.491,0.569],[0.544,0.494]]},
   3: {teeFrac:[0.173,0.881], greenFrac:[0.310,0.127], waypointFracs:[[0.822,0.627],[0.692,0.351]]},
-  4: {teeFrac:[0.495,0.859], greenFrac:[0.411,0.222], waypointFracs:[[0.501,0.585],[0.501,0.432]]},
+  4: {teeFrac:[0.508,0.919], greenFrac:[0.418,0.212], waypointFracs:[[0.518,0.515],[0.518,0.434]]},
   5: {teeFrac:[0.586,0.839], greenFrac:[0.870,0.142], waypointFracs:[[0.106,0.405],[0.254,0.241]]},
   6: {teeFrac:[0.332,0.892], greenFrac:[0.645,0.173], waypointFracs:[[0.490,0.42]]},
   7: {teeFrac:[0.390,0.868], greenFrac:[0.788,0.273], waypointFracs:[[0.180,0.255],[0.418,0.109]]},
@@ -3580,7 +3580,7 @@ const WII_GOLF_BRANCHES: Record<number, BranchSpec> = {
 const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; bunkers?: {start:number;end:number;side?:'left'|'right'}[] }> = {
   1: {bunkers:[{start:179,end:233}]},
   2: {hazards:[{start:27,end:82}], bunkers:[{start:113,end:121,side:'right'}]},
-  4: {bunkers:[{start:115,end:124}]},
+  4: {bunkers:[{start:113,end:124}]},
   5: {bunkers:[{start:134,end:144}]},
   6: {hazards:[{start:31,end:108},{start:268,end:297}], bunkers:[{start:308,end:320}]},
   7: {bunkers:[{start:295,end:312}]},
