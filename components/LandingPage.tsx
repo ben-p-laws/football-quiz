@@ -325,7 +325,7 @@ export default function LandingPage() {
             onClick={() => router.push('/blackjack')}>
             <div style={{ padding: '10px 12px 8px' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Casino</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Top 52 players as cards · beat the dealer to 21</div>
+              <div style={{ fontSize: 10, color: '#8899bb' }}>Use football trivia to build your stack</div>
             </div>
             <div style={{ padding: '0 10px 8px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ background: '#1a5428', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>

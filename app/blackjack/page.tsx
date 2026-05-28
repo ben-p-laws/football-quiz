@@ -21,9 +21,9 @@ const GAMES = [
   {
     label: 'Roulette',
     icon: '🎡',
-    href: null,
-    desc: null,
-    live: false,
+    href: '/blackjack/roulette',
+    desc: 'Find players to match the wheel',
+    live: true,
   },
   {
     label: 'Craps',
