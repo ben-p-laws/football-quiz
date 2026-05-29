@@ -489,7 +489,7 @@ export default function Roulette() {
         : `${chosen} has ${val} ${category.label.toLowerCase()}. Needed ${betDesc}.`
     )
     history.current.push({ target: target!, cat: category!.label, player: chosen, stat: val, won: hits })
-    setPhase(round >= 10 ? 'gameover' : 'result')
+    setPhase('result')
   }, [betType, chosen, players, target, category, winnings, round, seasonData])
 
   const nextRound = useCallback(() => {
@@ -526,15 +526,6 @@ export default function Roulette() {
         <div style={{ fontSize: 14, color: '#8899bb' }}>
           Finished with <span style={{ color: '#f59e0b', fontWeight: 700 }}>{winnings}</span> winnings
         </div>
-      </div>
-
-      {/* Round history */}
-      <div style={{ background: '#111827', borderRadius: 12, padding: '12px', marginBottom: 16 }}>
-        {history.current.map((r, i) => (
-          <div key={i} style={{ fontSize: 12, color: r.won ? '#22c55e' : '#dc2626', padding: '4px 0', borderBottom: i < history.current.length - 1 ? '1px solid #1e2d4a' : 'none' }}>
-            R{i + 1}: {r.cat} = {r.target} → {r.player} had {r.stat} {r.won ? '✓' : '✗'}
-          </div>
-        ))}
       </div>
 
       {/* Submit score */}
@@ -752,9 +743,15 @@ export default function Roulette() {
         <div style={{ marginTop: 10, background: won ? 'rgba(34,197,94,0.08)' : 'rgba(220,38,38,0.08)', border: `1px solid ${won ? '#22c55e' : '#dc2626'}`, borderRadius: 10, padding: '12px 16px' }}>
           <div style={{ fontSize: 15, fontWeight: 800, color: won ? '#22c55e' : '#dc2626', marginBottom: 4 }}>{won ? 'WIN!' : 'MISS'}</div>
           <div style={{ fontSize: 12, color: '#c4cfe8', lineHeight: 1.5, marginBottom: 10 }}>{resultMsg}</div>
-          <button onClick={nextRound} style={{ background: '#dc2626', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 800, padding: '8px 20px', cursor: 'pointer' }}>
-            Next Round →
-          </button>
+          {round >= 10 ? (
+            <button onClick={() => setPhase('gameover')} style={{ background: '#f59e0b', border: 'none', borderRadius: 6, color: '#0a0f1e', fontSize: 13, fontWeight: 800, padding: '8px 20px', cursor: 'pointer' }}>
+              Finish Game →
+            </button>
+          ) : (
+            <button onClick={nextRound} style={{ background: '#dc2626', border: 'none', borderRadius: 6, color: 'white', fontSize: 13, fontWeight: 800, padding: '8px 20px', cursor: 'pointer' }}>
+              Next Round →
+            </button>
+          )}
         </div>
       )}
 
