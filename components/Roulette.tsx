@@ -339,8 +339,8 @@ function SlotDisplay({ category, spinning }: { category: StatCat | null; spinnin
     return () => { if (ref.current) clearInterval(ref.current) }
   }, [spinning])
   return (
-    <div style={{ background: '#0d1424', border: '2px solid #1e3a5f', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 52 }}>
-      <div style={{ fontSize: 14, fontWeight: 800, color: spinning ? '#6b7fa3' : '#f59e0b', textAlign: 'center' }}>
+    <div style={{ background: '#0d1424', border: '2px solid #1e3a5f', borderRadius: 10, padding: '10px 14px', height: 76, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: spinning ? '#6b7fa3' : '#f59e0b', textAlign: 'center', lineHeight: 1.3 }}>
         {spinning ? labels[idx] : (category?.label ?? '—')}
       </div>
     </div>
@@ -507,7 +507,7 @@ export default function Roulette() {
           <div style={{ display: 'flex', gap: 6 }}>
             <div style={{ flex: '0 0 auto', minWidth: 72 }}>
               <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 2, marginBottom: 4, textAlign: 'center' }}>TARGET</div>
-              <div style={{ background: '#0d1424', border: '2px solid #1e3a5f', borderRadius: 10, padding: '10px 14px', minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <div style={{ background: '#0d1424', border: '2px solid #1e3a5f', borderRadius: 10, padding: '10px 14px', height: 76, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 <div style={{ fontSize: 28, fontWeight: 900, color: target !== null && !spinning ? '#f59e0b' : '#2a3a5a', lineHeight: 1 }}>{target !== null && !spinning ? target : '?'}</div>
               </div>
             </div>
@@ -533,10 +533,10 @@ export default function Roulette() {
       {/* Below-table: bet selection (left) + player selection (right) */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 2 }}>
 
-        {/* LEFT — bet type (60%) */}
-        <div style={{ flex: '0 0 60%', opacity: canBet ? 1 : 0.4 }}>
+        {/* LEFT — bet type (50%) */}
+        <div style={{ flex: 1, opacity: canBet ? 1 : 0.4 }}>
           <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 2, marginBottom: 6 }}>SELECT BET TYPE</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 5 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
             {(() => {
               const sNums = target ? streetNums(target) : null
               const scoreDesc = {
@@ -554,13 +554,13 @@ export default function Roulette() {
                   <button key={type} onClick={() => canBet && setBetType(type)} style={{
                     background: active ? '#f59e0b' : canBet ? 'rgba(245,158,11,0.06)' : 'rgba(255,255,255,0.02)',
                     border: `1px solid ${active ? '#f59e0b' : canBet ? 'rgba(245,158,11,0.35)' : '#1e2d4a'}`,
-                    borderRadius: 8, padding: '8px 4px', cursor: canBet ? 'pointer' : 'default',
+                    borderRadius: 8, padding: '6px 8px', cursor: canBet ? 'pointer' : 'default',
                     color: active ? '#0a0f1e' : canBet ? 'white' : '#4a5a7a',
-                    textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                    display: 'flex', alignItems: 'center', gap: 6, width: '100%', textAlign: 'left',
                   }}>
-                    <div style={{ fontSize: 12, fontWeight: 800 }}>{label}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: active ? 'rgba(0,0,0,0.6)' : '#8899bb' }}>returns {mult}x</div>
-                    <div style={{ fontSize: 8, color: active ? 'rgba(0,0,0,0.55)' : '#6b7fa3', lineHeight: 1.3 }}>{scoreDesc[type]}</div>
+                    <div style={{ fontSize: 12, fontWeight: 800, whiteSpace: 'nowrap', width: 46, flexShrink: 0 }}>{label}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: active ? 'rgba(0,0,0,0.6)' : '#8899bb', whiteSpace: 'nowrap', width: 24, flexShrink: 0 }}>{mult}x</div>
+                    <div style={{ fontSize: 9, color: active ? 'rgba(0,0,0,0.55)' : '#6b7fa3', lineHeight: 1.3, flex: 1, minWidth: 0 }}>{scoreDesc[type]}</div>
                   </button>
                 )
               })
