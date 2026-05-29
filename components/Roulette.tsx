@@ -16,7 +16,7 @@ function numColor(n: number) {
 }
 
 function WheelSVG({ rotation, size = 200 }: { rotation: number; size?: number }) {
-  const cx = 50, cy = 50, r = 46, ir = 35  // ir = 75% of r — thick outer band, large centre
+  const cx = 50, cy = 50, r = 46, ir = 35
   const toRad = (deg: number) => (deg - 90) * Math.PI / 180
   const sectors = WHEEL_ORDER.map((num, i) => {
     const a1 = i * SECTOR_DEG, a2 = a1 + SECTOR_DEG
@@ -25,7 +25,7 @@ function WheelSVG({ rotation, size = 200 }: { rotation: number; size?: number })
     const ix1 = cx + ir * Math.cos(toRad(a1)), iy1 = cy + ir * Math.sin(toRad(a1))
     const ix2 = cx + ir * Math.cos(toRad(a2)), iy2 = cy + ir * Math.sin(toRad(a2))
     const mid = a1 + SECTOR_DEG / 2
-    const tr  = r - 5.5  // near outer edge so numbers are larger in the wide part of the slice
+    const tr  = r - 5.5
     const tx  = cx + tr * Math.cos(toRad(mid))
     const ty  = cy + tr * Math.sin(toRad(mid))
     return { num, d: `M${ix1} ${iy1}L${x1} ${y1}A${r} ${r} 0 0 1 ${x2} ${y2}L${ix2} ${iy2}A${ir} ${ir} 0 0 0 ${ix1} ${iy1}Z`, tx, ty, rot: mid + 90 }
@@ -35,8 +35,6 @@ function WheelSVG({ rotation, size = 200 }: { rotation: number; size?: number })
     <div style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}>
       <div style={{ position: 'absolute', top: -6, left: '50%', transform: 'translateX(-50%)', zIndex: 10, width: 0, height: 0, borderLeft: '7px solid transparent', borderRight: '7px solid transparent', borderTop: '18px solid #f59e0b' }} />
       <svg viewBox="0 0 100 100" width={size} height={size} style={{ display: 'block' }}>
-
-        {/* Rotating outer ring + coloured sectors */}
         <g style={{ transform: `rotate(${rotation}deg)`, transformOrigin: `${cx}px ${cy}px`, transition: 'transform 3.5s cubic-bezier(0.17,0.67,0.12,1.0)' }}>
           {sectors.map(({ num, d, tx, ty, rot }) => (
             <g key={num}>
@@ -45,21 +43,15 @@ function WheelSVG({ rotation, size = 200 }: { rotation: number; size?: number })
                 transform={`rotate(${rot},${tx},${ty})`} style={{ userSelect: 'none', fontWeight: 700 }}>{num}</text>
             </g>
           ))}
-          {/* Black centre disc — rotates but looks the same */}
           <circle cx={cx} cy={cy} r={ir - 1} fill="#0a0f1e" />
         </g>
-
-        {/* Fixed TopBins Roulette text — does NOT rotate */}
         <text x={cx} y={cy - 3} textAnchor="middle" dominantBaseline="middle" fontSize="8.5" fontWeight="900" style={{ userSelect: 'none', letterSpacing: '-0.3' }}>
           <tspan fill="white">Top</tspan><tspan fill="#dc2626">Bins</tspan>
         </text>
         <text x={cx} y={cy + 7} textAnchor="middle" dominantBaseline="middle" fontSize="5.5" fontWeight="800" fill="#f59e0b" style={{ userSelect: 'none', letterSpacing: '0.5' }}>
           ROULETTE
         </text>
-
-        {/* Outer border ring */}
         <circle cx={cx} cy={cy} r={48} fill="none" stroke="#1e3a5f" strokeWidth="2" />
-        {/* Divider ring between outer coloured band and centre */}
         <circle cx={cx} cy={cy} r={ir} fill="none" stroke="#0a0f1e" strokeWidth="0.8" />
       </svg>
     </div>
@@ -71,7 +63,7 @@ type StatId = 'goals' | 'assists' | 'yellow_cards' | 'clean_sheets'
 type StatCat = { id: StatId; label: string; club?: string; nation?: string; continent?: string; season?: string }
 
 type SeasonPlayer = { goals: number; assists: number; yellow_cards: number; appearances: number; clean_sheets: number }
-type SeasonData   = Record<string, Record<string, SeasonPlayer>>  // season → playerName → stats
+type SeasonData   = Record<string, Record<string, SeasonPlayer>>
 
 const TOP_CLUBS = [
   'Arsenal','Chelsea','Liverpool','Manchester City','Manchester United',
@@ -175,11 +167,9 @@ function buildCatPool(seasonData: SeasonData): StatCat[] {
 }
 
 // ── Bet logic ─────────────────────────────────────────────────────────────────
-// "street" = vertical column of 3 (same as standard roulette street)
-// street s (1-based): contains numbers [3s-2, 3s-1, 3s]
 type BetType = 'number' | 'street' | 'third'
 
-function streetOf(n: number)  { return Math.ceil(n / 3) }              // 1-12
+function streetOf(n: number)  { return Math.ceil(n / 3) }
 function thirdOf(n: number)   { return n <= 12 ? 1 : n <= 24 ? 2 : 3 }
 function streetNums(n: number) {
   const s = streetOf(n)
@@ -197,17 +187,16 @@ function betMultiplier(type: BetType) {
   return type === 'number' ? 36 : type === 'street' ? 12 : 3
 }
 
-// ── Felt table (always visible) ───────────────────────────────────────────────
+// ── Felt table ────────────────────────────────────────────────────────────────
 const ROWS = [
   [3,6,9,12,15,18,21,24,27,30,33,36],
   [2,5,8,11,14,17,20,23,26,29,32,35],
   [1,4,7,10,13,16,19,22,25,28,31,34],
 ]
 
-// Casino chip: white with red conic edge pattern
 function Chip({ size = 16 }: { size?: number }) {
-  const segs = 9  // number of red/white pairs around edge
-  const edgePct = 28  // % of radius used for edge band
+  const segs = 9
+  const edgePct = 28
   const innerR = Math.round(size * (1 - edgePct / 100))
   const degPer = 360 / segs
   const pattern = Array.from({ length: segs }, (_, i) => {
@@ -223,7 +212,6 @@ function Chip({ size = 16 }: { size?: number }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
     }}>
-      {/* white centre disc */}
       <div style={{
         width: innerR, height: innerR, borderRadius: '50%',
         background: 'white',
@@ -242,9 +230,6 @@ function FeltTable({ target, selectedBet, revealed }: { target: number | null; s
   const isTarget = (n: number) => showTarget && n === target
 
   const chipOnThird = showTarget && selectedBet === 'third' && target ? thirdOf(target) : null
-
-  // For street: chip straddles the bottom edge of the bottom cell (ROWS[2] = 3s-2)
-  // and the third strip below. The cell gets overflow:visible so the chip can hang out.
   const streetChipCell = !target || selectedBet !== 'street' ? null : 3 * streetOf(target) - 2
 
   return (
@@ -254,7 +239,6 @@ function FeltTable({ target, selectedBet, revealed }: { target: number | null; s
       border: '3px solid #0d2b14',
       boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.5), 0 2px 12px rgba(0,0,0,0.4)',
     }}>
-      {/* Number grid — overflow visible so street chip can straddle the bottom edge */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12,1fr)', gap: 3, overflow: 'visible' }}>
         {ROWS.map(row =>
           row.map(n => {
@@ -280,13 +264,11 @@ function FeltTable({ target, selectedBet, revealed }: { target: number | null; s
                 boxShadow: tgt ? '0 0 8px rgba(245,158,11,0.6)' : 'none',
               }}>
                 {n}
-                {/* Number bet: chip on right edge of the cell */}
                 {hasNumberChip && (
                   <div style={{ position: 'absolute', top: '50%', right: -7, transform: 'translateY(-50%)', zIndex: 10, pointerEvents: 'none' }}>
                     <Chip size={14} />
                   </div>
                 )}
-                {/* Street bet: chip centred on bottom border, straddling into the third strip */}
                 {hasStreetChip && (
                   <div style={{ position: 'absolute', bottom: -7, left: '50%', transform: 'translateX(-50%)', zIndex: 10, pointerEvents: 'none' }}>
                     <Chip size={14} />
@@ -298,7 +280,6 @@ function FeltTable({ target, selectedBet, revealed }: { target: number | null; s
         )}
       </div>
 
-      {/* Third labels */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 3, marginTop: 4 }}>
         {[{ t: 1, label: '1st 12' }, { t: 2, label: '2nd 12' }, { t: 3, label: '3rd 12' }].map(({ t, label }) => {
           const active = showTarget && selectedBet === 'third' && target !== null && thirdOf(target) === t
@@ -347,30 +328,99 @@ function SlotDisplay({ category, spinning }: { category: StatCat | null; spinnin
   )
 }
 
+// ── Instructions card ─────────────────────────────────────────────────────────
+function InstructionsCard({ onClose, loading }: { onClose?: () => void; loading?: boolean }) {
+  return (
+    <div style={{
+      background: 'linear-gradient(135deg,#111827,#1e2d4a)',
+      border: '1px solid #1e3a5f',
+      borderRadius: 16,
+      padding: '28px 24px',
+      maxWidth: 360,
+      width: '100%',
+      textAlign: 'center',
+      color: 'white',
+    }}>
+      <div style={{ fontSize: 10, color: '#f59e0b', letterSpacing: 3, fontWeight: 700, marginBottom: 10 }}>♠ ♥ ♦ ♣</div>
+      <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 2 }}>
+        TopBins <span style={{ color: '#f59e0b' }}>Roulette</span>
+      </div>
+      <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 20 }}>How to play</div>
+
+      <div style={{ textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        {[
+          { icon: '🎡', text: '10 rounds — each round the wheel spins to a target number and a stat category' },
+          { icon: '⚽', text: 'Pick a player whose stat you think matches the target number' },
+          { icon: '🏆', text: 'Highest total winnings after 10 rounds wins!' },
+        ].map(({ icon, text }) => (
+          <div key={icon} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 16, lineHeight: 1.4 }}>{icon}</span>
+            <span style={{ fontSize: 13, color: '#c4cfe8', lineHeight: 1.5 }}>{text}</span>
+          </div>
+        ))}
+
+        <div style={{ background: '#0d1424', borderRadius: 10, padding: '10px 12px', marginTop: 2 }}>
+          <div style={{ fontSize: 10, color: '#6b7fa3', letterSpacing: 2, marginBottom: 8 }}>BET TYPES</div>
+          {[
+            { label: 'Number', mult: '36x', desc: 'Exact match — highest risk, highest reward' },
+            { label: 'Street', mult: '12x', desc: 'One of a group of 3 numbers' },
+            { label: 'Third',  mult:  '3x', desc: 'Right third: 1–12, 13–24, or 25–36' },
+          ].map(({ label, mult, desc }) => (
+            <div key={label} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, width: 46, flexShrink: 0 }}>{label}</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', width: 28, flexShrink: 0 }}>{mult}</div>
+              <div style={{ fontSize: 10, color: '#8899bb', lineHeight: 1.4 }}>{desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{ fontSize: 12, color: '#6b7fa3', letterSpacing: 1 }}>Loading player data…</div>
+      ) : (
+        <button onClick={onClose} style={{
+          background: '#dc2626', border: 'none', borderRadius: 8,
+          color: 'white', fontSize: 14, fontWeight: 800,
+          padding: '12px', cursor: 'pointer', width: '100%',
+          letterSpacing: 1,
+        }}>
+          LET&apos;S PLAY!
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 type Phase = 'intro' | 'spinning' | 'betting' | 'result' | 'gameover'
+type LbEntry = { name: string; score: number }
 
 export default function Roulette() {
-  const [players, setPlayers]     = useState<Record<string, PlayerData> | null>(null)
-  const [playerNames, setNames]   = useState<string[]>([])
+  const [players, setPlayers]       = useState<Record<string, PlayerData> | null>(null)
+  const [playerNames, setNames]     = useState<string[]>([])
   const [seasonData, setSeasonData] = useState<SeasonData>({})
-  const [loading, setLoading]     = useState(true)
+  const [loading, setLoading]       = useState(true)
 
-  const [phase, setPhase]         = useState<Phase>('intro')
-  const [winnings, setWinnings]   = useState(0)
-  const [round, setRound]         = useState(1)
-  const [wheelRot, setWheelRot]   = useState(0)
-  const [spinning, setSpinning]   = useState(false)
+  const [phase, setPhase]           = useState<Phase>('intro')
+  const [winnings, setWinnings]     = useState(0)
+  const [round, setRound]           = useState(1)
+  const [wheelRot, setWheelRot]     = useState(0)
+  const [spinning, setSpinning]     = useState(false)
 
-  const [target, setTarget]       = useState<number | null>(null)
-  const [category, setCategory]   = useState<StatCat | null>(null)
-  const [betType, setBetType]     = useState<BetType | null>(null)
+  const [target, setTarget]         = useState<number | null>(null)
+  const [category, setCategory]     = useState<StatCat | null>(null)
+  const [betType, setBetType]       = useState<BetType | null>(null)
 
-  const [query, setQuery]         = useState('')
-  const [suggestions, setSugg]    = useState<string[]>([])
-  const [chosen, setChosen]       = useState<string | null>(null)
-  const [resultMsg, setResultMsg] = useState('')
-  const [won, setWon]             = useState(false)
+  const [query, setQuery]           = useState('')
+  const [suggestions, setSugg]      = useState<string[]>([])
+  const [chosen, setChosen]         = useState<string | null>(null)
+  const [resultMsg, setResultMsg]   = useState('')
+  const [won, setWon]               = useState(false)
+
+  const [showInstructions, setShowInstructions] = useState(false)
+  const [lbName, setLbName]         = useState('')
+  const [lbSubmitted, setLbSubmitted] = useState(false)
+  const [lbEntries, setLbEntries]   = useState<LbEntry[]>([])
 
   const history = useRef<{ target: number; cat: string; player: string; stat: number; won: boolean }[]>([])
 
@@ -389,6 +439,11 @@ export default function Roulette() {
       setLoading(false)
     })
   }, [])
+
+  useEffect(() => {
+    if (phase !== 'gameover') return
+    fetch('/api/roulette-leaderboard').then(r => r.json()).then(setLbEntries)
+  }, [phase])
 
   useEffect(() => {
     if (!query || query.length < 2) { setSugg([]); return }
@@ -444,12 +499,14 @@ export default function Roulette() {
 
   const restart = useCallback(() => {
     setWinnings(0); setRound(1); setTarget(null); setCategory(null); setBetType(null)
-    setChosen(null); setQuery(''); setResultMsg(''); history.current = []; setPhase('intro')
+    setChosen(null); setQuery(''); setResultMsg(''); history.current = []
+    setLbName(''); setLbSubmitted(false); setLbEntries([])
+    setPhase('intro')
   }, [])
 
   if (loading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'calc(100dvh - 56px)', color: '#8899bb' }}>
-      Loading player data…
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100dvh - 56px)', padding: '24px 16px' }}>
+      <InstructionsCard loading />
     </div>
   )
 
@@ -460,25 +517,104 @@ export default function Roulette() {
   const thirdLabel  = target ? (thirdOf(target) === 1 ? '1–12' : thirdOf(target) === 2 ? '13–24' : '25–36') : '—'
 
   if (phase === 'gameover') return (
-    <div style={{ color: 'white', padding: '24px 16px', maxWidth: 600, margin: '0 auto', textAlign: 'center' }}>
-      <div style={{ fontSize: 36, marginBottom: 8 }}>{winnings === 0 ? '😬' : winnings >= 50 ? '🏆' : '🎰'}</div>
-      <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>{winnings === 0 ? 'Nothing!' : winnings >= 50 ? 'Big winner!' : 'Game Over'}</div>
-      <div style={{ fontSize: 14, color: '#8899bb', marginBottom: 24 }}>Finished with <span style={{ color: '#f59e0b', fontWeight: 700 }}>{winnings}</span> winnings</div>
-      <div style={{ background: '#111827', borderRadius: 12, padding: '12px', marginBottom: 20, textAlign: 'left' }}>
+    <div style={{ color: 'white', padding: '24px 16px', maxWidth: 480, margin: '0 auto' }}>
+      <div style={{ textAlign: 'center', marginBottom: 20 }}>
+        <div style={{ fontSize: 36, marginBottom: 8 }}>{winnings === 0 ? '😬' : winnings >= 50 ? '🏆' : '🎰'}</div>
+        <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 4 }}>
+          {winnings === 0 ? 'Nothing!' : winnings >= 50 ? 'Big winner!' : 'Game Over'}
+        </div>
+        <div style={{ fontSize: 14, color: '#8899bb' }}>
+          Finished with <span style={{ color: '#f59e0b', fontWeight: 700 }}>{winnings}</span> winnings
+        </div>
+      </div>
+
+      {/* Round history */}
+      <div style={{ background: '#111827', borderRadius: 12, padding: '12px', marginBottom: 16 }}>
         {history.current.map((r, i) => (
           <div key={i} style={{ fontSize: 12, color: r.won ? '#22c55e' : '#dc2626', padding: '4px 0', borderBottom: i < history.current.length - 1 ? '1px solid #1e2d4a' : 'none' }}>
             R{i + 1}: {r.cat} = {r.target} → {r.player} had {r.stat} {r.won ? '✓' : '✗'}
           </div>
         ))}
       </div>
-      <button onClick={restart} style={{ background: '#dc2626', border: 'none', borderRadius: 8, color: 'white', fontSize: 15, fontWeight: 800, padding: '12px 32px', cursor: 'pointer' }}>
-        Play Again
+
+      {/* Submit score */}
+      {!lbSubmitted ? (
+        <div style={{ background: '#111827', borderRadius: 12, padding: '16px', marginBottom: 16 }}>
+          <div style={{ fontSize: 10, color: '#6b7fa3', letterSpacing: 2, marginBottom: 8 }}>SAVE YOUR SCORE</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={lbName}
+              onChange={e => setLbName(e.target.value.slice(0, 20))}
+              placeholder="Enter your name"
+              style={{ flex: 1, background: '#0d1424', border: '1px solid #1e3a5f', borderRadius: 8, color: 'white', fontSize: 14, padding: '10px 12px', outline: 'none' }}
+            />
+            <button
+              disabled={!lbName.trim()}
+              onClick={() => {
+                fetch('/api/roulette-leaderboard', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ name: lbName.trim(), score: winnings }),
+                }).then(r => r.json()).then((data: LbEntry[]) => {
+                  setLbSubmitted(true)
+                  setLbEntries(data)
+                })
+              }}
+              style={{
+                background: lbName.trim() ? '#dc2626' : '#1e2d4a', border: 'none',
+                borderRadius: 8, color: lbName.trim() ? 'white' : '#4a5a7a',
+                fontSize: 13, fontWeight: 800, padding: '10px 16px',
+                cursor: lbName.trim() ? 'pointer' : 'default',
+              }}
+            >
+              SUBMIT
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid #22c55e', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#22c55e', textAlign: 'center' }}>
+          Score saved! ✓
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      {lbEntries.length > 0 && (
+        <div style={{ background: '#111827', borderRadius: 12, padding: '16px', marginBottom: 16 }}>
+          <div style={{ fontSize: 10, color: '#6b7fa3', letterSpacing: 2, marginBottom: 12 }}>LEADERBOARD</div>
+          {lbEntries.map((e, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '6px 0', borderBottom: i < lbEntries.length - 1 ? '1px solid #1e2d4a' : 'none',
+            }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? '#f59e0b' : i === 1 ? '#c0c0c0' : i === 2 ? '#cd7f32' : '#6b7fa3', width: 20, flexShrink: 0 }}>#{i + 1}</div>
+              <div style={{ fontSize: 13, flex: 1 }}>{e.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#f59e0b' }}>{e.score}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <button onClick={restart} style={{ background: '#dc2626', border: 'none', borderRadius: 8, color: 'white', fontSize: 15, fontWeight: 800, padding: '12px', cursor: 'pointer', width: '100%', letterSpacing: 1 }}>
+        PLAY AGAIN
       </button>
     </div>
   )
 
   return (
     <div style={{ color: 'white', padding: '12px 16px 20px', maxWidth: 640, margin: '0 auto' }}>
+
+      {/* Instructions modal overlay */}
+      {showInstructions && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={() => setShowInstructions(false)}
+        >
+          <div onClick={e => e.stopPropagation()}>
+            <InstructionsCard onClose={() => setShowInstructions(false)} />
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div>
@@ -487,7 +623,7 @@ export default function Roulette() {
             Football <span style={{ color: '#f59e0b' }}>Roulette</span>
           </h1>
         </div>
-        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 1 }}>ROUND</div>
             <div style={{ fontSize: 18, fontWeight: 900 }}>{round}/10</div>
@@ -496,6 +632,12 @@ export default function Roulette() {
             <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 1 }}>WINNINGS</div>
             <div style={{ fontSize: 18, fontWeight: 900, color: winnings < 0 ? '#dc2626' : '#f59e0b' }}>{winnings > 0 ? '+' : ''}{winnings}</div>
           </div>
+          <button
+            onClick={() => setShowInstructions(true)}
+            style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', border: '1px solid #1e3a5f', color: '#8899bb', fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+          >
+            ?
+          </button>
         </div>
       </div>
 
@@ -503,7 +645,6 @@ export default function Roulette() {
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
         <WheelSVG rotation={wheelRot} size={160} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {/* Target + stat category side by side */}
           <div style={{ display: 'flex', gap: 6 }}>
             <div style={{ flex: '0 0 auto', minWidth: 72 }}>
               <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 2, marginBottom: 4, textAlign: 'center' }}>TARGET</div>
@@ -524,16 +665,16 @@ export default function Roulette() {
         </div>
       </div>
 
-      {/* Felt table — always visible */}
+      {/* Felt table */}
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 2, marginBottom: 4 }}>TABLE</div>
         <FeltTable target={target} selectedBet={betType} revealed={phase === 'betting' || phase === 'result'} />
       </div>
 
-      {/* Below-table: bet selection (left) + player selection (right) */}
+      {/* Below-table: bet selection + player selection */}
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start', marginTop: 2 }}>
 
-        {/* LEFT — bet type (50%) */}
+        {/* LEFT — bet type */}
         <div style={{ flex: 1, opacity: canBet ? 1 : 0.4 }}>
           <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 2, marginBottom: 6 }}>SELECT BET TYPE</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -568,7 +709,7 @@ export default function Roulette() {
           </div>
         </div>
 
-        {/* RIGHT — player picker + submit */}
+        {/* RIGHT — player picker */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6, opacity: canBet ? 1 : 0.4 }}>
           <div style={{ fontSize: 9, color: '#6b7fa3', letterSpacing: 2, marginBottom: 0 }}>PICK A PLAYER</div>
           <div style={{ position: 'relative' }}>
