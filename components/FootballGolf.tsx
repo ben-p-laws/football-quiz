@@ -989,7 +989,7 @@ export default function FootballGolf(){
   const recentStats   = useRef<StatKey[]>([])
   const metaNations      = useRef<NationEntry[]>(FALLBACK_NATIONS)
   const metaClubs        = useRef<string[]>(FALLBACK_CLUBS)
-  const metaContinents   = useRef<string[]>(['Africa','Europe','Asia','S. America','N. America','Oceania'])
+  const metaContinents   = useRef<string[]>(['Africa','Europe','Asia','S. America','N. America'])
   const metaContClubPairs = useRef<[string,string][]>([])
   const top3CacheRef     = useRef<Record<string,number>|null>(null)
   const [metaReady, setMetaReady] = useState(false)
