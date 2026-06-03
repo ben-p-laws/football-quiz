@@ -56,7 +56,7 @@ export async function GET(req: Request) {
 
 // POST { deviceId, username, handicapIndex, tier, totalRounds, rounds? }
 export async function POST(req: Request) {
-  const { deviceId, username, handicapIndex, tier, totalRounds, rounds } = await req.json()
+  const { deviceId, username, handicapIndex, tier, totalRounds, rounds, streak } = await req.json()
   if (!deviceId || !username) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
   const db = getClient()
@@ -69,6 +69,7 @@ export async function POST(req: Request) {
     updated_at: new Date().toISOString(),
   }
   if (rounds !== undefined) payload.rounds = rounds
+  if (streak !== undefined) payload.streak = streak
 
   const { error } = await db.from('golf_handicap').upsert(payload, { onConflict: 'device_id' })
 

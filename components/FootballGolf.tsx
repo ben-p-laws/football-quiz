@@ -749,9 +749,11 @@ async function upsertHandicap(){
   const username = getSavedUsername()
   const deviceId = getDeviceId()
   if(!hcp || !username || !deviceId) return
+  const localRounds:GolfRound[] = typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')?? '[]'):[]
+  const streak = getStreak([...localRounds,...getServerRounds()])
   fetch('/api/golf-handicap',{
     method:'POST', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({deviceId, username, handicapIndex:hcp.index, tier:hcp.tier, totalRounds:hcp.totalRounds, rounds:hcp.top5}),
+    body:JSON.stringify({deviceId, username, handicapIndex:hcp.index, tier:hcp.tier, totalRounds:hcp.totalRounds, rounds:hcp.top5, streak}),
   }).catch(()=>{})
 }
 
@@ -3742,6 +3744,132 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
   )
 }
 
+type LobbyMember = { device_id:string; username:string; handicap_index:number|null; tier:string|null; total_rounds:number; streak:number; best_score:number|null }
+type ClubRanking = { name:string; code:string; avg_handicap:number; member_count:number }
+
+function ClubLobbyOverlay({ club, onClose }: { club:ClubInfo; onClose:()=>void }) {
+  const [members,setMembers] = useState<LobbyMember[]>([])
+  const [avgHandicap,setAvgHandicap] = useState<number|null>(null)
+  const [rankings,setRankings] = useState<ClubRanking[]>([])
+  const [rankOpen,setRankOpen] = useState(false)
+  const [loading,setLoading] = useState(true)
+
+  useEffect(()=>{
+    Promise.all([
+      fetch(`/api/golf-club?code=${club.code}&lobby=1`).then(r=>r.json()),
+      fetch('/api/golf-club?rankings=1').then(r=>r.json()),
+    ]).then(([lobbyData,rankData])=>{
+      setMembers(lobbyData.members??[])
+      setAvgHandicap(lobbyData.club?.avg_handicap??null)
+      setRankings(rankData.rankings??[])
+    }).finally(()=>setLoading(false))
+  },[club.code])
+
+  const myRank = rankings.findIndex(r=>r.code===club.code)+1 || null
+
+  function fmtHcp(h:number|null){
+    if(h===null) return '—'
+    return h>0?`+${h}`:String(h)
+  }
+  function fmtScore(s:number|null){
+    if(s===null) return '—'
+    return s===0?'E':s>0?`+${s}`:String(s)
+  }
+  function scoreColor(s:number|null){
+    if(s===null) return 'rgba(255,255,255,0.3)'
+    return s<0?'#22c55e':s>0?'#ef4444':'#94a3b8'
+  }
+  function tierColor(tier:string|null):string{
+    if(!tier) return 'rgba(255,255,255,0.3)'
+    const map:Record<string,string>={'Tour Pro':'#22c55e','Scratch':'#86efac','Club Pro':'#60a5fa','Decent':'#fbbf24','Amateur':'#f97316','Hacker':'#ef4444'}
+    return map[tier]??'rgba(255,255,255,0.4)'
+  }
+
+  return(
+    <div style={{position:'fixed',inset:0,zIndex:1000,background:'#0a0f1e',overflowY:'auto',fontFamily:"'DM Sans',sans-serif"}}>
+      <div style={{maxWidth:480,margin:'0 auto',padding:'16px 20px 40px'}}>
+        {/* Header */}
+        <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20}}>
+          <button onClick={onClose} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
+          <div style={{flex:1,fontSize:18,fontWeight:900,color:'white'}}>{club.name}</div>
+          <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',letterSpacing:'0.1em'}}>{club.code}</div>
+        </div>
+
+        {loading&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:14,padding:'40px 0'}}>Loading…</div>}
+
+        {!loading&&(
+          <>
+            {/* Club avg handicap + rank */}
+            <div style={{background:'#111827',border:'1.5px solid rgba(255,255,255,0.08)',borderRadius:14,padding:'14px 16px',marginBottom:16}}>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:8}}>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4}}>Club Avg. Handicap</div>
+                  <div style={{fontSize:28,fontWeight:900,color:avgHandicap!==null&&avgHandicap>0?'#22c55e':'rgba(255,255,255,0.8)'}}>
+                    {avgHandicap!==null?fmtHcp(avgHandicap):'No data yet'}
+                  </div>
+                </div>
+                {myRank&&(
+                  <button onClick={()=>setRankOpen(v=>!v)}
+                    style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:10,padding:'8px 14px',cursor:'pointer',fontFamily:'inherit',textAlign:'right'}}>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',fontWeight:700,marginBottom:2}}>Global Rank</div>
+                    <div style={{fontSize:18,fontWeight:900,color:'white'}}>#{myRank} <span style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{rankOpen?'▲':'▼'}</span></div>
+                  </button>
+                )}
+              </div>
+
+              {/* Rankings dropdown */}
+              {rankOpen&&rankings.length>0&&(
+                <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',paddingTop:10,marginTop:4,display:'flex',flexDirection:'column',gap:4}}>
+                  {rankings.map((r,i)=>{
+                    const isMe=r.code===club.code
+                    return(
+                      <div key={r.code} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 6px',borderRadius:8,background:isMe?'rgba(34,197,94,0.08)':'transparent'}}>
+                        <div style={{fontSize:11,fontWeight:700,color:isMe?'rgba(34,197,94,0.7)':'rgba(255,255,255,0.25)',width:24,textAlign:'right'}}>#{i+1}</div>
+                        <div style={{flex:1,fontSize:12,fontWeight:isMe?900:600,color:isMe?'white':'rgba(255,255,255,0.6)'}}>{r.name}{isMe&&<span style={{color:'rgba(34,197,94,0.6)',fontSize:10}}> ●</span>}</div>
+                        <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',marginRight:4}}>{r.member_count}p</div>
+                        <div style={{fontSize:12,fontWeight:900,color:r.avg_handicap>0?'#22c55e':'rgba(255,255,255,0.5)',minWidth:32,textAlign:'right'}}>{fmtHcp(r.avg_handicap)}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Members table */}
+            <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>
+              Members · {members.length}
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:5}}>
+              {members.map((m,i)=>(
+                <div key={m.device_id} style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'10px 14px',display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.2)',width:18,textAlign:'right',flexShrink:0}}>#{i+1}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:800,color:'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{m.username||'—'}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:tierColor(m.tier),marginTop:1}}>{m.tier??'No rounds yet'}</div>
+                  </div>
+                  <div style={{textAlign:'right',flexShrink:0}}>
+                    <div style={{fontSize:15,fontWeight:900,color:m.handicap_index!==null&&m.handicap_index>0?'#22c55e':'rgba(255,255,255,0.7)'}}>{fmtHcp(m.handicap_index)}</div>
+                    <div style={{fontSize:9,color:'rgba(255,255,255,0.25)',marginTop:1}}>{m.total_rounds} rounds</div>
+                  </div>
+                  <div style={{textAlign:'right',flexShrink:0,minWidth:36}}>
+                    <div style={{fontSize:12,fontWeight:800,color:m.streak>0?'#f97316':'rgba(255,255,255,0.2)'}}>
+                      {m.streak>0?`🔥${m.streak}`:'—'}
+                    </div>
+                    <div style={{fontSize:10,fontWeight:700,color:scoreColor(m.best_score),marginTop:1}}>{fmtScore(m.best_score)}</div>
+                  </div>
+                </div>
+              ))}
+              {members.length===0&&(
+                <div style={{textAlign:'center',color:'rgba(255,255,255,0.25)',fontSize:13,padding:'20px 0'}}>No members yet</div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function ClubSection(){
   const [expanded,setExpanded] = useState(false)
   const [clubs,setClubs] = useState<ClubInfo[]>([])
@@ -3752,6 +3880,7 @@ function ClubSection(){
   const [msg,setMsg] = useState('')
   const [loading,setLoading] = useState(false)
   const [memberCounts,setMemberCounts] = useState<Record<string,number>>({})
+  const [lobbyClub,setLobbyClub] = useState<ClubInfo|null>(null)
 
   useEffect(()=>{
     setClubs(getMyClubs())
@@ -3842,9 +3971,13 @@ function ClubSection(){
                       {memberCounts[club.id]!==undefined&&<span style={{letterSpacing:0,fontWeight:600}}> · {memberCounts[club.id]} member{memberCounts[club.id]!==1?'s':''}</span>}
                     </div>
                   </div>
+                  <button onClick={()=>setLobbyClub(club)}
+                    style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.5)',cursor:'pointer',fontFamily:'inherit'}}>
+                    Lobby →
+                  </button>
                   <button onClick={()=>toggleActive(club.code)}
                     style={{background:isActive?'#22c55e':'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:isActive?'#0a0f1e':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>
-                    {isActive?'✓ Active':'Set active'}
+                    {isActive?'✓':'Filter'}
                   </button>
                   <button onClick={()=>leaveClub(club.id,club.code)}
                     style={{background:'none',border:'none',color:'rgba(255,255,255,0.2)',fontSize:16,cursor:'pointer',padding:'0 2px',lineHeight:1,fontFamily:'inherit'}}>×</button>
@@ -3852,6 +3985,7 @@ function ClubSection(){
               </div>
             )
           })}
+          {lobbyClub&&<ClubLobbyOverlay club={lobbyClub} onClose={()=>setLobbyClub(null)} />}
 
           {mode==='view'&&(
             <div style={{display:'flex',gap:6,marginTop:clubs.length>0?4:0}}>
