@@ -1,6 +1,8 @@
 'use client'
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import NavBar from '@/components/NavBar'
+import { CONTINENT_MAP } from '@/lib/continents'
+import { type FilterSpec, type FilterKind, type ClubType, CLUB_THRESHOLD, cacheKeyFor } from '@/lib/golf-logic'
 
 // ── Categories ───────────────────────────────────────────────────────────────
 
@@ -21,52 +23,6 @@ const NAT_LABELS: Record<string, string> = {
   MKD:'Macedonian',KVX:'Kosovar',
 }
 
-// Nationality code → continent name (must match server CONTINENT_MAP)
-// Covers all FIFA member nations to future-proof against any PL player nationality
-const CONTINENT_MEMBERS: Record<string, string> = {
-  // Africa
-  ALG:'Africa',ANG:'Africa',BEN:'Africa',BOT:'Africa',BDI:'Africa',CPV:'Africa',
-  CMR:'Africa',CTA:'Africa',CHA:'Africa',COM:'Africa',COG:'Africa',COD:'Africa',
-  DJI:'Africa',EGY:'Africa',EQG:'Africa',ERI:'Africa',SWZ:'Africa',ETH:'Africa',
-  GAB:'Africa',GAM:'Africa',GHA:'Africa',GUI:'Africa',GNB:'Africa',CIV:'Africa',
-  KEN:'Africa',LES:'Africa',LIB:'Africa',LBR:'Africa',LBA:'Africa',MAD:'Africa',
-  MWI:'Africa',MLI:'Africa',MTN:'Africa',MRI:'Africa',MAR:'Africa',MOZ:'Africa',
-  NAM:'Africa',NIG:'Africa',NGA:'Africa',RWA:'Africa',STP:'Africa',SEN:'Africa',
-  SLE:'Africa',SOM:'Africa',ZAF:'Africa',SSD:'Africa',SDN:'Africa',TAN:'Africa',
-  TGO:'Africa',TUN:'Africa',UGA:'Africa',ZAM:'Africa',ZIM:'Africa',BFA:'Africa',
-  // Europe
-  ALB:'Europe',AND:'Europe',ARM:'Europe',AUT:'Europe',AZE:'Europe',BLR:'Europe',
-  BEL:'Europe',BIH:'Europe',BUL:'Europe',CRO:'Europe',CYP:'Europe',CZE:'Europe',
-  DEN:'Europe',ENG:'Europe',EST:'Europe',FRO:'Europe',FIN:'Europe',FRA:'Europe',
-  GEO:'Europe',GER:'Europe',GIB:'Europe',GRE:'Europe',HUN:'Europe',ISL:'Europe',
-  IRL:'Europe',ISR:'Europe',ITA:'Europe',KVX:'Europe',LVA:'Europe',LIE:'Europe',
-  LTU:'Europe',LUX:'Europe',MLT:'Europe',MDA:'Europe',MNE:'Europe',NED:'Europe',
-  MKD:'Europe',NIR:'Europe',NOR:'Europe',POL:'Europe',POR:'Europe',ROU:'Europe',
-  RUS:'Europe',SMR:'Europe',SCO:'Europe',SRB:'Europe',SVK:'Europe',SVN:'Europe',
-  ESP:'Europe',SWE:'Europe',SUI:'Europe',TUR:'Europe',UKR:'Europe',WAL:'Europe',
-  // Asia
-  AFG:'Asia',BHR:'Asia',BAN:'Asia',BHU:'Asia',CAM:'Asia',CHN:'Asia',TPE:'Asia',
-  IND:'Asia',IDN:'Asia',IRN:'Asia',IRQ:'Asia',JPN:'Asia',JOR:'Asia',KAZ:'Asia',
-  KUW:'Asia',KGZ:'Asia',LAO:'Asia',LBN:'Asia',MAC:'Asia',MAS:'Asia',MDV:'Asia',
-  MNG:'Asia',MYA:'Asia',NEP:'Asia',PRK:'Asia',OMA:'Asia',PAK:'Asia',PSE:'Asia',
-  PHI:'Asia',QAT:'Asia',KSA:'Asia',SGP:'Asia',KOR:'Asia',LKA:'Asia',SYR:'Asia',
-  TJK:'Asia',THA:'Asia',TLS:'Asia',TKM:'Asia',UAE:'Asia',UZB:'Asia',VIE:'Asia',YEM:'Asia',
-  // S. America
-  ARG:'S. America',BOL:'S. America',BRA:'S. America',CHI:'S. America',COL:'S. America',
-  ECU:'S. America',GUY:'S. America',PAR:'S. America',PER:'S. America',URU:'S. America',
-  VEN:'S. America',SUR:'S. America',
-  // N. America (incl. Caribbean + Central America)
-  USA:'N. America',CAN:'N. America',MEX:'N. America',
-  BLZ:'N. America',CRC:'N. America',SLV:'N. America',GUA:'N. America',
-  HON:'N. America',NCA:'N. America',PAN:'N. America',
-  JAM:'N. America',TRI:'N. America',HAI:'N. America',CUB:'N. America',DOM:'N. America',
-  BRB:'N. America',GRN:'N. America',ATG:'N. America',SKN:'N. America',LCA:'N. America',
-  VIN:'N. America',CUW:'N. America',ARU:'N. America',BAH:'N. America',DMA:'N. America',PUR:'N. America',
-  // Oceania
-  AUS:'Oceania',NZL:'Oceania',FIJ:'Oceania',PNG:'Oceania',SOL:'Oceania',
-  VAN:'Oceania',SAM:'Oceania',TGA:'Oceania',FSM:'Oceania',PLW:'Oceania',
-  MHL:'Oceania',KIR:'Oceania',NRU:'Oceania',TUV:'Oceania',COK:'Oceania',NCL:'Oceania',
-}
 
 // Adjective form for category labels e.g. "African PL Goals"
 const CONTINENT_LABELS: Record<string, string> = {
@@ -81,7 +37,6 @@ type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals
                `goals_since_${SinceYear}`|`ga_since_${SinceYear}`|
                `goals_before_${BeforeYear}`|`ga_before_${BeforeYear}`
 type Category = { key: StatKey; label: string; statLabel: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string }
-type ClubType = 'driver'|'iron'|'wedge'|'putter'
 
 const SINCE_YEARS = [2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018]
 const BEFORE_YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019]
@@ -113,7 +68,6 @@ function getStatLabel(key: StatKey): string {
 // Stats that support per-club and continent+club queries (2010/2015 stats do not)
 const CLUB_STATS: StatKey[] = ['goals','assists','goals_assists','appearances','apps_minus_goals','yellow_cards','clean_sheets']
 
-const CLUB_THRESHOLD: Record<ClubType, number> = { driver:250, iron:150, wedge:50, putter:10 }
 
 type NationEntry = { code: string; label: string }
 
@@ -130,20 +84,6 @@ const FALLBACK_CLUBS = [
   'Middlesbrough','Leeds United','Wolves','West Bromwich Albion',
 ]
 
-type FilterSpec =
-  | { k:'all' }
-  | { k:'nat'; code:string; label:string }
-  | { k:'club'; name:string }
-  | { k:'cont'; name:string }
-  | { k:'cc'; continent:string; club:string }
-
-function cacheKeyFor(stat: StatKey, f: FilterSpec): string {
-  if (f.k==='all')  return `${stat}::`
-  if (f.k==='nat')  return `${stat}:${f.code}:`
-  if (f.k==='club') return `${stat}::${f.name}`
-  if (f.k==='cont') return `${stat}:cont:${f.name}`
-  return `${stat}:cont:${f.continent}:${f.club}`
-}
 
 function filterStr(f: FilterSpec): string {
   if (f.k==='all')  return ''
@@ -209,7 +149,6 @@ function makeFilterLabel(cat: Category): string {
   return `All PL ${noun}`
 }
 
-type FilterKind = 'nat'|'club'|'cc'|'cont'|'all'
 
 function typeProbs(club: ClubType): Record<FilterKind, number> {
   if (club === 'driver') return { nat:23, club:23, cc:27, cont:22, all:5 }
@@ -273,7 +212,7 @@ function pickCategory(
     const fs = filterStr(f)
     if (fs && recentSet.has(fs)) return false
     if (f.k==='nat') {
-      const cont = CONTINENT_MEMBERS[f.code]
+      const cont = CONTINENT_MAP[f.code]
       if (cont && recentSet.has(cont)) return false
     }
     if ((top3Cache![cacheKeyFor(stat, f)] ?? 0) < threshold) return false
@@ -1322,7 +1261,7 @@ export default function FootballGolf(){
     )
     usedLabels.current.add(cat.label)
     if (cat.natFilter) {
-      const cont = CONTINENT_MEMBERS[cat.natFilter]
+      const cont = CONTINENT_MAP[cat.natFilter]
       const extras = cont ? [cat.natFilter, cont] : [cat.natFilter]
       recentFilters.current = [...recentFilters.current.slice(-(10 - extras.length)), ...extras]
     } else {
@@ -1497,7 +1436,7 @@ export default function FootballGolf(){
         const p=playerData[name]
         if(!p){ breakdown.push({name,value:0});continue }
         if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
-        if(question.continentFilter && CONTINENT_MEMBERS[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
+        if(question.continentFilter && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
         const cf=question.clubFilter
         if(cf){
           if(question.key==='goals')              value=p.clubGoals[cf]||0
@@ -1979,7 +1918,7 @@ export default function FootballGolf(){
     if(teeCat){
       usedLabels.current.add(teeCat.label)
       const tf=teeCat.natFilter||teeCat.clubFilter||teeCat.continentFilter
-      if(teeCat.natFilter){const cont=CONTINENT_MEMBERS[teeCat.natFilter];const extras=cont?[teeCat.natFilter,cont]:[teeCat.natFilter];recentFilters.current=[...recentFilters.current.slice(-(10-extras.length)),...extras]}
+      if(teeCat.natFilter){const cont=CONTINENT_MAP[teeCat.natFilter];const extras=cont?[teeCat.natFilter,cont]:[teeCat.natFilter];recentFilters.current=[...recentFilters.current.slice(-(10-extras.length)),...extras]}
       else if(tf) recentFilters.current=[...recentFilters.current.slice(-9),tf]
       recentStats.current=[...recentStats.current.slice(-3),teeCat.key]
       setQuestion(teeCat)
@@ -2013,7 +1952,7 @@ export default function FootballGolf(){
       tmpUsed.add(cat.label)
       tmpRecentS.push(cat.key)
       if (cat.natFilter) {
-        const cont = CONTINENT_MEMBERS[cat.natFilter]
+        const cont = CONTINENT_MAP[cat.natFilter]
         tmpRecentF.push(cat.natFilter)
         if (cont) tmpRecentF.push(cont)
       } else if (cat.clubFilter && !cat.continentFilter) {
@@ -2102,7 +2041,7 @@ export default function FootballGolf(){
     usedLabels.current.add(firstTeeCat.label)
     const firstTeeF=firstTeeCat.natFilter||firstTeeCat.clubFilter||firstTeeCat.continentFilter
     if(firstTeeF){
-      if(firstTeeCat.natFilter){const cont=CONTINENT_MEMBERS[firstTeeCat.natFilter];recentFilters.current=cont?[firstTeeCat.natFilter,cont]:[firstTeeCat.natFilter]}
+      if(firstTeeCat.natFilter){const cont=CONTINENT_MAP[firstTeeCat.natFilter];recentFilters.current=cont?[firstTeeCat.natFilter,cont]:[firstTeeCat.natFilter]}
       else recentFilters.current=[firstTeeF]
     }
     recentStats.current=[firstTeeCat.key]
@@ -2150,7 +2089,7 @@ export default function FootballGolf(){
     h2hMyHoleStrokes.current = 0
     usedLabels.current.add(cat.label)
     recentStats.current = [...recentStats.current.slice(-3), cat.key]
-    if (cat.natFilter) { const cont = CONTINENT_MEMBERS[cat.natFilter]; recentFilters.current = cont ? [cat.natFilter, cont] : [cat.natFilter] }
+    if (cat.natFilter) { const cont = CONTINENT_MAP[cat.natFilter]; recentFilters.current = cont ? [cat.natFilter, cont] : [cat.natFilter] }
     else if (cat.continentFilter) recentFilters.current = [cat.continentFilter]
     else if (cat.clubFilter) recentFilters.current = [cat.clubFilter]
     setQuestion(cat)
@@ -2190,7 +2129,7 @@ export default function FootballGolf(){
       const cat = pickCategory(hole.distance, cl, tmpUsed, tmpRecentF, tmpRecentS, metaNations.current, metaClubs.current, metaContinents.current, ccPairs, top3CacheRef.current)
       tmpUsed.add(cat.label)
       tmpRecentS.push(cat.key)
-      if (cat.natFilter) { const cont = CONTINENT_MEMBERS[cat.natFilter]; tmpRecentF.push(cat.natFilter); if (cont) tmpRecentF.push(cont) }
+      if (cat.natFilter) { const cont = CONTINENT_MAP[cat.natFilter]; tmpRecentF.push(cat.natFilter); if (cont) tmpRecentF.push(cont) }
       else if (cat.clubFilter && !cat.continentFilter) tmpRecentF.push(cat.clubFilter)
       else if (cat.continentFilter) tmpRecentF.push(cat.continentFilter)
       return cat

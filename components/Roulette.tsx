@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CONTINENT_MAP } from '@/lib/continents'
 
 const norm = (s: string) =>
   s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/['''`\-]/g, '').toLowerCase()
@@ -78,22 +79,6 @@ const TOP_NATIONS = [
   { code:'GHA', name:'Ghanaian' },{ code:'CMR', name:'Cameroonian' },{ code:'CIV', name:'Ivorian' },
 ]
 const CONTINENTS = ['Europe','S. America','Africa']
-const NAT_CONT: Record<string, string> = {
-  ENG:'Europe',ESP:'Europe',FRA:'Europe',GER:'Europe',ITA:'Europe',POR:'Europe',NED:'Europe',
-  BEL:'Europe',SCO:'Europe',WAL:'Europe',NIR:'Europe',IRL:'Europe',SUI:'Europe',AUT:'Europe',
-  SWE:'Europe',NOR:'Europe',DEN:'Europe',CRO:'Europe',SRB:'Europe',POL:'Europe',CZE:'Europe',
-  SVK:'Europe',HUN:'Europe',ROU:'Europe',TUR:'Europe',UKR:'Europe',RUS:'Europe',GRE:'Europe',
-  BUL:'Europe',ISL:'Europe',ALB:'Europe',MNE:'Europe',BIH:'Europe',MKD:'Europe',SVN:'Europe',
-  GEO:'Europe',ARM:'Europe',AZE:'Europe',KVX:'Europe',LVA:'Europe',LTU:'Europe',EST:'Europe',
-  FIN:'Europe',
-  BRA:'S. America',ARG:'S. America',COL:'S. America',URU:'S. America',CHI:'S. America',
-  PER:'S. America',ECU:'S. America',PAR:'S. America',BOL:'S. America',VEN:'S. America',
-  SEN:'Africa',NGA:'Africa',GHA:'Africa',CIV:'Africa',CMR:'Africa',MAR:'Africa',TUN:'Africa',
-  EGY:'Africa',ALG:'Africa',ZIM:'Africa',ZAF:'Africa',GAB:'Africa',COD:'Africa',COG:'Africa',
-  MLI:'Africa',GUI:'Africa',BFA:'Africa',TGO:'Africa',KEN:'Africa',ETH:'Africa',SLE:'Africa',
-  USA:'N. America',MEX:'N. America',CAN:'N. America',JAM:'N. America',TRI:'N. America',CRC:'N. America',
-  JPN:'Asia',KOR:'Asia',CHN:'Asia',IRN:'Asia',AUS:'Oceania',
-}
 
 type PlayerData = {
   goals: number; assists: number; games: number; yellow_cards: number; clean_sheets: number
@@ -113,7 +98,7 @@ function statVal(name: string, p: PlayerData, cat: StatCat, seasonData: SeasonDa
     return 0
   }
   if (cat.nation    && p.nationality !== cat.nation)             return 0
-  if (cat.continent && NAT_CONT[p.nationality] !== cat.continent) return 0
+  if (cat.continent && CONTINENT_MAP[p.nationality] !== cat.continent) return 0
   const g  = cat.club ? (p.clubGoals[cat.club]       || 0) : p.goals
   const a  = cat.club ? (p.clubAssists[cat.club]      || 0) : p.assists
   const yw = cat.club ? (p.clubYellowCards[cat.club]  || 0) : p.yellow_cards

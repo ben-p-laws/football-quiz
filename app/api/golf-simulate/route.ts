@@ -1,31 +1,13 @@
 import { NextResponse } from 'next/server'
+import { type FilterSpec, type FilterKind, CLUB_THRESHOLD, cacheKeyFor } from '@/lib/golf-logic'
 
 export const dynamic = 'force-dynamic'
-
-// ── Replicated constants from football-golf route / FootballGolf.tsx ───────────
-
-const CLUB_THRESHOLD: Record<string, number> = { driver: 250, iron: 150, wedge: 50, putter: 10 }
 
 function getClub(dist: number): string {
   if (dist > 250) return 'driver'
   if (dist > 150) return 'iron'
   if (dist > 50)  return 'wedge'
   return 'putter'
-}
-
-type FilterSpec =
-  | { k: 'all' }
-  | { k: 'nat'; code: string }
-  | { k: 'club'; name: string }
-  | { k: 'cont'; name: string }
-  | { k: 'cc'; continent: string; club: string }
-
-function cacheKey(stat: string, f: FilterSpec): string {
-  if (f.k === 'all')   return `${stat}::`
-  if (f.k === 'nat')   return `${stat}:${f.code}:`
-  if (f.k === 'club')  return `${stat}::${f.name}`
-  if (f.k === 'cont')  return `${stat}:cont:${f.name}`
-  return `${stat}:cont:${f.continent}:${f.club}`
 }
 
 function filterLabel(f: FilterSpec): string {
@@ -42,8 +24,6 @@ const BEFORE_YEARS = [2000, 2005, 2010]
 const SINCE_KEYS = SINCE_YEARS.flatMap(y => [`goals_since_${y}`, `ga_since_${y}`])
 const BEFORE_KEYS = BEFORE_YEARS.flatMap(y => [`goals_before_${y}`, `ga_before_${y}`])
 const CLUB_STATS = ['goals', 'assists', 'goals_assists', 'appearances', 'apps_minus_goals', 'yellow_cards', 'clean_sheets']
-
-type FilterKind = 'nat'|'club'|'cc'|'cont'|'all'
 
 function getTypeProbs(club: string): Record<FilterKind, number> {
   if (club === 'driver') return { nat:23, club:23, cc:27, cont:22, all:5 }
@@ -69,7 +49,7 @@ function simulate(
   top3Cache: Record<string, number>,
 ): Record<string, number> {
   const club = getClub(distance)
-  const threshold = CLUB_THRESHOLD[club]
+  const threshold = CLUB_THRESHOLD[club as keyof typeof CLUB_THRESHOLD]
   const probs = getTypeProbs(club)
 
   const filtersByKind: Record<FilterKind, FilterSpec[]> = {
@@ -100,7 +80,7 @@ function simulate(
 
       const valid = filtersByKind[kind].filter(f => {
         if (!isClubStat && (f.k === 'club' || f.k === 'cc')) return false
-        const sum = top3Cache[cacheKey(stat, f)] ?? 0
+        const sum = top3Cache[cacheKeyFor(stat, f)] ?? 0
         return sum >= threshold
       })
 
