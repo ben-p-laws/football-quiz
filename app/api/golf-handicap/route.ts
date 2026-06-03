@@ -15,6 +15,7 @@ function getClient() {
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const deviceId = searchParams.get('deviceId')
+  const clubCode = searchParams.get('clubCode')
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '50'), 100)
   const db = getClient()
 
@@ -33,11 +34,22 @@ export async function GET(req: Request) {
     return NextResponse.json({ entry, rank: (count ?? 0) + 1 })
   }
 
-  const { data } = await db
+  let clubDeviceIds: string[] | null = null
+  if (clubCode) {
+    const { data: club } = await db.from('golf_clubs').select('id').eq('code', clubCode).maybeSingle()
+    if (club) {
+      const { data: members } = await db.from('golf_club_members').select('device_id').eq('club_id', club.id)
+      clubDeviceIds = (members ?? []).map((m: { device_id: string }) => m.device_id)
+    }
+  }
+
+  let q = db
     .from('golf_handicap')
     .select('username, handicap_index, tier, total_rounds')
     .order('handicap_index', { ascending: false })
     .limit(limit)
+  if (clubDeviceIds !== null) q = q.in('device_id', clubDeviceIds)
+  const { data } = await q
 
   return NextResponse.json({ leaderboard: data ?? [] })
 }

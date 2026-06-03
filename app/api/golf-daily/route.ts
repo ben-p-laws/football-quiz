@@ -78,22 +78,34 @@ function getDailyParams(date: string) {
   return { distance, category }
 }
 
-// GET ?date=YYYY-MM-DD → { distance, category, leaderboard }
+// GET ?date=YYYY-MM-DD[&clubCode=XXX] → { distance, category, leaderboard }
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date') ?? new Date().toISOString().slice(0, 10)
+  const clubCode = searchParams.get('clubCode')
 
   const { distance, category } = getDailyParams(date)
   const db = getClient()
 
-  const { data: entries } = await db
+  let clubDeviceIds: string[] | null = null
+  if (clubCode) {
+    const { data: club } = await db.from('golf_clubs').select('id').eq('code', clubCode).maybeSingle()
+    if (club) {
+      const { data: members } = await db.from('golf_club_members').select('device_id').eq('club_id', club.id)
+      clubDeviceIds = (members ?? []).map((m: { device_id: string }) => m.device_id)
+    }
+  }
+
+  let q = db
     .from('golf_daily_entries')
     .select('player_name, distance_from_pin, is_oob')
     .eq('date', date)
     .order('distance_from_pin', { ascending: true, nullsFirst: false })
+  if (clubDeviceIds !== null) q = q.in('device_id', clubDeviceIds)
+  const { data: entries } = await q
 
-  const onGreen = (entries ?? []).filter(e => !e.is_oob)
-  const oob     = (entries ?? []).filter(e =>  e.is_oob)
+  const onGreen = (entries ?? []).filter((e: { is_oob: boolean }) => !e.is_oob)
+  const oob     = (entries ?? []).filter((e: { is_oob: boolean }) =>  e.is_oob)
   const leaderboard = [...onGreen, ...oob]
 
   return NextResponse.json({ date, distance, category, leaderboard })

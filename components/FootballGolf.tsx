@@ -738,6 +738,12 @@ function getDeviceId():string{
 }
 function setDeviceId(id:string){ if(typeof window!=='undefined') localStorage.setItem('golf_device_id', id) }
 
+type ClubInfo = { id:string; name:string; code:string }
+function getMyClubs():ClubInfo[]{ if(typeof window==='undefined') return []; try{return JSON.parse(localStorage.getItem('golf_clubs')??'[]')}catch{return []} }
+function saveMyClubs(clubs:ClubInfo[]){ if(typeof window!=='undefined') localStorage.setItem('golf_clubs',JSON.stringify(clubs)) }
+function getActiveClubCode():string|null{ if(typeof window==='undefined') return null; return localStorage.getItem('golf_active_club_code') }
+function setActiveClubCode(code:string|null){ if(typeof window==='undefined') return; if(code) localStorage.setItem('golf_active_club_code',code); else localStorage.removeItem('golf_active_club_code') }
+
 async function upsertHandicap(){
   const hcp = getHandicapData()
   const username = getSavedUsername()
@@ -3614,12 +3620,18 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
   const [linkMsg, setLinkMsg] = useState('')
   const [lbData, setLbData] = useState<{username:string;handicap_index:number;tier:string}[]>([])
   const [lbLoading, setLbLoading] = useState(true)
+  const [clubView, setClubView] = useState(false)
+  const activeClubCode = getActiveClubCode()
   useEffect(()=>{
-    fetch('/api/golf-handicap?limit=50')
+    setLbLoading(true)
+    const url = clubView && activeClubCode
+      ? `/api/golf-handicap?limit=50&clubCode=${activeClubCode}`
+      : '/api/golf-handicap?limit=50'
+    fetch(url)
       .then(r=>r.json())
       .then(d=>setLbData(d.leaderboard??[]))
       .finally(()=>setLbLoading(false))
-  },[])
+  },[clubView])
 
   async function generateCode(){
     setLinkMsg('')
@@ -3651,9 +3663,16 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
 
   return(
     <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'12px 14px'}}>
-      {/* Global leaderboard — top 5 */}
+      {/* Global / Club toggle */}
+      {activeClubCode&&(
+        <div style={{display:'flex',gap:4,marginBottom:10}}>
+          <button onClick={()=>setClubView(false)} style={{flex:1,background:!clubView?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.04)',border:`1px solid ${!clubView?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.06)'}`,borderRadius:8,padding:'6px 0',fontSize:11,fontWeight:800,color:!clubView?'white':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>🌍 Global</button>
+          <button onClick={()=>setClubView(true)} style={{flex:1,background:clubView?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',border:`1px solid ${clubView?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.06)'}`,borderRadius:8,padding:'6px 0',fontSize:11,fontWeight:800,color:clubView?'#22c55e':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>🏌️ Club</button>
+        </div>
+      )}
+      {/* Handicap leaderboard — top 5 */}
       <div style={{marginBottom:12}}>
-        <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>🌍 Global Rankings</div>
+        <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>{clubView?'🏌️ Club Rankings':'🌍 Global Rankings'}</div>
         {lbLoading&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:13,padding:'8px 0'}}>Loading…</div>}
         {!lbLoading&&lbData.length===0&&<div style={{textAlign:'center',color:'rgba(255,255,255,0.3)',fontSize:12,padding:'8px 0'}}>No entries yet</div>}
         {lbData.slice(0,5).map((e,i)=>{
@@ -3723,6 +3742,159 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
   )
 }
 
+function ClubSection(){
+  const [expanded,setExpanded] = useState(false)
+  const [clubs,setClubs] = useState<ClubInfo[]>([])
+  const [activeCode,setActiveCodeState] = useState<string|null>(null)
+  const [mode,setMode] = useState<'view'|'create'|'join'>('view')
+  const [createName,setCreateName] = useState('')
+  const [joinCode,setJoinCode] = useState('')
+  const [msg,setMsg] = useState('')
+  const [loading,setLoading] = useState(false)
+  const [memberCounts,setMemberCounts] = useState<Record<string,number>>({})
+
+  useEffect(()=>{
+    setClubs(getMyClubs())
+    setActiveCodeState(getActiveClubCode())
+  },[])
+
+  useEffect(()=>{
+    if(!expanded) return
+    clubs.forEach(c=>{
+      if(memberCounts[c.id]!==undefined) return
+      fetch(`/api/golf-club?code=${c.code}`).then(r=>r.json()).then(d=>{
+        if(d.members) setMemberCounts(prev=>({...prev,[c.id]:d.members.length}))
+      })
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[expanded,clubs])
+
+  function toggleActive(code:string){
+    const next = activeCode===code ? null : code
+    setActiveClubCode(next)
+    setActiveCodeState(next)
+  }
+
+  async function createClub(){
+    const name=createName.trim(); if(!name) return
+    setLoading(true); setMsg('')
+    const res=await fetch('/api/golf-club',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'create',name,deviceId:getDeviceId(),username:getSavedUsername()})}).then(r=>r.json())
+    setLoading(false)
+    if(res.error){setMsg(res.error);return}
+    const updated=[...clubs,res.club]; saveMyClubs(updated); setClubs(updated)
+    setCreateName(''); setMode('view'); setMsg(`Created! Share code: ${res.club.code}`)
+  }
+
+  async function joinClub(){
+    const code=joinCode.trim().toUpperCase(); if(!code) return
+    setLoading(true); setMsg('')
+    const res=await fetch('/api/golf-club',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'join',code,deviceId:getDeviceId(),username:getSavedUsername()})}).then(r=>r.json())
+    setLoading(false)
+    if(res.error){setMsg(res.error);return}
+    if(!clubs.find(c=>c.id===res.club.id)){
+      const updated=[...clubs,res.club]; saveMyClubs(updated); setClubs(updated)
+    }
+    setJoinCode(''); setMode('view'); setMsg(`Joined ${res.club.name}!`)
+  }
+
+  async function leaveClub(clubId:string,code:string){
+    await fetch('/api/golf-club',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'leave',clubId,deviceId:getDeviceId()})})
+    const updated=clubs.filter(c=>c.id!==clubId); saveMyClubs(updated); setClubs(updated)
+    if(activeCode===code){ setActiveClubCode(null); setActiveCodeState(null) }
+  }
+
+  const toggleBtn=(active:boolean,green=false):React.CSSProperties=>({
+    flex:1,background:active?(green?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.1)'):'rgba(255,255,255,0.04)',
+    border:`1px solid ${active?(green?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.2)'):'rgba(255,255,255,0.06)'}`,
+    borderRadius:8,padding:'6px 0',fontSize:11,fontWeight:800,
+    color:active?(green?'#22c55e':'white'):'rgba(255,255,255,0.4)',
+    cursor:'pointer',fontFamily:'inherit',
+  })
+
+  return(
+    <div style={{width:'100%',maxWidth:320}}>
+      <button onClick={()=>setExpanded(v=>!v)}
+        style={{width:'100%',background:expanded?'#111827':'rgba(255,255,255,0.03)',borderRadius:expanded?'12px 12px 0 0':12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'10px 12px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
+        <div style={{fontSize:16,lineHeight:1}}>🏌️</div>
+        <div style={{flex:1}}>
+          <div style={{fontSize:12,fontWeight:900,color:'white'}}>Clubs</div>
+          <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>
+            {clubs.length>0?`${clubs.length} club${clubs.length>1?'s':''}${activeCode?' · filtering leaderboards':''}` : 'Join or create a club'}
+          </div>
+        </div>
+        <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',flexShrink:0}}>{expanded?'▲':'▼'}</div>
+      </button>
+
+      {expanded&&(
+        <div style={{background:'#111827',borderRadius:'0 0 12px 12px',border:'1.5px solid rgba(255,255,255,0.07)',borderTop:'none',padding:'12px 14px'}}>
+          {clubs.map(club=>{
+            const isActive=activeCode===club.code
+            return(
+              <div key={club.id} style={{background:isActive?'rgba(34,197,94,0.08)':'rgba(255,255,255,0.03)',border:`1px solid ${isActive?'rgba(34,197,94,0.3)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'10px 12px',marginBottom:8}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{flex:1}}>
+                    <div style={{fontSize:13,fontWeight:800,color:'white'}}>{club.name}</div>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:2,letterSpacing:'0.1em',fontWeight:700}}>
+                      {club.code}
+                      {memberCounts[club.id]!==undefined&&<span style={{letterSpacing:0,fontWeight:600}}> · {memberCounts[club.id]} member{memberCounts[club.id]!==1?'s':''}</span>}
+                    </div>
+                  </div>
+                  <button onClick={()=>toggleActive(club.code)}
+                    style={{background:isActive?'#22c55e':'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:isActive?'#0a0f1e':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>
+                    {isActive?'✓ Active':'Set active'}
+                  </button>
+                  <button onClick={()=>leaveClub(club.id,club.code)}
+                    style={{background:'none',border:'none',color:'rgba(255,255,255,0.2)',fontSize:16,cursor:'pointer',padding:'0 2px',lineHeight:1,fontFamily:'inherit'}}>×</button>
+                </div>
+              </div>
+            )
+          })}
+
+          {mode==='view'&&(
+            <div style={{display:'flex',gap:6,marginTop:clubs.length>0?4:0}}>
+              <button onClick={()=>{setMode('create');setMsg('')}} style={toggleBtn(false)}>+ Create</button>
+              <button onClick={()=>{setMode('join');setMsg('')}} style={toggleBtn(false)}>Join</button>
+            </div>
+          )}
+          {mode==='create'&&(
+            <div style={{marginTop:4}}>
+              <input value={createName} onChange={e=>setCreateName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createClub()} placeholder="Club name…"
+                style={{width:'100%',background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'8px 10px',fontSize:14,color:'white',fontFamily:'inherit',outline:'none',marginBottom:6}}/>
+              <div style={{display:'flex',gap:6}}>
+                <button onClick={createClub} disabled={!createName.trim()||loading}
+                  style={{flex:1,background:createName.trim()&&!loading?'#16a34a':'#1e2d4a',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:900,color:'white',cursor:createName.trim()&&!loading?'pointer':'default',fontFamily:'inherit'}}>
+                  {loading?'Creating…':'Create'}
+                </button>
+                <button onClick={()=>setMode('view')} style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
+              </div>
+            </div>
+          )}
+          {mode==='join'&&(
+            <div style={{display:'flex',gap:6,marginTop:4}}>
+              <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&joinClub()} placeholder="CODE" maxLength={6}
+                style={{flex:1,background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'7px 10px',fontSize:14,fontWeight:900,color:'white',fontFamily:'inherit',letterSpacing:'0.15em',textTransform:'uppercase',outline:'none'}}/>
+              <button onClick={joinClub} disabled={!joinCode.trim()||loading}
+                style={{background:'#16a34a',border:'none',borderRadius:8,padding:'7px 12px',fontSize:11,fontWeight:900,color:'white',cursor:'pointer',fontFamily:'inherit'}}>
+                {loading?'…':'Join'}
+              </button>
+              <button onClick={()=>setMode('view')} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+            </div>
+          )}
+          {msg&&<div style={{marginTop:8,fontSize:11,fontWeight:700,color:msg.startsWith('Created')||msg.startsWith('Joined')?'#22c55e':'#ef4444'}}>{msg}</div>}
+          {activeCode&&(
+            <div style={{marginTop:10,background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.15)',borderRadius:8,padding:'7px 10px',fontSize:10,color:'rgba(34,197,94,0.7)',lineHeight:1.5}}>
+              ✓ Club active — leaderboard pages will show a Global / Club toggle.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,sharedResult,onDismissShare}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
@@ -3781,6 +3953,9 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         const rounds:GolfRound[] = typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')?? '[]'):[]
         return <HandicapExpandedContent hcp={hcp} roundCount={rounds.length} />
       })()}
+
+      {/* Club card */}
+      <ClubSection />
 
       {/* Daily Challenges card */}
       <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14}}>
@@ -3955,7 +4130,25 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
   leaderboard:DailyEntry[]; playerName:string; distance:number; onBack:()=>void
 }){
   const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
-  const board = leaderboard
+  const todayISO = new Date().toISOString().slice(0,10)
+  const activeClubCode = getActiveClubCode()
+  const [clubView, setClubView] = useState(false)
+  const [clubBoard, setClubBoard] = useState<DailyEntry[]>([])
+  const [clubLoading, setClubLoading] = useState(false)
+  useEffect(()=>{
+    if(!clubView||!activeClubCode) return
+    setClubLoading(true)
+    fetch(`/api/golf-daily?date=${todayISO}&clubCode=${activeClubCode}`)
+      .then(r=>r.json())
+      .then(d=>{
+        const entries=d.leaderboard??[]
+        const onGreen=entries.filter((e:DailyEntry)=>!e.is_oob)
+        const oob=entries.filter((e:DailyEntry)=>e.is_oob)
+        setClubBoard([...onGreen,...oob])
+      })
+      .finally(()=>setClubLoading(false))
+  },[clubView])
+  const board = clubView ? clubBoard : leaderboard
   const myEntry = board.find(e=>e.player_name===playerName)
   const myRank  = myEntry && !myEntry.is_oob
     ? board.filter(e=>!e.is_oob).findIndex(e=>e.player_name===playerName)+1
@@ -4002,10 +4195,17 @@ function DailyDoneScreen({result,leaderboard,playerName,distance,onBack}:{
       )}
 
       {/* Leaderboard */}
-      <div style={{fontWeight:800,fontSize:13,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Leaderboard</div>
+      {activeClubCode&&(
+        <div style={{display:'flex',gap:6,marginBottom:10}}>
+          <button onClick={()=>setClubView(false)} style={{flex:1,background:!clubView?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.04)',border:`1px solid ${!clubView?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.06)'}`,borderRadius:8,padding:'7px 0',fontSize:12,fontWeight:800,color:!clubView?'white':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>🌍 Global</button>
+          <button onClick={()=>setClubView(true)} style={{flex:1,background:clubView?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',border:`1px solid ${clubView?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.06)'}`,borderRadius:8,padding:'7px 0',fontSize:12,fontWeight:800,color:clubView?'#22c55e':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>🏌️ Club</button>
+        </div>
+      )}
+      <div style={{fontWeight:800,fontSize:13,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>{clubView?'Club Leaderboard':'Leaderboard'}</div>
       <div style={{display:'flex',flexDirection:'column',gap:6}}>
-        {board.length===0 && <div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
-        {board.map((e,i)=>{
+        {clubView&&clubLoading&&<div style={{color:'rgba(255,255,255,0.3)',fontSize:13,textAlign:'center',padding:'20px 0'}}>Loading…</div>}
+        {(!clubView||!clubLoading)&&board.length===0 && <div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
+        {(!clubView||!clubLoading)&&board.map((e,i)=>{
           const isMe = e.player_name===playerName
           const rank = !e.is_oob ? board.filter(x=>!x.is_oob).indexOf(e)+1 : null
           return(
@@ -4081,7 +4281,21 @@ function DailyRoundDoneScreen({result,leaderboard,playerName,onBack}:{
   leaderboard:DailyRoundEntry[]; playerName:string; onBack:()=>void
 }){
   const today = new Date().toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'})
-  const myRank = leaderboard.findIndex(e=>e.player_name===playerName)+1 || null
+  const todayISO = new Date().toISOString().slice(0,10)
+  const activeClubCode = getActiveClubCode()
+  const [clubView, setClubView] = useState(false)
+  const [clubBoard, setClubBoard] = useState<DailyRoundEntry[]>([])
+  const [clubLoading, setClubLoading] = useState(false)
+  useEffect(()=>{
+    if(!clubView||!activeClubCode) return
+    setClubLoading(true)
+    fetch(`/api/golf-daily-round?date=${todayISO}&clubCode=${activeClubCode}`)
+      .then(r=>r.json())
+      .then(d=>setClubBoard(d.leaderboard??[]))
+      .finally(()=>setClubLoading(false))
+  },[clubView])
+  const board = clubView ? clubBoard : leaderboard
+  const myRank = board.findIndex(e=>e.player_name===playerName)+1 || null
   function scoreLabel(s:number){ return s===0?'E':s>0?`+${s}`:String(s) }
   function scoreColor(s:number){ return s<0?'#22c55e':s>0?'#ef4444':'#94a3b8' }
   return(
@@ -4114,10 +4328,17 @@ function DailyRoundDoneScreen({result,leaderboard,playerName,onBack}:{
         </div>
       )}
 
-      <div style={{fontWeight:800,fontSize:13,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Leaderboard</div>
+      {activeClubCode&&(
+        <div style={{display:'flex',gap:6,marginBottom:10}}>
+          <button onClick={()=>setClubView(false)} style={{flex:1,background:!clubView?'rgba(255,255,255,0.1)':'rgba(255,255,255,0.04)',border:`1px solid ${!clubView?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.06)'}`,borderRadius:8,padding:'7px 0',fontSize:12,fontWeight:800,color:!clubView?'white':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>🌍 Global</button>
+          <button onClick={()=>setClubView(true)} style={{flex:1,background:clubView?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',border:`1px solid ${clubView?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.06)'}`,borderRadius:8,padding:'7px 0',fontSize:12,fontWeight:800,color:clubView?'#22c55e':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>🏌️ Club</button>
+        </div>
+      )}
+      <div style={{fontWeight:800,fontSize:13,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>{clubView?'Club Leaderboard':'Leaderboard'}</div>
       <div style={{display:'flex',flexDirection:'column',gap:6}}>
-        {leaderboard.length===0&&<div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
-        {leaderboard.map((e,i)=>{
+        {clubView&&clubLoading&&<div style={{color:'rgba(255,255,255,0.3)',fontSize:13,textAlign:'center',padding:'20px 0'}}>Loading…</div>}
+        {(!clubView||!clubLoading)&&board.length===0&&<div style={{color:'rgba(255,255,255,0.25)',fontSize:13,textAlign:'center',padding:'20px 0'}}>No entries yet today</div>}
+        {(!clubView||!clubLoading)&&board.map((e,i)=>{
           const isMe = e.player_name===playerName
           return(
             <div key={i} style={{background:isMe?'rgba(22,163,74,0.1)':'#111827',border:`1px solid ${isMe?'rgba(22,163,74,0.4)':'#1e2d4a'}`,borderRadius:10,padding:'11px 14px',display:'flex',alignItems:'center',gap:12}}>
