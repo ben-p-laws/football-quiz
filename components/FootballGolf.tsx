@@ -985,6 +985,10 @@ export default function FootballGolf(){
   const [dailyRoundLeaderboard, setDailyRoundLeaderboard] = useState<DailyRoundEntry[]>([])
   const [dailyRoundResult, setDailyRoundResult]   = useState<{totalStrokes:number;scoreToPar:number}|null>(null)
 
+  // ── Multiplayer mode ───────────────────────────────────────────────────────
+  const [multiMode, setMultiMode] = useState<MultiMode>('h2h-1v1')
+  const h2hGameModeRef = useRef<MultiMode>('h2h-1v1')
+
   // ── H2H multiplayer state ───────────────────────────────────────────────────
   const [h2hStep, setH2HStep] = useState<H2HStep>('off')
   const [h2hRoomId, setH2HRoomId] = useState('')
@@ -1024,6 +1028,8 @@ export default function FootballGolf(){
   const h2hMyRemainingRef = useRef(0)
   const h2hPendingShot = useRef<{result:ShotResult;toPos:number}|null>(null)
   const h2hPollRef     = useRef<ReturnType<typeof setInterval>|null>(null)
+  const h2hTeamBestRef = useRef<{remaining:number;pastPin:boolean;holedStrokes?:number}|null>(null)
+  const h2hAltHostTurnRef = useRef(true) // alt shot: true = host's turn
 
   // ── Play again / SD state ──────────────────────────────────────────────────
   const [h2hRematchWaiting, setH2HRematchWaiting] = useState(false)
@@ -1093,20 +1099,32 @@ export default function FootballGolf(){
     if(room){ setH2HJoinInput(room.toUpperCase()); setH2HStep('join') }
   },[])
 
-  // Tee shot: both players submit then reveal simultaneously
+  // Simultaneous shot: both players submit then reveal together (tee shot for 1v1; every shot for scramble)
   useEffect(()=>{
     if(!h2hOppShotReady||!h2hPendingShot.current) return
     const oRem=h2hOppShotReady.remaining_after
     const oPP=h2hOppShotReady.past_pin
     const oHoledOut=h2hOppShotReady.holed_out
+    const isTeamScramble = h2hGameModeRef.current === 'team-scramble'
     h2hOppRemainingRef.current=oHoledOut?0:oRem
     h2hOppPastPinRef.current=oPP
-    h2hOppShotIdxRef.current=0
+    h2hOppShotIdxRef.current=isTeamScramble?strokes:0
     setH2HWaiting(false)
     setH2HOppRemaining(oHoledOut?0:oRem)
     setH2HOppPastPin(oPP)
     if(oHoledOut){setH2HOppHoledOut(true);h2hOppHoleStrokesRef.current=h2hOppShotReady.hole_strokes;h2hOppFinishedRef.current=true}
-    setH2HOppShotCount(1)
+    setH2HOppShotCount(c=>isTeamScramble?c+1:1)
+    if(isTeamScramble){
+      const {result:myResult}=h2hPendingShot.current
+      const myHoledOut=myResult.isHoled||myResult.isGimme
+      const {remaining:myRA,pastPin:myPP}=calcNewBallState(myResult,remaining,pastPin)
+      if(myHoledOut||oHoledOut){
+        const teamStrokes=myHoledOut?(myResult.isGimme?strokes+2:strokes+1):h2hOppShotReady.hole_strokes
+        h2hTeamBestRef.current={remaining:0,pastPin:false,holedStrokes:teamStrokes}
+      } else {
+        h2hTeamBestRef.current=myRA<=oRem?{remaining:myRA,pastPin:myPP}:{remaining:oRem,pastPin:oPP}
+      }
+    }
     const {result,toPos}=h2hPendingShot.current
     h2hPendingShot.current=null
     animateShot(ballPos,toPos,result)
@@ -1129,6 +1147,30 @@ export default function FootballGolf(){
     setH2HOppShotCount(c=>c+1)
     setH2HOppRemaining(oHoledOut?0:oRem)
     setH2HOppPastPin(oPP)
+
+    // Alt shot: inherit partner's position, flip turn to me
+    if(h2hGameModeRef.current==='team-alt'){
+      const newStrokes=h2hOppTurnShot.shot_idx+1
+      if(oHoledOut){
+        // Partner holed out — hole done (gimme not fired as a real shot, so partner physically holed it)
+        setStrokes(newStrokes)
+        finishHole(h2hOppTurnShot.hole_strokes)
+      } else {
+        h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
+        const newRem=oHoledOut?0:oRem
+        setRemaining(newRem)
+        setPastPin(oPP)
+        setStrokes(newStrokes)
+        h2hMyRemainingRef.current=newRem
+        setQuestion(nextPickedCategory(newRem))
+        resetInputs()
+        setShotResult(null)
+        setBunkerQ(null)
+        setH2HIsMyTurn(true)
+      }
+      return
+    }
+
     if(oHoledOut){
       setH2HOppHoledOut(true)
       h2hOppHoleStrokesRef.current=h2hOppTurnShot.hole_strokes
@@ -1555,8 +1597,8 @@ export default function FootballGolf(){
               ? currentHole.distance + Math.min(overshoot, 55)
               : Math.min(ballPos + total, currentHole.distance + 50))
 
-    // H2H tee shot: synchronized — both submit then reveal together
-    if(h2hStep==='playing'&&strokes===0){
+    // H2H tee shot: synchronized — both submit then reveal together (skipped for alt shot)
+    if(h2hStep==='playing'&&strokes===0&&h2hGameModeRef.current!=='team-alt'){
       h2hPendingShot.current={result,toPos}
       const penaltyStrokes=result.isOOB?1:0
       const newStrokes=1+penaltyStrokes
@@ -1580,18 +1622,63 @@ export default function FootballGolf(){
           if(d.opponentShot?.player_names){setH2HOppShots(prev=>{const e={shot:1,question:d.opponentShot.question_label||'—',picks:d.opponentShot.player_names};const i=prev.findIndex(s=>s.shot===1);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}
           if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
           setH2HOppShotReady(d.opponentShot)
-        } else startTeePoll(holeIdx)
-      }).catch(()=>startTeePoll(holeIdx))
+        } else startSimultaneousPoll(holeIdx,0)
+      }).catch(()=>startSimultaneousPoll(holeIdx,0))
       return
     }
 
-    // H2H non-tee shot: take immediately (turn-based, furthest from hole goes next)
+    // H2H non-tee shot
     if(h2hStep==='playing'){
+      const isTeamScramble = h2hGameModeRef.current === 'team-scramble'
       const penaltyStrokes=result.isOOB?1:0
       const newStrokes=strokes+1+penaltyStrokes
       const holedOut=result.isHoled||result.isGimme
       const {remaining:ra,pastPin:pp}=calcNewBallState(result,remaining,pastPin)
       setShowOppGuesses(false)
+
+      if(isTeamScramble){
+        // Scramble: all shots simultaneous — same pattern as tee shot
+        h2hPendingShot.current={result,toPos}
+        setH2HWaiting(true)
+        fetch('/api/golf-room',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
+            holeIdx,shotIdx:strokes,
+            remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
+            holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
+            isGimme:result.isGimme??false,
+            playerNames:breakdown,
+            questionLabel:question?.label,
+          }),
+        }).then(r=>r.json()).then(d=>{
+          if(d.bothReady){
+            if(d.opponentShot?.player_names){setH2HOppShots(prev=>{const shotN=strokes+1;const e={shot:shotN,question:d.opponentShot.question_label||'—',picks:d.opponentShot.player_names};const i=prev.findIndex((s:any)=>s.shot===shotN);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a:any,b:any)=>a.shot-b.shot)})}
+            if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
+            setH2HOppShotReady(d.opponentShot)
+          } else startSimultaneousPoll(holeIdx,strokes)
+        }).catch(()=>startSimultaneousPoll(holeIdx,strokes))
+        return
+      }
+
+      if(h2hGameModeRef.current==='team-alt'){
+        fetch('/api/golf-room',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            action:'shot',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,
+            holeIdx,shotIdx:strokes,
+            remainingAfter:holedOut?0:ra,pastPin:pp,holedOut,
+            holeStrokes:holedOut?(result.isGimme?newStrokes+1:newStrokes):null,
+            isGimme:result.isGimme??false,
+            playerNames:breakdown,
+            questionLabel:question?.label,
+          }),
+        })
+        animateShot(ballPos,toPos,result)
+        return
+      }
+
+      // 1v1: fire-and-forget, turn-based
       fetch('/api/golf-room',{
         method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({
@@ -1654,6 +1741,21 @@ export default function FootballGolf(){
       oobDir.current = 0
       setArcOffset(0)
       if(h2hStep==='playing'){
+        const isTeamScramble=h2hGameModeRef.current==='team-scramble'
+        if(isTeamScramble&&h2hTeamBestRef.current){
+          const tb=h2hTeamBestRef.current;h2hTeamBestRef.current=null
+          if(tb.remaining===0){finishHole(tb.holedStrokes??newStrokes);return}
+          setRemaining(tb.remaining);setPastPin(tb.pastPin);setStrokes(newStrokes)
+          setShotResult(null);setBunkerQ(null);setQuestion(nextCat(tb.remaining));resetInputs()
+          h2hMyRemainingRef.current=tb.remaining;setH2HWaiting(false);setH2HIsMyTurn(true)
+          return
+        }
+        if(h2hGameModeRef.current==='team-alt'){
+          h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
+          h2hMyRemainingRef.current=newRemaining
+          setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(holeIdx)
+          return
+        }
         h2hMyRemainingRef.current=newRemaining
         if(h2hOppFinishedRef.current){
           const oppFinal=h2hOppHoleStrokesRef.current!
@@ -1692,6 +1794,14 @@ export default function FootballGolf(){
       newPastPin   = pastPin
     }
 
+    if(h2hStep==='playing'&&h2hGameModeRef.current==='team-scramble'&&h2hTeamBestRef.current){
+      const tb=h2hTeamBestRef.current;h2hTeamBestRef.current=null
+      if(tb.remaining===0){finishHole(tb.holedStrokes??newStrokes);return}
+      setRemaining(tb.remaining);setPastPin(tb.pastPin);setStrokes(newStrokes)
+      setShotResult(null);setBunkerQ(null);setQuestion(nextCat(tb.remaining));resetInputs()
+      h2hMyRemainingRef.current=tb.remaining;setH2HWaiting(false);setH2HIsMyTurn(true)
+      return
+    }
     setRemaining(newRemaining)
     setPastPin(newPastPin)
     setStrokes(newStrokes)
@@ -1701,6 +1811,11 @@ export default function FootballGolf(){
     resetInputs()
     if(h2hStep==='playing'){
       h2hMyRemainingRef.current=newRemaining
+      if(h2hGameModeRef.current==='team-alt'){
+        h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
+        setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(holeIdx)
+        return
+      }
       if(h2hOppFinishedRef.current){
         const oppFinal=h2hOppHoleStrokesRef.current!
         if(newStrokes+1>oppFinal){
@@ -1760,6 +1875,15 @@ export default function FootballGolf(){
       h2hMyRemainingRef.current=0
       h2hMyHoleStrokes.current=finalStrokes
       h2hIFinishedRef.current=true
+      if(h2hGameModeRef.current==='team-scramble'||h2hGameModeRef.current==='team-alt'){
+        // Team mode: no match play, just record score and advance
+        setTimeout(()=>{
+          setHoleResult(null)
+          if(holeIdx+1>=holes.length){stopH2HPoll();setPhase('h2h-done');return}
+          advanceH2HHole()
+        },3000)
+        return
+      }
       if(h2hOppFinishedRef.current){
         resolveH2HHole(finalStrokes,h2hOppHoleStrokesRef.current??finalStrokes)
       }else{
@@ -1817,7 +1941,7 @@ export default function FootballGolf(){
     })
   }
 
-  function startTeePoll(hi:number){
+  function startSimultaneousPoll(hi:number, shotIdx:number){
     stopH2HPoll()
     h2hPollRef.current=setInterval(async()=>{
       const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
@@ -1825,7 +1949,7 @@ export default function FootballGolf(){
       const shots:any[]=d.shots||[]
       // Backfill picks for any opp shots already in DB
       shots.filter((s:any)=>s.player_id===h2hOppId.current&&s.player_names).forEach(mergeOppShot)
-      const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===0)
+      const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===shotIdx)
       if(oppShot){stopH2HPoll();if(oppShot.question_label) setH2HOppLastQuestion(oppShot.question_label);setH2HOppShotReady(oppShot)}
     },1500)
   }
@@ -1901,7 +2025,6 @@ export default function FootballGolf(){
     setH2HOppHoledOut(false)
     setH2HOppRemaining(null)
     setH2HOppPastPin(false)
-    setH2HIsMyTurn(true)
     setH2HOppShotCount(0)
     setH2HOppShots([])
     setShowOppGuesses(false)
@@ -1912,6 +2035,10 @@ export default function FootballGolf(){
     h2hIFinishedRef.current=false
     h2hOppFinishedRef.current=false
     h2hMyHoleStrokes.current=0
+    h2hTeamBestRef.current=null
+    const nextIsMyTurn = h2hGameModeRef.current==='team-alt' ? (h2hAltHostTurnRef.current===h2hIsHost.current) : true
+    setH2HIsMyTurn(nextIsMyTurn)
+    if(h2hGameModeRef.current==='team-alt'&&!nextIsMyTurn){setH2HWaiting(true)}
     if(holeIdx+1>=holes.length){
       stopH2HPoll()
       setPhase('h2h-done')
@@ -1936,6 +2063,7 @@ export default function FootballGolf(){
       setQuestion(nextPickedCategory(dist, holes[nextIdx]?.isIsland ? holes[nextIdx].distance - 20 : undefined))
     }
     resetInputs()
+    if(h2hGameModeRef.current==='team-alt'&&!nextIsMyTurn) startOppPoll(nextIdx)
   }
 
   async function createH2HRoom(){
@@ -1974,12 +2102,13 @@ export default function FootballGolf(){
     })
     const res=await fetch('/api/golf-room',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'create',hostId:pid,hostName:h2hPlayerName||'Host',config:{courseMode,numHoles,tee,selectedCourse},holes:hs,teeCategories:teeCats}),
+      body:JSON.stringify({action:'create',hostId:pid,hostName:h2hPlayerName||'Host',config:{courseMode,numHoles,tee,selectedCourse,gameMode:multiMode},holes:hs,teeCategories:teeCats}),
     }).then(r=>r.json())
     if(res.error){setH2HError(res.error);return}
     setSavedUsername(h2hPlayerName)
     setH2HRoomId(res.roomId)
     h2hRoomIdRef.current=res.roomId
+    h2hGameModeRef.current=multiMode
     h2hRoomData.current={holes:hs,teeCategories:teeCats}
     setH2HStep('waiting-host')
     startLobbyPoll()
@@ -2016,6 +2145,7 @@ export default function FootballGolf(){
       if(cfg.courseMode) setCourseMode(cfg.courseMode)
       if(cfg.selectedCourse) setSelectedCourse(cfg.selectedCourse)
       if(cfg.tee) setTee(cfg.tee)
+      if(cfg.gameMode) { h2hGameModeRef.current=cfg.gameMode; setMultiMode(cfg.gameMode) }
     }
     setH2HStep('lobby')
     startLobbyPoll()
@@ -2040,7 +2170,10 @@ export default function FootballGolf(){
     h2hIFinishedRef.current=false
     h2hOppFinishedRef.current=false
     h2hMyRemainingRef.current=hs[0].distance
-    setH2HIsMyTurn(true)
+    h2hAltHostTurnRef.current=true
+    const isMyTurnFirst = h2hGameModeRef.current==='team-alt' ? h2hIsHost.current : true
+    setH2HIsMyTurn(isMyTurnFirst)
+    if(h2hGameModeRef.current==='team-alt'&&!isMyTurnFirst){setH2HWaiting(true);startOppPoll(0)}
     setH2HOppShotCount(0)
     setH2HOppRemaining(null)
     setH2HOppPastPin(false)
@@ -2267,14 +2400,45 @@ export default function FootballGolf(){
   }
 
   if(phase==='h2h-done'){
+    const isTeamScramble = h2hGameModeRef.current === 'team-scramble' || h2hGameModeRef.current === 'team-alt'
     const myName = h2hPlayerName || 'You'
-    const oppName = h2hOppName || 'Opponent'
+    const oppName = h2hOppName || (isTeamScramble?'Partner':'Opponent')
     const iWon = matchScore > 0
     const theyWon = matchScore < 0
     const isHalved = matchScore === 0
     const abs = Math.abs(matchScore)
     const resultText = iWon ? `${myName} wins ${abs} up` : theyWon ? `${oppName} wins ${abs} up` : 'Match halved'
-    if (!h2hIsHost.current && !rematchPollRef.current) startRematchPoll()
+    if (!h2hIsHost.current && !rematchPollRef.current && !isTeamScramble) startRematchPoll()
+
+    if(isTeamScramble){
+      const totalStrokes=scores.reduce((s:number,n)=>s+(n??0),0)
+      const totalPar=holes.reduce((s:number,h)=>s+h.par,0)
+      const vsPar=totalStrokes-totalPar
+      const vsParStr=vsPar===0?'E':vsPar>0?`+${vsPar}`:String(vsPar)
+      return (<><NavBar />
+        <div style={{...h2hScreenStyle,gap:24}}>
+          <div style={{textAlign:'center'}}>
+            <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>{h2hGameModeRef.current==='team-alt'?'Alt Shot Result':'Team Scramble Result'}</div>
+            <div style={{fontSize:48,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'#94a3b8'}}>{vsParStr}</div>
+            <div style={{fontSize:14,color:'rgba(255,255,255,0.45)',marginTop:4}}>{totalStrokes} strokes · {numHoles} holes</div>
+          </div>
+          <div style={{width:'100%',maxWidth:340,background:'#111827',border:'1px solid #1e2d4a',borderRadius:12,padding:'12px 14px'}}>
+            <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Scorecard</div>
+            {holes.map((h,i)=>{
+              const s=scores[i]??0;const d=s-h.par
+              return(<div key={i} style={{display:'flex',alignItems:'center',gap:8,paddingBottom:5,borderBottom:i<holes.length-1?'1px solid rgba(255,255,255,0.04)':'none',marginBottom:5}}>
+                <div style={{fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.3)',width:18}}>H{i+1}</div>
+                <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',flex:1}}>Par {h.par}</div>
+                <div style={{fontSize:13,fontWeight:900,color:d<0?'#22c55e':d>0?'#ef4444':'#94a3b8'}}>{s}</div>
+                <div style={{fontSize:10,fontWeight:700,color:d<0?'#22c55e':d>0?'#ef4444':'#94a3b8',width:22,textAlign:'right'}}>{d===0?'E':d>0?`+${d}`:d}</div>
+              </div>)
+            })}
+          </div>
+          <button style={h2hBtnStyle} onClick={()=>{setH2HStep('off');setPhase('setup')}}>Back to Menu</button>
+        </div>
+      </>)
+    }
+
     return (<><NavBar />
       <div style={{...h2hScreenStyle,gap:24}}>
         <div style={{textAlign:'center'}}>
@@ -2318,7 +2482,7 @@ export default function FootballGolf(){
   }
 
   if(phase==='club-lobby'&&lobbyClub) return(<><NavBar /><ClubLobbyScreen club={lobbyClub} onBack={()=>setPhase('setup')} /></>)
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -4031,7 +4195,8 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
   )
 }
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare}:{
+type MultiMode = 'h2h-1v1'|'h2h-scramble'|'h2h-alt'|'team-scramble'|'team-alt'
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
@@ -4040,8 +4205,9 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void; onDailyRound:()=>void
   onViewLobby:(club:ClubInfo)=>void
   sharedResult:SharePayload|null; onDismissShare:()=>void
+  multiMode:MultiMode; setMultiMode:(m:MultiMode)=>void
 }){
-  const [mode,setMode] = useState<'solo'|'h2h'>('solo')
+  const [mode,setMode] = useState<'solo'|'multiplayer'>('solo')
   const [hcpExpanded, setHcpExpanded] = useState(false)
   const [globalRank, setGlobalRank]   = useState<number|null>(null)
   const today = new Date().toISOString().slice(0,10)
@@ -4060,7 +4226,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
   const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
   return(
-    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'24px 20px 20px',overflowY:'auto'}}>
+    <div style={{width:'100%',height:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'24px 20px 20px',overflowY:'scroll',overflowX:'hidden',scrollbarGutter:'stable'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
 
       {/* Title */}
@@ -4098,19 +4264,15 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14}}>
         <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Daily Challenges</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-          <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
-            <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <span style={{fontSize:16,lineHeight:1}}>⛳</span>
-              <span style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</span>
-            </div>
-            <div style={{fontSize:10,fontWeight:800,color:dailyPlayed?'#22c55e':'#3b82f6'}}>{dailyPlayed?'✓ Done':'Play →'}</div>
+          <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'9px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:7}}>
+            <span style={{fontSize:16,lineHeight:1}}>⛳</span>
+            <span style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</span>
+            {dailyPlayed&&<span style={{fontSize:10,fontWeight:800,color:'#22c55e',marginLeft:'auto'}}>✓</span>}
           </button>
-          <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'10px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:6}}>
-            <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <span style={{fontSize:16,lineHeight:1}}>🏌️</span>
-              <span style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</span>
-            </div>
-            <div style={{fontSize:10,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'#3b82f6'}}>{dailyRoundPlayed?'✓ Done':'Play →'}</div>
+          <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'9px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:7}}>
+            <span style={{fontSize:16,lineHeight:1}}>🏌️</span>
+            <span style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</span>
+            {dailyRoundPlayed&&<span style={{fontSize:10,fontWeight:800,color:'#22c55e',marginLeft:'auto'}}>✓</span>}
           </button>
         </div>
       </div>
@@ -4135,8 +4297,58 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           <div style={row}>
             <div style={rowLbl}>Mode</div>
             <button onClick={()=>setMode('solo')} style={pill(mode==='solo')}>Solo</button>
-            <button onClick={()=>setMode('h2h')} style={pill(mode==='h2h')}>Head to Head</button>
+            <button onClick={()=>setMode('multiplayer')} style={pill(mode==='multiplayer')}>Multiplayer</button>
           </div>
+
+          {/* Multiplayer submenu */}
+          {mode==='multiplayer'&&(()=>{
+            const sectionLbl:React.CSSProperties={fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:5}
+            const mpPill=(active:boolean,soon=false):React.CSSProperties=>({
+              flex:1,background:active?'rgba(34,197,94,0.12)':soon?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)',
+              color:active?'#22c55e':soon?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.55)',
+              border:`1.5px solid ${active?'rgba(34,197,94,0.5)':soon?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.07)'}`,
+              borderRadius:9,padding:'7px 0',fontSize:11,fontWeight:800,cursor:soon?'default':'pointer',
+              fontFamily:'inherit',transition:'all 0.15s',textAlign:'center' as const,position:'relative' as const,
+            })
+            return(
+              <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)',borderRadius:10,padding:'10px 10px 8px',display:'flex',flexDirection:'column',gap:8}}>
+                {/* H2H section */}
+                <div>
+                  <div style={sectionLbl}>Head to Head</div>
+                  <div style={{display:'flex',gap:5,minWidth:0}}>
+                    <button onClick={()=>setMultiMode('h2h-1v1')} style={mpPill(multiMode==='h2h-1v1')}>1v1</button>
+                    <button onClick={()=>setMultiMode('h2h-scramble')} style={mpPill(multiMode==='h2h-scramble',true)}>
+                      2v2 Scramble
+                    </button>
+                    <button onClick={()=>setMultiMode('h2h-alt')} style={mpPill(multiMode==='h2h-alt',true)}>
+                      2v2 Alt Shot
+                    </button>
+                  </div>
+                </div>
+                {/* Divider */}
+                <div style={{height:1,background:'rgba(255,255,255,0.05)'}}/>
+                {/* Team Up section */}
+                <div>
+                  <div style={sectionLbl}>Team Up</div>
+                  <div style={{display:'flex',gap:5}}>
+                    <button onClick={()=>setMultiMode('team-scramble')} style={mpPill(multiMode==='team-scramble')}>
+                      Scramble
+                    </button>
+                    <button onClick={()=>setMultiMode('team-alt')} style={mpPill(multiMode==='team-alt')}>
+                      Alt Shot
+                    </button>
+                    <div style={{flex:1}}/>
+                  </div>
+                </div>
+                {/* Soon badge if applicable */}
+                {(multiMode==='h2h-scramble'||multiMode==='h2h-alt')&&(
+                  <div style={{textAlign:'center',fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.2)',marginTop:-2}}>
+                    Coming soon
+                  </div>
+                )}
+              </div>
+            )
+          })()}
 
           {/* Type row */}
           <div style={row}>
@@ -4190,15 +4402,19 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
             ? <button onClick={onStart} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginTop:2}}>
                 Tee Off →
               </button>
-            : <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
-                <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                  Create Room
+            : (multiMode==='h2h-1v1'||multiMode==='team-scramble'||multiMode==='team-alt')
+              ? <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
+                  <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                    Create Room
+                  </button>
+                  <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
+                  <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'1.5px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                    Join Room
+                  </button>
+                </div>
+              : <button disabled style={{width:'100%',background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.2)',border:'1.5px solid rgba(255,255,255,0.05)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'default',fontFamily:'inherit',marginTop:2}}>
+                  Coming Soon
                 </button>
-                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
-                <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'1.5px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                  Join Room
-                </button>
-              </div>
           }
         </div>
         )
