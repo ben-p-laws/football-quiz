@@ -919,7 +919,8 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function FootballGolf(){
-  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'|'h2h-done'>('setup')
+  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'|'h2h-done'|'club-lobby'>('setup')
+  const [lobbyClub,setLobbyClub]         = useState<ClubInfo|null>(null)
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
   const [selectedCourse,setSelectedCourse] = useState<string>('augusta')
   const [numHoles,setNumHoles]           = useState<3|6|9|18>(3)
@@ -2316,7 +2317,8 @@ export default function FootballGolf(){
     </>)
   }
 
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} /></>)
+  if(phase==='club-lobby'&&lobbyClub) return(<><NavBar /><ClubLobbyScreen club={lobbyClub} onBack={()=>setPhase('setup')} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -3747,7 +3749,7 @@ function HandicapExpandedContent({hcp,roundCount}:{hcp:HandicapData|null;roundCo
 type LobbyMember = { device_id:string; username:string; handicap_index:number|null; tier:string|null; total_rounds:number; streak:number; best_score:number|null }
 type ClubRanking = { name:string; code:string; avg_handicap:number; member_count:number }
 
-function ClubLobbyOverlay({ club, onClose }: { club:ClubInfo; onClose:()=>void }) {
+function ClubLobbyScreen({ club, onBack }: { club:ClubInfo; onBack:()=>void }) {
   const [members,setMembers] = useState<LobbyMember[]>([])
   const [avgHandicap,setAvgHandicap] = useState<number|null>(null)
   const [rankings,setRankings] = useState<ClubRanking[]>([])
@@ -3786,11 +3788,11 @@ function ClubLobbyOverlay({ club, onClose }: { club:ClubInfo; onClose:()=>void }
   }
 
   return(
-    <div style={{position:'fixed',inset:0,zIndex:1000,background:'#0a0f1e',overflowY:'auto',fontFamily:"'DM Sans',sans-serif"}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',overflowY:'auto',fontFamily:"'DM Sans',sans-serif"}}>
       <div style={{maxWidth:480,margin:'0 auto',padding:'16px 20px 40px'}}>
         {/* Header */}
         <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:20}}>
-          <button onClick={onClose} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
+          <button onClick={onBack} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
           <div style={{flex:1,fontSize:18,fontWeight:900,color:'white'}}>{club.name}</div>
           <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',letterSpacing:'0.1em'}}>{club.code}</div>
         </div>
@@ -3870,7 +3872,7 @@ function ClubLobbyOverlay({ club, onClose }: { club:ClubInfo; onClose:()=>void }
   )
 }
 
-function ClubSection(){
+function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
   const [expanded,setExpanded] = useState(false)
   const [clubs,setClubs] = useState<ClubInfo[]>([])
   const [activeCode,setActiveCodeState] = useState<string|null>(null)
@@ -3880,7 +3882,6 @@ function ClubSection(){
   const [msg,setMsg] = useState('')
   const [loading,setLoading] = useState(false)
   const [memberCounts,setMemberCounts] = useState<Record<string,number>>({})
-  const [lobbyClub,setLobbyClub] = useState<ClubInfo|null>(null)
 
   useEffect(()=>{
     setClubs(getMyClubs())
@@ -3971,7 +3972,7 @@ function ClubSection(){
                       {memberCounts[club.id]!==undefined&&<span style={{letterSpacing:0,fontWeight:600}}> · {memberCounts[club.id]} member{memberCounts[club.id]!==1?'s':''}</span>}
                     </div>
                   </div>
-                  <button onClick={()=>setLobbyClub(club)}
+                  <button onClick={()=>onViewLobby(club)}
                     style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.5)',cursor:'pointer',fontFamily:'inherit'}}>
                     Lobby →
                   </button>
@@ -3985,7 +3986,6 @@ function ClubSection(){
               </div>
             )
           })}
-          {lobbyClub&&<ClubLobbyOverlay club={lobbyClub} onClose={()=>setLobbyClub(null)} />}
 
           {mode==='view'&&(
             <div style={{display:'flex',gap:6,marginTop:clubs.length>0?4:0}}>
@@ -4029,13 +4029,14 @@ function ClubSection(){
   )
 }
 
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,sharedResult,onDismissShare}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
   tee:Tee; setTee:(t:Tee)=>void
   startHole:number; setStartHole:(n:number)=>void
   onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void; onDailyRound:()=>void
+  onViewLobby:(club:ClubInfo)=>void
   sharedResult:SharePayload|null; onDismissShare:()=>void
 }){
   const [mode,setMode] = useState<'solo'|'h2h'>('solo')
@@ -4089,7 +4090,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       })()}
 
       {/* Club card */}
-      <ClubSection />
+      <ClubSection onViewLobby={onViewLobby} />
 
       {/* Daily Challenges card */}
       <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14}}>
