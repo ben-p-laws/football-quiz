@@ -11,6 +11,7 @@ export const CONTINENT_MAP: Record<string, string> = {
   NAM:'Africa',NIG:'Africa',NGA:'Africa',RWA:'Africa',STP:'Africa',SEN:'Africa',
   SLE:'Africa',SOM:'Africa',ZAF:'Africa',SSD:'Africa',SDN:'Africa',TAN:'Africa',
   TGO:'Africa',TOG:'Africa',TUN:'Africa',UGA:'Africa',ZAM:'Africa',ZIM:'Africa',BFA:'Africa',
+  RSA:'Africa',CGO:'Africa',SEY:'Africa',
   // Europe
   ALB:'Europe',AND:'Europe',ARM:'Europe',AUT:'Europe',AZE:'Europe',BLR:'Europe',
   BEL:'Europe',BIH:'Europe',BUL:'Europe',CRO:'Europe',CYP:'Europe',CZE:'Europe',
@@ -20,7 +21,7 @@ export const CONTINENT_MAP: Record<string, string> = {
   LTU:'Europe',LUX:'Europe',MLT:'Europe',MDA:'Europe',MNE:'Europe',NED:'Europe',
   MKD:'Europe',NIR:'Europe',NOR:'Europe',POL:'Europe',POR:'Europe',ROU:'Europe',
   RUS:'Europe',SMR:'Europe',SCO:'Europe',SRB:'Europe',SVK:'Europe',SVN:'Europe',
-  ESP:'Europe',SWE:'Europe',SUI:'Europe',TUR:'Europe',UKR:'Europe',WAL:'Europe',
+  ESP:'Europe',SWE:'Europe',SUI:'Europe',TUR:'Europe',UKR:'Europe',WAL:'Europe',SCG:'Europe',
   // Asia
   AFG:'Asia',BHR:'Asia',BAN:'Asia',BHU:'Asia',CAM:'Asia',CHN:'Asia',TPE:'Asia',
   IND:'Asia',IDN:'Asia',IRN:'Asia',IRQ:'Asia',JPN:'Asia',JOR:'Asia',KAZ:'Asia',
@@ -39,6 +40,7 @@ export const CONTINENT_MAP: Record<string, string> = {
   JAM:'N. America',TRI:'N. America',HAI:'N. America',CUB:'N. America',DOM:'N. America',
   BRB:'N. America',GRN:'N. America',ATG:'N. America',SKN:'N. America',LCA:'N. America',
   VIN:'N. America',CUW:'N. America',ARU:'N. America',BAH:'N. America',DMA:'N. America',PUR:'N. America',MSR:'N. America',
+  GLP:'N. America',BER:'N. America',
   // Oceania
   AUS:'Oceania',NZL:'Oceania',FIJ:'Oceania',PNG:'Oceania',SOL:'Oceania',
   VAN:'Oceania',SAM:'Oceania',TGA:'Oceania',FSM:'Oceania',PLW:'Oceania',
