@@ -3884,8 +3884,15 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
   const [memberCounts,setMemberCounts] = useState<Record<string,number>>({})
 
   useEffect(()=>{
-    setClubs(getMyClubs())
-    setActiveCodeState(getActiveClubCode())
+    const stored = getMyClubs()
+    setClubs(stored)
+    const current = getActiveClubCode()
+    if(current){
+      setActiveCodeState(current)
+    } else if(stored.length>0){
+      setActiveClubCode(stored[0].code)
+      setActiveCodeState(stored[0].code)
+    }
   },[])
 
   useEffect(()=>{
@@ -3899,12 +3906,6 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[expanded,clubs])
 
-  function toggleActive(code:string){
-    const next = activeCode===code ? null : code
-    setActiveClubCode(next)
-    setActiveCodeState(next)
-  }
-
   async function createClub(){
     const name=createName.trim(); if(!name) return
     setLoading(true); setMsg('')
@@ -3913,6 +3914,7 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
     setLoading(false)
     if(res.error){setMsg(res.error);return}
     const updated=[...clubs,res.club]; saveMyClubs(updated); setClubs(updated)
+    setActiveClubCode(res.club.code); setActiveCodeState(res.club.code)
     setCreateName(''); setMode('view'); setMsg(`Created! Share code: ${res.club.code}`)
   }
 
@@ -3926,6 +3928,7 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
     if(!clubs.find(c=>c.id===res.club.id)){
       const updated=[...clubs,res.club]; saveMyClubs(updated); setClubs(updated)
     }
+    setActiveClubCode(res.club.code); setActiveCodeState(res.club.code)
     setJoinCode(''); setMode('view'); setMsg(`Joined ${res.club.name}!`)
   }
 
@@ -3933,7 +3936,10 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
     await fetch('/api/golf-club',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'leave',clubId,deviceId:getDeviceId()})})
     const updated=clubs.filter(c=>c.id!==clubId); saveMyClubs(updated); setClubs(updated)
-    if(activeCode===code){ setActiveClubCode(null); setActiveCodeState(null) }
+    if(activeCode===code){
+      const next=updated[0]?.code??null
+      setActiveClubCode(next); setActiveCodeState(next)
+    }
   }
 
   const toggleBtn=(active:boolean,green=false):React.CSSProperties=>({
@@ -3952,7 +3958,7 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
         <div style={{flex:1}}>
           <div style={{fontSize:12,fontWeight:900,color:'white'}}>Clubs</div>
           <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>
-            {clubs.length>0?`${clubs.length} club${clubs.length>1?'s':''}${activeCode?' · filtering leaderboards':''}` : 'Join or create a club'}
+            {clubs.length>0?`${clubs.length} club${clubs.length>1?'s':''}` : 'Join or create a club'}
           </div>
         </div>
         <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',flexShrink:0}}>{expanded?'▲':'▼'}</div>
@@ -3975,10 +3981,6 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
                   <button onClick={()=>onViewLobby(club)}
                     style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.5)',cursor:'pointer',fontFamily:'inherit'}}>
                     Lobby →
-                  </button>
-                  <button onClick={()=>toggleActive(club.code)}
-                    style={{background:isActive?'#22c55e':'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:isActive?'#0a0f1e':'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>
-                    {isActive?'✓':'Filter'}
                   </button>
                   <button onClick={()=>leaveClub(club.id,club.code)}
                     style={{background:'none',border:'none',color:'rgba(255,255,255,0.2)',fontSize:16,cursor:'pointer',padding:'0 2px',lineHeight:1,fontFamily:'inherit'}}>×</button>
@@ -4020,7 +4022,7 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
           {msg&&<div style={{marginTop:8,fontSize:11,fontWeight:700,color:msg.startsWith('Created')||msg.startsWith('Joined')?'#22c55e':'#ef4444'}}>{msg}</div>}
           {activeCode&&(
             <div style={{marginTop:10,background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.15)',borderRadius:8,padding:'7px 10px',fontSize:10,color:'rgba(34,197,94,0.7)',lineHeight:1.5}}>
-              ✓ Club active — leaderboard pages will show a Global / Club toggle.
+              ✓ Leaderboards show a Global / Club toggle while you're in a club.
             </div>
           )}
         </div>
