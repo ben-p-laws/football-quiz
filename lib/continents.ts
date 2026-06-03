@@ -38,7 +38,7 @@ export const CONTINENT_MAP: Record<string, string> = {
   HON:'N. America',NCA:'N. America',PAN:'N. America',
   JAM:'N. America',TRI:'N. America',HAI:'N. America',CUB:'N. America',DOM:'N. America',
   BRB:'N. America',GRN:'N. America',ATG:'N. America',SKN:'N. America',LCA:'N. America',
-  VIN:'N. America',CUW:'N. America',ARU:'N. America',BAH:'N. America',DMA:'N. America',PUR:'N. America',
+  VIN:'N. America',CUW:'N. America',ARU:'N. America',BAH:'N. America',DMA:'N. America',PUR:'N. America',MSR:'N. America',
   // Oceania
   AUS:'Oceania',NZL:'Oceania',FIJ:'Oceania',PNG:'Oceania',SOL:'Oceania',
   VAN:'Oceania',SAM:'Oceania',TGA:'Oceania',FSM:'Oceania',PLW:'Oceania',
