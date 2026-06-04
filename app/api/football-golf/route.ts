@@ -358,6 +358,17 @@ const buildMetaCache = unstable_cache(
           }
         }
       }
+
+      // per surname initial (base stats only)
+      if ((CLUB_STAT_KEYS as StatKey[]).includes(key)) {
+        for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+          const vals = Object.entries(byName)
+            .filter(([name]) => (name.trim().split(' ').pop() ?? '').charAt(0).toUpperCase() === letter)
+            .map(([, p]) => pStatValue(p, key))
+          const val = top3(vals)
+          if (val > 0) top3Cache[`${key}:letter:${letter}`] = val
+        }
+      }
     }
 
     // contClubPairs = continent+club pairs where at least one CLUB_STAT_KEYS stat has top3 >= 10
@@ -378,9 +389,14 @@ const buildMetaCache = unstable_cache(
       return [cont, club]
     })
 
-    return { clubs, nations, continents, contClubPairs, top3Cache }
+    // letters = A-Z where at least one base stat meets putter threshold (top3 >= 10)
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(letter =>
+      CLUB_STAT_KEYS.some(key => (top3Cache[`${key}:letter:${letter}`] ?? 0) >= 10)
+    )
+
+    return { clubs, nations, continents, contClubPairs, top3Cache, letters }
   },
-  ['football-golf-meta-v11'],
+  ['football-golf-meta-v12'],
   { revalidate: 86400 }
 )
 
