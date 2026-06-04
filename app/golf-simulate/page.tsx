@@ -49,7 +49,7 @@ function TypeBreakdown({ label, entries, n, color }: { label: string; entries: [
               return (
                 <tr key={key} style={{ borderBottom: '1px solid #0d1526', background: ratio > 1.5 ? 'rgba(239,68,68,0.08)' : 'transparent' }}>
                   <td style={{ padding: '3px 8px', color: '#444' }}>{i + 1}</td>
-                  <td style={{ padding: '3px 8px', color: 'white' }}>{key.replace(/^(club|nat|cont|cc|letter):/, '')}</td>
+                  <td style={{ padding: '3px 8px', color: 'white' }}>{key.replace(/^(club|nat|cont|cc):/, '')}</td>
                   <td style={{ padding: '3px 8px', color: '#888' }}>{count.toLocaleString()}</td>
                   <td style={{ padding: '3px 8px', fontWeight: 700, color: ratio > 1.5 ? '#ef4444' : ratio > 1.2 ? '#fbbf24' : '#aaa' }}>{pct(count, n)}%</td>
                   <td style={{ padding: '3px 8px', color: ratio > 1.5 ? '#ef4444' : ratio > 1.2 ? '#fbbf24' : '#6b7280' }}>{ratio.toFixed(2)}×</td>
@@ -78,7 +78,6 @@ function DistanceTable({ dist, freq, n }: { dist: string; freq: Record<string, n
       : k.startsWith('nat:') ? 'nat'
       : k.startsWith('cont:') ? 'cont'
       : k.startsWith('cc:') ? 'cc'
-      : k.startsWith('letter:') ? 'letter'
       : k === 'all' ? 'all' : 'other'
     if (!byType[type]) byType[type] = []
     byType[type].push([k, v])
@@ -106,7 +105,7 @@ function DistanceTable({ dist, freq, n }: { dist: string; freq: Record<string, n
       </div>
 
       {/* Per-type collapsible breakdowns */}
-      {(['club','nat','cc','cont','all','letter'] as const).map(type => {
+      {(['club','nat','cc','cont','all'] as const).map(type => {
         const entries = byType[type] ?? []
         if (entries.length === 0) return null
         return (
@@ -133,13 +132,13 @@ function DistanceTable({ dist, freq, n }: { dist: string; freq: Record<string, n
             {top.map(([key, count], i) => {
               const p = count / n
               const ratio = p / expectedUniform
-              const type = key.startsWith('club:') ? 'club' : key.startsWith('nat:') ? 'nat' : key.startsWith('cont:') ? 'cont' : key.startsWith('cc:') ? 'cc' : key.startsWith('letter:') ? 'letter' : 'all'
+              const type = key.startsWith('club:') ? 'club' : key.startsWith('nat:') ? 'nat' : key.startsWith('cont:') ? 'cont' : key.startsWith('cc:') ? 'cc' : 'all'
               return (
                 <tr key={key} style={{ borderBottom: '1px solid #222', background: ratio > 3 ? 'rgba(239,68,68,0.15)' : ratio > 2 ? 'rgba(251,191,36,0.1)' : 'transparent' }}>
                   <td style={{ padding: '5px 10px', color: '#666' }}>{i + 1}</td>
                   <td style={{ padding: '5px 10px' }}>
                     <span style={{ color: typeColor(type), fontWeight: 700, marginRight: 6, fontSize: 11 }}>{type}</span>
-                    {key.replace(/^(club|nat|cont|cc|letter):/, '')}
+                    {key.replace(/^(club|nat|cont|cc):/, '')}
                   </td>
                   <td style={{ padding: '5px 10px', color: '#aaa' }}>{count.toLocaleString()}</td>
                   <td style={{ padding: '5px 10px', fontWeight: 700 }}>{pct(count, n)}%</td>
@@ -166,7 +165,7 @@ function getThreshold(dist: number) {
   return { driver: 250, iron: 150, wedge: 50, putter: 10 }[getClub(dist)]
 }
 function typeColor(type: string) {
-  return { all: '#94a3b8', nat: '#60a5fa', cont: '#a78bfa', club: '#34d399', cc: '#fb923c', letter: '#f472b6', other: '#f87171' }[type] ?? '#fff'
+  return { all: '#94a3b8', nat: '#60a5fa', cont: '#a78bfa', club: '#34d399', cc: '#fb923c', other: '#f87171' }[type] ?? '#fff'
 }
 
 export default function GolfSimulatePage() {
