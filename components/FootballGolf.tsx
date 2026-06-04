@@ -1081,7 +1081,10 @@ export default function FootballGolf(){
         metaClubs.current        = m.clubs
         metaContinents.current   = m.continents.filter((c: string) => c !== 'Oceania')
         metaContClubPairs.current = m.contClubPairs
-        if (m.letters?.length) metaLetters.current = m.letters
+        // Derive valid letters from top3Cache directly (more robust than relying on server field)
+        metaLetters.current = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(letter =>
+          CLUB_STATS.some(key => (m.top3Cache[`${key}:letter:${letter}`] ?? 0) >= 10)
+        )
         top3CacheRef.current     = m.top3Cache
         setMetaReady(true)
       }).catch(()=>setMetaReady(true)) // on error, allow play with fallback lists
