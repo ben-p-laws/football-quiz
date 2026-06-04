@@ -436,9 +436,37 @@ const buildSeasonsListCache = unstable_cache(
 // GET ?data=1    → full stats for all players (used for shot calculation)
 // GET ?season=X  → per-player goals/assists/yellow_cards for one season (bad lie questions)
 // GET ?seasons=1 → list of all distinct season IDs
+// GET ?clubstats=1 → all clubs with season counts and total appearances (for admin use)
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   try {
+    if (searchParams.get('clubstats') === '1') {
+      const columns = 'year_id,games,teams_played_for'
+      const all: any[] = []
+      let offset = 0
+      while (true) {
+        const { data } = await getClient().from('player_seasons').select(columns).range(offset, offset + 999)
+        if (!data || data.length === 0) break
+        all.push(...data)
+        if (data.length < 1000) break
+        offset += 1000
+      }
+      const clubMap: Record<string, { seasons: Set<string>; apps: number }> = {}
+      for (const row of all) {
+        const yr = String(row.year_id || '')
+        const teams = String(row.teams_played_for || '').split(',').map((t: string) => normTeam(t.trim())).filter((t: string) => t && t !== '2 Teams')
+        if (teams.length === 1) {
+          const team = teams[0]
+          if (!clubMap[team]) clubMap[team] = { seasons: new Set(), apps: 0 }
+          if (yr) clubMap[team].seasons.add(yr)
+          clubMap[team].apps += Number(row.games) || 0
+        }
+      }
+      const clubs = Object.entries(clubMap)
+        .map(([name, v]) => ({ name, seasons: v.seasons.size, apps: v.apps }))
+        .sort((a, b) => b.seasons - a.seasons || b.apps - a.apps)
+      return NextResponse.json({ clubs })
+    }
     if (searchParams.get('meta') === '1') {
       return NextResponse.json(await buildMetaCache())
     }
