@@ -3101,7 +3101,7 @@ export default function FootballGolf(){
           })()}
           {/* Shot animation overlay — same position as background, full brightness */}
           {shotOverlay && currentHole && (() => {
-            const animYScale = courseMode==='real' && !dailyMode ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined
+            const animYScale = courseMode==='real' && !dailyMode ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : PEBBLE_YSCALE[currentHole.number]) : undefined
             return (
               <div style={{position:'absolute',inset:0,zIndex:10,background:'#0a0f1e',display:'flex',flexDirection:'column'}}>
                 <CourseView
@@ -3330,7 +3330,7 @@ export default function FootballGolf(){
             {/* Hole view */}
             {currentHole && (()=>{
               const isReal = courseMode==='real' && !dailyMode
-              const cvYScale = isReal ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : 260) : undefined
+              const cvYScale = isReal ? (selectedCourse==='augusta' ? AUGUSTA_YSCALE[currentHole.number] : selectedCourse==='wii-golf' ? WII_GOLF_YSCALE[currentHole.number] : PEBBLE_YSCALE[currentHole.number]) : undefined
               return (
                 <div style={{flex:1,minHeight:0,position:'relative'}}>
                   <CourseView
@@ -4132,6 +4132,15 @@ const WII_GOLF_HAZARDS: Record<number, { hazards?: {start:number;end:number}[]; 
 }
 
 // Augusta images have varying heights — yScale = 100/(w/h) so viewBox always 100 wide
+// yScale = (h/w)*100 from actual image pixel dimensions
+const PEBBLE_YSCALE: Record<number, number> = {
+   1:100/(257/673),  2:100/(187/710),  3:100/(263/618),  4:100/(233/607),
+   5:100/(237/613),  6:100/(237/747),  7:100/(275/525),  8:100/(271/629),
+   9:100/(222/606), 10:100/(255/662), 11:100/(250/653), 12:100/(265/644),
+  13:100/(202/703), 14:100/(267/602), 15:100/(241/701), 16:100/(278/682),
+  17:100/(267/684), 18:100/(263/664),
+}
+
 const AUGUSTA_YSCALE: Record<number, number> = {
    1:100/(300/920),  2:100/(300/726),  3:100/(300/759),  4:100/(300/728),
    5:100/(300/797),  6:100/(300/639),  7:100/(300/1054), 8:100/(300/975),
