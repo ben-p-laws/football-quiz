@@ -357,6 +357,15 @@ const buildMetaCache = unstable_cache(
             }
           }
         }
+
+        // per surname initial (only CLUB_STAT_KEYS — letter filter only uses base stats)
+        for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
+          const vals = Object.entries(byName)
+            .filter(([name]) => (name.trim().split(' ').pop() ?? '').charAt(0).toUpperCase() === letter)
+            .map(([, p]) => pStatValue(p, key))
+          const val = top3(vals)
+          if (val > 0) top3Cache[`${key}:letter:${letter}`] = val
+        }
       }
     }
 
@@ -378,9 +387,12 @@ const buildMetaCache = unstable_cache(
       return [cont, club]
     })
 
-    return { clubs, nations, continents, contClubPairs, top3Cache }
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
+      .filter(letter => CLUB_STAT_KEYS.some(key => (top3Cache[`${key}:letter:${letter}`] ?? 0) >= 10))
+
+    return { clubs, nations, continents, contClubPairs, top3Cache, letters }
   },
-  ['football-golf-meta-v11'],
+  ['football-golf-meta-v13'],
   { revalidate: 86400 }
 )
 
@@ -456,7 +468,7 @@ export async function GET(req: Request) {
 // POST { players, category, clubFilter?, natFilter? } → { total, breakdown }
 export async function POST(req: Request) {
   try {
-    const { players: playerNames, category, clubFilter, natFilter } = await req.json()
+    const { players: playerNames, category, clubFilter, natFilter, letterFilter } = await req.json()
     const { players } = await buildCache()
 
     const breakdown: { name: string; value: number }[] = []
@@ -466,6 +478,10 @@ export async function POST(req: Request) {
       const p = players[name]
       if (!p) { breakdown.push({ name, value: 0 }); continue }
       if (natFilter && p.nationality !== natFilter) { breakdown.push({ name, value: 0 }); continue }
+      if (letterFilter) {
+        const surname = (name.trim().split(' ').pop() ?? '').charAt(0).toUpperCase()
+        if (surname !== letterFilter) { breakdown.push({ name, value: 0 }); continue }
+      }
 
       let value = 0
       if (clubFilter) {

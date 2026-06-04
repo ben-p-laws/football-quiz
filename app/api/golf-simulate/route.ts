@@ -11,10 +11,11 @@ function getClub(dist: number): string {
 }
 
 function filterLabel(f: FilterSpec): string {
-  if (f.k === 'all')  return 'all'
-  if (f.k === 'nat')  return `nat:${f.code}`
-  if (f.k === 'club') return `club:${f.name}`
-  if (f.k === 'cont') return `cont:${f.name}`
+  if (f.k === 'all')    return 'all'
+  if (f.k === 'nat')    return `nat:${f.code}`
+  if (f.k === 'club')   return `club:${f.name}`
+  if (f.k === 'cont')   return `cont:${f.name}`
+  if (f.k === 'letter') return `letter:${f.letter}`
   return `cc:${f.continent}×${f.club}`
 }
 
@@ -26,13 +27,13 @@ const BEFORE_KEYS = BEFORE_YEARS.flatMap(y => [`goals_before_${y}`, `ga_before_$
 const CLUB_STATS = ['goals', 'assists', 'goals_assists', 'appearances', 'apps_minus_goals', 'yellow_cards', 'clean_sheets']
 
 function getTypeProbs(club: string): Record<FilterKind, number> {
-  if (club === 'driver') return { nat:23, club:23, cc:27, cont:22, all:5 }
-  if (club === 'iron')   return { nat:25, club:25, cc:25, cont:20, all:5 }
-  return                        { nat:27, club:27, cc:25, cont:18, all:3 }
+  if (club === 'driver') return { nat:20, club:20, cc:23, cont:19, all:5, letter:13 }
+  if (club === 'iron')   return { nat:22, club:22, cc:21, cont:17, all:5, letter:13 }
+  return                        { nat:23, club:23, cc:21, cont:15, all:3, letter:15 }
 }
 
 function sampleKind(probs: Record<FilterKind, number>): FilterKind {
-  const types: FilterKind[] = ['nat','club','cc','cont','all']
+  const types: FilterKind[] = ['nat','club','cc','cont','all','letter']
   const total = types.reduce((s, t) => s + probs[t], 0)
   let r = Math.random() * total
   for (const t of types) { r -= probs[t]; if (r <= 0) return t }
@@ -47,6 +48,7 @@ function simulate(
   continents: string[],
   contClubPairs: [string, string][],
   top3Cache: Record<string, number>,
+  letters: string[],
 ): Record<string, number> {
   const club = getClub(distance)
   const threshold = CLUB_THRESHOLD[club as keyof typeof CLUB_THRESHOLD]
@@ -58,6 +60,7 @@ function simulate(
     club: clubs.map(c => ({ k: 'club' as const, name: c })),
     cont: continents.map(c => ({ k: 'cont' as const, name: c })),
     cc:   contClubPairs.map(([cont, cl]) => ({ k: 'cc' as const, continent: cont, club: cl })),
+    letter: letters.map(l => ({ k: 'letter' as const, letter: l })),
   }
 
   const isLong = distance > 150
@@ -72,7 +75,7 @@ function simulate(
     let picked = false
     for (let attempt = 0; attempt < 120; attempt++) {
       const kind = sampleKind(probs)
-      const canUseTemporal = kind !== 'club' && kind !== 'cc'
+      const canUseTemporal = kind !== 'club' && kind !== 'cc' && kind !== 'letter'
       const useTemporal = canUseTemporal && Math.random() < 0.4
       const pool = useTemporal ? temporalPool : basePool
       const stat = pool[Math.floor(Math.random() * pool.length)]
@@ -80,6 +83,7 @@ function simulate(
 
       const valid = filtersByKind[kind].filter(f => {
         if (!isClubStat && (f.k === 'club' || f.k === 'cc')) return false
+        if (f.k === 'letter' && !isClubStat) return false
         const sum = top3Cache[cacheKeyFor(stat, f)] ?? 0
         return sum >= threshold
       })
@@ -110,11 +114,11 @@ export async function GET(req: Request) {
   // Fetch meta from the existing endpoint
   const baseUrl = new URL(req.url).origin
   const meta = await fetch(`${baseUrl}/api/football-golf?meta=1`).then(r => r.json())
-  const { clubs, nations, continents, contClubPairs, top3Cache } = meta
+  const { clubs, nations, continents, contClubPairs, top3Cache, letters = [] } = meta
 
   const results: Record<number, Record<string, number>> = {}
   for (const dist of distances) {
-    results[dist] = simulate(dist, n, clubs, nations, continents, contClubPairs, top3Cache)
+    results[dist] = simulate(dist, n, clubs, nations, continents, contClubPairs, top3Cache, letters)
   }
 
   return NextResponse.json({ n, distances, results })

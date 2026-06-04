@@ -37,7 +37,7 @@ type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals
                'yellow_cards'|'clean_sheets'|
                `goals_since_${SinceYear}`|`ga_since_${SinceYear}`|
                `goals_before_${BeforeYear}`|`ga_before_${BeforeYear}`
-type Category = { key: StatKey; label: string; statLabel: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string }
+type Category = { key: StatKey; label: string; statLabel: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string; letterFilter?: string }
 
 const SINCE_YEARS = [2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018]
 const BEFORE_YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019]
@@ -87,10 +87,11 @@ const FALLBACK_CLUBS = [
 
 
 function filterStr(f: FilterSpec): string {
-  if (f.k==='all')  return ''
-  if (f.k==='nat')  return f.code
-  if (f.k==='club') return f.name
-  if (f.k==='cont') return f.name
+  if (f.k==='all')    return ''
+  if (f.k==='nat')    return f.code
+  if (f.k==='club')   return f.name
+  if (f.k==='cont')   return f.name
+  if (f.k==='letter') return `letter:${f.letter}`
   return `${f.continent}:${f.club}`
 }
 
@@ -124,10 +125,11 @@ function buildShareText(p: SharePayload, url: string): string {
 
 function makeLabel(stat: StatKey, f: FilterSpec): string {
   const sl = getStatLabel(stat)
-  if (f.k==='all')  return `All-time PL ${sl}`
-  if (f.k==='nat')  return `${f.label} PL ${sl}`
-  if (f.k==='club') return `PL ${sl} for ${f.name}`
-  if (f.k==='cont') return `${CONTINENT_LABELS[f.name]??f.name} PL ${sl}`
+  if (f.k==='all')    return `All-time PL ${sl}`
+  if (f.k==='nat')    return `${f.label} PL ${sl}`
+  if (f.k==='club')   return `PL ${sl} for ${f.name}`
+  if (f.k==='cont')   return `${CONTINENT_LABELS[f.name]??f.name} PL ${sl}`
+  if (f.k==='letter') return `PL ${sl} - Surname ${f.letter}`
   return `${CONTINENT_LABELS[f.continent]??f.continent} PL ${sl} for ${f.club}`
 }
 
@@ -147,18 +149,19 @@ function makeFilterLabel(cat: Category): string {
   if (cat.continentFilter) return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${noun}`
   if (cat.clubFilter)      return `${cat.clubFilter} ${noun}`
   if (cat.natFilter)       return `${NAT_LABELS[cat.natFilter] ?? cat.natFilter} ${noun}`
+  if (cat.letterFilter)    return `surname ${cat.letterFilter} ${noun}`
   return `All PL ${noun}`
 }
 
 
 function typeProbs(club: ClubType): Record<FilterKind, number> {
-  if (club === 'driver') return { nat:23, club:23, cc:27, cont:22, all:5 }
-  if (club === 'iron')   return { nat:25, club:25, cc:25, cont:20, all:5 }
-  return                        { nat:27, club:27, cc:25, cont:18, all:3 }
+  if (club === 'driver') return { nat:20, club:20, cc:23, cont:19, all:5, letter:13 }
+  if (club === 'iron')   return { nat:22, club:22, cc:21, cont:17, all:5, letter:13 }
+  return                        { nat:23, club:23, cc:21, cont:15, all:3, letter:15 }
 }
 
 function sampleFilterKind(probs: Record<FilterKind, number>): FilterKind {
-  const types: FilterKind[] = ['nat','club','cc','cont','all']
+  const types: FilterKind[] = ['nat','club','cc','cont','all','letter']
   const total = types.reduce((s, t) => s + probs[t], 0)
   let r = Math.random() * total
   for (const t of types) { r -= probs[t]; if (r <= 0) return t }
@@ -177,6 +180,7 @@ function pickCategory(
   contClubPairs: [string,string][],
   top3Cache: Record<string,number> | null,
   minReach?: number,
+  letters?: string[],
 ): Category {
   const recentSet      = new Set(recentFilters)
   const recentStatsSet = new Set(recentStats)
@@ -205,11 +209,13 @@ function pickCategory(
     club: clubs.map(c => ({ k:'club' as const, name:c })),
     cont: continents.map(c => ({ k:'cont' as const, name:c })),
     cc:   contClubPairs.map(([cont,cl]) => ({ k:'cc' as const, continent:cont, club:cl })),
+    letter: (letters ?? []).map(l => ({ k:'letter' as const, letter:l })),
   }
 
   function isValidFilter(f: FilterSpec, stat: StatKey): boolean {
     const isClubStat = CLUB_STATS.includes(stat)
     if (!isClubStat && (f.k==='club' || f.k==='cc')) return false
+    if (f.k==='letter' && !CLUB_STATS.includes(stat)) return false
     const fs = filterStr(f)
     if (fs && recentSet.has(fs)) return false
     if (f.k==='nat') {
@@ -222,8 +228,8 @@ function pickCategory(
 
   for (let attempt = 0; attempt < 120; attempt++) {
     const kind = sampleFilterKind(probs)
-    // Club/cc filters don't support temporal stats — skip temporal for those types
-    const canUseTemporal = kind !== 'club' && kind !== 'cc'
+    // Club/cc/letter filters don't support temporal stats — skip temporal for those types
+    const canUseTemporal = kind !== 'club' && kind !== 'cc' && kind !== 'letter'
     const useTemporal = canUseTemporal && freshTemporal.length > 0 && Math.random() < 0.4
     const pool = useTemporal
       ? (freshTemporal.length > 0 ? freshTemporal : temporalPool)
@@ -240,6 +246,7 @@ function pickCategory(
     if (f.k==='club') cat.clubFilter = f.name
     if (f.k==='cont') cat.continentFilter = f.name
     if (f.k==='cc') { cat.continentFilter = f.continent; cat.clubFilter = f.club }
+    if (f.k==='letter') cat.letterFilter = f.letter
     return cat
   }
 
@@ -940,6 +947,7 @@ export default function FootballGolf(){
   const metaClubs        = useRef<string[]>(FALLBACK_CLUBS)
   const metaContinents   = useRef<string[]>(['Africa','Europe','Asia','S. America','N. America'])
   const metaContClubPairs = useRef<[string,string][]>([])
+  const metaLetters      = useRef<string[]>([])
   const top3CacheRef     = useRef<Record<string,number>|null>(null)
   const [metaReady, setMetaReady] = useState(false)
   const [showRules, setShowRules] = useState(false)
@@ -1067,12 +1075,13 @@ export default function FootballGolf(){
   },[])
 
   useEffect(()=>{
-    fetch('/api/football-golf?meta=1').then(r=>r.json())
-      .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>})=>{
+    fetch('/api/football-golf?meta=1&v=13').then(r=>r.json())
+      .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>;letters?:string[]})=>{
         metaNations.current      = m.nations.map(c=>({code:c,label:NAT_LABELS[c]??c}))
         metaClubs.current        = m.clubs
         metaContinents.current   = m.continents
         metaContClubPairs.current = m.contClubPairs
+        if (m.letters?.length) metaLetters.current = m.letters
         top3CacheRef.current     = m.top3Cache
         setMetaReady(true)
       }).catch(()=>setMetaReady(true)) // on error, allow play with fallback lists
@@ -1385,6 +1394,7 @@ export default function FootballGolf(){
       metaContinents.current, contClubPairs,
       top3CacheRef.current,
       minReach,
+      metaLetters.current,
     )
     usedLabels.current.add(cat.label)
     if (cat.natFilter) {
@@ -1392,7 +1402,7 @@ export default function FootballGolf(){
       const extras = cont ? [cat.natFilter, cont] : [cat.natFilter]
       recentFilters.current = [...recentFilters.current.slice(-(10 - extras.length)), ...extras]
     } else {
-      const f = cat.clubFilter || cat.continentFilter
+      const f = cat.clubFilter || cat.continentFilter || (cat.letterFilter ? `letter:${cat.letterFilter}` : undefined)
       if (f) recentFilters.current = [...recentFilters.current.slice(-9), f]
     }
     recentStats.current = [...recentStats.current.slice(-3), cat.key]
@@ -1564,6 +1574,7 @@ export default function FootballGolf(){
         if(!p){ breakdown.push({name,value:0});continue }
         if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
         if(question.continentFilter && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
+        if(question.letterFilter){ const initial=(name.trim().split(' ').pop()??'').charAt(0).toUpperCase(); if(initial!==question.letterFilter){ breakdown.push({name,value:0});continue } }
         const cf=question.clubFilter
         if(cf){
           if(question.key==='goals')              value=p.clubGoals[cf]||0
@@ -2321,7 +2332,7 @@ export default function FootballGolf(){
     const teeCat=h2hRoomData.current.teeCategories[nextIdx]
     if(teeCat){
       usedLabels.current.add(teeCat.label)
-      const tf=teeCat.natFilter||teeCat.clubFilter||teeCat.continentFilter
+      const tf=teeCat.natFilter||teeCat.clubFilter||teeCat.continentFilter||(teeCat.letterFilter?`letter:${teeCat.letterFilter}`:undefined)
       if(teeCat.natFilter){const cont=CONTINENT_MAP[teeCat.natFilter];const extras=cont?[teeCat.natFilter,cont]:[teeCat.natFilter];recentFilters.current=[...recentFilters.current.slice(-(10-extras.length)),...extras]}
       else if(tf) recentFilters.current=[...recentFilters.current.slice(-9),tf]
       recentStats.current=[...recentStats.current.slice(-3),teeCat.key]
@@ -2353,7 +2364,7 @@ export default function FootballGolf(){
     const ccPairs=top3CacheRef.current?metaContClubPairs.current:[]
     const teeCats=hs.map(hole=>{
       const cl=getClub(hole.distance)
-      const cat=pickCategory(hole.distance,cl,tmpUsed,tmpRecentF,tmpRecentS,metaNations.current,metaClubs.current,metaContinents.current,ccPairs,top3CacheRef.current)
+      const cat=pickCategory(hole.distance,cl,tmpUsed,tmpRecentF,tmpRecentS,metaNations.current,metaClubs.current,metaContinents.current,ccPairs,top3CacheRef.current,undefined,metaLetters.current)
       tmpUsed.add(cat.label)
       tmpRecentS.push(cat.key)
       if (cat.natFilter) {
@@ -2364,6 +2375,8 @@ export default function FootballGolf(){
         tmpRecentF.push(cat.clubFilter)
       } else if (cat.continentFilter) {
         tmpRecentF.push(cat.continentFilter)
+      } else if (cat.letterFilter) {
+        tmpRecentF.push(`letter:${cat.letterFilter}`)
       }
       return cat
     })
@@ -2494,7 +2507,7 @@ export default function FootballGolf(){
     setH2HHoleResults([])
     const firstTeeCat=rd.teeCategories[0]
     usedLabels.current.add(firstTeeCat.label)
-    const firstTeeF=firstTeeCat.natFilter||firstTeeCat.clubFilter||firstTeeCat.continentFilter
+    const firstTeeF=firstTeeCat.natFilter||firstTeeCat.clubFilter||firstTeeCat.continentFilter||(firstTeeCat.letterFilter?`letter:${firstTeeCat.letterFilter}`:undefined)
     if(firstTeeF){
       if(firstTeeCat.natFilter){const cont=CONTINENT_MAP[firstTeeCat.natFilter];recentFilters.current=cont?[firstTeeCat.natFilter,cont]:[firstTeeCat.natFilter]}
       else recentFilters.current=[firstTeeF]
@@ -2547,6 +2560,7 @@ export default function FootballGolf(){
     if (cat.natFilter) { const cont = CONTINENT_MAP[cat.natFilter]; recentFilters.current = cont ? [cat.natFilter, cont] : [cat.natFilter] }
     else if (cat.continentFilter) recentFilters.current = [cat.continentFilter]
     else if (cat.clubFilter) recentFilters.current = [cat.clubFilter]
+    else if (cat.letterFilter) recentFilters.current = [`letter:${cat.letterFilter}`]
     setQuestion(cat)
     resetInputs()
     setPhase('playing')
@@ -2581,12 +2595,13 @@ export default function FootballGolf(){
     const ccPairs = top3CacheRef.current ? metaContClubPairs.current : []
     const teeCats = hs.map(hole => {
       const cl = getClub(hole.distance)
-      const cat = pickCategory(hole.distance, cl, tmpUsed, tmpRecentF, tmpRecentS, metaNations.current, metaClubs.current, metaContinents.current, ccPairs, top3CacheRef.current)
+      const cat = pickCategory(hole.distance, cl, tmpUsed, tmpRecentF, tmpRecentS, metaNations.current, metaClubs.current, metaContinents.current, ccPairs, top3CacheRef.current, undefined, metaLetters.current)
       tmpUsed.add(cat.label)
       tmpRecentS.push(cat.key)
       if (cat.natFilter) { const cont = CONTINENT_MAP[cat.natFilter]; tmpRecentF.push(cat.natFilter); if (cont) tmpRecentF.push(cont) }
       else if (cat.clubFilter && !cat.continentFilter) tmpRecentF.push(cat.clubFilter)
       else if (cat.continentFilter) tmpRecentF.push(cat.continentFilter)
+      else if (cat.letterFilter) { tmpRecentF.push(`letter:${cat.letterFilter}`) }
       return cat
     })
     await fetch('/api/golf-room', {
@@ -2889,7 +2904,7 @@ export default function FootballGolf(){
   }
 
   if(phase==='club-lobby'&&lobbyClub) return(<><NavBar /><ClubLobbyScreen club={lobbyClub} onBack={()=>setPhase('setup')} /></>)
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -4603,13 +4618,14 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
 }
 
 type MultiMode = 'h2h-1v1'|'h2h-scramble'|'h2h-alt'|'team-scramble'|'team-alt'
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode,metaReady}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
   tee:Tee; setTee:(t:Tee)=>void
   startHole:number; setStartHole:(n:number)=>void
   onStart:()=>void; onH2H:()=>void; onJoin:()=>void; onDaily:()=>void; onDailyRound:()=>void
+  metaReady: boolean
   onViewLobby:(club:ClubInfo)=>void
   sharedResult:SharePayload|null; onDismissShare:()=>void
   multiMode:MultiMode; setMultiMode:(m:MultiMode)=>void
@@ -4806,8 +4822,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
           {/* CTA */}
           {mode==='solo'
-            ? <button onClick={onStart} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginTop:2}}>
-                Tee Off →
+            ? <button onClick={onStart} disabled={!metaReady} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:15,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',marginTop:2,opacity:metaReady?1:0.5}}>
+                {metaReady ? 'Tee Off →' : 'Loading…'}
               </button>
             : <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
                 <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
