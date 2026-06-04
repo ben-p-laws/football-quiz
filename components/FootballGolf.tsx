@@ -230,7 +230,7 @@ function pickCategory(
   for (let attempt = 0; attempt < 120; attempt++) {
     const kind = sampleFilterKind(probs)
     // Club/cc filters don't support temporal stats — skip temporal for those types
-    const canUseTemporal = kind !== 'club' && kind !== 'cc'
+    const canUseTemporal = kind !== 'club' && kind !== 'cc' && kind !== 'letter'
     const useTemporal = canUseTemporal && freshTemporal.length > 0 && Math.random() < 0.4
     const pool = useTemporal
       ? (freshTemporal.length > 0 ? freshTemporal : temporalPool)
@@ -1076,7 +1076,7 @@ export default function FootballGolf(){
   },[])
 
   useEffect(()=>{
-    fetch('/api/football-golf?meta=1').then(r=>r.json())
+    fetch('/api/football-golf?meta=1&v=12').then(r=>r.json())
       .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>;letters?:string[]})=>{
         metaNations.current      = m.nations.map(c=>({code:c,label:NAT_LABELS[c]??c}))
         metaClubs.current        = m.clubs
