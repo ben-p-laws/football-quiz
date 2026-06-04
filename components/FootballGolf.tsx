@@ -28,7 +28,7 @@ const NAT_LABELS: Record<string, string> = {
 // Adjective form for category labels e.g. "African PL Goals"
 const CONTINENT_LABELS: Record<string, string> = {
   'Africa':'African','Europe':'European','Asia':'Asian',
-  'S. America':'S. American','N. America':'N. American','Oceania':'Oceanian',
+  'S. America':'S. American','N. America':'N. American',
 }
 
 type SinceYear = 2008|2009|2010|2011|2012|2013|2014|2015|2016|2017|2018
@@ -1079,7 +1079,7 @@ export default function FootballGolf(){
       .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>;letters?:string[]})=>{
         metaNations.current      = m.nations.map(c=>({code:c,label:NAT_LABELS[c]??c}))
         metaClubs.current        = m.clubs
-        metaContinents.current   = m.continents
+        metaContinents.current   = m.continents.filter((c: string) => c !== 'Oceania')
         metaContClubPairs.current = m.contClubPairs
         if (m.letters?.length) metaLetters.current = m.letters
         top3CacheRef.current     = m.top3Cache

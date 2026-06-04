@@ -313,10 +313,11 @@ const buildMetaCache = unstable_cache(
       .slice(0, 60)
       .map(([code]) => code)
 
-    // continents = all continents with any contApps, sorted by contApps desc
+    // continents = all continents with any contApps, sorted by contApps desc (Oceania excluded)
     const continents = Object.entries(contApps)
       .sort((a, b) => b[1] - a[1])
       .map(([cont]) => cont)
+      .filter(cont => cont !== 'Oceania')
 
     const allPlayers = Object.values(byName)
 
