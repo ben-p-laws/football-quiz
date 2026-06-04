@@ -301,9 +301,15 @@ const buildMetaCache = unstable_cache(
       }
     }
 
-    // clubs = entries where seasons.size > 3, sorted by apps desc, map to name
+    const EXCLUDED_CLUBS = new Set([
+      'Hull City','Reading','Cardiff City','Huddersfield Town','Oldham Athletic',
+      'Bradford City','Luton Town','Swindon Town','Blackpool','Barnsley',
+      'Derby County','Wimbledon','Sheffield Wednesday','Charlton Athletic',
+    ])
+
+    // clubs = entries where seasons.size > 3 and not excluded, sorted by apps desc
     const clubs = Object.entries(clubMap)
-      .filter(([, v]) => v.seasons.size > 3)
+      .filter(([name, v]) => v.seasons.size > 3 && !EXCLUDED_CLUBS.has(name))
       .sort((a, b) => b[1].apps - a[1].apps)
       .map(([name]) => name)
 
@@ -393,7 +399,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, continents, contClubPairs, top3Cache, letters }
   },
-  ['football-golf-meta-v13'],
+  ['football-golf-meta-v14'],
   { revalidate: 86400 }
 )
 

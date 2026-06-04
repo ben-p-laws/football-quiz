@@ -149,7 +149,7 @@ function makeFilterLabel(cat: Category): string {
   if (cat.continentFilter) return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${noun}`
   if (cat.clubFilter)      return `${cat.clubFilter} ${noun}`
   if (cat.natFilter)       return `${NAT_LABELS[cat.natFilter] ?? cat.natFilter} ${noun}`
-  if (cat.letterFilter)    return `surname ${cat.letterFilter} ${noun}`
+  if (cat.letterFilter)    return `${noun} with surname starting with ${cat.letterFilter}`
   return `All PL ${noun}`
 }
 
@@ -1075,7 +1075,7 @@ export default function FootballGolf(){
   },[])
 
   useEffect(()=>{
-    fetch('/api/football-golf?meta=1&v=13').then(r=>r.json())
+    fetch('/api/football-golf?meta=1&v=14').then(r=>r.json())
       .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>;letters?:string[]})=>{
         metaNations.current      = m.nations.map(c=>({code:c,label:NAT_LABELS[c]??c}))
         metaClubs.current        = m.clubs
