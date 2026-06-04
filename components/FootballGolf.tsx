@@ -906,7 +906,7 @@ type PlayerDataLocal = {
 
 function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/['''`]/g,'').toLowerCase()}
 
-type H2HStep = 'off'|'create'|'join'|'waiting-host'|'lobby'|'playing'
+type H2HStep = 'off'|'create'|'join'|'waiting-host'|'waiting-guest'|'lobby'|'playing'
 
 function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):{remaining:number;pastPin:boolean}{
   if(result.isOOB) return {remaining:result.waterDropRemaining??remaining,pastPin}
@@ -1035,6 +1035,24 @@ export default function FootballGolf(){
   const [h2hRematchWaiting, setH2HRematchWaiting] = useState(false)
   const rematchPollRef = useRef<ReturnType<typeof setInterval>|null>(null)
 
+  // ── 2v2 state & refs ───────────────────────────────────────────────────────
+  const [h2hPendingPlayers, setH2HPendingPlayers] = useState<{id:string;name:string}[]>([])
+  const [h2hPartnerName, setH2HPartnerName] = useState('')
+  const [h2hOppTeamTurnShot, setH2HOppTeamTurnShot] = useState<any>(null)
+  const [h2hSlots, setH2HSlots] = useState<{host_partner?:string;guest?:string;guest_partner?:string}>({})
+
+  const h2hMySlotRef = useRef<'host'|'host_partner'|'guest'|'guest_partner'|null>('host')
+  const h2hIsTeamFirstPlayerRef = useRef(true)   // true for host + guest slots
+  const h2hPartnerId = useRef('')
+  const h2hOppTeamIds = useRef<[string,string]>(['',''])
+  const h2hActiveTeamRef = useRef<'A'|'B'>('A')  // which team is furthest (goes next)
+  const h2hOppTeamAltTurnRef = useRef(true)       // true = opp team's player1 is up
+  const h2hOppTeamRemainingRef = useRef(0)
+  const h2hOppTeamHoleStrokesRef = useRef<number|null>(null)
+  const h2hOppTeamFinishedRef = useRef(false)
+  const h2hOppTeamShotsRef = useRef<[any,any]>([null,null])
+  const h2hRoomPlayersRef = useRef<{hostId:string;hostPartnerId:string;guestId:string;guestPartnerId:string}|null>(null)
+
   useEffect(()=>{
     fetch('/api/football-golf?names=1').then(r=>r.json()).then(d=>{
       const names:string[]=d.playerNames||[]
@@ -1099,13 +1117,14 @@ export default function FootballGolf(){
     if(room){ setH2HJoinInput(room.toUpperCase()); setH2HStep('join') }
   },[])
 
-  // Simultaneous shot: both players submit then reveal together (tee shot for 1v1; every shot for scramble)
+  // Simultaneous shot reveal: teammate (scramble) or opp captain (alt tee)
   useEffect(()=>{
     if(!h2hOppShotReady||!h2hPendingShot.current) return
     const oRem=h2hOppShotReady.remaining_after
     const oPP=h2hOppShotReady.past_pin
     const oHoledOut=h2hOppShotReady.holed_out
-    const isTeamScramble = h2hGameModeRef.current === 'team-scramble'
+    const isTeamScramble = h2hGameModeRef.current==='team-scramble'||h2hGameModeRef.current==='h2h-scramble'
+    const is2v2Alt = h2hGameModeRef.current==='h2h-alt'
     h2hOppRemainingRef.current=oHoledOut?0:oRem
     h2hOppPastPinRef.current=oPP
     h2hOppShotIdxRef.current=isTeamScramble?strokes:0
@@ -1115,6 +1134,7 @@ export default function FootballGolf(){
     if(oHoledOut){setH2HOppHoledOut(true);h2hOppHoleStrokesRef.current=h2hOppShotReady.hole_strokes;h2hOppFinishedRef.current=true}
     setH2HOppShotCount(c=>isTeamScramble?c+1:1)
     if(isTeamScramble){
+      // h2hOppShotReady = teammate's shot — compute team best ball
       const {result:myResult}=h2hPendingShot.current
       const myHoledOut=myResult.isHoled||myResult.isGimme
       const {remaining:myRA,pastPin:myPP}=calcNewBallState(myResult,remaining,pastPin)
@@ -1124,12 +1144,25 @@ export default function FootballGolf(){
       } else {
         h2hTeamBestRef.current=myRA<=oRem?{remaining:myRA,pastPin:myPP}:{remaining:oRem,pastPin:oPP}
       }
+      if(h2hGameModeRef.current==='h2h-scramble'){
+        // Also store opp team best ball for active-team determination (done in advanceFromResult)
+        const [os1,os2]=h2hOppTeamShotsRef.current
+        if(os1||os2){
+          const r1=os1?.holed_out?0:(os1?.remaining_after??9999)
+          const r2=os2?.holed_out?0:(os2?.remaining_after??9999)
+          h2hOppTeamRemainingRef.current=Math.min(r1,r2)
+        }
+      }
+    }
+    if(is2v2Alt){
+      // h2hOppShotReady = opp captain's shot — store opp team position
+      h2hOppTeamRemainingRef.current=oHoledOut?0:oRem
     }
     const {result,toPos}=h2hPendingShot.current
     h2hPendingShot.current=null
     animateShot(ballPos,toPos,result)
     setH2HOppShotReady(null)
-    // Turn is determined in advanceFromResult after user clicks through the result
+    // Active team determination happens in advanceFromResult after user clicks through
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[h2hOppShotReady])
 
@@ -1148,25 +1181,27 @@ export default function FootballGolf(){
     setH2HOppRemaining(oHoledOut?0:oRem)
     setH2HOppPastPin(oPP)
 
-    // Alt shot: inherit partner's position, flip turn to me
-    if(h2hGameModeRef.current==='team-alt'){
+    // Alt shot (team-alt or h2h-alt): inherit partner's position, flip turn
+    if(h2hGameModeRef.current==='team-alt'||h2hGameModeRef.current==='h2h-alt'){
       const newStrokes=h2hOppTurnShot.shot_idx+1
       if(oHoledOut){
-        // Partner holed out — hole done (gimme not fired as a real shot, so partner physically holed it)
         setStrokes(newStrokes)
         finishHole(h2hOppTurnShot.hole_strokes)
       } else {
         h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
         const newRem=oHoledOut?0:oRem
-        setRemaining(newRem)
-        setPastPin(oPP)
-        setStrokes(newStrokes)
+        setRemaining(newRem);setPastPin(oPP);setStrokes(newStrokes)
         h2hMyRemainingRef.current=newRem
-        setQuestion(nextPickedCategory(newRem))
-        resetInputs()
-        setShotResult(null)
-        setBunkerQ(null)
-        setH2HIsMyTurn(true)
+        setQuestion(nextPickedCategory(newRem));resetInputs()
+        setShotResult(null);setBunkerQ(null)
+        if(h2hGameModeRef.current==='h2h-alt'){
+          const oppRem=h2hOppTeamRemainingRef.current
+          const isHostTeam=h2hMySlotRef.current==='host'||h2hMySlotRef.current==='host_partner'
+          if(newRem>oppRem||(newRem===oppRem&&isHostTeam)){setH2HIsMyTurn(true)}
+          else{h2hActiveTeamRef.current=isHostTeam?'B':'A';setH2HIsMyTurn(false);setH2HWaiting(true);startOppTeamPoll(holeIdx)}
+        } else {
+          setH2HIsMyTurn(true)
+        }
       }
       return
     }
@@ -1201,6 +1236,46 @@ export default function FootballGolf(){
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[h2hOppTurnShot])
+
+  // Waiting team receives opp team's shot (2v2 modes only)
+  useEffect(()=>{
+    if(!h2hOppTeamTurnShot) return
+    setH2HOppTeamTurnShot(null)
+    setH2HWaiting(false)
+    const oRem=h2hOppTeamTurnShot.remaining_after
+    const oPP=h2hOppTeamTurnShot.past_pin
+    const oHoledOut=h2hOppTeamTurnShot.holed_out
+    h2hOppTeamRemainingRef.current=oHoledOut?0:oRem
+    const isHostTeam=h2hMySlotRef.current==='host'||h2hMySlotRef.current==='host_partner'
+    if(oHoledOut){
+      h2hOppTeamHoleStrokesRef.current=h2hOppTeamTurnShot.hole_strokes
+      h2hOppTeamFinishedRef.current=true
+      if(h2hIFinishedRef.current){resolveH2HHole(h2hMyHoleStrokes.current,h2hOppTeamTurnShot.hole_strokes);return}
+      // opp done — my team is now "active" and must finish
+      const myTurnWithinTeam=h2hGameModeRef.current==='h2h-scramble'||(h2hAltHostTurnRef.current===h2hIsTeamFirstPlayerRef.current)
+      setH2HIsMyTurn(myTurnWithinTeam)
+      if(!myTurnWithinTeam) startPartnerPoll(holeIdx)
+      return
+    }
+    if(h2hGameModeRef.current==='h2h-alt') h2hOppTeamAltTurnRef.current=!h2hOppTeamAltTurnRef.current
+    const myRem=h2hMyRemainingRef.current
+    const myTeamActive=myRem>oRem||(myRem===oRem&&isHostTeam)
+    if(myTeamActive){
+      h2hActiveTeamRef.current=isHostTeam?'A':'B'
+      if(h2hGameModeRef.current==='h2h-scramble'){
+        setH2HIsMyTurn(true)
+      } else {
+        const myTurnWithinTeam=h2hAltHostTurnRef.current===h2hIsTeamFirstPlayerRef.current
+        setH2HIsMyTurn(myTurnWithinTeam)
+        if(!myTurnWithinTeam){setH2HWaiting(true);startPartnerPoll(holeIdx)}
+      }
+    } else {
+      h2hActiveTeamRef.current=isHostTeam?'B':'A'
+      setH2HWaiting(true)
+      startOppTeamPoll(holeIdx)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[h2hOppTeamTurnShot])
 
   const currentHole  = holes[holeIdx]
 
@@ -1597,8 +1672,10 @@ export default function FootballGolf(){
               ? currentHole.distance + Math.min(overshoot, 55)
               : Math.min(ballPos + total, currentHole.distance + 50))
 
-    // H2H tee shot: synchronized — both submit then reveal together (skipped for alt shot)
-    if(h2hStep==='playing'&&strokes===0&&h2hGameModeRef.current!=='team-alt'){
+    // H2H tee shot: synchronized — both/all submit then reveal together
+    // Skipped for team-alt (turn-based from start) and for h2h-alt player 2 (they wait, not tee-ing)
+    const is2v2AltPlayer2=h2hGameModeRef.current==='h2h-alt'&&!h2hIsTeamFirstPlayerRef.current
+    if(h2hStep==='playing'&&strokes===0&&h2hGameModeRef.current!=='team-alt'&&!is2v2AltPlayer2){
       h2hPendingShot.current={result,toPos}
       const penaltyStrokes=result.isOOB?1:0
       const newStrokes=1+penaltyStrokes
@@ -1618,18 +1695,29 @@ export default function FootballGolf(){
           questionLabel:question?.label,
         }),
       }).then(r=>r.json()).then(d=>{
-        if(d.bothReady){
-          if(d.opponentShot?.player_names){setH2HOppShots(prev=>{const e={shot:1,question:d.opponentShot.question_label||'—',picks:d.opponentShot.player_names};const i=prev.findIndex(s=>s.shot===1);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}
-          if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
-          setH2HOppShotReady(d.opponentShot)
-        } else startSimultaneousPoll(holeIdx,0)
+        if(h2hGameModeRef.current==='h2h-scramble'){
+          // All 4 must submit before reveal
+          if(d.allFourReady){h2hOppTeamShotsRef.current=d.oppTeamShots??[null,null];setH2HOppShotReady(d.opponentShot)}
+          else startSimultaneousPoll(holeIdx,0)
+        } else if(h2hGameModeRef.current==='h2h-alt'){
+          // Both captains must submit
+          const oppCaptainShot=d.oppTeamShots?.[0]
+          if(oppCaptainShot){h2hOppTeamShotsRef.current=[oppCaptainShot,null];setH2HOppShotReady(oppCaptainShot)}
+          else startSimultaneousPoll(holeIdx,0)
+        } else {
+          if(d.bothReady){
+            if(d.opponentShot?.player_names){setH2HOppShots(prev=>{const e={shot:1,question:d.opponentShot.question_label||'—',picks:d.opponentShot.player_names};const i=prev.findIndex(s=>s.shot===1);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a,b)=>a.shot-b.shot)})}
+            if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
+            setH2HOppShotReady(d.opponentShot)
+          } else startSimultaneousPoll(holeIdx,0)
+        }
       }).catch(()=>startSimultaneousPoll(holeIdx,0))
       return
     }
 
     // H2H non-tee shot
     if(h2hStep==='playing'){
-      const isTeamScramble = h2hGameModeRef.current === 'team-scramble'
+      const isTeamScramble = h2hGameModeRef.current==='team-scramble'||h2hGameModeRef.current==='h2h-scramble'
       const penaltyStrokes=result.isOOB?1:0
       const newStrokes=strokes+1+penaltyStrokes
       const holedOut=result.isHoled||result.isGimme
@@ -1637,7 +1725,7 @@ export default function FootballGolf(){
       setShowOppGuesses(false)
 
       if(isTeamScramble){
-        // Scramble: all shots simultaneous — same pattern as tee shot
+        // Scramble: all team shots simultaneous
         h2hPendingShot.current={result,toPos}
         setH2HWaiting(true)
         fetch('/api/golf-room',{
@@ -1652,16 +1740,21 @@ export default function FootballGolf(){
             questionLabel:question?.label,
           }),
         }).then(r=>r.json()).then(d=>{
-          if(d.bothReady){
-            if(d.opponentShot?.player_names){setH2HOppShots(prev=>{const shotN=strokes+1;const e={shot:shotN,question:d.opponentShot.question_label||'—',picks:d.opponentShot.player_names};const i=prev.findIndex((s:any)=>s.shot===shotN);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a:any,b:any)=>a.shot-b.shot)})}
-            if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
-            setH2HOppShotReady(d.opponentShot)
-          } else startSimultaneousPoll(holeIdx,strokes)
+          if(h2hGameModeRef.current==='h2h-scramble'){
+            if(d.bothReady){h2hOppTeamShotsRef.current=d.oppTeamShots??[null,null];setH2HOppShotReady(d.opponentShot)}
+            else startSimultaneousPoll(holeIdx,strokes)
+          } else {
+            if(d.bothReady){
+              if(d.opponentShot?.player_names){setH2HOppShots(prev=>{const shotN=strokes+1;const e={shot:shotN,question:d.opponentShot.question_label||'—',picks:d.opponentShot.player_names};const i=prev.findIndex((s:any)=>s.shot===shotN);return i>=0?[...prev.slice(0,i),e,...prev.slice(i+1)]:[...prev,e].sort((a:any,b:any)=>a.shot-b.shot)})}
+              if(d.opponentShot?.question_label) setH2HOppLastQuestion(d.opponentShot.question_label)
+              setH2HOppShotReady(d.opponentShot)
+            } else startSimultaneousPoll(holeIdx,strokes)
+          }
         }).catch(()=>startSimultaneousPoll(holeIdx,strokes))
         return
       }
 
-      if(h2hGameModeRef.current==='team-alt'){
+      if(h2hGameModeRef.current==='team-alt'||h2hGameModeRef.current==='h2h-alt'){
         fetch('/api/golf-room',{
           method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({
@@ -1741,19 +1834,42 @@ export default function FootballGolf(){
       oobDir.current = 0
       setArcOffset(0)
       if(h2hStep==='playing'){
-        const isTeamScramble=h2hGameModeRef.current==='team-scramble'
+        const isTeamScramble=h2hGameModeRef.current==='team-scramble'||h2hGameModeRef.current==='h2h-scramble'
         if(isTeamScramble&&h2hTeamBestRef.current){
           const tb=h2hTeamBestRef.current;h2hTeamBestRef.current=null
           if(tb.remaining===0){finishHole(tb.holedStrokes??newStrokes);return}
           setRemaining(tb.remaining);setPastPin(tb.pastPin);setStrokes(newStrokes)
           setShotResult(null);setBunkerQ(null);setQuestion(nextCat(tb.remaining));resetInputs()
-          h2hMyRemainingRef.current=tb.remaining;setH2HWaiting(false);setH2HIsMyTurn(true)
+          h2hMyRemainingRef.current=tb.remaining
+          if(h2hGameModeRef.current==='h2h-scramble'){
+            // Determine which team is active after both teams' best balls
+            const isHostTeam=h2hMySlotRef.current==='host'||h2hMySlotRef.current==='host_partner'
+            const oppRem=h2hOppTeamRemainingRef.current
+            const myTeamActive=tb.remaining>oppRem||(tb.remaining===oppRem&&isHostTeam)
+            if(myTeamActive){h2hActiveTeamRef.current=isHostTeam?'A':'B';setH2HWaiting(false);setH2HIsMyTurn(true)}
+            else{h2hActiveTeamRef.current=isHostTeam?'B':'A';setH2HWaiting(true);startOppTeamPoll(holeIdx)}
+          } else {
+            setH2HWaiting(false);setH2HIsMyTurn(true)
+          }
           return
         }
-        if(h2hGameModeRef.current==='team-alt'){
+        if(h2hGameModeRef.current==='team-alt'||h2hGameModeRef.current==='h2h-alt'){
           h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
           h2hMyRemainingRef.current=newRemaining
-          setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(holeIdx)
+          if(h2hGameModeRef.current==='h2h-alt'){
+            const isHostTeam=h2hMySlotRef.current==='host'||h2hMySlotRef.current==='host_partner'
+            const oppRem=h2hOppTeamRemainingRef.current
+            if(newRemaining>oppRem||(newRemaining===oppRem&&isHostTeam)){
+              // My team still active — but partner goes next within team (just flipped alt turn)
+              const partnerGoesNext=true // I just shot, so partner is up
+              setH2HIsMyTurn(false);setH2HWaiting(true);startPartnerPoll(holeIdx)
+            } else {
+              h2hActiveTeamRef.current=isHostTeam?'B':'A'
+              setH2HIsMyTurn(false);setH2HWaiting(true);startOppTeamPoll(holeIdx)
+            }
+          } else {
+            setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(holeIdx)
+          }
           return
         }
         h2hMyRemainingRef.current=newRemaining
@@ -1794,12 +1910,21 @@ export default function FootballGolf(){
       newPastPin   = pastPin
     }
 
-    if(h2hStep==='playing'&&h2hGameModeRef.current==='team-scramble'&&h2hTeamBestRef.current){
+    if(h2hStep==='playing'&&(h2hGameModeRef.current==='team-scramble'||h2hGameModeRef.current==='h2h-scramble')&&h2hTeamBestRef.current){
       const tb=h2hTeamBestRef.current;h2hTeamBestRef.current=null
       if(tb.remaining===0){finishHole(tb.holedStrokes??newStrokes);return}
       setRemaining(tb.remaining);setPastPin(tb.pastPin);setStrokes(newStrokes)
       setShotResult(null);setBunkerQ(null);setQuestion(nextCat(tb.remaining));resetInputs()
-      h2hMyRemainingRef.current=tb.remaining;setH2HWaiting(false);setH2HIsMyTurn(true)
+      h2hMyRemainingRef.current=tb.remaining
+      if(h2hGameModeRef.current==='h2h-scramble'){
+        const isHostTeam=h2hMySlotRef.current==='host'||h2hMySlotRef.current==='host_partner'
+        const oppRem=h2hOppTeamRemainingRef.current
+        const myTeamActive=tb.remaining>oppRem||(tb.remaining===oppRem&&isHostTeam)
+        if(myTeamActive){h2hActiveTeamRef.current=isHostTeam?'A':'B';setH2HWaiting(false);setH2HIsMyTurn(true)}
+        else{h2hActiveTeamRef.current=isHostTeam?'B':'A';setH2HWaiting(true);startOppTeamPoll(holeIdx)}
+      } else {
+        setH2HWaiting(false);setH2HIsMyTurn(true)
+      }
       return
     }
     setRemaining(newRemaining)
@@ -1811,8 +1936,19 @@ export default function FootballGolf(){
     resetInputs()
     if(h2hStep==='playing'){
       h2hMyRemainingRef.current=newRemaining
-      if(h2hGameModeRef.current==='team-alt'){
+      if(h2hGameModeRef.current==='team-alt'||h2hGameModeRef.current==='h2h-alt'){
         h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
+        if(h2hGameModeRef.current==='h2h-alt'){
+          const isHostTeam=h2hMySlotRef.current==='host'||h2hMySlotRef.current==='host_partner'
+          const oppRem=h2hOppTeamRemainingRef.current
+          if(newRemaining>oppRem||(newRemaining===oppRem&&isHostTeam)){
+            setH2HIsMyTurn(false);setH2HWaiting(true);startPartnerPoll(holeIdx)
+          } else {
+            h2hActiveTeamRef.current=isHostTeam?'B':'A'
+            setH2HIsMyTurn(false);setH2HWaiting(true);startOppTeamPoll(holeIdx)
+          }
+          return
+        }
         setH2HIsMyTurn(false);setH2HWaiting(true);startOppPoll(holeIdx)
         return
       }
@@ -1876,12 +2012,22 @@ export default function FootballGolf(){
       h2hMyHoleStrokes.current=finalStrokes
       h2hIFinishedRef.current=true
       if(h2hGameModeRef.current==='team-scramble'||h2hGameModeRef.current==='team-alt'){
-        // Team mode: no match play, just record score and advance
+        // Cooperative team mode: no match play, advance when done
         setTimeout(()=>{
           setHoleResult(null)
           if(holeIdx+1>=holes.length){stopH2HPoll();setPhase('h2h-done');return}
           advanceH2HHole()
         },3000)
+        return
+      }
+      if(h2hGameModeRef.current==='h2h-scramble'||h2hGameModeRef.current==='h2h-alt'){
+        // 2v2: wait for opp team to finish, then compare
+        if(h2hOppTeamFinishedRef.current){
+          resolveH2HHole(finalStrokes,h2hOppTeamHoleStrokesRef.current??finalStrokes)
+        } else {
+          setH2HWaiting(true)
+          startOppTeamHolePoll(holeIdx)
+        }
         return
       }
       if(h2hOppFinishedRef.current){
@@ -1947,10 +2093,92 @@ export default function FootballGolf(){
       const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
       if(!d) return
       const shots:any[]=d.shots||[]
-      // Backfill picks for any opp shots already in DB
+
+      if(h2hGameModeRef.current==='h2h-scramble'){
+        // Wait for all 4 shots at this shotIdx
+        const atIdx=shots.filter((s:any)=>s.shot_idx===shotIdx)
+        const teammateShot=atIdx.find((s:any)=>s.player_id===h2hPartnerId.current)
+        const oppShots=h2hOppTeamIds.current.map(id=>atIdx.find((s:any)=>s.player_id===id)??null)
+        if(atIdx.length>=4&&teammateShot){
+          stopH2HPoll()
+          h2hOppTeamShotsRef.current=oppShots as [any,any]
+          setH2HOppShotReady(teammateShot)
+        }
+        return
+      }
+      if(h2hGameModeRef.current==='h2h-alt'&&shotIdx===0){
+        // Wait for opp team captain's tee shot
+        const oppCaptainId=h2hOppTeamIds.current[0]
+        const oppCaptainShot=shots.find((s:any)=>s.player_id===oppCaptainId&&s.shot_idx===0)
+        if(oppCaptainShot){stopH2HPoll();h2hOppTeamShotsRef.current=[oppCaptainShot,null];setH2HOppShotReady(oppCaptainShot)}
+        return
+      }
+
+      // 1v1 / team-scramble
       shots.filter((s:any)=>s.player_id===h2hOppId.current&&s.player_names).forEach(mergeOppShot)
       const oppShot=shots.find((s:any)=>s.player_id===h2hOppId.current&&s.shot_idx===shotIdx)
       if(oppShot){stopH2HPoll();if(oppShot.question_label) setH2HOppLastQuestion(oppShot.question_label);setH2HOppShotReady(oppShot)}
+    },1500)
+  }
+
+  // Waiting team polls for active opp team's shot(s) (2v2)
+  function startOppTeamPoll(hi:number){
+    stopH2HPoll()
+    const lastSeen=h2hOppShotIdxRef.current
+    h2hPollRef.current=setInterval(async()=>{
+      const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
+      if(!d) return
+      const shots:any[]=d.shots||[]
+      if(h2hGameModeRef.current==='h2h-scramble'){
+        const nextIdx=lastSeen+1
+        const oppShots=h2hOppTeamIds.current.map(id=>shots.find((s:any)=>s.player_id===id&&s.shot_idx===nextIdx)??null)
+        if(oppShots[0]&&oppShots[1]){
+          stopH2HPoll()
+          h2hOppShotIdxRef.current=nextIdx
+          h2hOppTeamShotsRef.current=oppShots as [any,any]
+          const r1=oppShots[0].holed_out?0:oppShots[0].remaining_after
+          const r2=oppShots[1].holed_out?0:oppShots[1].remaining_after
+          const bestRem=Math.min(r1,r2)
+          const bestShot=r1<=r2?oppShots[0]:oppShots[1]
+          setH2HOppTeamTurnShot({...bestShot,remaining_after:bestRem})
+        }
+      } else {
+        // h2h-alt: poll for opp team's current active player
+        const oppActiveId=h2hOppTeamAltTurnRef.current?h2hOppTeamIds.current[0]:h2hOppTeamIds.current[1]
+        const newShot=shots.find((s:any)=>s.player_id===oppActiveId&&s.shot_idx>lastSeen)
+        if(newShot){stopH2HPoll();h2hOppShotIdxRef.current=newShot.shot_idx;setH2HOppTeamTurnShot(newShot)}
+      }
+    },1500)
+  }
+
+  // Active team's inactive player polls for their partner's shot (2v2)
+  function startPartnerPoll(hi:number){
+    stopH2HPoll()
+    const lastSeen=h2hOppShotIdxRef.current
+    h2hPollRef.current=setInterval(async()=>{
+      const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
+      if(!d) return
+      const shots:any[]=d.shots||[]
+      const newShot=shots.find((s:any)=>s.player_id===h2hPartnerId.current&&s.shot_idx>lastSeen)
+      if(newShot){stopH2HPoll();h2hOppShotIdxRef.current=newShot.shot_idx;setH2HOppTurnShot(newShot)}
+    },1500)
+  }
+
+  // Waiting team polls for opp team's hole completion (2v2)
+  function startOppTeamHolePoll(hi:number){
+    stopH2HPoll()
+    h2hPollRef.current=setInterval(async()=>{
+      const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}&holeIdx=${hi}`).then(r=>r.json()).catch(()=>null)
+      if(!d) return
+      const shots:any[]=d.shots||[]
+      const oppFinished=shots.find((s:any)=>s.holed_out&&(s.player_id===h2hOppTeamIds.current[0]||s.player_id===h2hOppTeamIds.current[1]))
+      if(oppFinished){
+        stopH2HPoll()
+        h2hOppTeamFinishedRef.current=true
+        h2hOppTeamHoleStrokesRef.current=oppFinished.hole_strokes
+        setH2HWaiting(false)
+        resolveH2HHole(h2hMyHoleStrokes.current,oppFinished.hole_strokes??h2hMyHoleStrokes.current)
+      }
     },1500)
   }
 
@@ -1993,12 +2221,41 @@ export default function FootballGolf(){
     h2hPollRef.current=setInterval(async()=>{
       const d=await fetch(`/api/golf-room?roomId=${h2hRoomIdRef.current}`).then(r=>r.json()).catch(()=>null)
       if(!d?.room) return
-      if(h2hIsHost.current&&d.room.guest_id&&d.room.guest_name){
+      const room=d.room
+      const gm=room.config?.gameMode as string|undefined
+      const is2v2=gm==='h2h-scramble'||gm==='h2h-alt'
+
+      if(is2v2){
+        // Update pending + assigned slots state for host
+        if(h2hIsHost.current){
+          setH2HPendingPlayers(room.pending_players??[])
+          setH2HSlots({host_partner:room.host_partner_name,guest:room.guest_name,guest_partner:room.guest_partner_name})
+        } else {
+          // Guest: update my slot assignment
+          const myId=h2hPlayerId.current
+          if(room.host_partner_id===myId) h2hMySlotRef.current='host_partner'
+          else if(room.guest_id===myId) h2hMySlotRef.current='guest'
+          else if(room.guest_partner_id===myId) h2hMySlotRef.current='guest_partner'
+        }
+        // Store player assignments for startH2HGame
+        if(room.host_partner_id&&room.guest_id&&room.guest_partner_id){
+          h2hRoomPlayersRef.current={hostId:room.host_id,hostPartnerId:room.host_partner_id,guestId:room.guest_id,guestPartnerId:room.guest_partner_id}
+        }
+        // All 4 assigned and status=playing → start game
+        if(room.status==='playing'&&room.host_id&&room.host_partner_id&&room.guest_id&&room.guest_partner_id){
+          stopH2HPoll()
+          startH2HGame()
+        }
+        return
+      }
+
+      // 1v1
+      if(h2hIsHost.current&&room.guest_id&&room.guest_name){
         stopH2HPoll()
-        setH2HOppName(d.room.guest_name)
-        h2hOppId.current=d.room.guest_id
+        setH2HOppName(room.guest_name)
+        h2hOppId.current=room.guest_id
         setH2HStep('lobby')
-      }else if(!h2hIsHost.current&&d.room.status==='playing'){
+      }else if(!h2hIsHost.current&&room.status==='playing'){
         stopH2HPoll()
         startH2HGame()
       }
@@ -2036,9 +2293,19 @@ export default function FootballGolf(){
     h2hOppFinishedRef.current=false
     h2hMyHoleStrokes.current=0
     h2hTeamBestRef.current=null
-    const nextIsMyTurn = h2hGameModeRef.current==='team-alt' ? (h2hAltHostTurnRef.current===h2hIsHost.current) : true
+    // 2v2 resets
+    const gm=h2hGameModeRef.current
+    const is2v2=gm==='h2h-scramble'||gm==='h2h-alt'
+    if(is2v2){
+      h2hOppTeamFinishedRef.current=false
+      h2hOppTeamHoleStrokesRef.current=null
+      h2hActiveTeamRef.current='A'
+      h2hOppTeamAltTurnRef.current=true
+      h2hAltHostTurnRef.current=true
+    }
+    const nextIsMyTurn = is2v2 ? true : gm==='team-alt' ? (h2hAltHostTurnRef.current===h2hIsHost.current) : true
     setH2HIsMyTurn(nextIsMyTurn)
-    if(h2hGameModeRef.current==='team-alt'&&!nextIsMyTurn){setH2HWaiting(true)}
+    if(gm==='team-alt'&&!nextIsMyTurn){setH2HWaiting(true)}
     if(holeIdx+1>=holes.length){
       stopH2HPoll()
       setPhase('h2h-done')
@@ -2063,7 +2330,7 @@ export default function FootballGolf(){
       setQuestion(nextPickedCategory(dist, holes[nextIdx]?.isIsland ? holes[nextIdx].distance - 20 : undefined))
     }
     resetInputs()
-    if(h2hGameModeRef.current==='team-alt'&&!nextIsMyTurn) startOppPoll(nextIdx)
+    if(gm==='team-alt'&&!nextIsMyTurn) startOppPoll(nextIdx)
   }
 
   async function createH2HRoom(){
@@ -2133,22 +2400,46 @@ export default function FootballGolf(){
     }).then(r=>r.json())
     if(res.error){setH2HError(res.error);return}
     setSavedUsername(h2hPlayerName)
-    // Server may have assigned a new guest ID if it collided with the host's ID
-    h2hPlayerId.current=res.room.guest_id
-    setH2HRoomId(code)
-    h2hRoomIdRef.current=code
-    setH2HOppName(res.room.host_name)
-    h2hOppId.current=res.room.host_id
-    h2hRoomData.current={holes:res.room.holes,teeCategories:res.room.tee_categories}
-    const cfg=res.room.config
+    const room=res.room
+    const cfg=room.config
+    const gm=cfg?.gameMode
+    const is2v2=gm==='h2h-scramble'||gm==='h2h-alt'
     if(cfg){
       if(cfg.courseMode) setCourseMode(cfg.courseMode)
       if(cfg.selectedCourse) setSelectedCourse(cfg.selectedCourse)
       if(cfg.tee) setTee(cfg.tee)
-      if(cfg.gameMode) { h2hGameModeRef.current=cfg.gameMode; setMultiMode(cfg.gameMode) }
+      if(gm) { h2hGameModeRef.current=gm; setMultiMode(gm) }
     }
-    setH2HStep('lobby')
-    startLobbyPoll()
+    h2hRoomData.current={holes:room.holes,teeCategories:room.tee_categories}
+    setH2HRoomId(code)
+    h2hRoomIdRef.current=code
+    if(is2v2){
+      // 2v2: myId may differ from original pid if host collision
+      h2hPlayerId.current=room.myId??pid
+      h2hMySlotRef.current=room.mySlot??null  // null = still in pending, waiting for assignment
+      setH2HOppName(room.host_name)
+      h2hOppId.current=room.host_id
+      setH2HStep('waiting-guest')
+      startLobbyPoll()
+    } else {
+      // 1v1
+      h2hPlayerId.current=room.guest_id
+      setH2HOppName(room.host_name)
+      h2hOppId.current=room.host_id
+      setH2HStep('lobby')
+      startLobbyPoll()
+    }
+  }
+
+  async function assignPlayer(playerId:string, slot:'host_partner'|'guest'|'guest_partner'){
+    const player=h2hPendingPlayers.find(p=>p.id===playerId)
+    if(!player) return
+    await fetch('/api/golf-room',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'assign',roomId:h2hRoomIdRef.current,hostId:h2hPlayerId.current,playerId,slot}),
+    }).then(r=>r.json())
+    // Optimistic update
+    setH2HPendingPlayers(prev=>prev.filter(p=>p.id!==playerId))
+    setH2HSlots(prev=>({...prev,[slot]:player.name}))
   }
 
   function startH2HGame(){
@@ -2171,9 +2462,30 @@ export default function FootballGolf(){
     h2hOppFinishedRef.current=false
     h2hMyRemainingRef.current=hs[0].distance
     h2hAltHostTurnRef.current=true
-    const isMyTurnFirst = h2hGameModeRef.current==='team-alt' ? h2hIsHost.current : true
+    // 2v2 init
+    const gm=h2hGameModeRef.current
+    const is2v2=gm==='h2h-scramble'||gm==='h2h-alt'
+    if(is2v2){
+      const rp=h2hRoomPlayersRef.current
+      if(rp){
+        const myId=h2hPlayerId.current
+        const slot=myId===rp.hostId?'host':myId===rp.hostPartnerId?'host_partner':myId===rp.guestId?'guest':'guest_partner'
+        h2hMySlotRef.current=slot as any
+        const isHostTeam=slot==='host'||slot==='host_partner'
+        h2hIsTeamFirstPlayerRef.current=slot==='host'||slot==='guest'
+        h2hPartnerId.current=isHostTeam
+          ?(slot==='host'?rp.hostPartnerId:rp.hostId)
+          :(slot==='guest'?rp.guestPartnerId:rp.guestId)
+        h2hOppTeamIds.current=isHostTeam?[rp.guestId,rp.guestPartnerId]:[rp.hostId,rp.hostPartnerId]
+        h2hActiveTeamRef.current='A' // both tied at start, A=host team goes first on tee
+        h2hOppTeamAltTurnRef.current=true
+        h2hOppTeamFinishedRef.current=false
+        h2hOppTeamHoleStrokesRef.current=null
+      }
+    }
+    const isMyTurnFirst = is2v2 ? true : gm==='team-alt' ? h2hIsHost.current : true
     setH2HIsMyTurn(isMyTurnFirst)
-    if(h2hGameModeRef.current==='team-alt'&&!isMyTurnFirst){setH2HWaiting(true);startOppPoll(0)}
+    if(gm==='team-alt'&&!isMyTurnFirst){setH2HWaiting(true);startOppPoll(0)}
     setH2HOppShotCount(0)
     setH2HOppRemaining(null)
     setH2HOppPastPin(false)
@@ -2354,6 +2666,13 @@ export default function FootballGolf(){
 
   if(h2hStep==='waiting-host'){
     const shareUrl=typeof window!=='undefined'?`${window.location.origin}${window.location.pathname}?room=${h2hRoomId}`:''
+    const is2v2Lobby=h2hGameModeRef.current==='h2h-scramble'||h2hGameModeRef.current==='h2h-alt'
+    const allSlotsAssigned=!!(h2hSlots.host_partner&&h2hSlots.guest&&h2hSlots.guest_partner)
+    const slotLabels:{slot:'host_partner'|'guest'|'guest_partner';team:string;label:string}[]=[
+      {slot:'host_partner',team:'A',label:'Team A P2'},
+      {slot:'guest',team:'B',label:'Team B P1'},
+      {slot:'guest_partner',team:'B',label:'Team B P2'},
+    ]
     return(<><NavBar />
       <div style={h2hScreenStyle}>
         <div style={{textAlign:'center'}}>
@@ -2365,9 +2684,93 @@ export default function FootballGolf(){
           <div style={{fontSize:11,color:'#6b7fa3',wordBreak:'break-all'}}>{shareUrl}</div>
           <button onClick={()=>navigator.clipboard?.writeText(shareUrl)} style={{marginTop:8,background:'#1e2d4a',border:'none',borderRadius:6,padding:'6px 12px',color:'white',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>Copy link</button>
         </div>
+        {is2v2Lobby ? (
+          <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',gap:12}}>
+            {/* Team A always includes host */}
+            <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'12px 16px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:'#3b82f6',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Team A</div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <span style={{fontSize:13,fontWeight:700,color:'white'}}>{h2hPlayerName||'You'}</span>
+                <span style={{fontSize:10,color:'rgba(255,255,255,0.3)'}}>Host · P1</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:13,fontWeight:700,color:h2hSlots.host_partner?'white':'rgba(255,255,255,0.3)'}}>{h2hSlots.host_partner||'Empty'}</span>
+                <span style={{fontSize:10,color:'rgba(255,255,255,0.3)'}}>P2</span>
+              </div>
+            </div>
+            <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'12px 16px'}}>
+              <div style={{fontSize:10,fontWeight:700,color:'#f59e0b',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Team B</div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <span style={{fontSize:13,fontWeight:700,color:h2hSlots.guest?'white':'rgba(255,255,255,0.3)'}}>{h2hSlots.guest||'Empty'}</span>
+                <span style={{fontSize:10,color:'rgba(255,255,255,0.3)'}}>P1</span>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:13,fontWeight:700,color:h2hSlots.guest_partner?'white':'rgba(255,255,255,0.3)'}}>{h2hSlots.guest_partner||'Empty'}</span>
+                <span style={{fontSize:10,color:'rgba(255,255,255,0.3)'}}>P2</span>
+              </div>
+            </div>
+            {h2hPendingPlayers.length>0&&(
+              <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'12px 16px'}}>
+                <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Lobby ({h2hPendingPlayers.length})</div>
+                {h2hPendingPlayers.map(p=>(
+                  <div key={p.id} style={{marginBottom:8}}>
+                    <div style={{fontSize:13,fontWeight:700,color:'white',marginBottom:4}}>{p.name}</div>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {slotLabels.filter(sl=>!h2hSlots[sl.slot]).map(sl=>(
+                        <button key={sl.slot} onClick={()=>assignPlayer(p.id,sl.slot)}
+                          style={{background:`${sl.team==='A'?'#1d3a6e':'#4c2c00'}`,border:`1px solid ${sl.team==='A'?'#3b82f6':'#f59e0b'}`,borderRadius:6,padding:'4px 8px',color:sl.team==='A'?'#3b82f6':'#f59e0b',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+                          {sl.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {allSlotsAssigned
+              ? <button style={h2hBtnStyle} onClick={startH2HGame}>Start Game →</button>
+              : <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'pulse 1.5s ease-in-out infinite'}}/>
+                  <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for all 3 players to join…</div>
+                </div>
+            }
+          </div>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'pulse 1.5s ease-in-out infinite'}}/>
+            <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for opponent to join…</div>
+          </div>
+        )}
+      </div>
+    </>)
+  }
+
+  if(h2hStep==='waiting-guest'){
+    const is2v2=h2hGameModeRef.current==='h2h-scramble'||h2hGameModeRef.current==='h2h-alt'
+    const slotName=h2hMySlotRef.current
+    const slotDisplay:Record<string,string>={host_partner:'Team A · P2',guest:'Team B · P1',guest_partner:'Team B · P2'}
+    const assigned=slotName&&slotName!=='host'
+    return(<><NavBar />
+      <div style={h2hScreenStyle}>
+        <div style={{textAlign:'center'}}>
+          <div style={{fontSize:24,fontWeight:900,color:'white',marginBottom:4}}>Room {h2hRoomId}</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)'}}>{is2v2?'4-player match':'Connected'}</div>
+        </div>
+        <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'20px',textAlign:'center',maxWidth:300,width:'100%'}}>
+          {assigned
+            ? <>
+                <div style={{fontSize:11,fontWeight:700,color:'#22c55e',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>Assigned</div>
+                <div style={{fontSize:20,fontWeight:900,color:'white'}}>{slotDisplay[slotName!]??slotName}</div>
+              </>
+            : <>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:6}}>In Lobby</div>
+                <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for host to assign you to a team…</div>
+              </>
+          }
+        </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
           <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'pulse 1.5s ease-in-out infinite'}}/>
-          <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for opponent to join…</div>
+          <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>Waiting for host to start…</div>
         </div>
       </div>
     </>)
@@ -2400,15 +2803,19 @@ export default function FootballGolf(){
   }
 
   if(phase==='h2h-done'){
-    const isTeamScramble = h2hGameModeRef.current === 'team-scramble' || h2hGameModeRef.current === 'team-alt'
-    const myName = h2hPlayerName || 'You'
-    const oppName = h2hOppName || (isTeamScramble?'Partner':'Opponent')
-    const iWon = matchScore > 0
-    const theyWon = matchScore < 0
+    const gm2=h2hGameModeRef.current
+    const isTeamScramble = gm2 === 'team-scramble' || gm2 === 'team-alt'
+    const is2v2Done = gm2 === 'h2h-scramble' || gm2 === 'h2h-alt'
+    const mySlot=h2hMySlotRef.current
+    const isHostTeamDone=mySlot==='host'||mySlot==='host_partner'
+    const myName = is2v2Done ? 'Team A' : h2hPlayerName || 'You'
+    const oppName = is2v2Done ? 'Team B' : h2hOppName || (isTeamScramble?'Partner':'Opponent')
+    const iWon = is2v2Done ? (isHostTeamDone ? matchScore>0 : matchScore<0) : matchScore > 0
+    const theyWon = is2v2Done ? (isHostTeamDone ? matchScore<0 : matchScore>0) : matchScore < 0
     const isHalved = matchScore === 0
     const abs = Math.abs(matchScore)
     const resultText = iWon ? `${myName} wins ${abs} up` : theyWon ? `${oppName} wins ${abs} up` : 'Match halved'
-    if (!h2hIsHost.current && !rematchPollRef.current && !isTeamScramble) startRematchPoll()
+    if (!h2hIsHost.current && !rematchPollRef.current && !isTeamScramble && !is2v2Done) startRematchPoll()
 
     if(isTeamScramble){
       const totalStrokes=scores.reduce((s:number,n)=>s+(n??0),0)
@@ -2456,7 +2863,7 @@ export default function FootballGolf(){
             <div style={{fontSize:28,fontWeight:900,color:theyWon?'#22c55e':iWon?'#ef4444':'#94a3b8'}}>{matchScore<0?`+${Math.abs(matchScore)}`:matchScore>0?`-${matchScore}`:'-'}</div>
           </div>
         </div>
-        {h2hIsHost.current ? (
+        {!is2v2Done && h2hIsHost.current ? (
           <div style={{display:'flex',flexDirection:'column',gap:10,width:'100%',maxWidth:340}}>
             {isHalved && (
               <button style={h2hBtnStyle} onClick={startSuddenDeath}>
@@ -2467,12 +2874,12 @@ export default function FootballGolf(){
               {h2hRematchWaiting?'Setting up…':'Play Again →'}
             </button>
           </div>
-        ) : (
+        ) : !is2v2Done ? (
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <div style={{width:8,height:8,borderRadius:'50%',background:'#f59e0b',animation:'pulse 1.5s ease-in-out infinite'}}/>
             <div style={{fontSize:14,color:'rgba(255,255,255,0.5)'}}>{isHalved?'Waiting for host — sudden death or rematch…':'Waiting for host to start a rematch…'}</div>
           </div>
-        )}
+        ) : null}
         <button style={h2hSecBtnStyle} onClick={()=>{
           if(rematchPollRef.current){clearInterval(rematchPollRef.current);rematchPollRef.current=null}
           setH2HStep('off');setPhase('setup')
@@ -4402,19 +4809,15 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
             ? <button onClick={onStart} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginTop:2}}>
                 Tee Off →
               </button>
-            : (multiMode==='h2h-1v1'||multiMode==='team-scramble'||multiMode==='team-alt')
-              ? <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
-                  <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                    Create Room
-                  </button>
-                  <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
-                  <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'1.5px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                    Join Room
-                  </button>
-                </div>
-              : <button disabled style={{width:'100%',background:'rgba(255,255,255,0.04)',color:'rgba(255,255,255,0.2)',border:'1.5px solid rgba(255,255,255,0.05)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'default',fontFamily:'inherit',marginTop:2}}>
-                  Coming Soon
+            : <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
+                <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                  Create Room
                 </button>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
+                <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'1.5px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+                  Join Room
+                </button>
+              </div>
           }
         </div>
         )
