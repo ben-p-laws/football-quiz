@@ -1196,11 +1196,11 @@ export default function FootballGolf(){
     // Alt shot (team-alt or h2h-alt): inherit partner's position, flip turn
     if(h2hGameModeRef.current==='team-alt'||h2hGameModeRef.current==='h2h-alt'){
       const newStrokes=h2hOppTurnShot.shot_idx+1
+      h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
       if(oHoledOut){
         setStrokes(newStrokes)
         finishHole(h2hOppTurnShot.hole_strokes)
       } else {
-        h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
         const newRem=oHoledOut?0:oRem
         setRemaining(newRem);setPastPin(oPP);setStrokes(newStrokes)
         h2hMyRemainingRef.current=newRem
@@ -1908,6 +1908,9 @@ export default function FootballGolf(){
     }
 
     if(shotResult.isHoled || shotResult.isGimme){
+      if(h2hStep==='playing'&&(h2hGameModeRef.current==='team-alt'||h2hGameModeRef.current==='h2h-alt')){
+        h2hAltHostTurnRef.current=!h2hAltHostTurnRef.current
+      }
       finishHole(shotResult.isGimme ? newStrokes + 1 : newStrokes)
       return
     }
@@ -3028,9 +3031,15 @@ export default function FootballGolf(){
                 <div style={{fontSize:11,color:'rgba(255,255,255,0.35)',paddingLeft:13}}>Sh {strokes+1} · {remaining} yds</div>
               </div>
               <div style={{textAlign:'center',flexShrink:0}}>
-                <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8'}}>
-                  {matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`}
-                </div>
+                {(multiMode==='team-scramble'||multiMode==='team-alt') ? (
+                  <div style={{fontSize:13,fontWeight:900,color:vsPar<0?'#22c55e':vsPar>0?'#ef4444':'#94a3b8'}}>
+                    {vsParStr}
+                  </div>
+                ) : (
+                  <div style={{fontSize:13,fontWeight:900,color:matchScore>0?'#22c55e':matchScore<0?'#ef4444':'#94a3b8'}}>
+                    {matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`}
+                  </div>
+                )}
                 <div style={{fontSize:9,color:'rgba(255,255,255,0.2)',marginTop:1}}>Hole {holeIdx+1} · Par {currentHole.par}</div>
               </div>
               <div style={{flex:1,display:'flex',flexDirection:'column',gap:1,alignItems:'flex-end'}}>
@@ -3322,8 +3331,8 @@ export default function FootballGolf(){
             <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexShrink:0,height:72,paddingTop:6}}>
               <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
                 <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>Overall</div>
-                <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:h2hStep==='playing'?'white':vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'}}>
-                  {h2hStep==='playing' ? (matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`) : (vsParStr??'E')}
+                <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:h2hStep==='playing'&&multiMode!=='team-scramble'&&multiMode!=='team-alt'?'white':vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'}}>
+                  {h2hStep==='playing'&&multiMode!=='team-scramble'&&multiMode!=='team-alt' ? (matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`) : (vsParStr??'E')}
                 </div>
               </div>
               <button onClick={()=>setShowRules(true)} style={{background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:12,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',width:22,height:22,borderRadius:'50%',flexShrink:0}}>?</button>
