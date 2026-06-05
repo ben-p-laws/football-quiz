@@ -5,6 +5,14 @@ import { CONTINENT_MAP } from '@/lib/continents'
 
 export const dynamic = 'force-dynamic'
 
+const NAME_PARTICLES = new Set(['van','de','der','den','von','du','le','la','di','da','dos','das','del','el','al','bin','binte','y'])
+function surnameInitial(fullName: string): string {
+  const words = fullName.trim().split(/\s+/)
+  let i = words.length - 1
+  while (i > 0 && NAME_PARTICLES.has(words[i - 1].toLowerCase())) i--
+  return (words[i] ?? '').charAt(0).toUpperCase()
+}
+
 const TEAM_NORM: Record<string, string> = {
   'Manchester Utd':  'Manchester United',
   'QPR':             'Queens Park Rangers',
@@ -368,7 +376,7 @@ const buildMetaCache = unstable_cache(
         // per surname initial (only CLUB_STAT_KEYS — letter filter only uses base stats)
         for (const letter of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ') {
           const vals = Object.entries(byName)
-            .filter(([name]) => (name.trim().split(' ').pop() ?? '').charAt(0).toUpperCase() === letter)
+            .filter(([name]) => surnameInitial(name) === letter)
             .map(([, p]) => pStatValue(p, key))
           const val = top3(vals)
           if (val > 0) top3Cache[`${key}:letter:${letter}`] = val
@@ -399,7 +407,7 @@ const buildMetaCache = unstable_cache(
 
     return { clubs, nations, continents, contClubPairs, top3Cache, letters }
   },
-  ['football-golf-meta-v14'],
+  ['football-golf-meta-v15'],
   { revalidate: 86400 }
 )
 
@@ -514,8 +522,7 @@ export async function POST(req: Request) {
       if (!p) { breakdown.push({ name, value: 0 }); continue }
       if (natFilter && p.nationality !== natFilter) { breakdown.push({ name, value: 0 }); continue }
       if (letterFilter) {
-        const surname = (name.trim().split(' ').pop() ?? '').charAt(0).toUpperCase()
-        if (surname !== letterFilter) { breakdown.push({ name, value: 0 }); continue }
+        if (surnameInitial(name) !== letterFilter) { breakdown.push({ name, value: 0 }); continue }
       }
 
       let value = 0

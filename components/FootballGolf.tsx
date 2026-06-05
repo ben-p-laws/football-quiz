@@ -1075,7 +1075,7 @@ export default function FootballGolf(){
   },[])
 
   useEffect(()=>{
-    fetch('/api/football-golf?meta=1&v=14').then(r=>r.json())
+    fetch('/api/football-golf?meta=1&v=15').then(r=>r.json())
       .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>;letters?:string[]})=>{
         metaNations.current      = m.nations.map(c=>({code:c,label:NAT_LABELS[c]??c}))
         metaClubs.current        = m.clubs
@@ -1577,7 +1577,7 @@ export default function FootballGolf(){
         if(!p){ breakdown.push({name,value:0});continue }
         if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
         if(question.continentFilter && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
-        if(question.letterFilter){ const initial=(name.trim().split(' ').pop()??'').charAt(0).toUpperCase(); if(initial!==question.letterFilter){ breakdown.push({name,value:0});continue } }
+        if(question.letterFilter){ const initial=getSurnameInitial(name); if(initial!==question.letterFilter){ breakdown.push({name,value:0});continue } }
         const cf=question.clubFilter
         if(cf){
           if(question.key==='goals')              value=p.clubGoals[cf]||0
@@ -4147,6 +4147,15 @@ const AUGUSTA_YSCALE: Record<number, number> = {
    9:100/(300/787), 10:100/(300/805), 11:100/(300/1002),12:100/(300/660),
   13:100/(300/627), 14:100/(300/849), 15:100/(300/1009),16:100/(300/636),
   17:100/(300/1012),18:100/(300/815),
+}
+
+// Dutch/French/German/etc. particles that prefix the last-name segment
+const NAME_PARTICLES = new Set(['van','de','der','den','von','du','le','la','di','da','dos','das','del','el','al','bin','binte','y'])
+function getSurnameInitial(fullName: string): string {
+  const words = fullName.trim().split(/\s+/)
+  let i = words.length - 1
+  while (i > 0 && NAME_PARTICLES.has(words[i - 1].toLowerCase())) i--
+  return (words[i] ?? '').charAt(0).toUpperCase()
 }
 
 function fracToSVG(frac:[number,number], yScale=260):{x:number;y:number}{
