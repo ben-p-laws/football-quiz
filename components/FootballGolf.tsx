@@ -2109,11 +2109,12 @@ export default function FootballGolf(){
       const shots:any[]=d.shots||[]
 
       if(h2hGameModeRef.current==='h2h-scramble'){
-        // Wait for all 4 shots at this shotIdx
         const atIdx=shots.filter((s:any)=>s.shot_idx===shotIdx)
         const teammateShot=atIdx.find((s:any)=>s.player_id===h2hPartnerId.current)
         const oppShots=h2hOppTeamIds.current.map(id=>atIdx.find((s:any)=>s.player_id===id)??null)
-        if(atIdx.length>=4&&teammateShot){
+        // Tee shot: all 4 must submit; subsequent shots: active team only (opp team waits via startOppTeamPoll)
+        const ready = shotIdx===0 ? (atIdx.length>=4 && !!teammateShot) : !!teammateShot
+        if(ready){
           stopH2HPoll()
           h2hOppTeamShotsRef.current=oppShots as [any,any]
           setH2HOppShotReady(teammateShot)
@@ -3354,6 +3355,9 @@ export default function FootballGolf(){
                     imageShiftY={isReal && selectedCourse==='wii-golf' ? (WII_GOLF_IMAGESHIFTY[currentHole.number] ?? 0) : 0}
                     useMeet={!isReal}
                     noBg
+                    oppBallPos={h2hStep==='playing'&&h2hOppRemaining!==null ? (h2hOppPastPin?currentHole.distance+h2hOppRemaining:currentHole.distance-h2hOppRemaining) : undefined}
+                    myBallColor={h2hStep==='playing'?(h2hIsHost.current?'#3b82f6':'#fbbf24'):undefined}
+                    oppBallColor={h2hStep==='playing'?(h2hIsHost.current?'#fbbf24':'#3b82f6'):undefined}
                   />
                 </div>
               )
