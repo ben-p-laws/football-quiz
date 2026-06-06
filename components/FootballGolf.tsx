@@ -4738,7 +4738,7 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
         <div style={{flex:1}}>
           <div style={{fontSize:12,fontWeight:900,color:'white'}}>Clubs</div>
           <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>
-            {clubs.length>0?`${clubs.length} club${clubs.length>1?'s':''}` : 'Join or create a club'}
+            {clubs.length>0?`${clubs.length} club${clubs.length>1?'s':''}` : 'Join or create'}
           </div>
         </div>
         <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',flexShrink:0}}>{expanded?'▲':'▼'}</div>
