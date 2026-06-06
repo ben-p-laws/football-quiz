@@ -4376,19 +4376,23 @@ function HandicapCard({globalRank,expanded,onToggle}:{globalRank:number|null;exp
   const cardBorder = hcp ? `1.5px solid ${hcp.color}55` : '1.5px solid rgba(255,255,255,0.07)'
 
   return(
-    <button onClick={onToggle} style={{width:'100%',background:cardBg,borderRadius:12,border:cardBorder,padding:'10px 12px',display:'flex',flexDirection:'column',alignItems:'flex-start',gap:3,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
-      {hcp
-        ? <>
-            <div style={{fontSize:12,fontWeight:900,color:'white'}}>
-              Handicap {hcp.index>0?`+${hcp.index}`:Math.abs(hcp.index)}
-            </div>
-            <div style={{fontSize:11,fontWeight:700,color:hcp.color,display:'flex',alignItems:'center',gap:5}}>
-              {hcp.tier}
-              {globalRank && <span style={{color:'rgba(255,255,255,0.35)',fontWeight:700}}>· #{globalRank}</span>}
-            </div>
-          </>
-        : <span style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.35)'}}>5 rounds for handicap</span>
-      }
+    <button onClick={onToggle} style={{width:'100%',background:cardBg,borderRadius:expanded?'12px 12px 0 0':12,border:cardBorder,padding:'10px 12px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
+      <div style={{fontSize:16,lineHeight:1}}>🏆</div>
+      <div style={{flex:1}}>
+        {hcp
+          ? <>
+              <div style={{fontSize:12,fontWeight:900,color:'white'}}>Handicap {hcp.index>0?`+${hcp.index}`:Math.abs(hcp.index)}</div>
+              <div style={{fontSize:10,fontWeight:700,color:hcp.color,marginTop:1}}>
+                {hcp.tier}{globalRank?<span style={{color:'rgba(255,255,255,0.35)'}}> · #{globalRank}</span>:null}
+              </div>
+            </>
+          : <>
+              <div style={{fontSize:12,fontWeight:900,color:'white'}}>Handicap</div>
+              <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>5 rounds to unlock</div>
+            </>
+        }
+      </div>
+      <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',flexShrink:0}}>{expanded?'▲':'▼'}</div>
     </button>
   )
 }
