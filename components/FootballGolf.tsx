@@ -1443,6 +1443,8 @@ export default function FootballGolf(){
     recentFilters.current = []
     recentStats.current   = []
     setHoles(hs)
+    setSelectedCourse(t.course)
+    setCourseMode('real')
     setScores(new Array(18).fill(null))
     setHoleIdx(0)
     setRemaining(hs[0].distance)
@@ -4322,6 +4324,29 @@ const MASTERS_2026_STANDINGS: TournamentEntry[] = [
   {pos:'T18', name:'M. McNealy',    country:'United States',    total:-4},
 ]
 
+const US_OPEN_2019_STANDINGS: TournamentEntry[] = [
+  {pos:'1',   name:'G. Woodland',  country:'United States',     total:-13},
+  {pos:'2',   name:'B. Koepka',    country:'United States',     total:-10},
+  {pos:'T3',  name:'J. Rahm',      country:'Spain',             total:-7},
+  {pos:'T3',  name:'X. Schauffele',country:'United States',     total:-7},
+  {pos:'T3',  name:'C. Reavie',    country:'United States',     total:-7},
+  {pos:'T3',  name:'J. Rose',      country:'England',           total:-7},
+  {pos:'T7',  name:'L. Oosthuizen',country:'South Africa',      total:-6},
+  {pos:'T7',  name:'A. Scott',     country:'Australia',         total:-6},
+  {pos:'T9',  name:'R. McIlroy',   country:'Northern Ireland',  total:-5},
+  {pos:'T9',  name:'C. Hadley',    country:'United States',     total:-5},
+  {pos:'T9',  name:'H. Stenson',   country:'Sweden',            total:-5},
+  {pos:'T12', name:'D. Willett',   country:'England',           total:-4},
+  {pos:'T12', name:'M. Wallace',   country:'England',           total:-4},
+  {pos:'T12', name:'V. Hovland',   country:'Norway',            total:-4},
+  {pos:'T12', name:'M. Fitzpatrick',country:'England',          total:-4},
+  {pos:'T16', name:'G. McDowell',  country:'Northern Ireland',  total:-3},
+  {pos:'T16', name:'W. Simpson',   country:'United States',     total:-3},
+  {pos:'T16', name:'F. Molinari',  country:'Italy',             total:-3},
+  {pos:'T16', name:'M. Kuchar',    country:'United States',     total:-3},
+  {pos:'T16', name:'B.H. An',      country:'South Korea',       total:-3},
+]
+
 const TOURNAMENTS = [
   {
     id: 'masters-2026',
@@ -4330,6 +4355,14 @@ const TOURNAMENTS = [
     r3LeaderScore: -11,
     standings: MASTERS_2026_STANDINGS,
     description: "You're playing the final round of the 2026 Masters. Heading into Sunday, you are tied for the lead at -11. Below are the final standings, can you beat the champion?",
+  },
+  {
+    id: 'us-open-2019',
+    name: '2019 US Open',
+    course: 'pebble-beach' as const,
+    r3LeaderScore: -11,
+    standings: US_OPEN_2019_STANDINGS,
+    description: "You're playing the final round of the 2019 US Open at Pebble Beach. Heading into Sunday, you are tied for the lead at -11. Below are the final standings, can you beat the champion?",
   },
 ]
 
