@@ -3049,7 +3049,7 @@ export default function FootballGolf(){
           <div style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
             <div style={{background:'#0d1f38',border:'2px solid #c9a84c',borderRadius:20,padding:'20px 18px',width:'100%',maxWidth:340}}>
               <div style={{textAlign:'center',marginBottom:14}}>
-                <div style={{fontSize:10,fontWeight:800,color:'#c9a84c',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:3}}>2026 Masters · Hole {holeIdx+1} of 18</div>
+                <div style={{fontSize:10,fontWeight:800,color:'#c9a84c',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:3}}>{TOURNAMENTS.find(t=>t.id===tournamentId)?.name??'Tournament'} · Hole {holeIdx+1} of 18</div>
                 <div style={{fontSize:18,fontWeight:900,color:'white'}}>Leaderboard</div>
               </div>
               {/* Header */}
@@ -3436,7 +3436,7 @@ export default function FootballGolf(){
             <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexShrink:0,height:72,paddingTop:6}}>
               <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
                 <div style={{fontSize:10,fontWeight:700,color:tournamentMode?'#c9a84c':'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>
-                  {tournamentMode?'Masters':'Overall'}
+                  {tournamentMode?(TOURNAMENTS.find(t=>t.id===tournamentId)?.name??'Tournament'):'Overall'}
                 </div>
                 {tournamentMode ? (()=>{
                   const ts=tournamentStartScore+vsPar
