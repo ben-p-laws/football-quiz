@@ -4329,7 +4329,7 @@ const TOURNAMENTS = [
     course: 'augusta' as const,
     r3LeaderScore: -11,
     standings: MASTERS_2026_STANDINGS,
-    description: "You're playing the final round of the 2026 Masters. Heading into Sunday, you are tied for the lead at -11. Below are the final standings — can you beat the champion?",
+    description: "You're playing the final round of the 2026 Masters. Heading into Sunday, you are tied for the lead at -11. Below are the final standings, can you beat the champion?",
   },
 ]
 
@@ -4845,7 +4845,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
   const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
   return(
-    <div style={{width:'100%',height:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:10,fontFamily:"'DM Sans',sans-serif",padding:'24px 20px 20px',overflowY:'scroll',overflowX:'hidden',scrollbarGutter:'stable'}}>
+    <div style={{width:'100%',height:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:8,fontFamily:"'DM Sans',sans-serif",padding:'16px 20px 20px',overflowY:'scroll',overflowX:'hidden',scrollbarGutter:'stable'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
 
       {/* Title */}
@@ -4881,9 +4881,35 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         return <HandicapExpandedContent hcp={hcp} roundCount={rounds.length} />
       })()}
 
+      {/* Tournament card */}
+      {(()=>{
+        return(
+          <div style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.03))',border:'2px solid #fbbf24',borderRadius:14,padding:'9px 12px',boxShadow:'0 0 18px rgba(251,191,36,0.12)',display:'flex',alignItems:'center',gap:10}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:10,fontWeight:800,color:'#fbbf24',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>🏆 Tournament</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',lineHeight:1.4}}>Play the final round of a major and challenge the world's best players.</div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
+              <div style={{position:'relative'}}>
+                <select value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}
+                  style={{background:'rgba(251,191,36,0.1)',color:'#fbbf24',border:'1px solid rgba(251,191,36,0.4)',borderRadius:7,padding:'4px 22px 4px 8px',fontSize:11,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
+                  {TOURNAMENTS.map(t=>(<option key={t.id} value={t.id}>{t.name}</option>))}
+                  <option disabled>More coming soon</option>
+                </select>
+                <div style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(251,191,36,0.5)',fontSize:8}}>▼</div>
+              </div>
+              <button onClick={()=>onTournament(selectedTournament)} disabled={!metaReady}
+                style={{background:metaReady?'#fbbf24':'rgba(251,191,36,0.1)',color:metaReady?'#0a0f1e':'rgba(255,255,255,0.3)',border:'none',borderRadius:7,padding:'5px 10px',fontSize:12,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                {metaReady?'Start →':'Loading…'}
+              </button>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Daily Challenges card */}
-      <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14}}>
-        <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:10}}>Daily Challenges</div>
+      <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'10px 12px'}}>
+        <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Daily Challenges</div>
         <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
           <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'9px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:7}}>
             <span style={{fontSize:16,lineHeight:1}}>⛳</span>
@@ -4898,34 +4924,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       </div>
 
-      {/* Tournament card */}
-      {(()=>{
-        return(
-          <div style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,#1a1200,#0d0e1a)',border:'1.5px solid #c9a84c55',borderRadius:16,padding:'10px 12px',display:'flex',alignItems:'center',gap:10}}>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:10,fontWeight:800,color:'#c9a84c',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>🏆 Tournaments</div>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',lineHeight:1.4}}>Play the final round of a major and challenge the world's best.</div>
-            </div>
-            <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
-              <div style={{position:'relative'}}>
-                <select value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}
-                  style={{background:'rgba(201,168,76,0.1)',color:'#c9a84c',border:'1.5px solid #c9a84c55',borderRadius:8,padding:'5px 24px 5px 8px',fontSize:12,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
-                  {TOURNAMENTS.map(t=>(<option key={t.id} value={t.id}>{t.name}</option>))}
-                  <option disabled>More coming soon</option>
-                </select>
-                <div style={{position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'#c9a84c88',fontSize:8}}>▼</div>
-              </div>
-              <button onClick={()=>onTournament(selectedTournament)} disabled={!metaReady}
-                style={{background:metaReady?'#c9a84c':'#443820',color:metaReady?'#0a0f1e':'rgba(255,255,255,0.3)',border:'none',borderRadius:8,padding:'6px 10px',fontSize:12,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
-                {metaReady?'Start →':'Loading…'}
-              </button>
-            </div>
-          </div>
-        )
-      })()}
 
-
-      {/* Normal Play card */}
+      {/* Free Play card */}
       {(()=>{
         const rowLbl: React.CSSProperties = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',whiteSpace:'nowrap',flexShrink:0,minWidth:46}
         const row: React.CSSProperties = {display:'flex',alignItems:'center',gap:10}
@@ -4938,8 +4938,8 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         })
         const maxH = courseHoleCount(selectedCourse)
         return(
-        <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'12px 14px',display:'flex',flexDirection:'column',gap:9}}>
-          <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Normal Play</div>
+        <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'10px 12px',display:'flex',flexDirection:'column',gap:9}}>
+          <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Free Play</div>
 
           {/* Mode row */}
           <div style={row}>
@@ -5359,13 +5359,12 @@ function TournamentSetupScreen({tournamentId,onPlay,onBack}:{tournamentId:string
   const {rows} = getTournamentLeaderboard(t.standings, t.r3LeaderScore)
   function scoreStr(n:number){ return n===0?'E':n>0?`+${n}`:String(n) }
   return(
-    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:20,fontFamily:"'DM Sans',sans-serif",padding:'16px 20px',overflowY:'auto'}}>
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:16,fontFamily:"'DM Sans',sans-serif",padding:'12px 20px',overflowY:'auto'}}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
       <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
       <div style={{textAlign:'center'}}>
-        <div style={{fontSize:40,marginBottom:8}}>🏆</div>
-        <div style={{fontSize:26,fontWeight:900,color:'#f59e0b',letterSpacing:'-0.5px'}}>{t.name}</div>
-        <div style={{fontSize:14,color:'rgba(255,255,255,0.55)',marginTop:10,maxWidth:320,lineHeight:1.55}}>{t.description}</div>
+        <div style={{fontSize:24,fontWeight:900,color:'#f59e0b',letterSpacing:'-0.5px'}}>{t.name}</div>
+        <div style={{fontSize:14,color:'rgba(255,255,255,0.55)',marginTop:8,maxWidth:320,lineHeight:1.55}}>{t.description}</div>
       </div>
       <div style={{width:'100%',maxWidth:360,background:'#111827',border:'1px solid rgba(245,158,11,0.3)',borderRadius:14,overflow:'hidden'}}>
         <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(245,158,11,0.15)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
