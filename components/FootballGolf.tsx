@@ -926,7 +926,12 @@ function calcNewBallState(result:ShotResult, remaining:number, pastPin:boolean):
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function FootballGolf(){
-  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'|'h2h-done'|'club-lobby'>('setup')
+  const [phase,setPhase]                 = useState<'setup'|'playing'|'done'|'daily-setup'|'daily-done'|'daily-round-setup'|'daily-round-done'|'h2h-done'|'club-lobby'|'tournament-setup'>('setup')
+  const [pendingTournamentId,setPendingTournamentId] = useState<string|null>(null)
+  const [tournamentMode,setTournamentMode]       = useState(false)
+  const [tournamentId,setTournamentId]           = useState<string|null>(null)
+  const [tournamentStartScore,setTournamentStartScore] = useState(-11)
+  const [showTournamentLeaderboard,setShowTournamentLeaderboard] = useState(false)
   const [lobbyClub,setLobbyClub]         = useState<ClubInfo|null>(null)
   const [courseMode,setCourseMode]       = useState<'random'|'real'>('real')
   const [selectedCourse,setSelectedCourse] = useState<string>('augusta')
@@ -1426,6 +1431,30 @@ export default function FootballGolf(){
     setPastPin(false)
     setQuestion(nextPickedCategory(hs[0].distance, hs[0].isIsland ? hs[0].distance - 20 : undefined))
     resetInputs()
+    if (!localStorage.getItem('golf_rules_seen')) setShowRules(true)
+    setTournamentMode(false)
+    setPhase('playing')
+  }
+
+  function startTournamentGame(tId: string) {
+    const t = TOURNAMENTS.find(t => t.id === tId)!
+    const hs = buildCourse('White', 18, 1, t.course)
+    usedLabels.current    = new Set()
+    recentFilters.current = []
+    recentStats.current   = []
+    setHoles(hs)
+    setScores(new Array(18).fill(null))
+    setHoleIdx(0)
+    setRemaining(hs[0].distance)
+    setStrokes(0)
+    setShotResult(null)
+    setPastPin(false)
+    setQuestion(nextPickedCategory(hs[0].distance, hs[0].isIsland ? hs[0].distance - 20 : undefined))
+    resetInputs()
+    setTournamentMode(true)
+    setTournamentId(tId)
+    setTournamentStartScore(t.r3LeaderScore)
+    setShowTournamentLeaderboard(false)
     if (!localStorage.getItem('golf_rules_seen')) setShowRules(true)
     setPhase('playing')
   }
@@ -2056,6 +2085,11 @@ export default function FootballGolf(){
       return
     }
 
+    if(tournamentMode){
+      setShowTournamentLeaderboard(true)
+      return
+    }
+
     setTimeout(()=>{
       setHoleResult(null)
       if(holeIdx+1>=holes.length){
@@ -2085,6 +2119,25 @@ export default function FootballGolf(){
         setQuestion(nextPickedCategory(dist, holes[nextIdx].isIsland ? holes[nextIdx].distance - 20 : undefined))
       }
     },3000)
+  }
+
+  function advanceTournamentHole(){
+    setShowTournamentLeaderboard(false)
+    setHoleResult(null)
+    setShotResult(null)
+    setBunkerQ(null)
+    if(holeIdx+1>=holes.length){
+      setPhase('done')
+      return
+    }
+    const nextIdx=holeIdx+1
+    setHoleIdx(nextIdx)
+    const dist=holes[nextIdx].distance
+    setRemaining(dist)
+    setPastPin(false)
+    setStrokes(0)
+    setQuestion(nextPickedCategory(dist, holes[nextIdx].isIsland ? holes[nextIdx].distance - 20 : undefined))
+    resetInputs()
   }
 
   // ── H2H functions ───────────────────────────────────────────────────────────
@@ -2911,7 +2964,8 @@ export default function FootballGolf(){
   }
 
   if(phase==='club-lobby'&&lobbyClub) return(<><NavBar /><ClubLobbyScreen club={lobbyClub} onBack={()=>setPhase('setup')} /></>)
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} /></>)
+  if(phase==='tournament-setup'&&pendingTournamentId) return(<><NavBar /><TournamentSetupScreen tournamentId={pendingTournamentId} onPlay={()=>startTournamentGame(pendingTournamentId!)} onBack={()=>setPhase('setup')} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} onTournament={(id)=>{setPendingTournamentId(id);setPhase('tournament-setup')}} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -2979,6 +3033,55 @@ export default function FootballGolf(){
           </div>
         </div>
       )}
+
+      {/* Tournament leaderboard overlay — shown after each hole */}
+      {showTournamentLeaderboard&&tournamentId&&(()=>{
+        const t=TOURNAMENTS.find(x=>x.id===tournamentId)!
+        const completedScoresNow=(scores.filter(s=>s!==null) as number[])
+        const completedParNow=holes.slice(0,completedScoresNow.length).reduce((s,h)=>s+h.par,0)
+        const vsParNow=completedScoresNow.reduce((s,n)=>s+n,0)-completedParNow
+        const userTournamentScore=tournamentStartScore+vsParNow
+        const {rows,userPos}=getTournamentLeaderboard(t.standings,userTournamentScore)
+        const isLast=holeIdx+1>=holes.length
+        return(
+          <div style={{position:'fixed',inset:0,zIndex:1000,background:'rgba(0,0,0,0.85)',display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+            <div style={{background:'#0d1f38',border:'2px solid #c9a84c',borderRadius:20,padding:'20px 18px',width:'100%',maxWidth:340}}>
+              <div style={{textAlign:'center',marginBottom:14}}>
+                <div style={{fontSize:10,fontWeight:800,color:'#c9a84c',textTransform:'uppercase',letterSpacing:'0.12em',marginBottom:3}}>2026 Masters · Hole {holeIdx+1} of 18</div>
+                <div style={{fontSize:18,fontWeight:900,color:'white'}}>Leaderboard</div>
+              </div>
+              {/* Header */}
+              <div style={{display:'grid',gridTemplateColumns:'28px 1fr 32px',gap:'0 8px',marginBottom:4}}>
+                <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.07em'}}>Pos</div>
+                <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.07em'}}>Player</div>
+                <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.07em',textAlign:'right'}}>Total</div>
+              </div>
+              {rows.map((row,i)=>{
+                const scoreStr=row.total===0?'E':row.total>0?`+${row.total}`:String(row.total)
+                const scoreColor=row.total<0?'#22c55e':row.total>0?'#ef4444':'#94a3b8'
+                const isUser=row.isUser
+                const isGap=!isLast&&i===5&&rows.length===7&&!rows[5].isUser
+                return(
+                  <div key={i}>
+                    {isGap&&<div style={{height:1,background:'rgba(255,255,255,0.07)',margin:'3px 0'}}/>}
+                    <div style={{display:'grid',gridTemplateColumns:'28px 1fr 32px',gap:'0 8px',padding:'5px 0',borderRadius:8,background:isUser?'rgba(201,168,76,0.1)':'transparent',paddingLeft:isUser?6:0,paddingRight:isUser?6:0,marginLeft:isUser?-6:0,marginRight:isUser?-6:0}}>
+                      <div style={{fontSize:12,fontWeight:800,color:isUser?'#c9a84c':'rgba(255,255,255,0.4)'}}>{row.pos}</div>
+                      <div style={{fontSize:12,fontWeight:isUser?900:600,color:isUser?'#c9a84c':'white',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                        {isUser?'You ⛳':row.name}
+                        {!isUser&&isLast&&<span style={{fontSize:10,color:'rgba(255,255,255,0.3)',marginLeft:4}}>F</span>}
+                      </div>
+                      <div style={{fontSize:13,fontWeight:900,color:scoreColor,textAlign:'right'}}>{scoreStr}</div>
+                    </div>
+                  </div>
+                )
+              })}
+              <button onClick={advanceTournamentHole} style={{width:'100%',background:'#c9a84c',color:'#0a0f1e',border:'none',borderRadius:10,padding:'11px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginTop:14}}>
+                {isLast?'View Final Result →':'Next Hole →'}
+              </button>
+            </div>
+          </div>
+        )
+      })()}
 
       {holeResult && (
         <div style={{position:'fixed',inset:0,zIndex:999,pointerEvents:h2hFinishHoleReady?'auto':'none',background:h2hFinishHoleReady?'rgba(0,0,0,0.6)':'transparent',display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -3330,10 +3433,18 @@ export default function FootballGolf(){
             {/* Header: overall score + rules button — same height as scorecard */}
             <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexShrink:0,height:72,paddingTop:6}}>
               <div style={{display:'flex',flexDirection:'column',alignItems:'center'}}>
-                <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>Overall</div>
-                <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:h2hStep==='playing'&&multiMode!=='team-scramble'&&multiMode!=='team-alt'?'white':vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'}}>
-                  {h2hStep==='playing'&&multiMode!=='team-scramble'&&multiMode!=='team-alt' ? (matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`) : (vsParStr??'E')}
+                <div style={{fontSize:10,fontWeight:700,color:tournamentMode?'#c9a84c':'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>
+                  {tournamentMode?'Masters':'Overall'}
                 </div>
+                {tournamentMode ? (()=>{
+                  const ts=tournamentStartScore+vsPar
+                  const tsStr=ts===0?'E':ts>0?`+${ts}`:String(ts)
+                  return <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:ts<0?'#22c55e':ts>0?'#ef4444':'#94a3b8'}}>{tsStr}</div>
+                })() : (
+                  <div style={{fontSize:28,fontWeight:900,lineHeight:1,color:h2hStep==='playing'&&multiMode!=='team-scramble'&&multiMode!=='team-alt'?'white':vsPar<0?'#22c55e':vsPar>0?'#ef4444':'white'}}>
+                    {h2hStep==='playing'&&multiMode!=='team-scramble'&&multiMode!=='team-alt' ? (matchScore===0?'AS':matchScore>0?`${matchScore} UP`:`${Math.abs(matchScore)} DN`) : (vsParStr??'E')}
+                  </div>
+                )}
               </div>
               <button onClick={()=>setShowRules(true)} style={{background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:12,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',width:22,height:22,borderRadius:'50%',flexShrink:0}}>?</button>
             </div>
@@ -4185,6 +4296,61 @@ const REAL_COURSES = [
   { id:'royal-birkdale',name:'Royal Birkdale',           available:false },
 ]
 
+// ── Tournament data ─────────────────────────────────────────────────────────────
+
+type TournamentEntry = { pos: string; name: string; country: string; total: number }
+const MASTERS_2026_STANDINGS: TournamentEntry[] = [
+  {pos:'1',   name:'R. McIlroy',    country:'Northern Ireland', total:-12},
+  {pos:'2',   name:'S. Scheffler',  country:'United States',    total:-11},
+  {pos:'T3',  name:'R. Henley',     country:'United States',    total:-10},
+  {pos:'T3',  name:'C. Young',      country:'United States',    total:-10},
+  {pos:'T3',  name:'T. Hatton',     country:'England',          total:-10},
+  {pos:'T3',  name:'J. Rose',       country:'England',          total:-10},
+  {pos:'T7',  name:'S. Burns',      country:'United States',    total:-9},
+  {pos:'T7',  name:'C. Morikawa',   country:'United States',    total:-9},
+  {pos:'T9',  name:'M. Homa',       country:'United States',    total:-8},
+  {pos:'T9',  name:'X. Schauffele', country:'United States',    total:-8},
+  {pos:'11',  name:'J. Knapp',      country:'United States',    total:-7},
+  {pos:'T12', name:'J. Day',        country:'Australia',        total:-5},
+  {pos:'T12', name:'P. Reed',       country:'United States',    total:-5},
+  {pos:'T12', name:'H. Matsuyama',  country:'Japan',            total:-5},
+  {pos:'T12', name:'P. Cantlay',    country:'United States',    total:-5},
+  {pos:'T12', name:'J. Spieth',     country:'United States',    total:-5},
+  {pos:'T12', name:'B. Koepka',     country:'United States',    total:-5},
+  {pos:'T18', name:'M. Fitzpatrick',country:'England',          total:-4},
+  {pos:'T18', name:'V. Hovland',    country:'Norway',           total:-4},
+  {pos:'T18', name:'M. McNealy',    country:'United States',    total:-4},
+]
+
+const TOURNAMENTS = [
+  {
+    id: 'masters-2026',
+    name: '2026 Masters',
+    course: 'augusta' as const,
+    r3LeaderScore: -11,
+    standings: MASTERS_2026_STANDINGS,
+    description: "You're playing the final round of the 2026 Masters. Heading into Sunday, you are tied for the lead at -11. Below are the final standings — can you beat the champion?",
+  },
+]
+
+function getTournamentLeaderboard(standings: TournamentEntry[], userScore: number, userName = 'You') {
+  type Row = TournamentEntry & { isUser: boolean }
+  const all: Row[] = [
+    ...standings.map(e => ({ ...e, isUser: false })),
+    { pos: '', name: userName, country: '', total: userScore, isUser: true },
+  ]
+  all.sort((a, b) => a.total !== b.total ? a.total - b.total : (a.isUser ? 1 : -1))
+  // Assign positions
+  let curPos = 1, tieCount = 0
+  for (let i = 0; i < all.length; i++) {
+    if (i > 0 && all[i].total === all[i-1].total) { tieCount++; all[i].pos = all[i-1].pos }
+    else { curPos = i + 1; tieCount = 0; all[i].pos = String(curPos) }
+  }
+  const userIdx = all.findIndex(e => e.isUser)
+  const rows = userIdx < 7 ? all.slice(0, 7) : [...all.slice(0, 6), all[userIdx]]
+  return { rows, userPos: parseInt(all[userIdx].pos) || userIdx + 1 }
+}
+
 function courseHoleCount(courseId: string) {
   if (courseId === 'wii-golf') return 9
   return 18
@@ -4652,7 +4818,7 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
 }
 
 type MultiMode = 'h2h-1v1'|'h2h-scramble'|'h2h-alt'|'team-scramble'|'team-alt'
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode,metaReady}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode,metaReady,onTournament}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
@@ -4663,10 +4829,12 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   onViewLobby:(club:ClubInfo)=>void
   sharedResult:SharePayload|null; onDismissShare:()=>void
   multiMode:MultiMode; setMultiMode:(m:MultiMode)=>void
+  onTournament:(id:string)=>void
 }){
   const [mode,setMode] = useState<'solo'|'multiplayer'>('solo')
   const [hcpExpanded, setHcpExpanded] = useState(false)
   const [globalRank, setGlobalRank]   = useState<number|null>(null)
+  const [selectedTournament, setSelectedTournament] = useState(TOURNAMENTS[0].id)
   const today = new Date().toISOString().slice(0,10)
   const dailyPlayed      = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_${today}`)
   const dailyRoundPlayed = typeof window!=='undefined' && !!localStorage.getItem(`golf_daily_round_${today}`)
@@ -4702,20 +4870,22 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       )}
 
-      {/* Handicap card — tap to expand */}
-      <div style={{width:'100%',maxWidth:320}}>
-        <HandicapCard globalRank={globalRank} expanded={hcpExpanded} onToggle={()=>setHcpExpanded(v=>!v)} />
+      {/* Handicap + Club cards — side by side */}
+      <div style={{width:'100%',maxWidth:320,display:'flex',gap:8}}>
+        <div style={{flex:1,minWidth:0}}>
+          <HandicapCard globalRank={globalRank} expanded={hcpExpanded} onToggle={()=>setHcpExpanded(v=>!v)} />
+        </div>
+        <div style={{flex:1,minWidth:0}}>
+          <ClubSection onViewLobby={onViewLobby} />
+        </div>
       </div>
 
-      {/* Handicap expanded content */}
+      {/* Handicap expanded content — full width, below the row */}
       {hcpExpanded&&(()=>{
         const hcp = getHandicapData()
         const rounds:GolfRound[] = typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')?? '[]'):[]
         return <HandicapExpandedContent hcp={hcp} roundCount={rounds.length} />
       })()}
-
-      {/* Club card */}
-      <ClubSection onViewLobby={onViewLobby} />
 
       {/* Daily Challenges card */}
       <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:14}}>
@@ -4733,6 +4903,33 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           </button>
         </div>
       </div>
+
+      {/* Tournament card */}
+      {(()=>{
+        return(
+          <div style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,#1a1200,#0d0e1a)',border:'1.5px solid #c9a84c55',borderRadius:16,padding:'10px 12px',display:'flex',alignItems:'center',gap:10}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:10,fontWeight:800,color:'#c9a84c',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:3}}>🏆 Tournaments</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',lineHeight:1.4}}>Play the final round of a major and challenge the world's best.</div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
+              <div style={{position:'relative'}}>
+                <select value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}
+                  style={{background:'rgba(201,168,76,0.1)',color:'#c9a84c',border:'1.5px solid #c9a84c55',borderRadius:8,padding:'5px 24px 5px 8px',fontSize:12,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
+                  {TOURNAMENTS.map(t=>(<option key={t.id} value={t.id}>{t.name}</option>))}
+                  <option disabled>More coming soon</option>
+                </select>
+                <div style={{position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'#c9a84c88',fontSize:8}}>▼</div>
+              </div>
+              <button onClick={()=>onTournament(selectedTournament)} disabled={!metaReady}
+                style={{background:metaReady?'#c9a84c':'#443820',color:metaReady?'#0a0f1e':'rgba(255,255,255,0.3)',border:'none',borderRadius:8,padding:'6px 10px',fontSize:12,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+                {metaReady?'Start →':'Loading…'}
+              </button>
+            </div>
+          </div>
+        )
+      })()}
+
 
       {/* Normal Play card */}
       {(()=>{
@@ -5157,6 +5354,47 @@ function DailyRoundDoneScreen({result,leaderboard,playerName,onBack}:{
         })}
       </div>
       </div>
+    </div>
+  )
+}
+
+// ── Tournament setup screen ───────────────────────────────────────────────────
+
+function TournamentSetupScreen({tournamentId,onPlay,onBack}:{tournamentId:string;onPlay:()=>void;onBack:()=>void}){
+  const t = TOURNAMENTS.find(x=>x.id===tournamentId)??TOURNAMENTS[0]
+  const {rows} = getTournamentLeaderboard(t.standings, t.r3LeaderScore)
+  function scoreStr(n:number){ return n===0?'E':n>0?`+${n}`:String(n) }
+  return(
+    <div style={{minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:20,fontFamily:"'DM Sans',sans-serif",padding:'16px 20px',overflowY:'auto'}}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+      <button onClick={onBack} style={{alignSelf:'flex-start',background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:0}}>← Back</button>
+      <div style={{textAlign:'center'}}>
+        <div style={{fontSize:40,marginBottom:8}}>🏆</div>
+        <div style={{fontSize:26,fontWeight:900,color:'#f59e0b',letterSpacing:'-0.5px'}}>{t.name}</div>
+        <div style={{fontSize:14,color:'rgba(255,255,255,0.55)',marginTop:10,maxWidth:320,lineHeight:1.55}}>{t.description}</div>
+      </div>
+      <div style={{width:'100%',maxWidth:360,background:'#111827',border:'1px solid rgba(245,158,11,0.3)',borderRadius:14,overflow:'hidden'}}>
+        <div style={{padding:'10px 14px',borderBottom:'1px solid rgba(245,158,11,0.15)',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+          <span style={{fontSize:12,fontWeight:800,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.07em'}}>Final Standings</span>
+          <span style={{fontSize:11,color:'rgba(255,255,255,0.25)'}}>Your start: −11</span>
+        </div>
+        {rows.map((row,i)=>{
+          const score=scoreStr(row.total)
+          const scoreColor=row.total<0?'#22c55e':row.total>0?'#ef4444':'#94a3b8'
+          return(
+            <div key={i} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',borderBottom:'1px solid #1e2d4a',background:row.isUser?'rgba(245,158,11,0.08)':'transparent'}}>
+              <span style={{fontSize:12,fontWeight:800,color:'rgba(255,255,255,0.25)',minWidth:24}}>{row.pos}</span>
+              <span style={{flex:1,fontSize:14,fontWeight:row.isUser?900:700,color:row.isUser?'#f59e0b':'white'}}>{row.name}</span>
+              {row.country?<span style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{row.country}</span>:null}
+              <span style={{fontSize:14,fontWeight:900,color:scoreColor,minWidth:32,textAlign:'right'}}>{score}</span>
+            </div>
+          )
+        })}
+      </div>
+      <button onClick={onPlay}
+        style={{background:'#f59e0b',color:'#0a0f1e',border:'none',borderRadius:12,padding:'14px 48px',fontSize:16,fontWeight:900,cursor:'pointer',fontFamily:'inherit',letterSpacing:'-0.3px'}}>
+        Begin Round →
+      </button>
     </div>
   )
 }
