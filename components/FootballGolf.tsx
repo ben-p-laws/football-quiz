@@ -4685,8 +4685,27 @@ function ClubLobbyScreen({ club, onBack }: { club:ClubInfo; onBack:()=>void }) {
   )
 }
 
-function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
-  const [expanded,setExpanded] = useState(false)
+function ClubSection({onViewLobby,expanded,onToggle}:{onViewLobby:(club:ClubInfo)=>void;expanded:boolean;onToggle:()=>void}){
+  const [clubs,setClubs] = useState<ClubInfo[]>([])
+  useEffect(()=>{
+    const stored = getMyClubs(); setClubs(stored)
+  },[])
+  return(
+    <button onClick={onToggle}
+      style={{width:'100%',background:expanded?'#111827':'rgba(255,255,255,0.03)',borderRadius:expanded?'12px 12px 0 0':12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'10px 12px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
+      <div style={{fontSize:16,lineHeight:1}}>🏌️</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:12,fontWeight:900,color:'white'}}>Clubs</div>
+        <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>
+          {clubs.length>0?`${clubs.length} club${clubs.length>1?'s':''}` : 'Join or create'}
+        </div>
+      </div>
+      <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',flexShrink:0}}>{expanded?'▲':'▼'}</div>
+    </button>
+  )
+}
+
+function ClubExpandedPanel({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
   const [clubs,setClubs] = useState<ClubInfo[]>([])
   const [activeCode,setActiveCodeState] = useState<string|null>(null)
   const [mode,setMode] = useState<'view'|'create'|'join'>('view')
@@ -4700,24 +4719,14 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
     const stored = getMyClubs()
     setClubs(stored)
     const current = getActiveClubCode()
-    if(current){
-      setActiveCodeState(current)
-    } else if(stored.length>0){
-      setActiveClubCode(stored[0].code)
-      setActiveCodeState(stored[0].code)
-    }
-  },[])
-
-  useEffect(()=>{
-    if(!expanded) return
-    clubs.forEach(c=>{
-      if(memberCounts[c.id]!==undefined) return
+    if(current){ setActiveCodeState(current) }
+    else if(stored.length>0){ setActiveClubCode(stored[0].code); setActiveCodeState(stored[0].code) }
+    stored.forEach(c=>{
       fetch(`/api/golf-club?code=${c.code}`).then(r=>r.json()).then(d=>{
         if(d.members) setMemberCounts(prev=>({...prev,[c.id]:d.members.length}))
       })
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[expanded,clubs])
+  },[])
 
   async function createClub(){
     const name=createName.trim(); if(!name) return
@@ -4749,10 +4758,7 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
     await fetch('/api/golf-club',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({action:'leave',clubId,deviceId:getDeviceId()})})
     const updated=clubs.filter(c=>c.id!==clubId); saveMyClubs(updated); setClubs(updated)
-    if(activeCode===code){
-      const next=updated[0]?.code??null
-      setActiveClubCode(next); setActiveCodeState(next)
-    }
+    if(activeCode===code){ const next=updated[0]?.code??null; setActiveClubCode(next); setActiveCodeState(next) }
   }
 
   const toggleBtn=(active:boolean,green=false):React.CSSProperties=>({
@@ -4764,80 +4770,63 @@ function ClubSection({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
   })
 
   return(
-    <div style={{width:'100%',maxWidth:320}}>
-      <button onClick={()=>setExpanded(v=>!v)}
-        style={{width:'100%',background:expanded?'#111827':'rgba(255,255,255,0.03)',borderRadius:expanded?'12px 12px 0 0':12,border:'1.5px solid rgba(255,255,255,0.07)',padding:'10px 12px',display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontFamily:'inherit',textAlign:'left'}}>
-        <div style={{fontSize:16,lineHeight:1}}>🏌️</div>
-        <div style={{flex:1}}>
-          <div style={{fontSize:12,fontWeight:900,color:'white'}}>Clubs</div>
-          <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:1}}>
-            {clubs.length>0?`${clubs.length} club${clubs.length>1?'s':''}` : 'Join or create'}
-          </div>
-        </div>
-        <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',flexShrink:0}}>{expanded?'▲':'▼'}</div>
-      </button>
-
-      {expanded&&(
-        <div style={{background:'#111827',borderRadius:'0 0 12px 12px',border:'1.5px solid rgba(255,255,255,0.07)',borderTop:'none',padding:'12px 14px'}}>
-          {clubs.map(club=>{
-            const isActive=activeCode===club.code
-            return(
-              <div key={club.id} style={{background:isActive?'rgba(34,197,94,0.08)':'rgba(255,255,255,0.03)',border:`1px solid ${isActive?'rgba(34,197,94,0.3)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'10px 12px',marginBottom:8}}>
-                <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <div style={{flex:1}}>
-                    <div style={{fontSize:13,fontWeight:800,color:'white'}}>{club.name}</div>
-                    <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:2,letterSpacing:'0.1em',fontWeight:700}}>
-                      {club.code}
-                      {memberCounts[club.id]!==undefined&&<span style={{letterSpacing:0,fontWeight:600}}> · {memberCounts[club.id]} member{memberCounts[club.id]!==1?'s':''}</span>}
-                    </div>
-                  </div>
-                  <button onClick={()=>onViewLobby(club)}
-                    style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.5)',cursor:'pointer',fontFamily:'inherit'}}>
-                    Lobby →
-                  </button>
-                  <button onClick={()=>leaveClub(club.id,club.code)}
-                    style={{background:'none',border:'none',color:'rgba(255,255,255,0.2)',fontSize:16,cursor:'pointer',padding:'0 2px',lineHeight:1,fontFamily:'inherit'}}>×</button>
+    <div style={{width:'100%',maxWidth:320,background:'#111827',borderRadius:'0 0 12px 12px',border:'1.5px solid rgba(255,255,255,0.07)',borderTop:'none',padding:'12px 14px'}}>
+      {clubs.map(club=>{
+        const isActive=activeCode===club.code
+        return(
+          <div key={club.id} style={{background:isActive?'rgba(34,197,94,0.08)':'rgba(255,255,255,0.03)',border:`1px solid ${isActive?'rgba(34,197,94,0.3)':'rgba(255,255,255,0.06)'}`,borderRadius:10,padding:'10px 12px',marginBottom:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:800,color:'white'}}>{club.name}</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:2,letterSpacing:'0.1em',fontWeight:700}}>
+                  {club.code}
+                  {memberCounts[club.id]!==undefined&&<span style={{letterSpacing:0,fontWeight:600}}> · {memberCounts[club.id]} member{memberCounts[club.id]!==1?'s':''}</span>}
                 </div>
               </div>
-            )
-          })}
-
-          {mode==='view'&&(
-            <div style={{display:'flex',gap:6,marginTop:clubs.length>0?4:0}}>
-              <button onClick={()=>{setMode('create');setMsg('')}} style={toggleBtn(false)}>+ Create</button>
-              <button onClick={()=>{setMode('join');setMsg('')}} style={toggleBtn(false)}>Join</button>
-            </div>
-          )}
-          {mode==='create'&&(
-            <div style={{marginTop:4}}>
-              <input value={createName} onChange={e=>setCreateName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createClub()} placeholder="Club name…"
-                style={{width:'100%',background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'8px 10px',fontSize:14,color:'white',fontFamily:'inherit',outline:'none',marginBottom:6}}/>
-              <div style={{display:'flex',gap:6}}>
-                <button onClick={createClub} disabled={!createName.trim()||loading}
-                  style={{flex:1,background:createName.trim()&&!loading?'#16a34a':'#1e2d4a',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:900,color:'white',cursor:createName.trim()&&!loading?'pointer':'default',fontFamily:'inherit'}}>
-                  {loading?'Creating…':'Create'}
-                </button>
-                <button onClick={()=>setMode('view')} style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
-              </div>
-            </div>
-          )}
-          {mode==='join'&&(
-            <div style={{display:'flex',gap:6,marginTop:4}}>
-              <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&joinClub()} placeholder="CODE" maxLength={6}
-                style={{flex:1,background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'7px 10px',fontSize:14,fontWeight:900,color:'white',fontFamily:'inherit',letterSpacing:'0.15em',textTransform:'uppercase',outline:'none'}}/>
-              <button onClick={joinClub} disabled={!joinCode.trim()||loading}
-                style={{background:'#16a34a',border:'none',borderRadius:8,padding:'7px 12px',fontSize:11,fontWeight:900,color:'white',cursor:'pointer',fontFamily:'inherit'}}>
-                {loading?'…':'Join'}
+              <button onClick={()=>onViewLobby(club)}
+                style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'5px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.5)',cursor:'pointer',fontFamily:'inherit'}}>
+                Lobby →
               </button>
-              <button onClick={()=>setMode('view')} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+              <button onClick={()=>leaveClub(club.id,club.code)}
+                style={{background:'none',border:'none',color:'rgba(255,255,255,0.2)',fontSize:16,cursor:'pointer',padding:'0 2px',lineHeight:1,fontFamily:'inherit'}}>×</button>
             </div>
-          )}
-          {msg&&<div style={{marginTop:8,fontSize:11,fontWeight:700,color:msg.startsWith('Created')||msg.startsWith('Joined')?'#22c55e':'#ef4444'}}>{msg}</div>}
-          {activeCode&&(
-            <div style={{marginTop:10,background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.15)',borderRadius:8,padding:'7px 10px',fontSize:10,color:'rgba(34,197,94,0.7)',lineHeight:1.5}}>
-              ✓ Leaderboards show a Global / Club toggle while you're in a club.
-            </div>
-          )}
+          </div>
+        )
+      })}
+      {mode==='view'&&(
+        <div style={{display:'flex',gap:6,marginTop:clubs.length>0?4:0}}>
+          <button onClick={()=>{setMode('create');setMsg('')}} style={toggleBtn(false)}>+ Create</button>
+          <button onClick={()=>{setMode('join');setMsg('')}} style={toggleBtn(false)}>Join</button>
+        </div>
+      )}
+      {mode==='create'&&(
+        <div style={{marginTop:4}}>
+          <input value={createName} onChange={e=>setCreateName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&createClub()} placeholder="Club name…"
+            style={{width:'100%',background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'8px 10px',fontSize:14,color:'white',fontFamily:'inherit',outline:'none',marginBottom:6}}/>
+          <div style={{display:'flex',gap:6}}>
+            <button onClick={createClub} disabled={!createName.trim()||loading}
+              style={{flex:1,background:createName.trim()&&!loading?'#16a34a':'#1e2d4a',border:'none',borderRadius:8,padding:'7px 0',fontSize:11,fontWeight:900,color:'white',cursor:createName.trim()&&!loading?'pointer':'default',fontFamily:'inherit'}}>
+              {loading?'Creating…':'Create'}
+            </button>
+            <button onClick={()=>setMode('view')} style={{background:'rgba(255,255,255,0.06)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {mode==='join'&&(
+        <div style={{display:'flex',gap:6,marginTop:4}}>
+          <input value={joinCode} onChange={e=>setJoinCode(e.target.value.toUpperCase())} onKeyDown={e=>e.key==='Enter'&&joinClub()} placeholder="CODE" maxLength={6}
+            style={{flex:1,background:'#0a0f1e',border:'1px solid rgba(255,255,255,0.15)',borderRadius:8,padding:'7px 10px',fontSize:14,fontWeight:900,color:'white',fontFamily:'inherit',letterSpacing:'0.15em',textTransform:'uppercase',outline:'none'}}/>
+          <button onClick={joinClub} disabled={!joinCode.trim()||loading}
+            style={{background:'#16a34a',border:'none',borderRadius:8,padding:'7px 12px',fontSize:11,fontWeight:900,color:'white',cursor:'pointer',fontFamily:'inherit'}}>
+            {loading?'…':'Join'}
+          </button>
+          <button onClick={()=>setMode('view')} style={{background:'rgba(255,255,255,0.07)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:11,fontWeight:800,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}>✕</button>
+        </div>
+      )}
+      {msg&&<div style={{marginTop:8,fontSize:11,fontWeight:700,color:msg.startsWith('Created')||msg.startsWith('Joined')?'#22c55e':'#ef4444'}}>{msg}</div>}
+      {activeCode&&(
+        <div style={{marginTop:10,background:'rgba(34,197,94,0.06)',border:'1px solid rgba(34,197,94,0.15)',borderRadius:8,padding:'7px 10px',fontSize:10,color:'rgba(34,197,94,0.7)',lineHeight:1.5}}>
+          ✓ Leaderboards show a Global / Club toggle while you're in a club.
         </div>
       )}
     </div>
@@ -4860,6 +4849,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 }){
   const [mode,setMode] = useState<'solo'|'multiplayer'>('solo')
   const [hcpExpanded, setHcpExpanded] = useState(false)
+  const [clubExpanded, setClubExpanded] = useState(false)
   const [globalRank, setGlobalRank]   = useState<number|null>(null)
   const [selectedTournament, setSelectedTournament] = useState(TOURNAMENTS[0].id)
   const today = new Date().toISOString().slice(0,10)
@@ -4900,10 +4890,10 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       {/* Handicap + Club cards — side by side */}
       <div style={{width:'100%',maxWidth:320,display:'flex',gap:8}}>
         <div style={{flex:1,minWidth:0}}>
-          <HandicapCard globalRank={globalRank} expanded={hcpExpanded} onToggle={()=>setHcpExpanded(v=>!v)} />
+          <HandicapCard globalRank={globalRank} expanded={hcpExpanded} onToggle={()=>{setHcpExpanded(v=>!v);setClubExpanded(false)}} />
         </div>
         <div style={{flex:1,minWidth:0}}>
-          <ClubSection onViewLobby={onViewLobby} />
+          <ClubSection onViewLobby={onViewLobby} expanded={clubExpanded} onToggle={()=>{setClubExpanded(v=>!v);setHcpExpanded(false)}} />
         </div>
       </div>
 
@@ -4913,6 +4903,9 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         const rounds:GolfRound[] = typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')?? '[]'):[]
         return <HandicapExpandedContent hcp={hcp} roundCount={rounds.length} />
       })()}
+
+      {/* Club expanded content — full width, below the row */}
+      {clubExpanded&&<ClubExpandedPanel onViewLobby={onViewLobby} />}
 
       {/* Tournament card */}
       {(()=>{
