@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 const LINKS = [
   { label: 'Games',                href: '/' },
   { label: 'Football Golf',        href: '/football-golf' },
+  { label: 'Perfect 10',           href: '/perfect10' },
   { label: 'Minimise',             href: '/minimise' },
   { label: 'Around the World',     href: '/around-the-world' },
   { label: 'Bingo',                href: '/bingo' },
