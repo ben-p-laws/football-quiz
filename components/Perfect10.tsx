@@ -372,7 +372,7 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
       const block = val >= 95 ? '🟩' : val >= 85 ? '🟨' : val >= 75 ? '🟧' : '🟥'
       return `${block} ${cat.short} ${val}`
     }).join('\n')
-    return `Perfect 10 ${scoreEmoji} ${totalScore}/1000\n\n${lines}\n\ntopbins.com/perfect10\n\n#Football #Perfect10 #WorldCup2026`
+    return `Perfect 10 ${scoreEmoji} ${totalScore}/1000\n\n${lines}\n\ntopbinsfooty.com/perfect10\n\n#Football #Perfect10 #WorldCup2026`
   }
 
   function handleShare() {
