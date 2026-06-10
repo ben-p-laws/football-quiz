@@ -367,11 +367,12 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
 
   function buildShareText() {
     const scoreEmoji = totalScore >= 950 ? '🔥' : totalScore >= 900 ? '👍' : totalScore >= 850 ? '😐' : totalScore >= 800 ? '😬' : '💩'
-    const lines = CATEGORIES.map((cat, i) => {
+    const entries = CATEGORIES.map((cat, i) => {
       const val = assignments[i]?.[cat.key] ?? 0
       const block = val >= 95 ? '🟩' : val >= 85 ? '🟨' : val >= 75 ? '🟧' : '🟥'
       return `${block} ${cat.short} ${val}`
-    }).join('\n')
+    })
+    const lines = Array.from({ length: 5 }, (_, i) => `${entries[i * 2]}  ${entries[i * 2 + 1]}`).join('\n')
     return `Perfect 10 ${scoreEmoji} ${totalScore}/1000\n\n${lines}\n\ntopbinsfooty.com/perfect10\n\n#Football #Perfect10 #WorldCup2026`
   }
 
