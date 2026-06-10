@@ -32,19 +32,25 @@ const BG_POLY  = VERTICES.map(v => `${v.x},${v.y}`).join(' ')
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function scoreColor(val: number) {
-  if (val >= 90) return '#22c55e'
-  if (val >= 75) return '#84cc16'
-  if (val >= 60) return '#eab308'
-  if (val >= 45) return '#f97316'
-  return '#ef4444'
+  if (val >= 95) return '#22c55e'   // green
+  if (val >= 90) return '#16a34a'   // dark green
+  if (val >= 85) return '#eab308'   // yellow
+  if (val >= 80) return '#ca8a04'   // dark yellow
+  if (val >= 75) return '#f97316'   // orange
+  if (val >= 70) return '#ea580c'   // dark orange
+  if (val >= 65) return '#ef4444'   // red
+  return '#b91c1c'                  // dark red
 }
 
 function scoreColorRGB(val: number) {
-  if (val >= 90) return '34,197,94'
-  if (val >= 75) return '132,204,22'
-  if (val >= 60) return '234,179,8'
-  if (val >= 45) return '249,115,22'
-  return '239,68,68'
+  if (val >= 95) return '34,197,94'
+  if (val >= 90) return '22,163,74'
+  if (val >= 85) return '234,179,8'
+  if (val >= 80) return '202,138,4'
+  if (val >= 75) return '249,115,22'
+  if (val >= 70) return '234,88,12'
+  if (val >= 65) return '239,68,68'
+  return '185,28,28'
 }
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -236,10 +242,10 @@ function LobbyScreen({ leaderboard, loading, onPlay }: {
       <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, padding: '14px 18px', maxWidth: 360, width: '100%' }}>
         <div style={{ fontSize: 10, fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 12 }}>How to play</div>
         {[
-          ['🎰', 'Hit Spin — a random player is revealed'],
+          ['🎰', 'Hit Spin: a random player is revealed'],
           ['📍', 'Tap a category on the polygon to assign them'],
           ['🔁', 'Repeat for all 10 players'],
-          ['🏆', 'Scores revealed at the end — no take-backs!'],
+          ['🏆', 'Scores revealed at the end. No take-backs!'],
         ].map(([icon, text], i) => (
           <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 3 ? 9 : 0 }}>
             <div style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>{icon}</div>
@@ -302,7 +308,7 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
   const [copied, setCopied] = useState(false)
 
   function buildShareText() {
-    const scoreEmoji = totalScore >= 950 ? '🔥' : totalScore >= 900 ? '⭐' : totalScore >= 800 ? '💪' : totalScore >= 700 ? '👍' : '⚽'
+    const scoreEmoji = totalScore >= 950 ? '🔥' : totalScore >= 900 ? '👍' : totalScore >= 850 ? '😐' : totalScore >= 800 ? '😬' : '💩'
     const bars = CATEGORIES.map((cat, i) => {
       const p = assignments[i]
       const val = p ? p[cat.key] : 0
@@ -340,12 +346,12 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
           {(done || revealing) ? (
             done ? (
               <>
-                <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-1.5px', color: totalScore >= 900 ? '#22c55e' : totalScore >= 750 ? '#eab308' : 'white', lineHeight: 1 }}>
+                <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-1.5px', color: totalScore >= 950 ? '#22c55e' : totalScore >= 900 ? '#16a34a' : totalScore >= 850 ? '#eab308' : totalScore >= 800 ? '#ca8a04' : totalScore >= 750 ? '#f97316' : totalScore >= 700 ? '#ea580c' : totalScore >= 650 ? '#ef4444' : '#b91c1c', lineHeight: 1 }}>
                   {totalScore}
                   <span style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginLeft: 4 }}>/1000</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
-                  {totalScore >= 950 ? '🔥 Incredible!' : totalScore >= 900 ? '⭐ Excellent!' : totalScore >= 800 ? '💪 Great score!' : totalScore >= 700 ? '👍 Solid!' : 'Keep practising!'}
+                  {totalScore >= 950 ? 'Great' : totalScore >= 900 ? 'Good' : totalScore >= 850 ? 'Not bad' : totalScore >= 800 ? 'OK' : 'Stinker'}
                 </div>
               </>
             ) : (
