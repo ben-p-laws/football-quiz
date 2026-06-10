@@ -62,8 +62,11 @@ type LeaderboardRow = { id: string; display_name: string; score: number }
 
 export default function Perfect10() {
   const [phase, setPhase]               = useState<Phase>('lobby')
-  const [playerName, setPlayerName]     = useState('')
+  const [playerName, setPlayerName]     = useState(() =>
+    typeof window !== 'undefined' ? (localStorage.getItem('perfect10_name') ?? '') : ''
+  )
   const [leaderboard, setLeaderboard]   = useState<LeaderboardRow[]>([])
+  const [userBest, setUserBest]         = useState<{ rank: number; row: LeaderboardRow } | null>(null)
   const [loadingLb, setLoadingLb]       = useState(false)
 
   // Game state
@@ -86,14 +89,29 @@ export default function Perfect10() {
     if (phase === 'lobby' || phase === 'done') fetchLeaderboard()
   }, [phase])
 
-  async function fetchLeaderboard() {
+  async function fetchLeaderboard(name?: string) {
     setLoadingLb(true)
     const { data } = await supabase
       .from('perfect10_scores')
       .select('id, display_name, score')
       .order('score', { ascending: false })
-      .limit(10)
-    if (data) setLeaderboard(data as LeaderboardRow[])
+      .limit(1000)
+    if (data) {
+      const seen = new Set<string>()
+      const deduped = (data as LeaderboardRow[]).filter(row => {
+        if (seen.has(row.display_name)) return false
+        seen.add(row.display_name)
+        return true
+      })
+      setLeaderboard(deduped.slice(0, 20))
+
+      const lookup = (name ?? playerName).trim().toLowerCase()
+      if (lookup) {
+        const idx = deduped.findIndex(r => r.display_name.toLowerCase() === lookup)
+        if (idx >= 20) setUserBest({ rank: idx + 1, row: deduped[idx] })
+        else setUserBest(null)
+      }
+    }
     setLoadingLb(false)
   }
 
@@ -186,16 +204,18 @@ export default function Perfect10() {
         score: p ? p[CATEGORY_KEYS[i]] : 0,
       })),
     })
+    const name = playerName.trim()
+    localStorage.setItem('perfect10_name', name)
     setSubmitted(true)
     setSubmitting(false)
-    fetchLeaderboard()
+    fetchLeaderboard(name)
   }
 
   // ── Route to screens ──────────────────────────────────────────────────────
 
   if (phase === 'lobby') return (
     <><NavBar />
-      <LobbyScreen leaderboard={leaderboard} loading={loadingLb} onPlay={startGame} />
+      <LobbyScreen leaderboard={leaderboard} userBest={userBest} loading={loadingLb} onPlay={startGame} />
     </>
   )
 
@@ -212,17 +232,65 @@ export default function Perfect10() {
         revealing={phase === 'reveal'}
         playerName={playerName} onNameChange={setPlayerName}
         submitted={submitted} submitting={submitting}
-        onSubmit={submitScore} leaderboard={leaderboard}
+        onSubmit={submitScore} leaderboard={leaderboard} userBest={userBest}
         loadingLb={loadingLb} onPlayAgain={startGame}
       />
     </>
   )
 }
 
+// ── Shared leaderboard list ───────────────────────────────────────────────────
+
+function LeaderboardList({ leaderboard, userBest, loading }: {
+  leaderboard: LeaderboardRow[]
+  userBest?: { rank: number; row: LeaderboardRow } | null
+  loading: boolean
+}) {
+  const rankColor = (i: number) => i === 0 ? '#fbbf24' : i === 1 ? '#9ca3af' : i === 2 ? '#cd7c2f' : '#4a5568'
+  const rowStyle = (highlight: boolean): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', padding: '8px 11px',
+    background: highlight ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)',
+    border: `1px solid ${highlight ? 'rgba(220,38,38,0.25)' : '#1e2d4a'}`,
+    borderRadius: 8, marginBottom: 5,
+  })
+
+  return (
+    <>
+      <div style={{ fontSize: 10, fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Top Scores</div>
+      {loading ? (
+        <div style={{ fontSize: 13, color: '#4a5568', textAlign: 'center', padding: '14px 0' }}>Loading…</div>
+      ) : leaderboard.length === 0 ? (
+        <div style={{ fontSize: 13, color: '#4a5568', textAlign: 'center', padding: '14px 0' }}>No scores yet — be the first!</div>
+      ) : (
+        <>
+          {leaderboard.map((row, i) => (
+            <div key={row.id} style={rowStyle(i === 0)}>
+              <div style={{ width: 32, fontSize: 11, fontWeight: 800, color: rankColor(i), flexShrink: 0 }}>#{i + 1}</div>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'white' }}>{row.display_name}</div>
+              <div style={{ fontSize: 14, fontWeight: 900, color: i === 0 ? '#dc2626' : 'white' }}>{row.score}</div>
+            </div>
+          ))}
+          {userBest && (
+            <>
+              <div style={{ textAlign: 'center', fontSize: 10, color: '#2a3d5e', margin: '6px 0 5px', letterSpacing: '0.05em' }}>· · ·</div>
+              <div style={rowStyle(false)}>
+                <div style={{ width: 32, fontSize: 11, fontWeight: 800, color: '#4a5568', flexShrink: 0 }}>#{userBest.rank}</div>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{userBest.row.display_name}</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: 'rgba(255,255,255,0.6)' }}>{userBest.row.score}</div>
+              </div>
+            </>
+          )}
+        </>
+      )}
+    </>
+  )
+}
+
 // ── Lobby ─────────────────────────────────────────────────────────────────────
 
-function LobbyScreen({ leaderboard, loading, onPlay }: {
+function LobbyScreen({ leaderboard, userBest, loading, onPlay }: {
   leaderboard: LeaderboardRow[]
+  userBest: { rank: number; row: LeaderboardRow } | null
   loading: boolean
   onPlay: () => void
 }) {
@@ -262,18 +330,7 @@ function LobbyScreen({ leaderboard, loading, onPlay }: {
       </button>
 
       <div style={{ width: '100%', maxWidth: 360 }}>
-        <div style={{ fontSize: 10, fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Top Scores</div>
-        {loading ? (
-          <div style={{ fontSize: 13, color: '#4a5568', textAlign: 'center', padding: '14px 0' }}>Loading…</div>
-        ) : leaderboard.length === 0 ? (
-          <div style={{ fontSize: 13, color: '#4a5568', textAlign: 'center', padding: '14px 0' }}>No scores yet — be the first!</div>
-        ) : leaderboard.map((row, i) => (
-          <div key={row.id} style={{ display: 'flex', alignItems: 'center', padding: '9px 12px', background: i === 0 ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)', border: `1px solid ${i === 0 ? 'rgba(220,38,38,0.25)' : '#1e2d4a'}`, borderRadius: 8, marginBottom: 6 }}>
-            <div style={{ width: 24, fontSize: 11, fontWeight: 800, color: i < 3 ? ['#fbbf24','#9ca3af','#cd7c2f'][i] : '#4a5568' }}>#{i + 1}</div>
-            <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'white' }}>{row.display_name}</div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: i === 0 ? '#dc2626' : 'white' }}>{row.score}</div>
-          </div>
-        ))}
+        <LeaderboardList leaderboard={leaderboard} userBest={userBest} loading={loading} />
       </div>
     </div>
   )
@@ -281,7 +338,7 @@ function LobbyScreen({ leaderboard, loading, onPlay }: {
 
 // ── Game screen ───────────────────────────────────────────────────────────────
 
-function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onSpin, onAssign, suppressSpinButton, revealStep = -1, totalScore = 0, done = false, revealing = false, playerName = '', onNameChange, submitted = false, submitting = false, onSubmit, leaderboard = [], loadingLb = false, onPlayAgain }: {
+function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onSpin, onAssign, suppressSpinButton, revealStep = -1, totalScore = 0, done = false, revealing = false, playerName = '', onNameChange, submitted = false, submitting = false, onSubmit, leaderboard = [], userBest = null, loadingLb = false, onPlayAgain }: {
   round: number
   spinning: boolean
   spinText: string
@@ -300,6 +357,7 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
   submitting?: boolean
   onSubmit?: () => void
   leaderboard?: LeaderboardRow[]
+  userBest?: { rank: number; row: LeaderboardRow } | null
   loadingLb?: boolean
   onPlayAgain?: () => void
 }) {
@@ -451,16 +509,7 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
                 </div>
 
                 <div style={{ marginTop: 18 }}>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>Top Scores</div>
-                  {loadingLb ? (
-                    <div style={{ fontSize: 13, color: '#4a5568', textAlign: 'center' }}>Loading…</div>
-                  ) : leaderboard.map((row, i) => (
-                    <div key={row.id} style={{ display: 'flex', alignItems: 'center', padding: '8px 11px', background: 'rgba(255,255,255,0.02)', border: '1px solid #1e2d4a', borderRadius: 7, marginBottom: 5 }}>
-                      <div style={{ width: 24, fontSize: 11, fontWeight: 800, color: i < 3 ? ['#fbbf24','#9ca3af','#cd7c2f'][i] : '#4a5568' }}>#{i + 1}</div>
-                      <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'white' }}>{row.display_name}</div>
-                      <div style={{ fontSize: 14, fontWeight: 900, color: i === 0 ? '#dc2626' : 'white' }}>{row.score}</div>
-                    </div>
-                  ))}
+                  <LeaderboardList leaderboard={leaderboard} userBest={userBest} loading={loadingLb} />
                 </div>
               </div>
             )}
