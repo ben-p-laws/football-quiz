@@ -5,7 +5,12 @@ export const metadata: Metadata = {
   title: "Perfect 10 — Top Bins",
   openGraph: {
     title: "Perfect 10 — Top Bins",
-    description: "Spin 10 players. Assign each to a category. Chase the perfect 1000.",
+    description: "Can you draft the perfect player?",
+    images: [{ url: '/api/perfect10-og', width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/api/perfect10-og'],
   },
 }
 
