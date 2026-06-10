@@ -372,7 +372,14 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
       const block = val >= 95 ? '🟩' : val >= 85 ? '🟨' : val >= 75 ? '🟧' : '🟥'
       return `${block} ${cat.short} ${val}`
     })
-    const lines = Array.from({ length: 5 }, (_, i) => `${entries[i * 2]}  ${entries[i * 2 + 1]}`).join('\n')
+    // Emoji are 2 JS chars but 1 visual char wide — subtract 1 per entry to get visual length
+    const visualLen = (s: string) => [...s].length - (s.match(/\p{Emoji}/gu)?.length ?? 0)
+    const maxLeft = Math.max(...Array.from({ length: 5 }, (_, i) => visualLen(entries[i * 2])))
+    const lines = Array.from({ length: 5 }, (_, i) => {
+      const left = entries[i * 2]
+      const pad = ' '.repeat(maxLeft - visualLen(left) + 2)
+      return `${left}${pad}${entries[i * 2 + 1]}`
+    }).join('\n')
     return `Perfect 10 ${scoreEmoji} ${totalScore}/1000\n\n${lines}\n\ntopbinsfooty.com/perfect10\n\n#Football #Perfect10 #WorldCup2026`
   }
 
