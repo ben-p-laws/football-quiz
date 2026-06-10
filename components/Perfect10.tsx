@@ -245,7 +245,7 @@ function LobbyScreen({ leaderboard, loading, onPlay }: {
           ['🎰', 'Hit Spin: a random player is revealed'],
           ['📍', 'Tap a category on the polygon to assign them'],
           ['🔁', 'Repeat for all 10 players'],
-          ['🏆', 'Scores revealed at the end. No take-backs!'],
+          ['🏆', 'Scores revealed at the end and your position in the global leaderboard'],
         ].map(([icon, text], i) => (
           <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 3 ? 9 : 0 }}>
             <div style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>{icon}</div>
@@ -339,6 +339,15 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
               <div key={i} style={{ width: 16, height: 3, borderRadius: 2, background: i < filled ? '#dc2626' : '#1e2d4a' }} />
             ))}
           </div>
+          <div style={{ flex: 1 }} />
+          {inGame && (
+            <button
+              onClick={onPlayAgain}
+              style={{ background: 'transparent', border: '1px solid #1e2d4a', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: '#4a5568', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Restart
+            </button>
+          )}
         </div>
 
         {/* Score header / tap-to-assign — same slot, swaps between game and results */}
