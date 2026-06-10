@@ -367,13 +367,11 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
 
   function buildShareText() {
     const scoreEmoji = totalScore >= 950 ? '🔥' : totalScore >= 900 ? '👍' : totalScore >= 850 ? '😐' : totalScore >= 800 ? '😬' : '💩'
-    const bars = CATEGORIES.map((cat, i) => {
-      const p = assignments[i]
-      const val = p ? p[cat.key] : 0
-      const block = val >= 90 ? '🟩' : val >= 75 ? '🟨' : val >= 60 ? '🟧' : '🟥'
-      return `${block} ${cat.short}: ${p ? p.name : '—'} (${val})`
-    }).join('\n')
-    return `Perfect 10 ${scoreEmoji} ${totalScore}/1000\n\n${bars}\n\ntopbins.com/perfect10`
+    const blocks = CATEGORIES.map((cat, i) => {
+      const val = assignments[i]?.[cat.key] ?? 0
+      return val >= 95 ? '🟩' : val >= 85 ? '🟨' : val >= 75 ? '🟧' : '🟥'
+    }).join('')
+    return `Perfect 10 ${scoreEmoji} ${totalScore}/1000\n\n${blocks}\n\ntopbins.com/perfect10`
   }
 
   function handleShare() {
