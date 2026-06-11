@@ -249,8 +249,8 @@ function LeaderboardList({ leaderboard, userBest, loading }: {
   const rankColor = (i: number) => i === 0 ? '#fbbf24' : i === 1 ? '#9ca3af' : i === 2 ? '#cd7c2f' : '#4a5568'
   const rowStyle = (highlight: boolean): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', padding: '8px 11px',
-    background: highlight ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.02)',
-    border: `1px solid ${highlight ? 'rgba(245,158,11,0.25)' : '#1e2d4a'}`,
+    background: highlight ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)',
+    border: `1px solid ${highlight ? 'rgba(220,38,38,0.25)' : '#1e2d4a'}`,
     borderRadius: 8, marginBottom: 5,
   })
 
@@ -275,8 +275,8 @@ function LeaderboardList({ leaderboard, userBest, loading }: {
               <div style={{ textAlign: 'center', fontSize: 10, color: '#2a3d5e', margin: '6px 0 5px', letterSpacing: '0.05em' }}>· · ·</div>
               <div style={rowStyle(false)}>
                 <div style={{ width: 32, fontSize: 11, fontWeight: 800, color: '#4a5568', flexShrink: 0 }}>#{userBest.rank}</div>
-                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgba(245,158,11,0.6)' }}>{userBest.row.display_name}</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: 'rgba(245,158,11,0.6)' }}>{userBest.row.score}</div>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{userBest.row.display_name}</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: 'rgba(255,255,255,0.6)' }}>{userBest.row.score}</div>
               </div>
             </>
           )}
@@ -302,8 +302,8 @@ function LobbyScreen({ leaderboard, userBest, loading, onPlay }: {
         <div style={{ fontSize: 38, fontWeight: 900, color: 'white', letterSpacing: '-1.5px', lineHeight: 1 }}>
           Perfect <span style={{ color: '#dc2626' }}>10</span>
         </div>
-        <div style={{ fontSize: 14, color: 'rgba(245,158,11,0.45)', marginTop: 10, maxWidth: 300, lineHeight: 1.6 }}>
-          Spin the slot machine. Assign each player to a category.<br />Max score: <strong style={{ color: 'white' }}>1000</strong>. Chase perfection.
+        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginTop: 10, maxWidth: 300, lineHeight: 1.6 }}>
+          Can you draft the ultimate footballer?<br />Max score: <strong style={{ color: 'white' }}>1000</strong>. Chase perfection.
         </div>
       </div>
 
@@ -317,7 +317,7 @@ function LobbyScreen({ leaderboard, userBest, loading, onPlay }: {
         ].map(([icon, text], i) => (
           <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 3 ? 9 : 0 }}>
             <div style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>{icon}</div>
-            <div style={{ fontSize: 13, color: 'rgba(245,158,11,0.65)', lineHeight: 1.5 }}>{text}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>{text}</div>
           </div>
         ))}
       </div>
@@ -398,7 +398,7 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
 
         {/* Progress bar — hidden during reveal/done but kept in layout */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(245,158,11,0.4)', opacity: inGame ? 1 : 0, transition: 'opacity 0.3s' }}>Player {filled + 1} / 10</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)', opacity: inGame ? 1 : 0, transition: 'opacity 0.3s' }}>Player {filled + 1} / 10</div>
           <div style={{ display: 'flex', gap: 3, opacity: inGame ? 1 : 0, transition: 'opacity 0.3s' }}>
             {Array.from({ length: 10 }, (_, i) => (
               <div key={i} style={{ width: 16, height: 3, borderRadius: 2, background: i < filled ? '#dc2626' : '#1e2d4a' }} />
@@ -427,7 +427,7 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
                 </div>
               </>
             ) : (
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(245,158,11,0.4)', paddingTop: 10 }}>Revealing…</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', paddingTop: 10 }}>Revealing…</div>
             )
           ) : (
             <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: 10, opacity: currentPlayer ? 1 : 0, transition: 'opacity 0.2s' }}>
