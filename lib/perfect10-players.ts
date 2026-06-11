@@ -125,7 +125,7 @@ const RAW: [string, string, ...number[]][] = [
   ['didier_drogba', 'Didier Drogba', 68,85,90,93,80,95,72,55,48,88],
   ['michael_essien', 'Michael Essien', 70,82,70,72,82,85,72,75,94,98],
   ['claude_makelele', 'Claude Makélélé', 65,72,48,60,72,72,62,60,99,91],
-  ['rio_ferdinand', 'Rio Ferdinand', 72,78,45,94,80,78,68,78,90,78],
+  ['rio_ferdinand', 'Rio Ferdinand', 72,78,45,94,80,89,68,78,90,78],
   ['john_terry', 'John Terry', 65,72,45,96,65,88,55,65,93,82],
   ['nemanja_vidic', 'Nemanja Vidić', 60,72,45,93,70,92,50,58,97,82],
   ['luis_suarez', 'Luis Suárez', 70,94,92,78,85,75,90,72,42,88],
