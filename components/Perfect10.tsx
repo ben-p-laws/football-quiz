@@ -189,7 +189,7 @@ export default function Perfect10() {
 
   const totalScore = assignments.reduce((sum, p, i) => {
     if (!p) return sum
-    return sum + p[CATEGORY_KEYS[i]]
+    return sum + p[CATEGORIES[i].key]
   }, 0)
 
   async function submitScore() {
@@ -199,9 +199,9 @@ export default function Perfect10() {
       display_name: playerName.trim(),
       score: totalScore,
       assignments: assignments.map((p, i) => ({
-        category: CATEGORY_KEYS[i],
+        category: CATEGORIES[i].key,
         player: p?.name ?? null,
-        score: p ? p[CATEGORY_KEYS[i]] : 0,
+        score: p ? p[CATEGORIES[i].key] : 0,
       })),
     })
     const name = playerName.trim()
@@ -249,8 +249,8 @@ function LeaderboardList({ leaderboard, userBest, loading }: {
   const rankColor = (i: number) => i === 0 ? '#fbbf24' : i === 1 ? '#9ca3af' : i === 2 ? '#cd7c2f' : '#4a5568'
   const rowStyle = (highlight: boolean): React.CSSProperties => ({
     display: 'flex', alignItems: 'center', padding: '8px 11px',
-    background: highlight ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)',
-    border: `1px solid ${highlight ? 'rgba(220,38,38,0.25)' : '#1e2d4a'}`,
+    background: highlight ? 'rgba(245,158,11,0.08)' : 'rgba(245,158,11,0.02)',
+    border: `1px solid ${highlight ? 'rgba(245,158,11,0.25)' : '#1e2d4a'}`,
     borderRadius: 8, marginBottom: 5,
   })
 
@@ -275,8 +275,8 @@ function LeaderboardList({ leaderboard, userBest, loading }: {
               <div style={{ textAlign: 'center', fontSize: 10, color: '#2a3d5e', margin: '6px 0 5px', letterSpacing: '0.05em' }}>· · ·</div>
               <div style={rowStyle(false)}>
                 <div style={{ width: 32, fontSize: 11, fontWeight: 800, color: '#4a5568', flexShrink: 0 }}>#{userBest.rank}</div>
-                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{userBest.row.display_name}</div>
-                <div style={{ fontSize: 14, fontWeight: 900, color: 'rgba(255,255,255,0.6)' }}>{userBest.row.score}</div>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'rgba(245,158,11,0.6)' }}>{userBest.row.display_name}</div>
+                <div style={{ fontSize: 14, fontWeight: 900, color: 'rgba(245,158,11,0.6)' }}>{userBest.row.score}</div>
               </div>
             </>
           )}
@@ -302,7 +302,7 @@ function LobbyScreen({ leaderboard, userBest, loading, onPlay }: {
         <div style={{ fontSize: 38, fontWeight: 900, color: 'white', letterSpacing: '-1.5px', lineHeight: 1 }}>
           Perfect <span style={{ color: '#dc2626' }}>10</span>
         </div>
-        <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginTop: 10, maxWidth: 300, lineHeight: 1.6 }}>
+        <div style={{ fontSize: 14, color: 'rgba(245,158,11,0.45)', marginTop: 10, maxWidth: 300, lineHeight: 1.6 }}>
           Spin the slot machine. Assign each player to a category.<br />Max score: <strong style={{ color: 'white' }}>1000</strong>. Chase perfection.
         </div>
       </div>
@@ -317,7 +317,7 @@ function LobbyScreen({ leaderboard, userBest, loading, onPlay }: {
         ].map(([icon, text], i) => (
           <div key={i} style={{ display: 'flex', gap: 10, marginBottom: i < 3 ? 9 : 0 }}>
             <div style={{ fontSize: 15, lineHeight: 1.5, flexShrink: 0 }}>{icon}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>{text}</div>
+            <div style={{ fontSize: 13, color: 'rgba(245,158,11,0.65)', lineHeight: 1.5 }}>{text}</div>
           </div>
         ))}
       </div>
@@ -397,22 +397,20 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
       <div style={{ maxWidth: 560, margin: '0 auto', width: '100%', padding: '20px 20px 32px', display: 'flex', flexDirection: 'column', gap: 0 }}>
 
         {/* Progress bar — hidden during reveal/done but kept in layout */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, opacity: inGame ? 1 : 0, transition: 'opacity 0.3s' }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.4)' }}>Player {filled + 1} / 10</div>
-          <div style={{ display: 'flex', gap: 3 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(245,158,11,0.4)', opacity: inGame ? 1 : 0, transition: 'opacity 0.3s' }}>Player {filled + 1} / 10</div>
+          <div style={{ display: 'flex', gap: 3, opacity: inGame ? 1 : 0, transition: 'opacity 0.3s' }}>
             {Array.from({ length: 10 }, (_, i) => (
               <div key={i} style={{ width: 16, height: 3, borderRadius: 2, background: i < filled ? '#dc2626' : '#1e2d4a' }} />
             ))}
           </div>
           <div style={{ flex: 1 }} />
-          {inGame && (
-            <button
-              onClick={onPlayAgain}
-              style={{ background: 'transparent', border: '1px solid #1e2d4a', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: '#4a5568', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              Restart
-            </button>
-          )}
+          <button
+            onClick={onPlayAgain}
+            style={{ background: 'transparent', border: '1px solid #1e2d4a', borderRadius: 6, padding: '3px 10px', fontSize: 11, fontWeight: 700, color: '#4a5568', cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Restart
+          </button>
         </div>
 
         {/* Score header / tap-to-assign — same slot, swaps between game and results */}
@@ -422,14 +420,14 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
               <>
                 <div style={{ fontSize: 36, fontWeight: 900, letterSpacing: '-1.5px', color: totalScore >= 950 ? '#22c55e' : totalScore >= 900 ? '#16a34a' : totalScore >= 850 ? '#eab308' : totalScore >= 800 ? '#ca8a04' : totalScore >= 750 ? '#f97316' : totalScore >= 700 ? '#ea580c' : totalScore >= 650 ? '#ef4444' : '#b91c1c', lineHeight: 1 }}>
                   {totalScore}
-                  <span style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginLeft: 4 }}>/1000</span>
+                  <span style={{ fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.25)', marginLeft: 4 }}>/1000</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>
                   {totalScore >= 950 ? 'Great' : totalScore >= 900 ? 'Good' : totalScore >= 850 ? 'Not bad' : totalScore >= 800 ? 'OK' : 'Stinker'}
                 </div>
               </>
             ) : (
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', paddingTop: 10 }}>Revealing…</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(245,158,11,0.4)', paddingTop: 10 }}>Revealing…</div>
             )
           ) : (
             <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.1em', paddingTop: 10, opacity: currentPlayer ? 1 : 0, transition: 'opacity 0.2s' }}>
@@ -497,19 +495,19 @@ function GameScreen({ round, spinning, spinText, currentPlayer, assignments, onS
                     </button>
                   </div>
                 ) : (
-                  <div style={{ fontSize: 13, color: '#22c55e', textAlign: 'center', padding: '6px 0' }}>Score submitted! ✓</div>
+                  <div style={{ fontSize: 13, color: '#dc2626', textAlign: 'center', padding: '6px 0' }}>Score submitted! ✓</div>
                 )}
 
                 <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                   <button
                     onClick={handleShare}
-                    style={{ flex: 1, background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)', border: `1px solid ${copied ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, borderRadius: 10, padding: '11px', fontSize: 14, fontWeight: 700, color: copied ? '#22c55e' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}
+                    style={{ flex: 1, background: copied ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)', border: `1px solid ${copied ? 'rgba(34,197,94,0.5)' : 'rgba(34,197,94,0.3)'}`, borderRadius: 10, padding: '11px', fontSize: 14, fontWeight: 700, color: copied ? '#22c55e' : '#22c55e', cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}
                   >
                     {copied ? 'Copied! ✓' : '🔗 Share'}
                   </button>
                   <button
                     onClick={onPlayAgain}
-                    style={{ flex: 1, background: 'transparent', border: '1px solid #1e2d4a', borderRadius: 10, padding: '11px', fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: 10, padding: '11px', fontSize: 14, fontWeight: 700, color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     Play Again
                   </button>
@@ -550,6 +548,21 @@ function DecagonBoard({ assignments, currentPlayer, onAssign, revealStep, spinni
           <line key={i} x1={CX} y1={CY} x2={v.x} y2={v.y} stroke="#111827" strokeWidth="1" />
         ))}
 
+        {/* Outer decagon */}
+        <polygon points={BG_POLY} fill="none" stroke="#1e2d4a" strokeWidth="1.5" />
+
+        {/* Corner dots */}
+        {CATEGORIES.map((cat, i) => {
+          const { x, y } = vertexXY(i, R_POLY)
+          const p = assignments[i]
+          const revealed = revealStep >= i && revealStep >= 0
+          const canAssign = !!currentPlayer && !assignments.every(Boolean)
+          const clickable = canAssign && !p
+          if (revealed) return null
+          const dotColor = p ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.8)'
+          return <circle key={i} cx={x} cy={y} r={3} fill={dotColor} stroke="none" />
+        })}
+
         {/* Growing score polygon — unrevealed vertices collapse to centre */}
         {revealStep >= 0 && (() => {
           const pts = CATEGORIES.map((cat, i) => {
@@ -578,9 +591,6 @@ function DecagonBoard({ assignments, currentPlayer, onAssign, revealStep, spinni
           const { x, y } = vertexXY(i, r)
           return <circle key={i} cx={x} cy={y} r={3.5} fill={scoreColor(p[cat.key])} stroke="#0a0f1e" strokeWidth="1.5" />
         })}
-
-        {/* Outer decagon */}
-        <polygon points={BG_POLY} fill="none" stroke="#1e2d4a" strokeWidth="1.5" />
       </svg>
 
       {/* Category labels at corners */}
@@ -593,12 +603,24 @@ function DecagonBoard({ assignments, currentPlayer, onAssign, revealStep, spinni
         const revealed  = revealStep >= i && revealStep >= 0
         const score     = p && revealed ? p[cat.key] : null
 
-        // colours: revealed=score colour, assigned=blue, clickable=red, empty=neutral
         const scoreCol = revealed && p ? scoreColor(p[cat.key]) : null
         const scoreRGB = revealed && p ? scoreColorRGB(p[cat.key]) : null
-        const bg     = scoreRGB ? `rgba(${scoreRGB},0.12)` : p ? 'rgba(59,130,246,0.12)' : clickable ? 'rgba(220,38,38,0.12)' : 'rgba(255,255,255,0.04)'
-        const border = scoreRGB ? `rgba(${scoreRGB},0.4)`  : p ? 'rgba(59,130,246,0.4)'  : clickable ? 'rgba(220,38,38,0.4)'  : '#1e2d4a'
-        const color  = scoreCol ?? (p ? '#60a5fa' : clickable ? '#f87171' : '#4a5568')
+        const empty = !p && !revealed
+        const glow = scoreRGB
+          ? `0 0 14px rgba(${scoreRGB},0.55), 0 0 4px rgba(${scoreRGB},0.3)`
+          : p
+          ? 'none'
+          : '0 0 10px rgba(255,255,255,0.4), 0 0 4px rgba(255,255,255,0.2)'
+        const borderCol = scoreRGB
+          ? `rgba(${scoreRGB},0.45)`
+          : p
+          ? 'rgba(255,255,255,0.1)'
+          : 'rgba(255,255,255,0.35)'
+        const labelColor = scoreCol
+          ? scoreCol
+          : p
+          ? 'rgba(255,255,255,0.35)'
+          : 'rgba(255,255,255,0.9)'
 
         return (
           <div
@@ -610,25 +632,28 @@ function DecagonBoard({ assignments, currentPlayer, onAssign, revealStep, spinni
               transform: 'translate(-50%, -50%)',
               textAlign: 'center',
               cursor: clickable ? 'pointer' : 'default',
-              padding: '3px 6px',
-              borderRadius: 6,
-              background: bg,
-              border: `1px solid ${border}`,
+              padding: '4px 7px',
+              borderRadius: 8,
+              background: 'rgba(255,255,255,0.04)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: `1px solid ${borderCol}`,
+              boxShadow: glow,
               minWidth: 60,
               maxWidth: 72,
-              transition: 'background 0.15s, border-color 0.15s',
+              transition: 'box-shadow 0.3s, border-color 0.3s, background 0.3s',
               zIndex: 10,
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 800, color, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.2 }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: labelColor, textTransform: 'uppercase', letterSpacing: '0.04em', lineHeight: 1.2 }}>
               {cat.label}
             </div>
             {p ? (
-              <div style={{ fontSize: 10, fontWeight: 700, color: scoreCol ? `rgba(${scoreRGB},0.8)` : 'rgba(96,165,250,0.7)', maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: scoreCol ? scoreCol : 'rgba(255,255,255,0.3)', maxWidth: 68, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {score !== null ? String(score) : p.name.split(' ').slice(-1)[0]}
               </div>
             ) : (
-              <div style={{ fontSize: 9, color: clickable ? 'rgba(220,38,38,0.5)' : '#2a3d5e' }}>—</div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)' }}>—</div>
             )}
           </div>
         )
@@ -637,11 +662,13 @@ function DecagonBoard({ assignments, currentPlayer, onAssign, revealStep, spinni
       {/* Centre — slot machine or score */}
       <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '36%', zIndex: 20 }}>
         {revealStep >= 0 ? null : currentPlayer ? (
-          <>
-            <div style={{ fontSize: 20, fontWeight: 900, color: 'white', lineHeight: 1.2, wordBreak: 'break-word' }}>{currentPlayer.name}</div>
-          </>
+          <div style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 12, padding: '8px 12px', boxShadow: '0 0 18px rgba(255,255,255,0.12)' }}>
+            <div style={{ fontSize: 26, fontWeight: 900, color: 'white', lineHeight: 1.2, wordBreak: 'break-word' }}>{currentPlayer.name}</div>
+          </div>
         ) : spinning ? (
-          <div style={{ fontSize: 18, fontWeight: 900, color: '#dc2626', lineHeight: 1.2, wordBreak: 'break-word' }}>{spinText}</div>
+          <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '8px 12px' }}>
+            <div style={{ fontSize: 22, fontWeight: 900, color: 'white', lineHeight: 1.2, wordBreak: 'break-word' }}>{spinText}</div>
+          </div>
         ) : (
           <>
             <div style={{ fontSize: 10, fontWeight: 700, color: '#2a3d5e', marginBottom: 5 }}>

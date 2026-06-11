@@ -17,16 +17,16 @@ export const CATEGORY_KEYS = ['lf','rf','fin','head','pace','tb','drib','lp','ta
 export type CategoryKey = typeof CATEGORY_KEYS[number]
 
 export const CATEGORIES: { key: CategoryKey; label: string; short: string }[] = [
-  { key:'lf',   label:'Left Foot',  short:'L.Foot'  },
-  { key:'rf',   label:'Right Foot', short:'R.Foot'  },
   { key:'fin',  label:'Finishing',  short:'Finish'  },
-  { key:'head', label:'Heading',    short:'Header'  },
+  { key:'rf',   label:'Right Foot', short:'R.Foot'  },
+  { key:'lp',   label:'Passing',    short:'Passing' },
   { key:'pace', label:'Pace',       short:'Pace'    },
   { key:'tb',   label:'Strength',   short:'Strength'},
-  { key:'drib', label:'Dribbling',  short:'Dribble' },
-  { key:'lp',   label:'Passing',    short:'Passing' },
+  { key:'head', label:'Heading',    short:'Header'  },
   { key:'tack', label:'Tackling',   short:'Tackle'  },
   { key:'eng',  label:'Engine',     short:'Engine'  },
+  { key:'drib', label:'Dribbling',  short:'Dribble' },
+  { key:'lf',   label:'Left Foot',  short:'L.Foot'  },
 ]
 
 // lf, rf, fin, head, pace, str(tb), drib, pas(lp), tack, eng
