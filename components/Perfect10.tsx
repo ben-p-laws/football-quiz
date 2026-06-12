@@ -663,11 +663,11 @@ function DecagonBoard({ assignments, currentPlayer, onAssign, revealStep, spinni
       <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', width: '36%', zIndex: 20 }}>
         {revealStep >= 0 ? null : currentPlayer ? (
           <div style={{ background: 'rgba(255,255,255,0.07)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.18)', borderRadius: 12, padding: '8px 12px', boxShadow: '0 0 18px rgba(255,255,255,0.12)' }}>
-            <div style={{ fontSize: 26, fontWeight: 900, color: 'white', lineHeight: 1.2, wordBreak: 'break-word' }}>{currentPlayer.name}</div>
+            <div style={{ fontSize: 'clamp(14px, 3.5vw, 20px)', fontWeight: 900, color: 'white', lineHeight: 1.2, wordBreak: 'break-word' }}>{currentPlayer.name}</div>
           </div>
         ) : spinning ? (
           <div style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '8px 12px' }}>
-            <div style={{ fontSize: 22, fontWeight: 900, color: 'white', lineHeight: 1.2, wordBreak: 'break-word' }}>{spinText}</div>
+            <div style={{ fontSize: 'clamp(12px, 3vw, 18px)', fontWeight: 900, color: 'white', lineHeight: 1.2, wordBreak: 'break-word' }}>{spinText}</div>
           </div>
         ) : (
           <>
