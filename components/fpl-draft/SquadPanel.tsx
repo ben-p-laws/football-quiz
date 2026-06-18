@@ -28,7 +28,7 @@ export default function SquadPanel({
     return [...squad].sort((a, b) => {
       const da = order.indexOf(a.position) - order.indexOf(b.position)
       if (da !== 0) return da
-      return b.fpl_points - a.fpl_points
+      return a.name.localeCompare(b.name)
     })
   }, [squad])
 
