@@ -170,7 +170,7 @@ export default function FplDraftGame() {
     let cancelled = false
     async function load() {
       try {
-        const res = await fetch('/data/fpl-players.json', { cache: 'force-cache' })
+        const res = await fetch('/data/fpl-players.json', { cache: 'no-cache' })
         const json = await res.json() as { players: FplPlayer[] }
         if (cancelled) return
         setAllPlayers(json.players ?? [])
