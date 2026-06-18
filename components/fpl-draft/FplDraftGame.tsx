@@ -103,23 +103,19 @@ function projectedFormation(picks: FplPlayer[]): Formation {
   return fit ?? [1, 4, 4, 2]
 }
 
+// Always emit max possible slots — PitchView trims based on viable formations
+const MAX_SLOTS: Record<Position, number> = { GKP: 1, DEF: 5, MID: 5, FWD: 3 }
+
 function buildSlots(picks: FplPlayer[], revealAll = false): PitchSlot[] {
-  const formation = findFormation(picks) ?? projectedFormation(picks)
-  const [g, d, m, f] = formation
-  const slots: PitchSlot[] = []
   const byPos: Record<Position, FplPlayer[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
   for (const p of picks) byPos[p.position].push(p)
-
-  function add(pos: Position, count: number) {
-    for (let i = 0; i < count; i++) {
+  const slots: PitchSlot[] = []
+  for (const pos of ['GKP', 'DEF', 'MID', 'FWD'] as Position[]) {
+    for (let i = 0; i < MAX_SLOTS[pos]; i++) {
       const player = byPos[pos][i] ?? null
       slots.push({ position: pos, player, revealed: revealAll && !!player })
     }
   }
-  add('GKP', g)
-  add('DEF', d)
-  add('MID', m)
-  add('FWD', f)
   return slots
 }
 
@@ -225,20 +221,20 @@ export default function FplDraftGame() {
     setState('spinning')
     setSpinDisplay(combos[0] ?? target)
     let ticks = 0
-    const totalTicks = 22
+    const totalTicks = 11
     const spin = () => {
       ticks++
       if (ticks < totalTicks) {
         const random = combos[Math.floor(Math.random() * combos.length)]
         setSpinDisplay(random)
-        const delay = ticks < 14 ? 60 : ticks < 19 ? 110 : 200
+        const delay = ticks < 7 ? 40 : ticks < 10 ? 70 : 130
         setTimeout(spin, delay)
       } else {
         setSpinDisplay(target)
-        setTimeout(() => setState('playing'), 400)
+        setTimeout(() => setState('playing'), 250)
       }
     }
-    setTimeout(spin, 60)
+    setTimeout(spin, 40)
   }, [])
 
   function confirmName() {
