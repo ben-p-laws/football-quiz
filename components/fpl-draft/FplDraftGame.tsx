@@ -444,7 +444,7 @@ export default function FplDraftGame() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FPL Draft 11</div>
               <h1 style={{ fontSize: 34, fontWeight: 900, color: 'white', margin: '6px 0 0', letterSpacing: '-1px', lineHeight: 1.1 }}>
-                Draft your ultimate XI
+                Draft the ultimate FPL XI
               </h1>
               <p style={{ fontSize: 14, color: '#8899bb', marginTop: 10, lineHeight: 1.6 }}>
                 11 rounds. Each round a random Premier League team &amp; season is revealed. Pick one player from that squad. Scores are hidden until the end — maximise your total FPL points.
