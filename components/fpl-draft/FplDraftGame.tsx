@@ -23,7 +23,7 @@ const FORMATIONS: Formation[] = [
 ]
 
 type TeamSeason = { team: string; season: string }
-type GameState = 'loading' | 'name-entry' | 'no-data' | 'playing' | 'end'
+type GameState = 'loading' | 'name-entry' | 'no-data' | 'lobby' | 'spinning' | 'playing' | 'end'
 
 const LS_NAME = 'fpl_draft_name'
 const LS_DEVICE_ID = 'fpl_draft_device_id'
@@ -154,6 +154,8 @@ export default function FplDraftGame() {
   const [submitting, setSubmitting] = useState(false)
   const [copied, setCopied] = useState(false)
   const [revealedCount, setRevealedCount] = useState(0)
+  const [spinDisplay, setSpinDisplay] = useState<TeamSeason | null>(null)
+  const allCombosRef = React.useRef<TeamSeason[]>([])
 
   // ── Initial load: data + name/device ──
   useEffect(() => {
@@ -180,11 +182,20 @@ export default function FplDraftGame() {
           setState('no-data')
           return
         }
+        // pre-build all combos for slot machine
+        const seen = new Set<string>()
+        const combos: TeamSeason[] = []
+        for (const p of json.players) {
+          const key = `${p.team}|${p.season}`
+          if (!seen.has(key)) { seen.add(key); combos.push({ team: p.team, season: p.season }) }
+        }
+        allCombosRef.current = combos
+
         if (!storedName) {
           setState('name-entry')
         } else {
           setName(storedName)
-          startGame(json.players)
+          setState('lobby')
         }
       } catch (err) {
         console.error(err)
@@ -204,15 +215,38 @@ export default function FplDraftGame() {
     setRoundIdx(0)
     setNewBest(false)
     setRevealedCount(0)
-    setState('playing')
+    setState('lobby')
   }, [allPlayers])
+
+  const beginRound = useCallback((roundIndex: number, roundList: TeamSeason[]) => {
+    const target = roundList[roundIndex]
+    if (!target) return
+    const combos = allCombosRef.current
+    setState('spinning')
+    setSpinDisplay(combos[0] ?? target)
+    let ticks = 0
+    const totalTicks = 22
+    const spin = () => {
+      ticks++
+      if (ticks < totalTicks) {
+        const random = combos[Math.floor(Math.random() * combos.length)]
+        setSpinDisplay(random)
+        const delay = ticks < 14 ? 60 : ticks < 19 ? 110 : 200
+        setTimeout(spin, delay)
+      } else {
+        setSpinDisplay(target)
+        setTimeout(() => setState('playing'), 400)
+      }
+    }
+    setTimeout(spin, 60)
+  }, [])
 
   function confirmName() {
     const n = nameInput.trim()
     if (!n) return
     localStorage.setItem(LS_NAME, n)
     setName(n)
-    startGame()
+    setState('lobby')
   }
 
   // ── Current round data ──
@@ -234,7 +268,9 @@ export default function FplDraftGame() {
     if (nextPicks.length >= 11) {
       finishGame(nextPicks)
     } else {
-      setRoundIdx(i => i + 1)
+      const nextIdx = roundIdx + 1
+      setRoundIdx(nextIdx)
+      beginRound(nextIdx, rounds)
     }
   }
 
@@ -382,7 +418,51 @@ export default function FplDraftGame() {
     )
   }
 
-  // playing / end
+  // lobby — instructions before first pick
+  if (state === 'lobby') {
+    return (
+      <>
+        <NavBar />
+        <div style={pageStyle}>
+          <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 18px 60px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FPL Draft 11</div>
+              <h1 style={{ fontSize: 34, fontWeight: 900, color: 'white', margin: '6px 0 0', letterSpacing: '-1px', lineHeight: 1.1 }}>
+                Draft your ultimate XI
+              </h1>
+              <p style={{ fontSize: 14, color: '#8899bb', marginTop: 10, lineHeight: 1.6 }}>
+                11 rounds. Each round a random Premier League team &amp; season is revealed. Pick one player from that squad. Scores are hidden until the end — maximise your total FPL points.
+              </p>
+            </div>
+            <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {([
+                ['🎰', 'Each round, a slot machine reveals a random team & season'],
+                ['📋', 'Pick one player from that squad to fill your XI'],
+                ['📐', 'Formation rules apply — you must end with a valid 11'],
+                ['🏆', 'Scores revealed at the end — compete for the leaderboard'],
+              ] as [string, string][]).map(([icon, text], i) => (
+                <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 18, lineHeight: 1.4, flexShrink: 0 }}>{icon}</span>
+                  <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>{text}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => beginRound(0, rounds)} style={{ ...primaryButton, fontSize: 16, padding: '16px 0' }}>
+              Start Draft →
+            </button>
+            {name && (
+              <div style={{ textAlign: 'center', fontSize: 12, color: '#4a5568' }}>
+                Playing as <span style={{ color: 'white', fontWeight: 700 }}>{name}</span>
+                <button onClick={() => router.push('/fpl-draft/leaderboard')} style={{ ...ghostButton, marginLeft: 10, padding: '3px 10px', fontSize: 11 }}>Leaderboard</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // spinning / playing / end — always show split layout
   const slots = buildSlots(picks, state === 'end')
   const slotsForDisplay = state === 'end'
     ? slots.map((s, i) => ({ ...s, revealed: i < revealedCount }))
@@ -394,54 +474,68 @@ export default function FplDraftGame() {
       <div style={pageStyle}>
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '12px 8px 40px' }}>
           {/* Header bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
             <div>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                FPL Draft 11
-              </div>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FPL Draft 11</div>
               <div style={{ fontSize: 18, fontWeight: 900, color: 'white', letterSpacing: '-0.5px' }}>
-                {state === 'playing' ? `Pick ${Math.min(roundIdx + 1, 11)} of 11` : 'Final XI'}
+                {state === 'end' ? 'Final XI' : `Pick ${Math.min(roundIdx + 1, 11)} of 11`}
               </div>
             </div>
             <div style={{ flex: 1 }} />
-            <div style={{ fontSize: 11, color: '#4a5568' }}>
-              Hi, <span style={{ color: 'white', fontWeight: 700 }}>{name}</span>
-            </div>
-            <button
-              onClick={() => router.push('/fpl-draft/leaderboard')}
-              style={ghostButton}
-            >
-              Leaderboard
-            </button>
-            <button onClick={() => startGame()} style={ghostButton}>
-              Restart
-            </button>
+            {name && <div style={{ fontSize: 11, color: '#4a5568' }}>Hi, <span style={{ color: 'white', fontWeight: 700 }}>{name}</span></div>}
+            <button onClick={() => router.push('/fpl-draft/leaderboard')} style={ghostButton}>Leaderboard</button>
+            <button onClick={() => startGame()} style={ghostButton}>Restart</button>
           </div>
 
           {/* Progress bar */}
-          {state === 'playing' && (
-            <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
-              {Array.from({ length: 11 }, (_, i) => (
-                <div key={i} style={{
-                  flex: 1,
-                  height: 3,
-                  borderRadius: 2,
-                  background: i < picks.length ? '#dc2626' : '#1e2d4a',
-                }} />
-              ))}
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+            {Array.from({ length: 11 }, (_, i) => (
+              <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: i < picks.length ? '#dc2626' : '#1e2d4a' }} />
+            ))}
+          </div>
 
-          {/* Layout — always side-by-side */}
+          {/* Always side-by-side: pitch left, action right */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
+            <PitchView
+              slots={slotsForDisplay}
+              totalScore={totalScore}
+              showTotal={state === 'end' && revealedCount >= slots.length}
+            />
             <div>
-              <PitchView
-                slots={slotsForDisplay}
-                totalScore={totalScore}
-                showTotal={state === 'end' && revealedCount >= slots.length}
-              />
-            </div>
-            <div>
+              {state === 'spinning' && spinDisplay && (
+                <div style={{
+                  background: '#111827',
+                  border: '1px solid #1e2d4a',
+                  borderRadius: 14,
+                  padding: '28px 18px',
+                  textAlign: 'center',
+                  minHeight: 200,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                }}>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    Round {roundIdx + 1}
+                  </div>
+                  <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 8 }}>Drawing team…</div>
+                  <div style={{
+                    fontSize: 'clamp(18px, 4vw, 26px)',
+                    fontWeight: 900,
+                    color: 'white',
+                    letterSpacing: '-0.5px',
+                    lineHeight: 1.2,
+                    minHeight: 64,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                    {spinDisplay.team}
+                  </div>
+                  <div style={{ fontSize: 14, color: '#8899bb', fontWeight: 700 }}>{spinDisplay.season}</div>
+                </div>
+              )}
               {state === 'playing' && currentRound && (
                 <SquadPanel
                   team={currentRound.team}
@@ -468,7 +562,6 @@ export default function FplDraftGame() {
           </div>
         </div>
       </div>
-
     </>
   )
 }
