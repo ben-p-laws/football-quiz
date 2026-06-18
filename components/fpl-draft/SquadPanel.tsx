@@ -71,16 +71,9 @@ export default function SquadPanel({
       gap: 12,
       minHeight: 0,
     }}>
-      <div>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Current squad
-        </div>
-        <div style={{ fontSize: 20, fontWeight: 900, color: 'white', marginTop: 2 }}>
-          {team}
-        </div>
-        <div style={{ fontSize: 12, color: '#8899bb', marginTop: 2 }}>
-          {season} season · {squad.length} players
-        </div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+        <div style={{ fontSize: 20, fontWeight: 900, color: 'white' }}>{team}</div>
+        <div style={{ fontSize: 13, color: '#8899bb', fontWeight: 600 }}>{season}</div>
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
