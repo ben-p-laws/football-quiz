@@ -35,6 +35,35 @@ const DEFAULT_SEASONS = [
 
 const POSITION_MAP = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
+// teams.csv is missing for these seasons in the vaastav repo.
+// FPL assigns team IDs alphabetically each season (1=Arsenal etc.) and resets on promotion/relegation.
+const HARDCODED_TEAMS = {
+  '2016-17': {
+    '1': 'Arsenal', '2': 'Bournemouth', '3': 'Burnley', '4': 'Chelsea',
+    '5': 'Crystal Palace', '6': 'Everton', '7': 'Hull City', '8': 'Leicester City',
+    '9': 'Liverpool', '10': 'Manchester City', '11': 'Manchester United',
+    '12': 'Middlesbrough', '13': 'Southampton', '14': 'Stoke City',
+    '15': 'Sunderland', '16': 'Swansea City', '17': 'Tottenham Hotspur',
+    '18': 'Watford', '19': 'West Bromwich Albion', '20': 'West Ham United',
+  },
+  '2017-18': {
+    '1': 'Arsenal', '2': 'Bournemouth', '3': 'Brighton', '4': 'Burnley',
+    '5': 'Chelsea', '6': 'Crystal Palace', '7': 'Everton', '8': 'Huddersfield Town',
+    '9': 'Leicester City', '10': 'Liverpool', '11': 'Manchester City',
+    '12': 'Manchester United', '13': 'Newcastle United', '14': 'Southampton',
+    '15': 'Stoke City', '16': 'Swansea City', '17': 'Tottenham Hotspur',
+    '18': 'Watford', '19': 'West Bromwich Albion', '20': 'West Ham United',
+  },
+  '2018-19': {
+    '1': 'Arsenal', '2': 'Bournemouth', '3': 'Brighton', '4': 'Burnley',
+    '5': 'Cardiff City', '6': 'Chelsea', '7': 'Crystal Palace', '8': 'Everton',
+    '9': 'Fulham', '10': 'Huddersfield Town', '11': 'Leicester City',
+    '12': 'Liverpool', '13': 'Manchester City', '14': 'Manchester United',
+    '15': 'Newcastle United', '16': 'Southampton', '17': 'Tottenham Hotspur',
+    '18': 'Watford', '19': 'West Ham United', '20': 'Wolverhampton Wanderers',
+  },
+}
+
 // ── CSV parsing ─────────────────────────────────────────────────────────────
 
 function parseCsv(text) {
@@ -99,6 +128,10 @@ async function fetchTeamsForSeason(season) {
       }
       if (byId.size > 0) return byId
     } catch { /* try next */ }
+  }
+  // Fallback: hardcoded maps for seasons where teams.csv is absent in the repo
+  if (HARDCODED_TEAMS[season]) {
+    return new Map(Object.entries(HARDCODED_TEAMS[season]))
   }
   return null
 }
