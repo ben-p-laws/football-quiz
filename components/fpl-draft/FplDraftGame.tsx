@@ -24,6 +24,7 @@ const FORMATIONS: Formation[] = [
 
 type TeamSeason = { team: string; season: string }
 type GameState = 'loading' | 'name-entry' | 'no-data' | 'lobby' | 'spinning' | 'playing' | 'end'
+type LeaderboardEntry = { device_id: string; name: string; best_score: number }
 
 const LS_NAME = 'fpl_draft_name'
 const LS_DEVICE_ID = 'fpl_draft_device_id'
@@ -151,6 +152,7 @@ export default function FplDraftGame() {
   const [copied, setCopied] = useState(false)
   const [revealedCount, setRevealedCount] = useState(0)
   const [spinDisplay, setSpinDisplay] = useState<TeamSeason | null>(null)
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null)
   const allCombosRef = React.useRef<TeamSeason[]>([])
 
   // ── Initial load: data + name/device ──
@@ -297,6 +299,14 @@ export default function FplDraftGame() {
     }
     setTimeout(tick, 350)
 
+    // Fetch leaderboard early (before upsert so it shows quickly)
+    supabase
+      .from('fpl_draft_leaderboard')
+      .select('device_id, name, best_score')
+      .order('best_score', { ascending: false })
+      .limit(10)
+      .then(({ data }) => { if (data) setLeaderboard(data as LeaderboardEntry[]) })
+
     // Persist to leaderboard (best only)
     void persistScore(total, isNewBest, prevBest)
   }
@@ -327,6 +337,13 @@ export default function FplDraftGame() {
           },
           { onConflict: 'device_id' }
         )
+      // Refresh leaderboard after upsert so user's new score appears
+      const { data } = await supabase
+        .from('fpl_draft_leaderboard')
+        .select('device_id, name, best_score')
+        .order('best_score', { ascending: false })
+        .limit(10)
+      if (data) setLeaderboard(data as LeaderboardEntry[])
     } catch (err) {
       console.error('leaderboard upsert', err)
     } finally {
@@ -461,11 +478,115 @@ export default function FplDraftGame() {
     )
   }
 
-  // spinning / playing / end — always show split layout
-  const slots = buildSlots(picks, state === 'end')
-  const slotsForDisplay = state === 'end'
-    ? slots.map((s, i) => ({ ...s, revealed: i < revealedCount }))
-    : slots
+  // ── End screen ──────────────────────────────────────────────────────────
+  if (state === 'end') {
+    const endSlots = buildSlots(picks, true)
+    const slotsForDisplay = endSlots.map((s, i) => ({ ...s, revealed: i < revealedCount }))
+    const revealComplete = revealedCount >= picks.length
+
+    return (
+      <>
+        <NavBar />
+        <div style={pageStyle}>
+          <div style={{ maxWidth: 560, margin: '0 auto', width: '100%', padding: '12px 20px 40px' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FPL Draft 11</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: 'white', letterSpacing: '-0.5px' }}>Final XI</div>
+              </div>
+              <div style={{ flex: 1 }} />
+              {name && <div style={{ fontSize: 11, color: '#4a5568' }}>Hi, <span style={{ color: 'white', fontWeight: 700 }}>{name}</span></div>}
+              <button onClick={() => router.push('/fpl-draft/leaderboard')} style={ghostButton}>Leaderboard</button>
+              <button onClick={() => startGame()} style={ghostButton}>Restart</button>
+            </div>
+
+            {/* Progress bar — all filled */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
+              {Array.from({ length: 11 }, (_, i) => (
+                <div key={i} style={{ flex: 1, height: 3, borderRadius: 2, background: '#dc2626' }} />
+              ))}
+            </div>
+
+            {/* Total score */}
+            <div style={{ textAlign: 'center', padding: '6px 0 14px', minHeight: 68 }}>
+              {revealComplete ? (
+                <>
+                  <div style={{ fontSize: 52, fontWeight: 900, color: 'white', letterSpacing: '-2px', lineHeight: 1 }}>
+                    {totalScore}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#8899bb', marginTop: 5 }}>
+                    {newBest ? '🎉 New personal best!' : best != null ? `Personal best: ${best}` : 'First run!'}
+                    {submitting && <span style={{ color: '#4a5568', marginLeft: 8 }}>Saving…</span>}
+                  </div>
+                </>
+              ) : (
+                <div style={{ fontSize: 13, color: '#4a5568', paddingTop: 24 }}>Revealing scores…</div>
+              )}
+            </div>
+
+            {/* Vertical pitch with scores */}
+            <PitchView slots={slotsForDisplay} vertical />
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+              <button onClick={handleShare} style={{
+                flex: 1,
+                background: copied ? 'rgba(34,197,94,0.18)' : 'rgba(34,197,94,0.1)',
+                border: `1px solid ${copied ? 'rgba(34,197,94,0.5)' : 'rgba(34,197,94,0.35)'}`,
+                color: '#22c55e',
+                padding: '11px',
+                borderRadius: 10,
+                fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                {copied ? 'Copied! ✓' : 'Share'}
+              </button>
+              <button onClick={() => startGame()} style={{ ...primaryButton, flex: 1 }}>
+                Play Again
+              </button>
+            </div>
+
+            {/* Mini leaderboard */}
+            {leaderboard && leaderboard.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Leaderboard
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {leaderboard.map((entry, i) => {
+                    const isMe = entry.device_id === deviceId
+                    return (
+                      <div key={entry.device_id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 12px',
+                        background: isMe ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isMe ? 'rgba(220,38,38,0.25)' : '#1e2d4a'}`,
+                        borderRadius: 8,
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', minWidth: 18, textAlign: 'right' }}>
+                          {i + 1}
+                        </div>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: isMe ? 'white' : '#aabbcc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {entry.name}
+                        </div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: isMe ? '#dc2626' : 'white' }}>
+                          {entry.best_score}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </>
+    )
+  }
+
+  // spinning / playing — always show split layout
+  const slots = buildSlots(picks, false)
+  const slotsForDisplay = slots
 
   return (
     <>
@@ -477,7 +598,7 @@ export default function FplDraftGame() {
             <div>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>FPL Draft 11</div>
               <div style={{ fontSize: 18, fontWeight: 900, color: 'white', letterSpacing: '-0.5px' }}>
-                {state === 'end' ? 'Final XI' : `Pick ${Math.min(roundIdx + 1, 11)} of 11`}
+                {`Pick ${Math.min(roundIdx + 1, 11)} of 11`}
               </div>
             </div>
             <div style={{ flex: 1 }} />
@@ -493,12 +614,8 @@ export default function FplDraftGame() {
             ))}
           </div>
 
-          {/* Horizontal formation strip — always visible */}
-          <PitchView
-            slots={slotsForDisplay}
-            totalScore={totalScore}
-            showTotal={state === 'end' && revealedCount >= slots.length}
-          />
+          {/* Horizontal formation strip */}
+          <PitchView slots={slotsForDisplay} />
 
           {/* Action panel below formation */}
           <div style={{ marginTop: 12 }}>
@@ -543,18 +660,6 @@ export default function FplDraftGame() {
                 pickedIds={pickedIds}
                 allowedPositions={allowed}
                 onPick={handlePick}
-              />
-            )}
-            {state === 'end' && (
-              <EndPanel
-                picks={picks}
-                totalScore={totalScore}
-                best={best}
-                newBest={newBest}
-                onPlayAgain={() => startGame()}
-                onShare={handleShare}
-                copied={copied}
-                submitting={submitting}
               />
             )}
           </div>

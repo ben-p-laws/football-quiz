@@ -27,19 +27,15 @@ const FORMATIONS = [
   [1,3,4,3],[1,3,5,2],[1,4,4,2],[1,4,5,1],[1,4,3,3],[1,5,4,1],[1,5,3,2],
 ] as const
 
-// How many slots to display for each position given current picks.
-// = max count in any formation that's still reachable.
 function maxSlotsPerPos(slots: PitchSlot[]): Record<Pos, number> {
   const filled: Record<Pos, number> = { GKP: 0, DEF: 0, MID: 0, FWD: 0 }
   for (const s of slots) if (s.player) filled[s.position]++
-  const total = slots.filter(s => s.player).length
 
   const viable = FORMATIONS.filter(([g, d, m, f]) =>
     filled.GKP <= g && filled.DEF <= d && filled.MID <= m && filled.FWD <= f
   )
 
   if (viable.length === 0) {
-    // Fallback: show whatever is filled
     return { GKP: Math.max(filled.GKP, 1), DEF: Math.max(filled.DEF, 3), MID: Math.max(filled.MID, 4), FWD: Math.max(filled.FWD, 2) }
   }
 
@@ -55,16 +51,140 @@ export default function PitchView({
   slots,
   totalScore,
   showTotal = false,
+  vertical = false,
 }: {
   slots: PitchSlot[]
   totalScore?: number
   showTotal?: boolean
+  vertical?: boolean
 }) {
   const maxSlots = maxSlotsPerPos(slots)
-
   const byPos: Record<Pos, PitchSlot[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
   for (const s of slots) byPos[s.position].push(s)
 
+  // ── Vertical mode (end screen) ───────────────────────────────────────────
+  if (vertical) {
+    const ROW_H = 90
+    const PAD_V = 14
+    const height = 4 * ROW_H + PAD_V * 2
+    const rows: Pos[] = ['FWD', 'MID', 'DEF', 'GKP']
+
+    return (
+      <div style={{
+        position: 'relative',
+        borderRadius: 12,
+        border: '1px solid #1e2d4a',
+        overflow: 'hidden',
+        height,
+        width: '100%',
+      }}>
+        <svg
+          viewBox={`0 0 300 ${height}`}
+          preserveAspectRatio="none"
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
+        >
+          <defs>
+            <linearGradient id="pitchGradV" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#0e3c1c" />
+              <stop offset="100%" stopColor="#0a2f15" />
+            </linearGradient>
+          </defs>
+          <rect width="300" height={height} fill="url(#pitchGradV)" />
+          {Array.from({ length: 5 }, (_, i) => (
+            <rect key={i} x="0" y={i * (height / 5)} width="300" height={height / 10} fill="rgba(255,255,255,0.018)" />
+          ))}
+          <rect x="3" y="3" width="294" height={height - 6} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.8" />
+          <line x1="3" y1={height / 2} x2="297" y2={height / 2} stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
+          <circle cx="150" cy={height / 2} r="20" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
+          <circle cx="150" cy={height / 2} r="1.5" fill="rgba(255,255,255,0.25)" />
+          {/* Top penalty box (FWD side) */}
+          <rect x="75" y="3" width="150" height="52" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
+          <rect x="112" y="3" width="76" height="20" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+          {/* Bottom penalty box (GKP side) */}
+          <rect x="75" y={height - 55} width="150" height="52" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.6" />
+          <rect x="112" y={height - 23} width="76" height="20" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
+        </svg>
+
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          padding: `${PAD_V}px 6px`,
+        }}>
+          {rows.map(pos => {
+            const color = POS_COLOR[pos]
+            const rgb = POS_RGB[pos]
+            const count = maxSlots[pos]
+            const display = Array.from({ length: count }, (_, i) => byPos[pos][i] ?? null)
+            // slot width: narrower when more players
+            const slotW = count >= 5 ? 52 : count >= 4 ? 60 : 68
+
+            return (
+              <div key={pos} style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: count >= 5 ? 4 : 8,
+              }}>
+                {display.map((slot, si) => {
+                  const filled = !!slot?.player
+                  const surname = slot?.player?.name.split(' ').slice(-1)[0] ?? ''
+                  return (
+                    <div key={si} style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 3,
+                      width: slotW,
+                    }}>
+                      <div style={{
+                        width: 28, height: 28, borderRadius: '50%',
+                        background: filled ? `rgba(${rgb},0.25)` : 'rgba(255,255,255,0.04)',
+                        border: `1.5px solid ${filled ? color : 'rgba(255,255,255,0.18)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 7, fontWeight: 900,
+                        color: filled ? color : 'rgba(255,255,255,0.3)',
+                        boxShadow: filled ? `0 0 7px rgba(${rgb},0.4)` : 'none',
+                        flexShrink: 0,
+                      }}>
+                        {pos[0]}
+                      </div>
+                      <div style={{
+                        fontSize: count >= 5 ? 8 : 9,
+                        fontWeight: filled ? 700 : 400,
+                        color: filled ? 'white' : 'rgba(255,255,255,0.2)',
+                        textAlign: 'center',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '100%',
+                        lineHeight: 1.2,
+                      }}>
+                        {filled ? surname : pos}
+                      </div>
+                      {slot?.revealed && slot.player && (
+                        <div style={{ fontSize: 10, fontWeight: 900, color, lineHeight: 1 }}>
+                          {slot.player.fpl_points}
+                        </div>
+                      )}
+                      {filled && !slot?.revealed && (
+                        <div style={{ fontSize: 10, lineHeight: 1, color: 'transparent' }}>0</div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Horizontal mode (in-game strip) ─────────────────────────────────────
   const columns = (['GKP','DEF','MID','FWD'] as Pos[]).map(pos => {
     const filled = byPos[pos]
     const total = maxSlots[pos]
@@ -88,13 +208,11 @@ export default function PitchView({
       overflow: 'hidden',
       height,
     }}>
-      {/* Pitch background */}
       <svg
         viewBox="0 0 400 100"
         preserveAspectRatio="none"
         style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
       >
-        {/* Grass gradient stripes */}
         <defs>
           <linearGradient id="pitchGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#0e3c1c" />
@@ -102,26 +220,19 @@ export default function PitchView({
           </linearGradient>
         </defs>
         <rect width="400" height="100" fill="url(#pitchGrad)" />
-        {/* Grass stripes */}
         {Array.from({ length: 5 }, (_, i) => (
           <rect key={i} x={i * 80} y="0" width="40" height="100" fill="rgba(255,255,255,0.018)" />
         ))}
-        {/* Outer border */}
         <rect x="3" y="3" width="394" height="94" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="0.6" />
-        {/* Halfway line */}
         <line x1="200" y1="3" x2="200" y2="97" stroke="rgba(255,255,255,0.2)" strokeWidth="0.5" />
-        {/* Centre circle */}
         <circle cx="200" cy="50" r="14" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
         <circle cx="200" cy="50" r="1" fill="rgba(255,255,255,0.25)" />
-        {/* Left penalty box */}
         <rect x="3" y="26" width="22" height="48" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
         <rect x="3" y="37" width="9" height="26" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
-        {/* Right penalty box */}
         <rect x="375" y="26" width="22" height="48" fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="0.5" />
         <rect x="388" y="37" width="9" height="26" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="0.5" />
       </svg>
 
-      {/* Columns: GKP | DEF | MID | FWD */}
       <div style={{
         position: 'relative',
         zIndex: 1,
