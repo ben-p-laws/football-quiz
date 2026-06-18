@@ -377,7 +377,7 @@ export default function FplDraftGame() {
 
   // ── Share ──
   // Replace with the URL of the pinned @topbinsfooty tweet once live
-  const TOPBINS_TWEET_URL = 'https://x.com/topbinsfooty'
+  const TOPBINS_TWEET_URL = 'https://x.com/TopBins_Footy/status/2067538417735578062?s=20'
 
   function buildShareText() {
     return `Ultimate FPL draft, ${totalScore} total.\nChallenge me at topbinsfooty.com/fpl-draft\n#football #worldcup2026 #soccer`
