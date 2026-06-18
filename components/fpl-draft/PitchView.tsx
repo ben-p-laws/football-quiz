@@ -22,23 +22,11 @@ const POS_RGB: Record<FplPlayer['position'], string> = {
   FWD: '220,38,38',
 }
 
-/**
- * Lay out slots vertically: GKP on the goal line, then DEF row, MID row, FWD row.
- * `slots` is grouped by position in order GKP, DEF, MID, FWD.
- */
-function buildRows(slots: PitchSlot[]) {
+function buildColumns(slots: PitchSlot[]) {
   const byPos: Record<FplPlayer['position'], PitchSlot[]> = { GKP: [], DEF: [], MID: [], FWD: [] }
   for (const s of slots) byPos[s.position].push(s)
-  // y positions as % of pitch height (0 = top goal, 100 = bottom goal). Player attacks downward.
-  const yMap: Record<FplPlayer['position'], number> = {
-    GKP: 10,
-    DEF: 32,
-    MID: 55,
-    FWD: 80,
-  }
   return (['GKP', 'DEF', 'MID', 'FWD'] as const).map(pos => ({
     position: pos,
-    y: yMap[pos],
     slots: byPos[pos],
   }))
 }
@@ -52,144 +40,120 @@ export default function PitchView({
   totalScore?: number
   showTotal?: boolean
 }) {
-  const rows = buildRows(slots)
+  const columns = buildColumns(slots)
+  // max slots in any column determines row height
+  const maxRows = Math.max(...columns.map(c => c.slots.length), 1)
+  const ROW_H = 28
+  const PADDING = 10
+  const height = maxRows * ROW_H + PADDING * 2
 
   return (
     <div style={{
-      position: 'relative',
-      width: '100%',
-      aspectRatio: '0.72 / 1',
-      background: 'linear-gradient(180deg, #0e3c1c 0%, #0a2f15 100%)',
-      borderRadius: 14,
+      background: '#0e1f2e',
       border: '1px solid #1e2d4a',
+      borderRadius: 12,
+      padding: `${PADDING}px 8px`,
+      display: 'flex',
+      alignItems: 'stretch',
+      gap: 0,
+      minHeight: height,
+      position: 'relative',
       overflow: 'hidden',
     }}>
-      {/* Pitch markings */}
-      <svg viewBox="0 0 100 140" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        {/* Outer pitch */}
-        <rect x="3" y="3" width="94" height="134" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="0.5" />
-        {/* Halfway line */}
-        <line x1="3" y1="70" x2="97" y2="70" stroke="rgba(255,255,255,0.25)" strokeWidth="0.4" />
-        {/* Centre circle */}
-        <circle cx="50" cy="70" r="10" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.4" />
-        <circle cx="50" cy="70" r="0.7" fill="rgba(255,255,255,0.3)" />
-        {/* Top box (defending) */}
-        <rect x="25" y="3" width="50" height="16" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.4" />
-        <rect x="37" y="3" width="26" height="6" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.4" />
-        {/* Bottom box (attacking) */}
-        <rect x="25" y="121" width="50" height="16" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.4" />
-        <rect x="37" y="131" width="26" height="6" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.4" />
-        {/* Stripes */}
-        {Array.from({ length: 7 }, (_, i) => (
-          <rect
-            key={i}
-            x="3"
-            y={3 + i * 19.14}
-            width="94"
-            height="9.57"
-            fill="rgba(255,255,255,0.018)"
-          />
-        ))}
-      </svg>
+      {/* Subtle vertical dividers between columns */}
+      {columns.map((col, ci) => {
+        const color = POS_COLOR[col.position]
+        const rgb = POS_RGB[col.position]
+        const isEmpty = col.slots.length === 0
 
-      {/* Slot layout */}
-      {rows.map(row => {
-        const count = row.slots.length
-        return row.slots.map((slot, idx) => {
-          const xPct = count === 0 ? 50 : ((idx + 1) / (count + 1)) * 100
-          const color = POS_COLOR[slot.position]
-          const rgb = POS_RGB[slot.position]
-          const filled = !!slot.player
-          const revealed = slot.revealed
-          return (
-            <div
-              key={`${row.position}-${idx}`}
-              style={{
-                position: 'absolute',
-                left: `${xPct}%`,
-                top: `${row.y}%`,
-                transform: 'translate(-50%, -50%)',
-                textAlign: 'center',
-                width: '22%',
-                maxWidth: 110,
-              }}
-            >
-              <div style={{
-                width: 32,
-                height: 32,
-                margin: '0 auto 4px',
-                borderRadius: '50%',
-                background: filled ? `rgba(${rgb},0.25)` : 'rgba(255,255,255,0.05)',
-                border: `1.5px solid ${filled ? color : 'rgba(255,255,255,0.35)'}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 10,
-                fontWeight: 900,
-                color: filled ? color : 'rgba(255,255,255,0.7)',
-                boxShadow: filled ? `0 0 12px rgba(${rgb},0.35)` : 'none',
-              }}>
-                {slot.position}
-              </div>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 800,
-                color: filled ? 'white' : 'rgba(255,255,255,0.55)',
-                lineHeight: 1.15,
-                textShadow: '0 1px 4px rgba(0,0,0,0.7)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}>
-                {slot.player
-                  ? slot.player.name.split(' ').slice(-1)[0]
-                  : '—'}
-              </div>
-              {slot.player && (
+        return (
+          <div key={col.position} style={{
+            flex: 1,
+            borderRight: ci < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: 4,
+            padding: '0 6px',
+            minWidth: 0,
+          }}>
+            {isEmpty ? (
+              /* Empty column placeholder */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0.3 }}>
                 <div style={{
-                  fontSize: 9,
-                  fontWeight: 700,
-                  color: 'rgba(255,255,255,0.55)',
-                  textShadow: '0 1px 3px rgba(0,0,0,0.7)',
-                  marginTop: 1,
+                  width: 18, height: 18, flexShrink: 0,
+                  borderRadius: '50%',
+                  border: `1.5px solid ${color}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 7, fontWeight: 900, color,
                 }}>
-                  {slot.player.team} {slot.player.season.slice(2)}
+                  {col.position}
                 </div>
-              )}
-              {revealed && slot.player && (
-                <div style={{
-                  marginTop: 3,
-                  display: 'inline-block',
-                  fontSize: 11,
-                  fontWeight: 900,
-                  color: 'white',
-                  background: `rgba(${rgb},0.3)`,
-                  border: `1px solid ${color}`,
-                  borderRadius: 6,
-                  padding: '1px 6px',
-                }}>
-                  {slot.player.fpl_points}
+                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {col.position}
                 </div>
-              )}
-            </div>
-          )
-        })
+              </div>
+            ) : (
+              col.slots.map((slot, si) => {
+                const filled = !!slot.player
+                const surname = slot.player?.name.split(' ').slice(-1)[0] ?? '—'
+                return (
+                  <div key={si} style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                    {/* Circle */}
+                    <div style={{
+                      width: 18, height: 18, flexShrink: 0,
+                      borderRadius: '50%',
+                      background: filled ? `rgba(${rgb},0.2)` : 'rgba(255,255,255,0.04)',
+                      border: `1.5px solid ${filled ? color : 'rgba(255,255,255,0.2)'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 7, fontWeight: 900,
+                      color: filled ? color : 'rgba(255,255,255,0.35)',
+                      boxShadow: filled ? `0 0 6px rgba(${rgb},0.3)` : 'none',
+                    }}>
+                      {col.position[0]}
+                    </div>
+                    {/* Name + score */}
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{
+                        fontSize: 10,
+                        fontWeight: filled ? 700 : 400,
+                        color: filled ? 'white' : 'rgba(255,255,255,0.25)',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        lineHeight: 1.2,
+                      }}>
+                        {surname}
+                      </div>
+                      {slot.revealed && slot.player && (
+                        <div style={{
+                          fontSize: 9,
+                          fontWeight: 900,
+                          color,
+                          lineHeight: 1,
+                          marginTop: 1,
+                        }}>
+                          {slot.player.fpl_points} pts
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )
       })}
 
       {showTotal && typeof totalScore === 'number' && (
         <div style={{
           position: 'absolute',
-          bottom: 8,
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(0,0,0,0.55)',
-          border: '1px solid rgba(255,255,255,0.2)',
-          borderRadius: 10,
-          padding: '6px 16px',
-          fontSize: 18,
+          bottom: 6,
+          right: 10,
+          fontSize: 13,
           fontWeight: 900,
           color: 'white',
-          letterSpacing: '-0.5px',
+          opacity: 0.7,
         }}>
           {totalScore} pts
         </div>

@@ -246,7 +246,7 @@ export default function FplDraftGame() {
     if (!n) return
     localStorage.setItem(LS_NAME, n)
     setName(n)
-    setState('lobby')
+    startGame()
   }
 
   // ── Current round data ──
@@ -472,7 +472,7 @@ export default function FplDraftGame() {
     <>
       <NavBar />
       <div style={pageStyle}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '12px 8px 40px' }}>
+        <div style={{ maxWidth: 560, margin: '0 auto', width: '100%', padding: '12px 20px 40px' }}>
           {/* Header bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10, flexWrap: 'wrap' }}>
             <div>
@@ -494,71 +494,70 @@ export default function FplDraftGame() {
             ))}
           </div>
 
-          {/* Always side-by-side: pitch left, action right */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
-            <PitchView
-              slots={slotsForDisplay}
-              totalScore={totalScore}
-              showTotal={state === 'end' && revealedCount >= slots.length}
-            />
-            <div>
-              {state === 'spinning' && spinDisplay && (
+          {/* Horizontal formation strip — always visible */}
+          <PitchView
+            slots={slotsForDisplay}
+            totalScore={totalScore}
+            showTotal={state === 'end' && revealedCount >= slots.length}
+          />
+
+          {/* Action panel below formation */}
+          <div style={{ marginTop: 12 }}>
+            {state === 'spinning' && spinDisplay && (
+              <div style={{
+                background: '#111827',
+                border: '1px solid #1e2d4a',
+                borderRadius: 14,
+                padding: '28px 18px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  Round {roundIdx + 1}
+                </div>
+                <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 8 }}>Drawing team…</div>
                 <div style={{
-                  background: '#111827',
-                  border: '1px solid #1e2d4a',
-                  borderRadius: 14,
-                  padding: '28px 18px',
-                  textAlign: 'center',
-                  minHeight: 200,
+                  fontSize: 26,
+                  fontWeight: 900,
+                  color: 'white',
+                  letterSpacing: '-0.5px',
+                  lineHeight: 1.2,
+                  minHeight: 36,
                   display: 'flex',
-                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: 6,
                 }}>
-                  <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    Round {roundIdx + 1}
-                  </div>
-                  <div style={{ fontSize: 11, color: '#4a5568', marginBottom: 8 }}>Drawing team…</div>
-                  <div style={{
-                    fontSize: 'clamp(18px, 4vw, 26px)',
-                    fontWeight: 900,
-                    color: 'white',
-                    letterSpacing: '-0.5px',
-                    lineHeight: 1.2,
-                    minHeight: 64,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                    {spinDisplay.team}
-                  </div>
-                  <div style={{ fontSize: 14, color: '#8899bb', fontWeight: 700 }}>{spinDisplay.season}</div>
+                  {spinDisplay.team}
                 </div>
-              )}
-              {state === 'playing' && currentRound && (
-                <SquadPanel
-                  team={currentRound.team}
-                  season={currentRound.season}
-                  squad={currentSquad}
-                  pickedIds={pickedIds}
-                  allowedPositions={allowed}
-                  onPick={handlePick}
-                />
-              )}
-              {state === 'end' && (
-                <EndPanel
-                  picks={picks}
-                  totalScore={totalScore}
-                  best={best}
-                  newBest={newBest}
-                  onPlayAgain={() => startGame()}
-                  onShare={handleShare}
-                  copied={copied}
-                  submitting={submitting}
-                />
-              )}
-            </div>
+                <div style={{ fontSize: 14, color: '#8899bb', fontWeight: 700 }}>{spinDisplay.season}</div>
+              </div>
+            )}
+            {state === 'playing' && currentRound && (
+              <SquadPanel
+                team={currentRound.team}
+                season={currentRound.season}
+                squad={currentSquad}
+                pickedIds={pickedIds}
+                allowedPositions={allowed}
+                onPick={handlePick}
+              />
+            )}
+            {state === 'end' && (
+              <EndPanel
+                picks={picks}
+                totalScore={totalScore}
+                best={best}
+                newBest={newBest}
+                onPlayAgain={() => startGame()}
+                onShare={handleShare}
+                copied={copied}
+                submitting={submitting}
+              />
+            )}
           </div>
         </div>
       </div>
