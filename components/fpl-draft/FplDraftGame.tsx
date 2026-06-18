@@ -367,7 +367,7 @@ export default function FplDraftGame() {
 
   // ── Share ──
   function buildShareText() {
-    return `FPL Draft 11 — ${totalScore} pts. Can you beat me? topbinsfooty.com/fpl-draft`
+    return `Ultimate FPL draft, ${totalScore} total.\nChallenge me at topbinsfooty.com/fpl-draft\n#football #worldcup2026 #soccer`
   }
   function handleShare() {
     const text = buildShareText()
