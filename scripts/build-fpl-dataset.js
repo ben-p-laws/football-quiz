@@ -35,6 +35,22 @@ const DEFAULT_SEASONS = [
 
 const POSITION_MAP = { 1: 'GKP', 2: 'DEF', 3: 'MID', 4: 'FWD' }
 
+// Normalise team names to a single canonical form across all seasons
+const TEAM_ALIASES = {
+  'Manchester City':        'Man City',
+  'Manchester United':      'Man Utd',
+  'Leicester City':         'Leicester',
+  'Newcastle United':       'Newcastle',
+  'Tottenham Hotspur':      'Spurs',
+  'West Bromwich Albion':   'West Brom',
+  'West Ham United':        'West Ham',
+  'Wolverhampton Wanderers':'Wolves',
+}
+
+function normaliseTeam(name) {
+  return TEAM_ALIASES[name] ?? name
+}
+
 // teams.csv is missing for these seasons in the vaastav repo.
 // FPL assigns team IDs alphabetically each season (1=Arsenal etc.) and resets on promotion/relegation.
 const HARDCODED_TEAMS = {
@@ -173,9 +189,9 @@ async function buildSeason(season) {
     const teamRaw = row.team_name ?? row.team
     let team
     if (teamRaw && isNaN(Number(teamRaw))) {
-      team = teamRaw
+      team = normaliseTeam(teamRaw)
     } else if (teams && teamRaw != null) {
-      team = teams.get(String(teamRaw))
+      team = normaliseTeam(teams.get(String(teamRaw)) ?? '')
     }
     if (!team) continue
 
