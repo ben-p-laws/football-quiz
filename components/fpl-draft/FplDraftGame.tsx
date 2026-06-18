@@ -160,7 +160,6 @@ export default function FplDraftGame() {
   const [best, setBest] = useState<number | null>(null)
   const [newBest, setNewBest] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [copied, setCopied] = useState(false)
   const [revealedCount, setRevealedCount] = useState(0)
   const [spinDisplay, setSpinDisplay] = useState<TeamSeason | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[] | null>(null)
@@ -377,16 +376,19 @@ export default function FplDraftGame() {
   }
 
   // ── Share ──
+  // Replace with the URL of the pinned @topbinsfooty tweet once live
+  const TOPBINS_TWEET_URL = 'https://x.com/topbinsfooty'
+
   function buildShareText() {
     return `Ultimate FPL draft, ${totalScore} total.\nChallenge me at topbinsfooty.com/fpl-draft\n#football #worldcup2026 #soccer`
   }
-  function handleShare() {
+  function handleWhatsApp() {
     const text = buildShareText()
-    navigator.clipboard?.writeText(text).catch(() => {})
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`
     window.open(url, '_blank', 'noopener')
+  }
+  function handleRetweet() {
+    window.open(TOPBINS_TWEET_URL, '_blank', 'noopener')
   }
 
   // ── Render ──
@@ -590,16 +592,27 @@ export default function FplDraftGame() {
 
             {/* Buttons */}
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
-              <button onClick={handleShare} style={{
+              <button onClick={handleWhatsApp} style={{
                 flex: 1,
-                background: copied ? 'rgba(34,197,94,0.18)' : 'rgba(34,197,94,0.1)',
-                border: `1px solid ${copied ? 'rgba(34,197,94,0.5)' : 'rgba(34,197,94,0.35)'}`,
-                color: '#22c55e',
+                background: 'rgba(37,211,102,0.1)',
+                border: '1px solid rgba(37,211,102,0.35)',
+                color: '#25d366',
                 padding: '11px',
                 borderRadius: 10,
-                fontSize: 14, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+                fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
               }}>
-                {copied ? 'Copied! ✓' : 'Share'}
+                WhatsApp
+              </button>
+              <button onClick={handleRetweet} style={{
+                flex: 1,
+                background: 'rgba(29,161,242,0.1)',
+                border: '1px solid rgba(29,161,242,0.35)',
+                color: '#1da1f2',
+                padding: '11px',
+                borderRadius: 10,
+                fontSize: 13, fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+              }}>
+                Retweet
               </button>
               <button onClick={() => startGame()} style={{ ...primaryButton, flex: 1 }}>
                 Play Again
@@ -733,107 +746,6 @@ export default function FplDraftGame() {
   )
 }
 
-// ── End screen panel ────────────────────────────────────────────────────────
-
-function EndPanel({
-  picks,
-  totalScore,
-  best,
-  newBest,
-  onPlayAgain,
-  onShare,
-  copied,
-  submitting,
-}: {
-  picks: FplPlayer[]
-  totalScore: number
-  best: number | null
-  newBest: boolean
-  onPlayAgain: () => void
-  onShare: () => void
-  copied: boolean
-  submitting: boolean
-}) {
-  const orderedPicks = useMemo(() => {
-    const order: Position[] = ['GKP', 'DEF', 'MID', 'FWD']
-    return [...picks].sort((a, b) =>
-      order.indexOf(a.position) - order.indexOf(b.position) || b.fpl_points - a.fpl_points
-    )
-  }, [picks])
-
-  return (
-    <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-          Final score
-        </div>
-        <div style={{ fontSize: 44, fontWeight: 900, color: 'white', letterSpacing: '-1.5px', lineHeight: 1 }}>
-          {totalScore}
-        </div>
-        <div style={{ fontSize: 12, color: '#8899bb', marginTop: 4 }}>
-          {newBest ? 'New personal best! 🎉' : best != null ? `Personal best: ${best}` : 'First run!'}
-        </div>
-        {submitting && (
-          <div style={{ fontSize: 10, color: '#4a5568', marginTop: 4 }}>Saving…</div>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, maxHeight: 360, overflowY: 'auto', paddingRight: 4 }}>
-        {orderedPicks.map(p => (
-          <div key={p.id} style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '7px 10px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid #1e2d4a',
-            borderRadius: 8,
-          }}>
-            <div style={{
-              fontSize: 9,
-              fontWeight: 900,
-              color: POS_TEXT[p.position],
-              background: POS_BG[p.position],
-              padding: '2px 6px',
-              borderRadius: 4,
-              minWidth: 32,
-              textAlign: 'center',
-            }}>
-              {p.position}
-            </div>
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {p.name}
-              </div>
-              <div style={{ fontSize: 10, color: '#4a5568' }}>{p.team} · {p.season}</div>
-            </div>
-            <div style={{ fontSize: 14, fontWeight: 900, color: 'white' }}>{p.fpl_points}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={onShare} style={{
-          flex: 1,
-          background: copied ? 'rgba(34,197,94,0.18)' : 'rgba(34,197,94,0.1)',
-          border: `1px solid ${copied ? 'rgba(34,197,94,0.5)' : 'rgba(34,197,94,0.35)'}`,
-          color: '#22c55e',
-          padding: '11px',
-          borderRadius: 10,
-          fontSize: 14,
-          fontWeight: 800,
-          cursor: 'pointer',
-          fontFamily: 'inherit',
-        }}>
-          {copied ? 'Copied! ✓' : 'Share'}
-        </button>
-        <button onClick={onPlayAgain} style={{ ...primaryButton, flex: 1 }}>
-          Play Again
-        </button>
-      </div>
-    </div>
-  )
-}
 
 // ── Shared styles ──────────────────────────────────────────────────────────
 
