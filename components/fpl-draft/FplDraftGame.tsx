@@ -305,7 +305,7 @@ export default function FplDraftGame() {
       .select('device_id, name, best_score')
       .order('best_score', { ascending: false })
       .limit(10)
-      .then(({ data }) => { if (data) setLeaderboard(data as LeaderboardEntry[]) })
+      .then(({ data }) => { setLeaderboard((data ?? []) as LeaderboardEntry[]) })
 
     // Persist to leaderboard (best only)
     void persistScore(total, isNewBest, prevBest)
@@ -343,7 +343,7 @@ export default function FplDraftGame() {
         .select('device_id, name, best_score')
         .order('best_score', { ascending: false })
         .limit(10)
-      if (data) setLeaderboard(data as LeaderboardEntry[])
+      setLeaderboard((data ?? []) as LeaderboardEntry[])
     } catch (err) {
       console.error('leaderboard upsert', err)
     } finally {
@@ -553,12 +553,15 @@ export default function FplDraftGame() {
             </div>
 
             {/* Mini leaderboard */}
-            {leaderboard && leaderboard.length > 0 && (
+            {leaderboard !== null && (
               <div style={{ marginTop: 24 }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
                   Leaderboard
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {leaderboard.length === 0 && (
+                    <div style={{ fontSize: 12, color: '#4a5568', textAlign: 'center', padding: '12px 0' }}>No entries yet — you could be first!</div>
+                  )}
                   {leaderboard.map((entry, i) => {
                     const isMe = entry.device_id === deviceId
                     return (
