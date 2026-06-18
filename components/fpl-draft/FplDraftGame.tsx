@@ -481,7 +481,13 @@ export default function FplDraftGame() {
   // ── End screen ──────────────────────────────────────────────────────────
   if (state === 'end') {
     const endSlots = buildSlots(picks, true)
-    const slotsForDisplay = endSlots.map((s, i) => ({ ...s, revealed: i < revealedCount }))
+    // Reveal the nth filled slot (not nth array index — empty slots skew the count)
+    let filledSeen = 0
+    const slotsForDisplay = endSlots.map((s) => {
+      if (!s.player) return s
+      filledSeen++
+      return { ...s, revealed: filledSeen <= revealedCount }
+    })
     const revealComplete = revealedCount >= picks.length
 
     return (

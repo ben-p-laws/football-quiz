@@ -64,7 +64,7 @@ export default function PitchView({
 
   // ── Vertical mode (end screen) ───────────────────────────────────────────
   if (vertical) {
-    const ROW_H = 90
+    const ROW_H = 100
     const PAD_V = 14
     const height = 4 * ROW_H + PAD_V * 2
     const rows: Pos[] = ['FWD', 'MID', 'DEF', 'GKP']
@@ -141,19 +141,19 @@ export default function PitchView({
                       width: slotW,
                     }}>
                       <div style={{
-                        width: 28, height: 28, borderRadius: '50%',
+                        width: 34, height: 34, borderRadius: '50%',
                         background: filled ? `rgba(${rgb},0.25)` : 'rgba(255,255,255,0.04)',
                         border: `1.5px solid ${filled ? color : 'rgba(255,255,255,0.18)'}`,
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 7, fontWeight: 900,
+                        fontSize: 8, fontWeight: 900,
                         color: filled ? color : 'rgba(255,255,255,0.3)',
-                        boxShadow: filled ? `0 0 7px rgba(${rgb},0.4)` : 'none',
+                        boxShadow: filled ? `0 0 8px rgba(${rgb},0.45)` : 'none',
                         flexShrink: 0,
                       }}>
                         {pos[0]}
                       </div>
                       <div style={{
-                        fontSize: count >= 5 ? 8 : 9,
+                        fontSize: count >= 5 ? 10 : 11,
                         fontWeight: filled ? 700 : 400,
                         color: filled ? 'white' : 'rgba(255,255,255,0.2)',
                         textAlign: 'center',
@@ -165,13 +165,18 @@ export default function PitchView({
                       }}>
                         {filled ? surname : pos}
                       </div>
+                      {filled && slot?.player && (
+                        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', lineHeight: 1, textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                          {slot.player.season}
+                        </div>
+                      )}
                       {slot?.revealed && slot.player && (
-                        <div style={{ fontSize: 10, fontWeight: 900, color, lineHeight: 1 }}>
+                        <div style={{ fontSize: 13, fontWeight: 900, color, lineHeight: 1 }}>
                           {slot.player.fpl_points}
                         </div>
                       )}
                       {filled && !slot?.revealed && (
-                        <div style={{ fontSize: 10, lineHeight: 1, color: 'transparent' }}>0</div>
+                        <div style={{ fontSize: 13, lineHeight: 1, color: 'transparent' }}>0</div>
                       )}
                     </div>
                   )
