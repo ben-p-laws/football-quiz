@@ -9,6 +9,7 @@ export default function SquadPanel({
   season,
   squad,
   pickedIds,
+  pickedNames,
   allowedPositions,
   revealed = false,
   onPick,
@@ -17,6 +18,7 @@ export default function SquadPanel({
   season: string
   squad: FplPlayer[]
   pickedIds: Set<string>
+  pickedNames: Set<string>
   allowedPositions: Record<Position, boolean>
   revealed?: boolean
   onPick: (player: FplPlayer) => void
@@ -95,11 +97,11 @@ export default function SquadPanel({
           </div>
         )}
         {filtered.map(p => {
-          const alreadyPicked = pickedIds.has(p.id)
+          const alreadyPicked = pickedIds.has(p.id) || pickedNames.has(p.name.toLowerCase())
           const blocked = !allowedPositions[p.position]
           const disabled = alreadyPicked || blocked
           const reason = alreadyPicked
-            ? 'Already picked'
+            ? 'Already in your XI'
             : blocked
             ? `Formation would be invalid if you pick another ${p.position}`
             : undefined

@@ -131,7 +131,17 @@ function pickRounds(allPlayers: FplPlayer[]): TeamSeason[] {
     seen.add(key)
     combos.push({ team: p.team, season: p.season })
   }
-  return shuffle(combos).slice(0, 11)
+  // Pick 11 with no team appearing twice (different seasons of same club excluded)
+  const shuffled = shuffle(combos)
+  const seenTeam = new Set<string>()
+  const result: TeamSeason[] = []
+  for (const combo of shuffled) {
+    if (seenTeam.has(combo.team)) continue
+    seenTeam.add(combo.team)
+    result.push(combo)
+    if (result.length >= 11) break
+  }
+  return result
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -142,6 +152,7 @@ export default function FplDraftGame() {
   const [allPlayers, setAllPlayers] = useState<FplPlayer[]>([])
   const [rounds, setRounds] = useState<TeamSeason[]>([])
   const [picks, setPicks] = useState<FplPlayer[]>([])
+  const [pickedNames, setPickedNames] = useState<Set<string>>(new Set())
   const [roundIdx, setRoundIdx] = useState(0)
   const [name, setName] = useState('')
   const [nameInput, setNameInput] = useState('')
@@ -213,6 +224,7 @@ export default function FplDraftGame() {
     const newRounds = pickRounds(pool)
     setRounds(newRounds)
     setPicks([])
+    setPickedNames(new Set())
     setRoundIdx(0)
     setNewBest(false)
     setRevealedCount(0)
@@ -263,9 +275,11 @@ export default function FplDraftGame() {
   function handlePick(player: FplPlayer) {
     if (state !== 'playing') return
     if (pickedIds.has(player.id)) return
+    if (pickedNames.has(player.name.toLowerCase())) return
     if (!allowed[player.position]) return
     const nextPicks = [...picks, player]
     setPicks(nextPicks)
+    setPickedNames(prev => new Set([...prev, player.name.toLowerCase()]))
     if (nextPicks.length >= 11) {
       finishGame(nextPicks)
     } else {
@@ -667,6 +681,7 @@ export default function FplDraftGame() {
                 season={currentRound.season}
                 squad={currentSquad}
                 pickedIds={pickedIds}
+                pickedNames={pickedNames}
                 allowedPositions={allowed}
                 onPick={handlePick}
               />
