@@ -191,6 +191,9 @@ export default function FplDraftGame() {
           setState('name-entry')
         } else {
           setName(storedName)
+          // pass players directly — allPlayers state update hasn't flushed yet
+          const newRounds = pickRounds(json.players)
+          setRounds(newRounds)
           setState('lobby')
         }
       } catch (err) {
