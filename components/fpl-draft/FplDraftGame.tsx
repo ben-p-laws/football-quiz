@@ -219,6 +219,17 @@ export default function FplDraftGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Fetch leaderboard whenever lobby is shown
+  useEffect(() => {
+    if (state !== 'lobby') return
+    supabase
+      .from('fpl_draft_leaderboard')
+      .select('device_id, name, best_score')
+      .order('best_score', { ascending: false })
+      .limit(10)
+      .then(({ data }) => { setLeaderboard((data ?? []) as LeaderboardEntry[]) })
+  }, [state])
+
   const startGame = useCallback((players?: FplPlayer[]) => {
     const pool = players ?? allPlayers
     const newRounds = pickRounds(pool)
@@ -483,7 +494,36 @@ export default function FplDraftGame() {
             {name && (
               <div style={{ textAlign: 'center', fontSize: 12, color: '#4a5568' }}>
                 Playing as <span style={{ color: 'white', fontWeight: 700 }}>{name}</span>
-                <button onClick={() => router.push('/fpl-draft/leaderboard')} style={{ ...ghostButton, marginLeft: 10, padding: '3px 10px', fontSize: 11 }}>Leaderboard</button>
+              </div>
+            )}
+
+            {/* Leaderboard */}
+            {leaderboard !== null && (
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#dc2626', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>
+                  Leaderboard
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {leaderboard.length === 0 && (
+                    <div style={{ fontSize: 12, color: '#4a5568', textAlign: 'center', padding: '12px 0' }}>No entries yet — you could be first!</div>
+                  )}
+                  {leaderboard.map((entry, i) => {
+                    const isMe = entry.device_id === deviceId
+                    return (
+                      <div key={entry.device_id} style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '8px 12px',
+                        background: isMe ? 'rgba(220,38,38,0.08)' : 'rgba(255,255,255,0.02)',
+                        border: `1px solid ${isMe ? 'rgba(220,38,38,0.25)' : '#1e2d4a'}`,
+                        borderRadius: 8,
+                      }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', minWidth: 18, textAlign: 'right' }}>{i + 1}</div>
+                        <div style={{ flex: 1, fontSize: 13, fontWeight: 700, color: isMe ? 'white' : '#aabbcc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{entry.name}</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: isMe ? '#dc2626' : 'white' }}>{entry.best_score}</div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
           </div>
