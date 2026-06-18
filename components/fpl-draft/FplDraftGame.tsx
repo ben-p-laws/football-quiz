@@ -392,7 +392,7 @@ export default function FplDraftGame() {
     <>
       <NavBar />
       <div style={pageStyle}>
-        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '16px 18px 40px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '12px 8px 40px' }}>
           {/* Header bar */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
             <div>
@@ -432,8 +432,8 @@ export default function FplDraftGame() {
             </div>
           )}
 
-          {/* Layout */}
-          <div className="fpld-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
+          {/* Layout — always side-by-side */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, alignItems: 'start' }}>
             <div>
               <PitchView
                 slots={slotsForDisplay}
@@ -469,11 +469,6 @@ export default function FplDraftGame() {
         </div>
       </div>
 
-      <style>{`
-        @media (max-width: 800px) {
-          .fpld-layout { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
     </>
   )
 }
