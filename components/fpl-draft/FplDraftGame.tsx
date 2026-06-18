@@ -461,14 +461,14 @@ export default function FplDraftGame() {
                 Draft the ultimate FPL XI
               </h1>
               <p style={{ fontSize: 14, color: '#8899bb', marginTop: 10, lineHeight: 1.6 }}>
-                11 rounds. Each round a random Premier League team &amp; season is revealed. Pick one player from that squad. Scores are hidden until the end — maximise your total FPL points.
+                11 rounds. Each round a random Premier League team &amp; season is revealed. Pick one player from that squad. Scores are hidden until the end, maximise your total FPL points.
               </p>
             </div>
             <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 14, padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 12 }}>
               {([
                 ['🎰', 'Each round, a slot machine reveals a random team & season'],
                 ['📋', 'Pick one player from that squad to fill your XI'],
-                ['📐', 'Formation rules apply — you must end with a valid 11'],
+                ['📐', 'Formation rules apply, you must end with a valid 11'],
                 ['🏆', 'Scores revealed at the end — compete for the leaderboard'],
               ] as [string, string][]).map(([icon, text], i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
