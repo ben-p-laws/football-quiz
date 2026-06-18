@@ -7,6 +7,7 @@ const LINKS = [
   { label: 'Games',                href: '/' },
   { label: 'Football Golf',        href: '/football-golf' },
   { label: 'Perfect 10',           href: '/perfect10' },
+  { label: 'FPL Draft',            href: '/fpl-draft' },
   { label: 'Minimise',             href: '/minimise' },
   { label: 'Around the World',     href: '/around-the-world' },
   { label: 'Bingo',                href: '/bingo' },
