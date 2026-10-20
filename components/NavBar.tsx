@@ -19,6 +19,11 @@ const LINKS = [
   { label: 'Countdown',            href: '/countdown' },
 ]
 
+const GEO_LINKS = [
+  { label: 'Population Guesser',   href: '/geo/population' },
+  { label: 'Pop Challenge',        href: '/geo/challenge' },
+]
+
 const LOGO = (
   <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
     <rect width="32" height="32" rx="7" fill="#0a0f1e"/>
@@ -52,6 +57,11 @@ export default function NavBar() {
   const router   = useRouter()
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [geoOpen, setGeoOpen] = useState(false)
+
+  useEffect(() => {
+    if (pathname.startsWith('/geo')) setGeoOpen(true)
+  }, [pathname])
 
   useEffect(() => {
     LINKS.forEach(({ href }) => router.prefetch(href))
@@ -90,6 +100,18 @@ export default function NavBar() {
         {/* Mobile dropdown */}
         {menuOpen && (
           <div style={{ position: 'absolute', top: 56, left: 0, right: 0, background: '#111827', borderBottom: '1px solid #1e2d4a', zIndex: 200 }}>
+            {/* Geography group */}
+            <div onClick={() => setGeoOpen(v => !v)}
+              style={{ padding: '14px 24px', fontSize: 15, fontWeight: 500, cursor: 'pointer', color: pathname.startsWith('/geo') ? 'white' : '#8899bb', borderLeft: pathname.startsWith('/geo') ? '3px solid #22c55e' : '3px solid transparent', borderBottom: '1px solid #1e2d4a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span>🌍 Geography</span>
+              <span style={{ fontSize: 12, color: '#4a5568' }}>{geoOpen ? '▲' : '▼'}</span>
+            </div>
+            {geoOpen && GEO_LINKS.map(({ label, href }) => (
+              <div key={href} onClick={() => navigate(href)}
+                style={{ padding: '11px 24px 11px 40px', fontSize: 14, fontWeight: 500, cursor: 'pointer', color: active(href) ? 'white' : '#8899bb', borderLeft: active(href) ? '3px solid #22c55e' : '3px solid transparent', borderBottom: '1px solid #1e2d4a', background: 'rgba(34,197,94,0.04)' }}>
+                {label}
+              </div>
+            ))}
             {LINKS.map(({ label, href }) => (
               <div key={href} onClick={() => navigate(href)}
                 style={{ padding: '14px 24px', fontSize: 15, fontWeight: 500, cursor: 'pointer', color: active(href) ? 'white' : '#8899bb', borderLeft: active(href) ? '3px solid #dc2626' : '3px solid transparent', borderBottom: '1px solid #1e2d4a' }}>
@@ -105,6 +127,18 @@ export default function NavBar() {
 
       {/* ── Desktop sidebar ── */}
       <aside className="tb-sidebar" style={{ position: 'fixed', top: 56, left: 0, width: 180, height: 'calc(100vh - 56px)', background: '#0a0f1e', borderRight: '1px solid #1e2d4a', overflowY: 'auto', zIndex: 90, paddingTop: 8 }}>
+        {/* Geography group */}
+        <div onClick={() => setGeoOpen(v => !v)} className="tb-sidebar-link"
+          style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, fontWeight: pathname.startsWith('/geo') ? 700 : 400, color: pathname.startsWith('/geo') ? 'white' : '#8899bb', borderLeft: `3px solid ${pathname.startsWith('/geo') ? '#22c55e' : 'transparent'}`, background: pathname.startsWith('/geo') ? 'rgba(34,197,94,0.06)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span>🌍 Geography</span>
+          <span style={{ fontSize: 10, color: '#4a5568' }}>{geoOpen ? '▲' : '▼'}</span>
+        </div>
+        {geoOpen && GEO_LINKS.map(({ label, href }) => (
+          <div key={href} onClick={() => navigate(href)} className="tb-sidebar-link"
+            style={{ padding: '7px 16px 7px 28px', cursor: 'pointer', fontSize: 12, fontWeight: active(href) ? 700 : 400, color: active(href) ? 'white' : '#6677aa', borderLeft: `3px solid ${active(href) ? '#22c55e' : 'transparent'}`, background: active(href) ? 'rgba(34,197,94,0.06)' : 'rgba(34,197,94,0.02)' }}>
+            {label}
+          </div>
+        ))}
         {LINKS.map(({ label, href }) => (
           <div key={href} onClick={() => navigate(href)} className="tb-sidebar-link"
             style={{ padding: '9px 16px', cursor: 'pointer', fontSize: 13, fontWeight: active(href) ? 700 : 400, color: active(href) ? 'white' : '#8899bb', borderLeft: `3px solid ${active(href) ? '#dc2626' : 'transparent'}`, background: active(href) ? 'rgba(220,38,38,0.06)' : 'transparent' }}>
