@@ -56,13 +56,15 @@ export default function ChallengeMode() {
     setInput(val)
     if (val.length < 2) { setSuggestions([]); return }
     const v = val.toLowerCase()
-    const starts = CITIES.filter(c => c.name.toLowerCase().startsWith(v))
-    const contains = CITIES.filter(c => !c.name.toLowerCase().startsWith(v) && c.name.toLowerCase().includes(v))
+    const isTarget = (c: City) => c.name === target.name && c.country === target.country
+    const starts = CITIES.filter(c => !isTarget(c) && c.name.toLowerCase().startsWith(v))
+    const contains = CITIES.filter(c => !isTarget(c) && !c.name.toLowerCase().startsWith(v) && c.name.toLowerCase().includes(v))
     setSuggestions([...starts, ...contains].slice(0, 8))
     setSelectedIdx(-1)
   }
 
   function submitGuess(city: City) {
+    if (city.name === target.name && city.country === target.country) return
     const diff = Math.abs(city.pop - target.pop)
     const pct = (diff / target.pop) * 100
     const abovePct = ((city.pop - target.pop) / target.pop) * 100
