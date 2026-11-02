@@ -22,6 +22,7 @@ const LINKS = [
 const GEO_LINKS = [
   { label: 'Population Guesser',   href: '/geo/population' },
   { label: 'Pop Challenge',        href: '/geo/challenge' },
+  { label: 'Pop Circle',           href: '/geo/circle' },
 ]
 
 const LOGO = (

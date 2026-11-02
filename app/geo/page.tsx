@@ -121,6 +121,42 @@ export default function GeoPage() {
           </div>
         </div>
 
+        {/* Population Circle card */}
+        <div
+          style={s.card}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
+          onClick={() => router.push('/geo/circle')}
+        >
+          <div style={{ padding: '16px 18px 14px' }}>
+            <div style={{ fontSize: 17, fontWeight: 800, color: 'white', marginBottom: 3 }}>Population Circle</div>
+            <div style={{ fontSize: 12, color: '#8899bb', marginBottom: 12 }}>
+              Daily puzzle · estimate the population inside the circle
+            </div>
+
+            {/* Preview */}
+            <div style={{ background: '#0a0f1e', borderRadius: 10, height: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+              <svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ opacity: 0.7 }}>
+                <rect width="120" height="80" fill="#0a0f1e"/>
+                <line x1="0" y1="16" x2="120" y2="16" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <line x1="0" y1="32" x2="120" y2="32" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <line x1="0" y1="48" x2="120" y2="48" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <line x1="0" y1="64" x2="120" y2="64" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <line x1="24" y1="0" x2="24" y2="80" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <line x1="48" y1="0" x2="48" y2="80" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <line x1="72" y1="0" x2="72" y2="80" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <line x1="96" y1="0" x2="96" y2="80" stroke="#1e2d4a" strokeWidth="0.8"/>
+                <circle cx="60" cy="40" r="28" stroke="#dc2626" strokeWidth="2" fill="#dc2626" fillOpacity="0.15"/>
+              </svg>
+              <div style={{ position: 'absolute', bottom: 8, right: 10, fontSize: 10, color: '#4a5568' }}>?</div>
+            </div>
+          </div>
+
+          <div style={{ background: '#dc2626', padding: '11px 18px', textAlign: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>Play Population Circle →</span>
+          </div>
+        </div>
+
         {/* Coming soon */}
         <div style={{ ...s.card, cursor: 'default', opacity: 0.5 }}>
           <div style={{ padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
