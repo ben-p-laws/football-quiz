@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import {
   CirclePuzzle,
   getDailyPuzzle,
-  getRandomPuzzle,
+  getDailyFreePool,
   guessPct,
   parsePopGuess,
   formatPopGuess,
@@ -22,32 +22,35 @@ const CircleMapView = dynamic(() => import('./CircleMapView'), {
 })
 
 type DailyRecord = { date: string; pct: number; guess: number }
+type FreeRecord  = { date: string; index: number }
+
+const FREE_POOL_SIZE = 10
 
 export default function PopulationCircle() {
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const [freePool] = useState<CirclePuzzle[]>(() => getDailyFreePool())
+
   const [puzzle, setPuzzle] = useState<CirclePuzzle>(() => getDailyPuzzle())
   const [mode, setMode] = useState<'daily' | 'free'>('daily')
+  const [freeIndex, setFreeIndex] = useState(0)
   const [input, setInput] = useState('')
   const [submitted, setSubmitted] = useState(false)
   const [dailyDone, setDailyDone] = useState<DailyRecord | null>(null)
   const [copied, setCopied] = useState(false)
-
-  const todayStr = new Date().toISOString().slice(0, 10)
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem('popCircle_daily')
       if (raw) {
         const rec: DailyRecord = JSON.parse(raw)
-        if (rec.date === todayStr) {
-          setDailyDone(rec)
-          setSubmitted(true)
-        }
+        if (rec.date === todayStr) { setDailyDone(rec); setSubmitted(true) }
       }
     } catch {}
   }, [todayStr])
 
   const parsed = parsePopGuess(input)
   const canSubmit = parsed !== null
+  const freeExhausted = mode === 'free' && freeIndex >= FREE_POOL_SIZE
 
   function handleSubmit() {
     if (!parsed || submitted) return
@@ -57,19 +60,32 @@ export default function PopulationCircle() {
       const rec: DailyRecord = { date: todayStr, pct, guess: parsed }
       setDailyDone(rec)
       try { localStorage.setItem('popCircle_daily', JSON.stringify(rec)) } catch {}
+    } else {
+      try { localStorage.setItem('popCircle_free', JSON.stringify({ date: todayStr, index: freeIndex + 1 } as FreeRecord)) } catch {}
     }
   }
 
   function handleNextFree() {
-    setPuzzle(getRandomPuzzle(puzzle.id))
+    const next = freeIndex + 1
+    setFreeIndex(next)
+    setPuzzle(freePool[next] ?? freePool[0])
     setInput('')
     setSubmitted(false)
     setCopied(false)
   }
 
   function handlePlayFree() {
+    let startIndex = 0
+    try {
+      const raw = localStorage.getItem('popCircle_free')
+      if (raw) {
+        const rec: FreeRecord = JSON.parse(raw)
+        if (rec.date === todayStr) startIndex = rec.index
+      }
+    } catch {}
     setMode('free')
-    setPuzzle(getRandomPuzzle(puzzle.id))
+    setFreeIndex(startIndex)
+    setPuzzle(freePool[startIndex] ?? freePool[0])
     setInput('')
     setSubmitted(false)
     setCopied(false)
@@ -113,22 +129,27 @@ export default function PopulationCircle() {
                 <div style={{ fontSize: 11, color: '#4a5568' }}>{mode === 'daily' ? 'Daily puzzle' : 'Free mode'}</div>
               </div>
             </div>
-            {mode === 'free' && !submitted && (
-              <button
-                onClick={handleNextFree}
-                style={{ background: 'none', border: '1px solid #1e2d4a', borderRadius: 8, padding: '6px 12px', color: '#8899bb', fontSize: 12, cursor: 'pointer' }}
-              >
-                New circle
-              </button>
+            {mode === 'free' && (
+              <span style={{ fontSize: 11, color: '#4a5568', fontWeight: 600 }}>
+                {Math.min(freeIndex + 1, FREE_POOL_SIZE)} / {FREE_POOL_SIZE}
+              </span>
             )}
           </div>
         </div>
 
-        <div style={{ height: 300, borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
-          <CircleMapView lat={puzzle.lat} lng={puzzle.lng} radiusKm={puzzle.radiusKm} />
-        </div>
+        {freeExhausted ? (
+          <div style={{ background: '#111827', border: '1px solid #1e2d4a', borderRadius: 14, padding: '40px 20px', textAlign: 'center', marginBottom: 14 }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🌍</div>
+            <div style={{ fontSize: 18, fontWeight: 900, color: 'white', marginBottom: 6 }}>That's all for today</div>
+            <div style={{ fontSize: 13, color: '#8899bb' }}>Come back tomorrow for {FREE_POOL_SIZE} more circles</div>
+          </div>
+        ) : (
+          <div style={{ height: 300, borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
+            <CircleMapView lat={puzzle.lat} lng={puzzle.lng} radiusKm={puzzle.radiusKm} />
+          </div>
+        )}
 
-        {!submitted ? (
+        {!freeExhausted && !submitted ? (
           <div style={{ marginBottom: 20 }}>
             <div style={{ fontSize: 13, color: '#8899bb', marginBottom: 10, fontWeight: 500 }}>
               Estimate the population inside the circle
@@ -257,7 +278,7 @@ export default function PopulationCircle() {
                   fontFamily: 'inherit',
                 }}
               >
-                Next circle →
+                {freeIndex + 1 < FREE_POOL_SIZE ? 'Next circle →' : 'Finish →'}
               </button>
             )}
           </div>

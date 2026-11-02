@@ -75,9 +75,18 @@ export function getDailyPuzzle(): CirclePuzzle {
   return PUZZLES[getDailyIndex()]
 }
 
-export function getRandomPuzzle(exclude?: number): CirclePuzzle {
-  const pool = exclude !== undefined ? PUZZLES.filter(p => p.id !== exclude) : PUZZLES
-  return pool[Math.floor(Math.random() * pool.length)]
+export function getDailyFreePool(): CirclePuzzle[] {
+  const epoch = new Date('2026-01-01').getTime()
+  const days = Math.floor((Date.now() - epoch) / 86_400_000)
+  const dailyId = getDailyPuzzle().id
+  const pool = PUZZLES.filter(p => p.id !== dailyId)
+  const picked: CirclePuzzle[] = []
+  const used = new Set<number>()
+  for (let i = 0; picked.length < 10 && i < pool.length * 2; i++) {
+    const idx = ((days * 17 + i * 11) % pool.length + pool.length) % pool.length
+    if (!used.has(idx)) { used.add(idx); picked.push(pool[idx]) }
+  }
+  return picked
 }
 
 export function guessPct(guess: number, actual: number): number {
