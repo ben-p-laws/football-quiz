@@ -27,7 +27,8 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
       zoomControl={false}
       attributionControl={false}
     >
-      <TileLayer url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" />
+      <style>{`.leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%); }`}</style>
+      <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
       <Circle
         center={[lat, lng]}
         radius={radiusKm * 1000}
