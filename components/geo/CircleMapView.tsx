@@ -27,8 +27,10 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
       zoomControl={false}
       attributionControl={false}
     >
-      <style>{`.leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(90%) contrast(90%); }`}</style>
-      <TileLayer url="https://tile.openstreetmap.org/{z}/{x}/{y}.png" />
+      <style>{`.leaflet-tile-pane { filter: brightness(0.55) contrast(1.4); }`}</style>
+      {/* ESRI Canvas Dark Gray — clean borders/labels, no terrain or texture */}
+      <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
+      <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}" />
       <Circle
         center={[lat, lng]}
         radius={radiusKm * 1000}
