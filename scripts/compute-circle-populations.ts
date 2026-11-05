@@ -75,7 +75,7 @@ async function main() {
   for (const puzzle of PUZZLES) {
     process.stderr.write(`Computing ${puzzle.label} (r=${puzzle.radiusKm}km)… `)
 
-    const cells  = h3.polygonToCells({ outer: circlePoly(puzzle.lat, puzzle.lng, puzzle.radiusKm) }, H3_RES)
+    const cells  = h3.polygonToCells(circlePoly(puzzle.lat, puzzle.lng, puzzle.radiusKm), H3_RES)
     let   total  = 0
 
     for (let i = 0; i < cells.length; i += BATCH) {

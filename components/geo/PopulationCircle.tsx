@@ -196,7 +196,7 @@ export default function PopulationCircle() {
             <div style={{ fontSize: 13, color: '#8899bb' }}>Come back tomorrow for {FREE_POOL_SIZE} more circles</div>
           </div>
         ) : (
-          <div key={puzzle.id} style={{ height: 300, borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
+          <div key={puzzle.id} style={{ height: '50vh', borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
             <CircleMapView lat={puzzle.lat} lng={puzzle.lng} radiusKm={puzzle.radiusKm} />
           </div>
         )}
@@ -238,10 +238,9 @@ export default function PopulationCircle() {
           <div style={{ marginBottom: 20 }}>
             {/* Result card */}
             <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 14, padding: '20px 18px', marginBottom: 12 }}>
-              <div style={{ fontSize: 36, fontWeight: 900, color: colors.text, marginBottom: 4 }}>
+              <div style={{ fontSize: 36, fontWeight: 900, color: colors.text, marginBottom: 14 }}>
                 {pct.toFixed(1)}% off
               </div>
-              <div style={{ fontSize: 13, color: '#8899bb', marginBottom: 14 }}>{puzzle.label}</div>
               <div style={{ display: 'flex', gap: 16 }}>
                 <div>
                   <div style={{ fontSize: 10, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Your guess</div>
