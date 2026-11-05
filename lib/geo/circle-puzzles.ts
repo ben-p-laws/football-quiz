@@ -4,7 +4,7 @@ export type CirclePuzzle = {
   lng: number
   radiusKm: number
   population: number
-  label: string
+  label?: string
 }
 
 export const PUZZLES: CirclePuzzle[] = [
