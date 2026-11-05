@@ -27,10 +27,10 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
       zoomControl={false}
       attributionControl={false}
     >
-      {/* Light Gray inverted → dark bg with bright borders & labels */}
-      <style>{`.leaflet-tile-pane { filter: invert(1) brightness(0.85) contrast(1.4); }`}</style>
-      <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}" />
-      <TileLayer url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}" />
+      <TileLayer
+        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"
+        subdomains="abcd"
+      />
       <Circle
         center={[lat, lng]}
         radius={radiusKm * 1000}
