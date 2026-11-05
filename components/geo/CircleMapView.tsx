@@ -48,7 +48,7 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
       zoomControl={false}
       attributionControl={false}
     >
-      <style>{`.leaflet-tile-pane { filter: invert(1) brightness(0.8) saturate(0.3) hue-rotate(180deg); }`}</style>
+      <style>{`.leaflet-tile-pane { filter: invert(1) brightness(0.85) saturate(0.15) hue-rotate(180deg); }`}</style>
       <TileLayer url="https://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}" />
       <Circle
         center={[lat, lng]}
