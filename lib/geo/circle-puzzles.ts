@@ -65,28 +65,35 @@ export const PUZZLES: CirclePuzzle[] = [
   { id: 49, lat: -31.0000, lng: 149.0000, radiusKm: 900,  population: 19_458_752,     label: 'Australia East Coast' },
 ]
 
-export function getDailyIndex(): number {
+function seededShuffle<T>(arr: T[], seed: number): T[] {
+  const result = [...arr]
+  let s = seed | 0
+  for (let i = result.length - 1; i > 0; i--) {
+    s = (Math.imul(s, 1664525) + 1013904223) | 0
+    const j = Math.abs(s) % (i + 1);
+    [result[i], result[j]] = [result[j], result[i]]
+  }
+  return result
+}
+
+function getDailyState(): { days: number; shuffled: CirclePuzzle[] } {
   const epoch = new Date('2026-01-01').getTime()
   const days = Math.floor((Date.now() - epoch) / 86_400_000)
-  return ((days % PUZZLES.length) + PUZZLES.length) % PUZZLES.length
+  const cycle = Math.floor(days / PUZZLES.length)
+  const shuffled = seededShuffle(PUZZLES, cycle + 1)
+  return { days, shuffled }
 }
 
 export function getDailyPuzzle(): CirclePuzzle {
-  return PUZZLES[getDailyIndex()]
+  const { days, shuffled } = getDailyState()
+  return shuffled[days % shuffled.length]
 }
 
 export function getDailyFreePool(): CirclePuzzle[] {
-  const epoch = new Date('2026-01-01').getTime()
-  const days = Math.floor((Date.now() - epoch) / 86_400_000)
-  const dailyId = getDailyPuzzle().id
-  const pool = PUZZLES.filter(p => p.id !== dailyId)
-  const picked: CirclePuzzle[] = []
-  const used = new Set<number>()
-  for (let i = 0; picked.length < 10 && i < pool.length * 2; i++) {
-    const idx = ((days * 17 + i * 11) % pool.length + pool.length) % pool.length
-    if (!used.has(idx)) { used.add(idx); picked.push(pool[idx]) }
-  }
-  return picked
+  const { days, shuffled } = getDailyState()
+  const dailyId = shuffled[days % shuffled.length].id
+  const pool = shuffled.filter(p => p.id !== dailyId)
+  return pool.slice(0, 10)
 }
 
 export function guessPct(guess: number, actual: number): number {
