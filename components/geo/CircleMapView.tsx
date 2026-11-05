@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { geoCircle } from 'd3-geo'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { ComposableMap, Geographies, Geography, Marker } = require('react-simple-maps')
@@ -217,6 +217,9 @@ const CITIES: [string, number, number][] = [
 ]
 
 export default function CircleMapView({ lat, lng, radiusKm }: Props) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+
   // Scale so the circle fills ~40% of the 800px canvas width
   // For geoEqualEarth: r_px ≈ radiusKm/6371 × scale, target r_px ≈ 160
   const scale = useMemo(
@@ -233,16 +236,19 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
     }],
   }), [lat, lng, radiusKm])
 
-  // Font sizes relative to SVG viewBox (800×600)
+  // Font sizes relative to SVG viewBox (800×450)
   const countryFontSize = Math.max(4, Math.min(11, 7_000 / scale))
   const cityFontSize    = Math.max(3, Math.min(9,  5_000 / scale))
   const cityDotR        = Math.max(0.8, Math.min(2.5, 1500 / scale))
 
   return (
-    <div style={{ width: '100%', height: '100%', background: '#04101f', borderRadius: 'inherit' }}>
+    <div style={{ width: '100%', background: '#04101f', borderRadius: 'inherit' }}>
+      {mounted && (
       <ComposableMap
+        width={800}
+        height={450}
         projectionConfig={{ scale, center: [lng, lat] }}
-        style={{ width: '100%', height: '100%', display: 'block' }}
+        style={{ width: '100%', height: 'auto', display: 'block' }}
       >
         {/* Country fills — exact ATW colours */}
         <Geographies geography={GEO_URL}>
@@ -313,6 +319,7 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
           }
         </Geographies>
       </ComposableMap>
+      )}
     </div>
   )
 }

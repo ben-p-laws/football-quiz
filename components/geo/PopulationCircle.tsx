@@ -196,7 +196,7 @@ export default function PopulationCircle() {
             <div style={{ fontSize: 13, color: '#8899bb' }}>Come back tomorrow for {FREE_POOL_SIZE} more circles</div>
           </div>
         ) : (
-          <div key={puzzle.id} style={{ height: 300, borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
+          <div key={puzzle.id} style={{ borderRadius: 14, overflow: 'hidden', marginBottom: 14 }}>
             <CircleMapView lat={puzzle.lat} lng={puzzle.lng} radiusKm={puzzle.radiusKm} />
           </div>
         )}
