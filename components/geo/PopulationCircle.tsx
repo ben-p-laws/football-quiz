@@ -250,7 +250,7 @@ export default function PopulationCircle() {
                 <div style={{ width: 1, background: '#1e2d4a' }} />
                 <div>
                   <div style={{ fontSize: 10, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 2 }}>Actual</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: colors.text }}>{formatPopGuess(puzzle.population)}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: colors.text }}>{puzzle.population.toLocaleString()}</div>
                 </div>
               </div>
             </div>
