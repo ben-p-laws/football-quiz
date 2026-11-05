@@ -28,16 +28,6 @@ function circlePoly(lat: number, lng: number, radiusKm: number): [number, number
   return pts
 }
 
-/**
- * Convert an H3 cell string ("88abc...") to the signed 64-bit integer
- * that Kontur stores in SQLite.
- */
-function h3ToSigned(cell: string): bigint {
-  let n = BigInt('0x' + cell)
-  if (n > BigInt('0x7FFFFFFFFFFFFFFF')) n -= (1n << 64n)
-  return n
-}
-
 // ── main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
@@ -47,8 +37,7 @@ async function main() {
     process.exit(1)
   }
 
-  const db = new Database(gpkgPath, { readonly: true })
-  db.defaultSafeIntegers(true)   // return BigInt for INTEGER columns
+  const db = new Database(gpkgPath)  // writable so we can create index
 
   // Auto-detect table and column names
   const tables = db.prepare(`SELECT name FROM sqlite_master WHERE type='table'`).all() as { name: string }[]
@@ -68,24 +57,29 @@ async function main() {
   const h3Col  = cols.find((c: any) => c.name.toLowerCase() === 'h3')?.name       ?? 'h3'
   const popCol = cols.find((c: any) => c.name.toLowerCase().includes('pop'))?.name ?? 'population'
 
-  console.error(`Using table="${popTable.name}" h3="${h3Col}" population="${popCol}"\n`)
+  console.error(`Using table="${popTable.name}" h3="${h3Col}" population="${popCol}"`)
+
+  // Create index on h3 column if it doesn't exist — critical for performance
+  console.error('Checking h3 index…')
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_kontur_h3 ON ${popTable.name}(${h3Col})`)
+  console.error('Index ready.\n')
 
   const results: { id: number; label: string; oldPop: number; newPop: number }[] = []
 
   for (const puzzle of PUZZLES) {
-    process.stderr.write(`Computing ${puzzle.label} (r=${puzzle.radiusKm}km)… `)
+    process.stderr.write(`Circle ${puzzle.id + 1}/${PUZZLES.length} (r=${puzzle.radiusKm}km)… `)
 
     const cells  = h3.polygonToCells(circlePoly(puzzle.lat, puzzle.lng, puzzle.radiusKm), H3_RES)
     let   total  = 0
 
     for (let i = 0; i < cells.length; i += BATCH) {
-      const batch    = cells.slice(i, i + BATCH).map(h3ToSigned)
-      const holders  = batch.map(() => '?').join(',')
-      const rows     = db
+      const batch   = cells.slice(i, i + BATCH)  // h3 strings match DB TEXT column directly
+      const holders = batch.map(() => '?').join(',')
+      const rows    = db
         .prepare(`SELECT ${popCol} FROM ${popTable.name} WHERE ${h3Col} IN (${holders})`)
-        .all(...batch) as Record<string, bigint>[]
+        .all(...batch) as Record<string, number>[]
 
-      total += rows.reduce((s, r) => s + Number(r[popCol] ?? 0n), 0)
+      total += rows.reduce((s, r) => s + (r[popCol] ?? 0), 0)
     }
 
     const rounded = Math.round(total)
