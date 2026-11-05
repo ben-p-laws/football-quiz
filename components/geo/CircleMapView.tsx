@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo, useState, useEffect } from 'react'
-import { geoCircle } from 'd3-geo'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { ComposableMap, Geographies, Geography, Marker } = require('react-simple-maps')
 
@@ -220,34 +219,25 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
   const [mounted, setMounted] = useState(false)
   useEffect(() => { setMounted(true) }, [])
 
-  // Scale so the circle fills ~40% of the 800px canvas width
-  // For geoEqualEarth: r_px ≈ radiusKm/6371 × scale, target r_px ≈ 160
-  const scale = useMemo(
-    () => Math.min((160 * 6371) / radiusKm, 25_000),
-    [radiusKm]
-  )
+  // geoAzimuthalEquidistant: 1 km = scale/6371 px. Target circle radius = 160px.
+  const scale = useMemo(() => (160 * 6371) / radiusKm, [radiusKm])
 
-  const circleGeoJSON = useMemo(() => ({
-    type: 'FeatureCollection' as const,
-    features: [{
-      type: 'Feature' as const,
-      properties: {},
-      geometry: geoCircle().center([lng, lat]).radius(radiusKm / 111.32).precision(1)(),
-    }],
-  }), [lat, lng, radiusKm])
+  // SVG circle radius is always 160px (the formula guarantees it)
+  const SVG_R = 160
 
-  // Font sizes relative to SVG viewBox (800×450)
+  // Font sizes in SVG units (viewBox 800×450)
   const countryFontSize = Math.max(4, Math.min(11, 7_000 / scale))
   const cityFontSize    = Math.max(3, Math.min(9,  5_000 / scale))
-  const cityDotR        = Math.max(0.8, Math.min(2.5, 1500 / scale))
+  const cityDotR        = Math.max(0.8, Math.min(2.5, 1_500 / scale))
 
   return (
     <div style={{ width: '100%', background: '#04101f', borderRadius: 'inherit' }}>
       {mounted && (
       <ComposableMap
+        projection="geoAzimuthalEquidistant"
         width={800}
         height={450}
-        projectionConfig={{ scale, center: [lng, lat] }}
+        projectionConfig={{ scale, rotate: [-lng, -lat, 0] }}
         style={{ width: '100%', height: 'auto', display: 'block' }}
       >
         {/* Country fills — exact ATW colours */}
@@ -302,22 +292,17 @@ export default function CircleMapView({ lat, lng, radiusKm }: Props) {
           </Marker>
         ))}
 
-        {/* Circle overlay */}
-        <Geographies geography={circleGeoJSON}>
-          {({ geographies }: any) =>
-            geographies.map((geo: any) => (
-              <Geography
-                key={geo.rsmKey}
-                geography={geo}
-                fill="rgba(220,38,38,0.12)"
-                stroke="#dc2626"
-                strokeWidth={2}
-                strokeDasharray="8 4"
-                style={{ default: { outline: 'none' }, hover: { outline: 'none' }, pressed: { outline: 'none' } }}
-              />
-            ))
-          }
-        </Geographies>
+        {/* Circle overlay — perfect circle because azimuthal equidistant has uniform radial scale */}
+        <Marker coordinates={[lng, lat]}>
+          <circle
+            r={SVG_R}
+            fill="rgba(220,38,38,0.12)"
+            stroke="#dc2626"
+            strokeWidth={2}
+            strokeDasharray="8 4"
+            style={{ pointerEvents: 'none' }}
+          />
+        </Marker>
       </ComposableMap>
       )}
     </div>
