@@ -3,483 +3,185 @@
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import NavBar from './NavBar'
+import s from './LandingPage.module.css'
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { ComposableMap, Geographies, Geography } = require('react-simple-maps')
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
-// ISO numeric codes for the demo route
-const ATW_COMPLETED = new Set(['620', '724'])       // POR, ESP — green
-const ATW_CURRENT   = '250'                          // FRA — yellow
-const ATW_UPCOMING  = new Set(['276', '616'])        // GER, POL — blue
+const ATW_COMPLETED = new Set(['620', '724'])
+const ATW_CURRENT   = '250'
+const ATW_UPCOMING  = new Set(['276', '616'])
 
 export default function LandingPage() {
   const router  = useRouter()
   const [mounted, setMounted] = useState(false)
   useEffect(() => setMounted(true), [])
 
-  const s = {
-    page: { background: '#0a0f1e', minHeight: '100vh', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" } as React.CSSProperties,
-    header: { borderBottom: '1px solid #1e2d4a', padding: '16px 20px 14px', maxWidth: 1100, margin: '0 auto' } as React.CSSProperties,
-    h1: { fontSize: 20, fontWeight: 800, color: 'white', letterSpacing: '-0.5px', margin: '0 0 4px' } as React.CSSProperties,
-    sub: { fontSize: 12, color: '#4a5568', margin: 0 } as React.CSSProperties,
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, padding: '16px 20px', maxWidth: 1100, margin: '0 auto' } as React.CSSProperties,
-    card: { background: '#111827', border: '1px solid #1e2d4a', borderRadius: 12, overflow: 'hidden', display: 'flex', flexDirection: 'column', cursor: 'pointer', transition: 'border-color 0.15s' } as React.CSSProperties,
-    cardHead: { padding: '12px 14px 10px' } as React.CSSProperties,
-    cardTitle: { fontSize: 15, fontWeight: 800, color: 'white', marginBottom: 2 } as React.CSSProperties,
-    cardDesc: { fontSize: 11, color: '#8899bb' } as React.CSSProperties,
-    tag: { display: 'inline-block', fontSize: 10, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.12)', padding: '2px 8px', borderRadius: 20, marginTop: 6 } as React.CSSProperties,
-    preview: { padding: '0 12px 10px', flex: 1 } as React.CSSProperties,
-    cta:    { background: '#dc2626', padding: '11px 14px', textAlign: 'center' as const, cursor: 'pointer' } as React.CSSProperties,
-    ctaSm:  { background: '#dc2626', padding: '8px 14px',  textAlign: 'center' as const, cursor: 'pointer' } as React.CSSProperties,
-    ctaText: { fontSize: 13, fontWeight: 800, color: 'white' } as React.CSSProperties,
-  }
-
-  function TBar({ pct, name, val, found }: { pct: number; name?: string; val: string; found?: boolean }) {
-    return (
-      <div style={{ height: 28, background: '#0a0f1e', borderRadius: 6, border: `1px solid ${found ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, display: 'flex', alignItems: 'center', padding: '0 10px', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', marginBottom: 3 }}>
-        {found && <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${pct}%`, background: 'rgba(34,197,94,0.15)', borderRight: '1px solid rgba(34,197,94,0.5)' }} />}
-        <span style={{ fontSize: 11, fontWeight: found ? 700 : 400, color: found ? '#22c55e' : '#8899bb', position: 'relative' }}>{found ? name : '?'}</span>
-        <span style={{ fontSize: 11, fontWeight: 800, color: found ? '#22c55e' : '#4a5568', position: 'relative' }}>{val}</span>
-      </div>
-    )
-  }
-
-  function BCell({ label, player, state }: { label: string; player?: string; state: 'green' | 'red' | 'none' }) {
-    const bg = state === 'green' ? 'rgba(34,197,94,0.12)' : state === 'red' ? 'rgba(239,68,68,0.12)' : '#0a0f1e'
-    const border = state === 'green' ? 'rgba(34,197,94,0.4)' : state === 'red' ? 'rgba(239,68,68,0.35)' : '#1e2d4a'
-    const playerColor = state === 'green' ? '#22c55e' : '#ef4444'
-    return (
-      <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 6, padding: '5px 7px', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, textAlign: 'center' as const }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: state !== 'none' ? 'white' : '#8899bb', lineHeight: 1.2 }}>{label}</div>
-        {player && <div style={{ fontSize: 9, fontWeight: 700, color: playerColor, lineHeight: 1.25 }}>{player}</div>}
-      </div>
-    )
-  }
-
-  const SHIRT_PATH = [
-    'M 12,32', 'L 2,44', 'L 20,56', 'C 22,55 24,51 24,48',
-    'L 24,90', 'L 76,90', 'L 76,48', 'C 76,51 78,55 80,56',
-    'L 98,44', 'L 88,32', 'C 80,20 70,16 62,16',
-    'A 12,10 0 0 1 38,16', 'C 30,16 20,20 12,32', 'Z',
-  ].join(' ')
-
-  function TShirt({ bg, label, revealed }: { bg: string; label: string; revealed: boolean }) {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-        <svg viewBox="0 0 100 100" width="42" height="42" style={{ display: 'block' }}>
-          <path d={SHIRT_PATH}
-            fill={revealed ? bg : '#111827'} fillOpacity={revealed ? 0.6 : 1}
-            stroke={revealed ? bg : '#2a3d5e'} strokeOpacity={revealed ? 0.9 : 1}
-            strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-        </svg>
-        <span style={{ fontSize: 9, fontWeight: 700, color: revealed ? '#cbd5e1' : '#4a5568', whiteSpace: 'nowrap' }}>{revealed ? label : '?'}</span>
-      </div>
-    )
-  }
-
-  function MCat({ icon, label, player, rank, color }: { icon: string; label: string; player?: string; rank?: string; color?: string }) {
-    const assigned = !!player
-    const bg = color === 'green' ? 'rgba(34,197,94,0.12)' : color === 'yellow' ? 'rgba(251,191,36,0.1)' : '#0a0f1e'
-    const border = color === 'green' ? 'rgba(34,197,94,0.35)' : color === 'yellow' ? 'rgba(251,191,36,0.35)' : '#1e2d4a'
-    const rankColor = color === 'green' ? '#22c55e' : color === 'yellow' ? '#fbbf24' : '#2a3d5e'
-    return (
-      <div style={{ background: bg, border: `1px solid ${border}`, borderRadius: 6, padding: '5px 7px', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-        <div style={{ fontSize: 10, fontWeight: 600, color: assigned ? 'white' : '#8899bb', lineHeight: 1.2 }}>{icon} {label}</div>
-        {assigned && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: '#8899bb' }}>{player}</span>
-            <span style={{ fontSize: 13, fontWeight: 800, color: rankColor }}>{rank}</span>
-          </div>
-        )}
-      </div>
-    )
-  }
-
   return (
-    <div style={s.page}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&display=swap');
-        @media (max-width: 700px) {
-          .game-grid { grid-template-columns: 1fr !important; }
-          .small-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          .landing-header { padding: 14px 16px 12px !important; }
-          .landing-wrap { padding: 12px 16px !important; }
-        }
-        @media (min-width: 701px) and (max-width: 900px) {
-          .small-grid { grid-template-columns: repeat(3, 1fr) !important; }
-        }
-      `}</style>
-
+    <>
       <NavBar />
 
-      <div className="landing-header" style={s.header}>
-        <h1 style={s.h1}>Test your football knowledge</h1>
-        <p style={s.sub}>Premier League knowledge games · new content added regularly</p>
-      </div>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bungee&family=Chivo:wght@400;700;900&display=swap');`}</style>
 
-      <div className="game-grid" style={s.grid}>
+      <div className={s.lp}>
 
-        {/* ---- FOOTBALL GOLF (featured) ---- */}
-        <div style={s.card}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-          onClick={() => router.push('/football-golf')}>
-          <div style={{ ...s.cardHead, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-            <div>
-              <div style={s.cardTitle}>Football Golf</div>
-              <div style={s.cardDesc}>Pick up to 3 players based on the stat</div>
-            </div>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 3, marginRight: 36 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/course-logos/augusta.png" alt="Augusta" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-            </div>
-          </div>
-          <div style={{ ...s.preview, display: 'flex', gap: 10 }}>
-            {/* Left: game info */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 5, paddingTop: 2 }}>
-              <div style={{ fontSize: 9, fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>Augusta National · Hole 12</div>
-              <div style={{ fontSize: 13, fontWeight: 900, color: 'white' }}>Par 3 · 155 yds to pin</div>
-              <div style={{ background: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10, padding: '7px 10px', textAlign: 'center', fontSize: 11, lineHeight: 1.3, flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <span style={{ fontWeight: 700, color: 'white' }}>Goals by Dutch players</span>
+        {/* ── Hero ─────────────────────────────────────────────────── */}
+        <section className={s.hero}>
+          <h1>Know your football?</h1>
+          <p className={s.lead}>Eight daily quiz games to settle it.</p>
+          <button className={s.btnEmber} onClick={() => router.push('/football-golf')}>
+            Play today
+          </button>
+        </section>
+
+        {/* ── Featured games ───────────────────────────────────────── */}
+        <section className={s.section}>
+          <h2 className={s.sectionHead}>Featured</h2>
+          <div className={s.featured}>
+
+            {/* Football Golf */}
+            <div className={s.gameCard} role="button" tabIndex={0}
+              onClick={() => router.push('/football-golf')}
+              onKeyDown={e => { if (e.key === 'Enter') router.push('/football-golf') }}>
+              <div className={s.cardHead}>
+                <div className={s.cardTitle}>Football Golf</div>
+                <div className={s.cardDesc}>Pick up to 3 players based on the stat</div>
               </div>
-              {[
-                { name: 'Ruud Van Nistelrooy', locked: true },
-                { name: 'Dirk Kuyt',      locked: true },
-                { name: null,             locked: false },
-              ].map((p, i) => (
-                <div key={i} style={{ background: p.locked ? 'rgba(34,197,94,0.1)' : '#0a0f1e', border: `1px solid ${p.locked ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, borderRadius: 6, padding: '5px 7px', fontSize: 10, fontWeight: p.locked ? 700 : 400, color: p.locked ? '#22c55e' : '#4a5568' }}>
-                  {p.name ?? 'Pick a player'}
+              <div className={s.cardPreview}>
+                <div className={s.previewWell}>
+                  <div className={s.previewLabel}>Augusta National · Par 3</div>
+                  <div className={s.previewHeading}>Goals by Dutch players</div>
+                  <div className={`${s.previewRow} ${s.previewRowFound}`}>Ruud Van Nistelrooy</div>
+                  <div className={`${s.previewRow} ${s.previewRowFound}`}>Dirk Kuyt</div>
+                  <div className={`${s.previewRow} ${s.previewRowEmpty}`}>Pick a player</div>
                 </div>
-              ))}
-            </div>
-            {/* Right: real hole image — cropped to fit card, showing green + fairway */}
-            <div style={{ width: '40%', flexShrink: 0, borderRadius: 10, overflow: 'hidden', alignSelf: 'stretch', position: 'relative' }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/holes/augusta/hole_12.png" alt="Augusta Hole 12" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', display: 'block', transform: 'scale(1.0)', transformOrigin: 'center center' }} />
-              {/* Pin */}
-              <div style={{ position: 'absolute', left: '50%', top: '27%', transform: 'translate(-50%,-100%)', pointerEvents: 'none' }}>
-                <svg width="14" height="28" viewBox="0 0 14 28">
-                  <line x1="7" y1="0" x2="7" y2="26" stroke="white" strokeWidth="1.5"/>
-                  <polygon points="7,0 14,5 7,10" fill="#dc2626"/>
-                  <circle cx="7" cy="27" r="3" fill="rgba(0,0,0,0.4)"/>
-                </svg>
               </div>
-              {/* Ball */}
-              <div style={{ position: 'absolute', left: '55%', top: '84%', transform: 'translate(-50%,-50%)', pointerEvents: 'none' }}>
-                <svg width="12" height="12" viewBox="0 0 12 12">
-                  <circle cx="6" cy="6" r="5" fill="white" stroke="rgba(0,0,0,0.3)" strokeWidth="0.8"/>
-                </svg>
+              <div className={s.cardCta}>Play Football Golf</div>
+            </div>
+
+            {/* Minimise */}
+            <div className={s.gameCard} role="button" tabIndex={0}
+              onClick={() => router.push('/minimise')}
+              onKeyDown={e => { if (e.key === 'Enter') router.push('/minimise') }}>
+              <div className={s.cardHead}>
+                <div className={s.cardTitle}>Minimise</div>
+                <div className={s.cardDesc}>Assign each player to their best PL stat category</div>
               </div>
-            </div>
-          </div>
-          <div style={s.cta}><span style={s.ctaText}>Play Football Golf →</span></div>
-        </div>
-
-        {/* ---- MINIMISE ---- */}
-        <div style={s.card}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-          onClick={() => router.push('/minimise')}>
-          <div style={s.cardHead}>
-            <div style={s.cardTitle}>Minimise</div>
-            <div style={s.cardDesc}>Assign each player to their best PL stat category</div>
-          </div>
-          <div style={{ ...s.preview, display: 'flex', flexDirection: 'column' as const }}>
-            <div style={{ background: '#0a0f1e', border: '1px solid #2d3f5e', borderRadius: 6, padding: '5px 10px', marginBottom: 6, textAlign: 'center' }}>
-              <div style={{ fontSize: 10, color: '#4a5568', marginBottom: 1 }}>Assign this player</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white' }}>Erling Haaland</div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridAutoRows: '1fr', gap: 3, flex: 1 }}>
-              <MCat icon="⚽" label="Most Goals" />
-              <MCat icon="🅰️" label="Most Assists" player="Fàbregas" rank="#3" color="green" />
-              <MCat icon="📊" label="Appearances" player="Milner" rank="#1" color="green" />
-              <MCat icon="⚡" label="Pens Scored" />
-              <MCat icon="👴" label="Oldest Player" />
-              <MCat icon="🟡" label="Yellow Cards" player="Cattermole" rank="#12" color="yellow" />
-            </div>
-          </div>
-          <div style={s.cta}><span style={s.ctaText}>Play Minimise →</span></div>
-        </div>
-
-        {/* ---- AROUND THE WORLD ---- */}
-        <div style={s.card}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-          onClick={() => router.push('/around-the-world')}>
-          <div style={s.cardHead}>
-            <div style={s.cardTitle}>Around the World in 80 Goals</div>
-            <div style={s.cardDesc}>Navigate your way through the world map by using your football knowledge</div>
-          </div>
-          <div style={{ ...s.preview, display: 'flex', gap: 8 }}>
-            {/* Left: stat + target */}
-            <div style={{ width: '25%', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <div style={{ flex: 1, background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.25)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ fontSize: 8, fontWeight: 700, color: '#4a6fa0', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>Stat</div>
-                <div style={{ fontSize: 13, fontWeight: 900, color: 'white', lineHeight: 1.2 }}>PL Goals</div>
-              </div>
-              <div style={{ flex: 1, background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.30)', borderRadius: 8, padding: '8px 10px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ fontSize: 8, fontWeight: 700, color: '#a07830', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 4 }}>Target</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: '#f59e0b', lineHeight: 1 }}>250</div>
-              </div>
-            </div>
-            {/* Right: map */}
-            <div style={{ flex: 1, background: '#04101f', borderRadius: 8, overflow: 'hidden', border: '1px solid #1e2d4a' }}>
-              {mounted && (
-                <ComposableMap
-                  projectionConfig={{ scale: 1400, center: [6, 46] }}
-                  style={{ width: '100%', height: '100%', display: 'block' }}
-                >
-                  <Geographies geography={GEO_URL}>
-                    {({ geographies }: { geographies: any[] }) =>
-                      geographies.map((geo: any) => {
-                        const n = String(Number(geo.id))
-                        const fill   = ATW_COMPLETED.has(n) ? 'rgba(34,197,94,0.32)'
-                                     : n === ATW_CURRENT    ? 'rgba(245,158,11,0.30)'
-                                     : ATW_UPCOMING.has(n)  ? 'rgba(59,130,246,0.22)'
-                                     : '#1a2d45'
-                        const stroke = ATW_COMPLETED.has(n) ? '#22c55e'
-                                     : n === ATW_CURRENT    ? '#f59e0b'
-                                     : ATW_UPCOMING.has(n)  ? '#5b8fd4'
-                                     : '#2e4a6a'
-                        const sw     = (ATW_COMPLETED.has(n) || n === ATW_CURRENT || ATW_UPCOMING.has(n)) ? 1.1 : 0.5
-                        return (
-                          <Geography key={geo.rsmKey} geography={geo}
-                            fill={fill} stroke={stroke} strokeWidth={sw}
-                            style={{ default: { outline: 'none' }, hover: { outline: 'none' }, pressed: { outline: 'none' } }}
-                          />
-                        )
-                      })
-                    }
-                  </Geographies>
-                </ComposableMap>
-              )}
-            </div>
-          </div>
-          <div style={s.cta}><span style={s.ctaText}>Play Around the World →</span></div>
-        </div>
-
-      </div>
-
-      {/* ---- OTHER GAMES ---- */}
-      <div style={{ maxWidth: 1100, margin: '4px auto 0', padding: '0 20px 48px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#4a5568', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 12 }}>More Games</div>
-        <div className="small-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-
-          {/* ---- BINGO ---- */}
-          <div style={s.card}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/bingo')}>
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Bingo</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Fill the achievement grid</div>
-            </div>
-            <div style={{ padding: '0 10px 8px', flex: 1 }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 2 }}>
-                <BCell label="100+ Goals"  player="Salah"    state="green" />
-                <BCell label="3+ Titles"                     state="none" />
-                <BCell label="Never won PL" player="Henry"    state="red" />
-                <BCell label="4+ Clubs"                      state="none" />
-                <BCell label="3+ Pens missed" player="Ronaldo" state="green" />
-                <BCell label="400+ Apps"                     state="none" />
-              </div>
-            </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Bingo →</span></div>
-          </div>
-
-          {/* ---- STAT CLASH ---- */}
-          <div style={s.card}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/stat-clash')}>
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Stat Clash</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player closest to a PL stat target</div>
-            </div>
-            <div style={{ padding: '0 10px 8px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 5 }}>
-              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 6, padding: '5px 8px', textAlign: 'center' as const }}>
-                <div style={{ fontSize: 8, color: '#8899bb', textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Target</div>
-                <div style={{ fontSize: 24, fontWeight: 800, color: '#e2e8f0', lineHeight: 1.1 }}>150</div>
-                <div style={{ fontSize: 9, color: '#8899bb' }}>PL goals</div>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 4 }}>
-                {[
-                  { name: 'T. Henry', stat: '175', color: '#22c55e', border: 'rgba(34,197,94,0.4)', bg: 'rgba(34,197,94,0.08)' },
-                  { name: 'Gerrard',  stat: '120', color: '#ef4444', border: 'rgba(239,68,68,0.35)', bg: 'rgba(239,68,68,0.08)' },
-                  { name: '?',        stat: '···', color: '#8899bb', border: '#4a5568', bg: '#0a0f1e' },
-                ].map((p, i) => (
-                  <div key={i} style={{ background: p.bg, border: `1px solid ${p.border}`, borderRadius: 5, padding: '5px 4px', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', gap: 2 }}>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: p.color, textAlign: 'center' as const }}>{p.name}</span>
-                    <span style={{ fontSize: 13, fontWeight: 800, color: p.color, lineHeight: 1 }}>{p.stat}</span>
+              <div className={s.cardPreview}>
+                <div className={s.catGrid}>
+                  <div className={`${s.cat} ${s.catEmpty}`}>
+                    <div className={s.catLabel}>Most Goals</div>
                   </div>
-                ))}
-              </div>
-            </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Stat Clash →</span></div>
-          </div>
-
-          {/* ---- BLACKJACK ---- */}
-          <div style={s.card}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/blackjack')}>
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Casino</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Use football trivia to build your stack</div>
-            </div>
-            <div style={{ padding: '0 10px 8px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ background: '#1a5428', borderRadius: 10, padding: '10px 14px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%' }}>
-                <div style={{ display: 'flex', gap: 0 }}>
-                  {[{ v: '⚽', n: 'Haaland', t: '36' }, { v: '⚽', n: 'Salah', t: '19' }].map((c, i) => (
-                    <div key={i} style={{ width: 52, height: 72, borderRadius: 6, background: 'white', border: '1px solid #e5e7eb', marginLeft: i === 0 ? 0 : -12, zIndex: i, position: 'relative', display: 'flex', flexDirection: 'column', padding: '4px 5px', boxShadow: '0 3px 10px rgba(0,0,0,0.4)' }}>
-                      <div style={{ fontSize: 12, fontWeight: 900, color: '#111', lineHeight: 1 }}>{c.t}</div>
-                      <div style={{ fontSize: 8 }}>{c.v}</div>
-                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-                        <div style={{ fontSize: 7, fontWeight: 800, color: '#111', textAlign: 'center' }}>{c.n}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', letterSpacing: 2, fontWeight: 700 }}>TOPBINS CASINO</div>
-              </div>
-            </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Casino →</span></div>
-          </div>
-
-          {/* ---- COUNTDOWN (moved up) ---- */}
-          <div style={s.card}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/countdown')}>
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Footy Countdown</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Letters, numbers & conundrum · 7 rounds</div>
-            </div>
-            <div style={{ padding: '0 10px 10px', flex: 1 }}>
-              <div style={{ fontSize: 9, color: '#4a5568', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Final Conundrum</div>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 6 }}>
-                {['L','G','R','I','N','E','S','T'].map((l, i) => (
-                  <div key={i} style={{ width: 18, height: 22, background: '#0a0f1e', border: '1px solid #dc2626', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: 'white' }}>{l}</div>
-                ))}
-              </div>
-              <div style={{ background: '#0a0f1e', border: '1px solid #1e2d4a', borderRadius: 4, padding: '4px 8px', fontSize: 11, color: '#4a5568', textAlign: 'center' as const }}>Unscramble the PL surname →</div>
-            </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Countdown →</span></div>
-          </div>
-
-          {/* ---- GRID (moved down) — now position 5, after Teammates ---- */}
-          {(() => {
-            const cols = ['Man Utd', 'Chelsea', 'City']
-            const rows = ['Arsenal', 'Liverpool', 'Spurs']
-            const cells: Array<{ color: string } | null> = [
-              { color: '#22c55e' }, null, { color: '#dc2626' },
-              null, { color: '#ef4444' }, null,
-              { color: '#22c55e' }, null, { color: '#fbbf24' },
-            ]
-            return (
-              <div style={s.card}
-                onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-                onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-                onClick={() => router.push('/grid')}>
-                <div style={{ padding: '10px 12px 8px' }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Grid</div>
-                  <div style={{ fontSize: 10, color: '#8899bb' }}>Find a PL player for each row × column</div>
-                </div>
-                <div style={{ padding: '0 10px 8px', flex: 1 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '28px 1fr 1fr 1fr', gap: 2 }}>
-                    <div />
-                    {cols.map(c => <div key={c} style={{ fontSize: 7, fontWeight: 700, color: '#f97316', textAlign: 'center' as const, paddingBottom: 2 }}>{c}</div>)}
-                    {rows.map((row, ri) => (
-                      <>
-                        <div key={`r${ri}`} style={{ fontSize: 7, fontWeight: 700, color: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 3 }}>{row}</div>
-                        {cells.slice(ri * 3, ri * 3 + 3).map((cell, ci) => (
-                          <div key={ci} style={{
-                            background: cell ? `${cell.color}22` : '#0a0f1e',
-                            border: `1px solid ${cell ? `${cell.color}55` : '#1e2d4a'}`,
-                            borderRadius: 4, minHeight: 26,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}>
-                            {cell && <span style={{ fontSize: 12, lineHeight: 1 }}>👤</span>}
-                          </div>
-                        ))}
-                      </>
-                    ))}
+                  <div className={`${s.cat} ${s.catAcid}`}>
+                    <div className={s.catLabel}>Most Assists</div>
+                    <div className={s.catPlayer}>Fàbregas</div>
+                  </div>
+                  <div className={`${s.cat} ${s.catAcid}`}>
+                    <div className={s.catLabel}>Appearances</div>
+                    <div className={s.catPlayer}>Milner</div>
+                  </div>
+                  <div className={`${s.cat} ${s.catEmpty}`}>
+                    <div className={s.catLabel}>Pens Scored</div>
+                  </div>
+                  <div className={`${s.cat} ${s.catEmpty}`}>
+                    <div className={s.catLabel}>Oldest Player</div>
+                  </div>
+                  <div className={`${s.cat} ${s.catEmber}`}>
+                    <div className={s.catLabel}>Yellow Cards</div>
+                    <div className={s.catPlayer}>Cattermole</div>
                   </div>
                 </div>
-                <div style={s.ctaSm}><span style={s.ctaText}>Play Grid →</span></div>
               </div>
-            )
-          })()}
-
-          {/* ---- TEAMMATES ---- */}
-          <div style={s.card}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/teammates')}>
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Teammates</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Find the player from their PL teammates</div>
+              <div className={s.cardCta}>Play Minimise</div>
             </div>
-            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
-                <TShirt bg="#C8102E" label="Gerrard"   revealed={true} />
-                <TShirt bg="#6CABDD" label="De Bruyne" revealed={true} />
-                <TShirt bg="#034694" label="Lampard"   revealed={true} />
+
+            {/* Around the World */}
+            <div className={s.gameCard} role="button" tabIndex={0}
+              onClick={() => router.push('/around-the-world')}
+              onKeyDown={e => { if (e.key === 'Enter') router.push('/around-the-world') }}>
+              <div className={s.cardHead}>
+                <div className={s.cardTitle}>Around the World in 80 Goals</div>
+                <div className={s.cardDesc}>Navigate the world map using your football knowledge</div>
               </div>
-            </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Teammates →</span></div>
-          </div>
-
-          {/* ---- TENABLE (moved down) ---- */}
-          <div style={s.card}
-            onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = '#dc2626'}
-            onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = '#1e2d4a'}
-            onClick={() => router.push('/tenables')}>
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: 'white', marginBottom: 2 }}>Tenable</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>Build your own top 10 quiz</div>
-            </div>
-            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', flexDirection: 'column' as const, gap: 0 }}>
-              {[
-                { n: 1, name: 'R. Giggs',      val: '162', pct: 100, found: true  },
-                { n: 2, name: 'K. De Bruyne',  val: '111', pct: 69,  found: true  },
-                { n: 3, name: '?',             val: '103', pct: 0,   found: false },
-              ].map(r => (
-                <div key={r.n} style={{ display: 'flex', alignItems: 'stretch', gap: 4, flex: 1 }}>
-                  <span style={{ fontSize: 9, color: '#2a3d5e', width: 10, display: 'flex', alignItems: 'center' }}>{r.n}</span>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column' as const }}>
-                    <div style={{ flex: 1, background: '#0a0f1e', borderRadius: 6, border: `1px solid ${r.found ? 'rgba(34,197,94,0.4)' : '#1e2d4a'}`, display: 'flex', alignItems: 'center', padding: '0 10px', justifyContent: 'space-between', position: 'relative', overflow: 'hidden', marginBottom: 3 }}>
-                      {r.found && <div style={{ position: 'absolute', top: 0, left: 0, height: '100%', width: `${r.pct}%`, background: 'rgba(34,197,94,0.15)', borderRight: '1px solid rgba(34,197,94,0.5)' }} />}
-                      <span style={{ fontSize: 11, fontWeight: r.found ? 700 : 400, color: r.found ? '#22c55e' : '#8899bb', position: 'relative' }}>{r.found ? r.name : '?'}</span>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: r.found ? '#22c55e' : '#4a5568', position: 'relative' }}>{r.val}</span>
-                    </div>
-                  </div>
+              <div className={s.cardPreview}>
+                <div className={s.mapWell}>
+                  {mounted && (
+                    <ComposableMap
+                      projectionConfig={{ scale: 1400, center: [6, 46] }}
+                      style={{ width: '100%', height: '100%', display: 'block' }}
+                    >
+                      <Geographies geography={GEO_URL}>
+                        {({ geographies }: { geographies: any[] }) =>
+                          geographies.map((geo: any) => {
+                            const n = String(Number(geo.id))
+                            const fill   = ATW_COMPLETED.has(n) ? 'rgba(136,220,100,0.32)'
+                                         : n === ATW_CURRENT    ? 'rgba(245,158,11,0.30)'
+                                         : ATW_UPCOMING.has(n)  ? 'rgba(59,130,246,0.22)'
+                                         : '#1a2d45'
+                            const stroke = ATW_COMPLETED.has(n) ? '#5fba40'
+                                         : n === ATW_CURRENT    ? '#f59e0b'
+                                         : ATW_UPCOMING.has(n)  ? '#5b8fd4'
+                                         : '#2e4a6a'
+                            return (
+                              <Geography key={geo.rsmKey} geography={geo}
+                                fill={fill} stroke={stroke} strokeWidth={0.5}
+                                style={{ default: { outline: 'none' }, hover: { outline: 'none' }, pressed: { outline: 'none' } }}
+                              />
+                            )
+                          })
+                        }
+                      </Geographies>
+                    </ComposableMap>
+                  )}
                 </div>
-              ))}
-            </div>
-            <div style={s.ctaSm}><span style={s.ctaText}>Play Tenable →</span></div>
-          </div>
-
-          {/* ---- COMING SOON ---- */}
-          <div style={{ ...s.card, cursor: 'default', opacity: 0.6 }}>
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#8899bb', marginBottom: 2 }}>Coming Soon</div>
-              <div style={{ fontSize: 10, color: '#8899bb' }}>New game in development</div>
-            </div>
-            <div style={{ padding: '0 10px 10px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 90 }}>
-              <div style={{ textAlign: 'center' as const }}>
-                <div style={{ fontSize: 28, marginBottom: 6, opacity: 0.65 }}>🔒</div>
-                <div style={{ fontSize: 10, color: '#8899bb' }}>Stay tuned</div>
               </div>
+              <div className={s.cardCta}>Play Around the World</div>
             </div>
-            <div style={{ background: '#111827', padding: '8px', textAlign: 'center' as const, borderTop: '1px solid #1e2d4a' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#8899bb' }}>Coming Soon</span>
-            </div>
+
           </div>
+        </section>
 
-        </div>
+        <hr className={s.rule} />
+
+        {/* ── More games ───────────────────────────────────────────── */}
+        <section className={s.section}>
+          <h2 className={s.sectionHead}>More games</h2>
+          <div className={s.more}>
+            {[
+              { name: 'Bingo',           desc: 'Fill the achievement grid',                   route: '/bingo' },
+              { name: 'Stat Clash',      desc: 'Find the player closest to a PL stat target', route: '/stat-clash' },
+              { name: 'Casino',          desc: 'Use football trivia to build your stack',      route: '/blackjack' },
+              { name: 'Footy Countdown', desc: 'Letters, numbers and conundrum — 7 rounds',   route: '/countdown' },
+              { name: 'Grid',            desc: 'Find a PL player for each row and column',    route: '/grid' },
+              { name: 'Teammates',       desc: 'Find the player from their PL teammates',     route: '/teammates' },
+              { name: 'Tenable',         desc: 'Build your own top 10 quiz',                  route: '/tenables' },
+            ].map(game => (
+              <div key={game.route} className={s.gameSm} role="button" tabIndex={0}
+                onClick={() => router.push(game.route)}
+                onKeyDown={e => { if (e.key === 'Enter') router.push(game.route) }}>
+                <div className={s.gameSmBody}>
+                  <div className={s.gameSmTitle}>{game.name}</div>
+                  <div className={s.gameSmDesc}>{game.desc}</div>
+                </div>
+                <div className={s.gameSmCta}>Play {game.name}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Footer ───────────────────────────────────────────────── */}
+        <footer>
+          <div className={s.footer}>
+            <span className={s.footerWord}>TopBins</span>
+            <nav className={s.footerLinks} aria-label="Footer navigation">
+              <a href="/football-golf">Football Golf</a>
+              <a href="/around-the-world">Around the World</a>
+              <a href="/geo/circle">Population Circle</a>
+            </nav>
+          </div>
+        </footer>
+
       </div>
-
-    </div>
+    </>
   )
 }
