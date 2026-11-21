@@ -142,8 +142,11 @@
   font-weight: 400;
 }
 .cardPreview {
-  padding: 0 var(--space-md) var(--space-sm);
   flex: 1;
+  min-height: 200px;
+  margin: 0 var(--space-md) var(--space-sm);
+  border-radius: 2px;
+  overflow: hidden;
 }
 .cardCta {
   padding: var(--space-sm) var(--space-lg);

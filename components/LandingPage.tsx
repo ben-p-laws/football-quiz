@@ -47,14 +47,8 @@ export default function LandingPage() {
                 <div className={s.cardTitle}>Football Golf</div>
                 <div className={s.cardDesc}>Pick up to 3 players based on the stat</div>
               </div>
-              <div className={s.cardPreview}>
-                <div className={s.previewWell}>
-                  <div className={s.previewLabel}>Augusta National · Par 3</div>
-                  <div className={s.previewHeading}>Goals by Dutch players</div>
-                  <div className={`${s.previewRow} ${s.previewRowFound}`}>Ruud Van Nistelrooy</div>
-                  <div className={`${s.previewRow} ${s.previewRowFound}`}>Dirk Kuyt</div>
-                  <div className={`${s.previewRow} ${s.previewRowEmpty}`}>Pick a player</div>
-                </div>
+              <div className={s.cardPreview} data-slot>
+                <img src="/screenshots/screen-football-golf-gameplay.png" alt="Football Golf gameplay" />
               </div>
               <div className={s.cardCta}>Play Football Golf</div>
             </div>
@@ -104,7 +98,7 @@ export default function LandingPage() {
                 <div className={s.cardDesc}>Navigate the world map using your football knowledge</div>
               </div>
               <div className={s.cardPreview}>
-                <div className={s.mapWell}>
+                <div className={s.mapWell} aria-hidden="true">
                   {mounted && (
                     <ComposableMap
                       projectionConfig={{ scale: 1400, center: [6, 46] }}
@@ -124,6 +118,7 @@ export default function LandingPage() {
                                          : '#2e4a6a'
                             return (
                               <Geography key={geo.rsmKey} geography={geo}
+                                tabIndex={-1}
                                 fill={fill} stroke={stroke} strokeWidth={0.5}
                                 style={{ default: { outline: 'none' }, hover: { outline: 'none' }, pressed: { outline: 'none' } }}
                               />
