@@ -47,8 +47,8 @@ export default function LandingPage() {
                 <div className={s.cardTitle}>Football Golf</div>
                 <div className={s.cardDesc}>Pick up to 3 players based on the stat</div>
               </div>
-              <div className={s.cardPreview} data-slot>
-                <img src="/screenshots/screen-football-golf-gameplay.png" alt="Football Golf gameplay" />
+              <div className={s.cardPreview}>
+                <img src="/screenshots/screen-football-golf-gameplay.png" alt="Football Golf gameplay" className={s.cardImg} />
               </div>
               <div className={s.cardCta}>Play Football Golf</div>
             </div>
