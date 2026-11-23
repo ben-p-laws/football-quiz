@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import NavBar from '@/components/NavBar'
 import { CONTINENT_MAP } from '@/lib/continents'
-import { type FilterSpec, type FilterKind, type ClubType, CLUB_THRESHOLD, cacheKeyFor } from '@/lib/golf-logic'
+import { type FilterSpec, type FilterKind, type ClubType, type CompScope, CLUB_THRESHOLD, cacheKeyFor } from '@/lib/golf-logic'
 
 // ── Categories ───────────────────────────────────────────────────────────────
 
@@ -31,13 +31,18 @@ const CONTINENT_LABELS: Record<string, string> = {
   'S. America':'S. American','N. America':'N. American',
 }
 
+const COMP_LABELS: Record<string, string> = {
+  pl: 'PL', cl: 'CL', 'La Liga': 'La Liga', 'Serie A': 'Serie A',
+  'Bundesliga': 'Bundesliga', 'Ligue 1': 'Ligue 1',
+}
+
 type SinceYear = 2008|2009|2010|2011|2012|2013|2014|2015|2016|2017|2018
 type BeforeYear = 2010|2011|2012|2013|2014|2015|2016|2017|2018|2019
 type StatKey = 'goals'|'assists'|'goals_assists'|'appearances'|'apps_minus_goals'|
                'yellow_cards'|'clean_sheets'|
                `goals_since_${SinceYear}`|`ga_since_${SinceYear}`|
                `goals_before_${BeforeYear}`|`ga_before_${BeforeYear}`
-type Category = { key: StatKey; label: string; statLabel: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string; letterFilter?: string }
+type Category = { key: StatKey; label: string; statLabel: string; clubFilter?: string; natFilter?: string; continentFilter?: string; seasonFilter?: string; letterFilter?: string; competitionFilter?: string; clubScope?: CompScope }
 
 const SINCE_YEARS = [2008,2009,2010,2011,2012,2013,2014,2015,2016,2017,2018]
 const BEFORE_YEARS = [2010,2011,2012,2013,2014,2015,2016,2017,2018,2019]
@@ -87,11 +92,13 @@ const FALLBACK_CLUBS = [
 
 
 function filterStr(f: FilterSpec): string {
-  if (f.k==='all')    return ''
-  if (f.k==='nat')    return f.code
-  if (f.k==='club')   return f.name
-  if (f.k==='cont')   return f.name
-  if (f.k==='letter') return `letter:${f.letter}`
+  if (f.k==='all')       return ''
+  if (f.k==='nat')       return f.code
+  if (f.k==='club')      return f.name
+  if (f.k==='cont')      return f.name
+  if (f.k==='letter')    return `letter:${f.letter}`
+  if (f.k==='comp')      return `comp:${f.comp}`
+  if (f.k==='club_euro') return `${f.name}:${f.scope}`
   return `${f.continent}:${f.club}`
 }
 
@@ -125,11 +132,19 @@ function buildShareText(p: SharePayload, url: string): string {
 
 function makeLabel(stat: StatKey, f: FilterSpec): string {
   const sl = getStatLabel(stat)
-  if (f.k==='all')    return `All-time PL ${sl}`
-  if (f.k==='nat')    return `${f.label} PL ${sl}`
-  if (f.k==='club')   return `PL ${sl} for ${f.name}`
-  if (f.k==='cont')   return `${CONTINENT_LABELS[f.name]??f.name} PL ${sl}`
-  if (f.k==='letter') return `PL ${sl} - Surname ${f.letter}`
+  if (f.k==='all')       return `All-time PL ${sl}`
+  if (f.k==='nat')       return `${f.label} PL ${sl}`
+  if (f.k==='club')      return `PL ${sl} for ${f.name}`
+  if (f.k==='cont')      return `${CONTINENT_LABELS[f.name]??f.name} PL ${sl}`
+  if (f.k==='letter')    return `PL ${sl} - Surname ${f.letter}`
+  if (f.k==='comp') {
+    const cn = COMP_LABELS[f.comp] ?? f.comp
+    return `All-time ${cn} ${sl}`
+  }
+  if (f.k==='club_euro') {
+    const scopeLabel = f.scope==='both' ? 'League + CL' : f.scope==='cl' ? 'CL' : (COMP_LABELS[f.comp] ?? f.comp)
+    return `${scopeLabel} ${sl} at ${f.name}`
+  }
   return `${CONTINENT_LABELS[f.continent]??f.continent} PL ${sl} for ${f.club}`
 }
 
@@ -143,10 +158,15 @@ function makeFilterLabel(cat: Category): string {
     const [y1, y2] = cat.seasonFilter.split('-')
     return `in ${y1.slice(2)}/${y2.slice(2)}`
   }
+  if (cat.clubFilter && cat.clubScope) {
+    const scopeLabel = cat.clubScope==='both' ? 'League + CL' : cat.clubScope==='cl' ? 'CL' : (COMP_LABELS[cat.competitionFilter ?? ''] ?? 'League')
+    return `${cat.clubFilter} ${scopeLabel} ${noun}`
+  }
   if (cat.continentFilter && cat.clubFilter) {
     return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${cat.clubFilter} ${noun}`
   }
   if (cat.continentFilter) return `${CONTINENT_LABELS[cat.continentFilter] ?? cat.continentFilter} ${noun}`
+  if (cat.competitionFilter) return `${COMP_LABELS[cat.competitionFilter] ?? cat.competitionFilter} ${noun}`
   if (cat.clubFilter)      return `${cat.clubFilter} ${noun}`
   if (cat.natFilter)       return `${NAT_LABELS[cat.natFilter] ?? cat.natFilter} ${noun}`
   if (cat.letterFilter)    return `${noun} with surname starting with ${cat.letterFilter}`
@@ -154,14 +174,19 @@ function makeFilterLabel(cat: Category): string {
 }
 
 
-function typeProbs(club: ClubType): Record<FilterKind, number> {
-  if (club === 'driver') return { nat:20, club:20, cc:23, cont:19, all:5, letter:13 }
-  if (club === 'iron')   return { nat:22, club:22, cc:21, cont:17, all:5, letter:13 }
-  return                        { nat:23, club:23, cc:21, cont:15, all:3, letter:15 }
+function typeProbs(club: ClubType, isEuro = false): Record<FilterKind, number> {
+  if (isEuro) {
+    if (club === 'driver') return { nat:17, club:0, club_euro:20, cc:20, cont:16, all:0, letter:10, comp:17 }
+    if (club === 'iron')   return { nat:18, club:0, club_euro:22, cc:18, cont:14, all:0, letter:10, comp:18 }
+    return                        { nat:19, club:0, club_euro:22, cc:18, cont:12, all:0, letter:11, comp:18 }
+  }
+  if (club === 'driver') return { nat:20, club:20, cc:23, cont:19, all:5, letter:13, comp:0, club_euro:0 }
+  if (club === 'iron')   return { nat:22, club:22, cc:21, cont:17, all:5, letter:13, comp:0, club_euro:0 }
+  return                        { nat:23, club:23, cc:21, cont:15, all:3, letter:15, comp:0, club_euro:0 }
 }
 
 function sampleFilterKind(probs: Record<FilterKind, number>): FilterKind {
-  const types: FilterKind[] = ['nat','club','cc','cont','all','letter']
+  const types: FilterKind[] = ['nat','club','cc','cont','all','letter','comp','club_euro']
   const total = types.reduce((s, t) => s + probs[t], 0)
   let r = Math.random() * total
   for (const t of types) { r -= probs[t]; if (r <= 0) return t }
@@ -181,6 +206,10 @@ function pickCategory(
   top3Cache: Record<string,number> | null,
   minReach?: number,
   letters?: string[],
+  isEuro?: boolean,
+  euroClClubs?: string[],
+  euroClubComp?: Record<string,string>,
+  euroTop5Comps?: string[],
 ): Category {
   const recentSet      = new Set(recentFilters)
   const recentStatsSet = new Set(recentStats)
@@ -201,20 +230,33 @@ function pickCategory(
   const freshBase     = basePool.filter(s => !recentStatsSet.has(s))
   const freshTemporal = temporalPool.filter(s => !recentStatsSet.has(s))
 
-  const probs = typeProbs(club)
+  const probs = typeProbs(club, !!isEuro)
+
+  const clClubSet = new Set(euroClClubs ?? [])
+  const compPool = isEuro ? ['pl', 'cl', ...(euroTop5Comps ?? [])] : []
 
   const filtersByKind: Record<FilterKind, FilterSpec[]> = {
-    all:  [{ k:'all' }],
-    nat:  nations.map(n => ({ k:'nat' as const, code:n.code, label:n.label })),
-    club: clubs.map(c => ({ k:'club' as const, name:c })),
-    cont: continents.map(c => ({ k:'cont' as const, name:c })),
-    cc:   contClubPairs.map(([cont,cl]) => ({ k:'cc' as const, continent:cont, club:cl })),
-    letter: (letters ?? []).map(l => ({ k:'letter' as const, letter:l })),
+    all:       [{ k:'all' }],
+    nat:       nations.map(n => ({ k:'nat' as const, code:n.code, label:n.label })),
+    club:      clubs.map(c => ({ k:'club' as const, name:c })),
+    cont:      continents.map(c => ({ k:'cont' as const, name:c })),
+    cc:        contClubPairs.map(([cont,cl]) => ({ k:'cc' as const, continent:cont, club:cl })),
+    letter:    (letters ?? []).map(l => ({ k:'letter' as const, letter:l })),
+    comp:      compPool.map(comp => ({ k:'comp' as const, comp })),
+    club_euro: isEuro ? clubs.flatMap(name => {
+      const comp = euroClubComp?.[name] ?? 'pl'
+      const specs: FilterSpec[] = [{ k:'club_euro' as const, name, scope:'league', comp }]
+      if (clClubSet.has(name)) {
+        specs.push({ k:'club_euro' as const, name, scope:'cl', comp:'CL' })
+        specs.push({ k:'club_euro' as const, name, scope:'both', comp })
+      }
+      return specs
+    }) : [],
   }
 
   function isValidFilter(f: FilterSpec, stat: StatKey): boolean {
     const isClubStat = CLUB_STATS.includes(stat)
-    if (!isClubStat && (f.k==='club' || f.k==='cc')) return false
+    if (!isClubStat && (f.k==='club' || f.k==='cc' || f.k==='club_euro')) return false
     if (f.k==='letter' && !CLUB_STATS.includes(stat)) return false
     const fs = filterStr(f)
     if (fs && recentSet.has(fs)) return false
@@ -228,8 +270,8 @@ function pickCategory(
 
   for (let attempt = 0; attempt < 120; attempt++) {
     const kind = sampleFilterKind(probs)
-    // Club/cc/letter filters don't support temporal stats — skip temporal for those types
-    const canUseTemporal = kind !== 'club' && kind !== 'cc' && kind !== 'letter'
+    // Club/cc/letter/comp filters don't support temporal stats
+    const canUseTemporal = kind !== 'club' && kind !== 'cc' && kind !== 'letter' && kind !== 'club_euro' && kind !== 'comp'
     const useTemporal = canUseTemporal && freshTemporal.length > 0 && Math.random() < 0.4
     const pool = useTemporal
       ? (freshTemporal.length > 0 ? freshTemporal : temporalPool)
@@ -247,6 +289,8 @@ function pickCategory(
     if (f.k==='cont') cat.continentFilter = f.name
     if (f.k==='cc') { cat.continentFilter = f.continent; cat.clubFilter = f.club }
     if (f.k==='letter') cat.letterFilter = f.letter
+    if (f.k==='comp') cat.competitionFilter = f.comp
+    if (f.k==='club_euro') { cat.clubFilter = f.name; cat.clubScope = f.scope; cat.competitionFilter = f.comp }
     return cat
   }
 
@@ -254,7 +298,8 @@ function pickCategory(
   const fbPool = freshBase.length > 0 ? freshBase : basePool
   const stat = fbPool[Math.floor(Math.random() * fbPool.length)]
   const sl = getStatLabel(stat)
-  return { key:stat, label:`All-time PL ${sl}`, statLabel:sl }
+  const fbLabel = isEuro ? `All-time ${sl}` : `All-time PL ${sl}`
+  return { key:stat, label:fbLabel, statLabel:sl }
 }
 
 const BAD_LIE_SEASONS = ['2000-2001','2004-2005','2008-2009','2012-2013','2015-2016','2018-2019']
@@ -909,6 +954,13 @@ type PlayerDataLocal = {
   goalsBefore:Record<number,number>; gaBefore:Record<number,number>
   clubGoals:Record<string,number>; clubAssists:Record<string,number>; clubGames:Record<string,number>
   clubYellowCards:Record<string,number>; clubCleanSheets:Record<string,number>
+  // euro mode extras (absent in PL-only data)
+  plGoals?:number; plAssists?:number; plGames?:number; plYellowCards?:number; plCleanSheets?:number
+  clGoals?:number; clAssists?:number; clGames?:number; clYellowCards?:number; clCleanSheets?:number
+  compGoals?:Record<string,number>; compAssists?:Record<string,number>; compGames?:Record<string,number>
+  compYellowCards?:Record<string,number>; compCleanSheets?:Record<string,number>
+  clubClGoals?:Record<string,number>; clubClAssists?:Record<string,number>; clubClGames?:Record<string,number>
+  clubClYellowCards?:Record<string,number>; clubClCleanSheets?:Record<string,number>
 }
 
 function normSearch(s:string){return s.normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/['''`]/g,'').toLowerCase()}
@@ -954,6 +1006,10 @@ export default function FootballGolf(){
   const metaContClubPairs = useRef<[string,string][]>([])
   const metaLetters      = useRef<string[]>([])
   const top3CacheRef     = useRef<Record<string,number>|null>(null)
+  const metaEuroClClubs   = useRef<string[]>([])
+  const metaEuroClubComp  = useRef<Record<string,string>>({})
+  const metaEuroTop5Comps = useRef<string[]>([])
+  const [dataMode, setDataMode]   = useState<'pl'|'euro'>('pl')
   const [metaReady, setMetaReady] = useState(false)
   const [showRules, setShowRules] = useState(false)
   const [sharedResult, setSharedResult] = useState<SharePayload|null>(null)
@@ -1073,33 +1129,44 @@ export default function FootballGolf(){
   const h2hRoomPlayersRef = useRef<{hostId:string;hostPartnerId:string;guestId:string;guestPartnerId:string}|null>(null)
 
   useEffect(()=>{
-    fetch('/api/football-golf?names=1').then(r=>r.json()).then(d=>{
+    const base = dataMode === 'euro' ? '/api/football-golf/euro' : '/api/football-golf'
+    setNamesLoading(true)
+    fetch(`${base}?names=1`).then(r=>r.json()).then(d=>{
       const names:string[]=d.playerNames||[]
       setAllPlayerNames(names)
       normalisedNames.current=names.map(normSearch)
       setNamesLoading(false)
     }).catch(()=>setNamesLoading(false))
-  },[])
+  },[dataMode])
 
   useEffect(()=>{
-    fetch('/api/football-golf?data=1').then(r=>r.json()).then(d=>setPlayerData(d.players||{})).catch(()=>{})
-  },[])
+    const base = dataMode === 'euro' ? '/api/football-golf/euro' : '/api/football-golf'
+    fetch(`${base}?data=1`).then(r=>r.json()).then(d=>setPlayerData(d.players||{})).catch(()=>{})
+  },[dataMode])
 
   useEffect(()=>{
-    fetch('/api/football-golf?meta=1&v=15').then(r=>r.json())
-      .then((m:{clubs:string[];nations:string[];continents:string[];contClubPairs:[string,string][];top3Cache:Record<string,number>;letters?:string[]})=>{
-        metaNations.current      = m.nations.map(c=>({code:c,label:NAT_LABELS[c]??c}))
-        metaClubs.current        = m.clubs
-        metaContinents.current   = m.continents.filter((c: string) => c !== 'Oceania')
+    const base = dataMode === 'euro' ? '/api/football-golf/euro' : '/api/football-golf'
+    const ver  = dataMode === 'euro' ? '&v=9' : '&v=15'
+    setMetaReady(false)
+    top3CacheRef.current = null
+    fetch(`${base}?meta=1${ver}`).then(r=>r.json())
+      .then((m:any)=>{
+        metaNations.current       = m.nations.map((c:string)=>({code:c,label:NAT_LABELS[c]??c}))
+        metaClubs.current         = dataMode === 'euro' ? (m.euroClubs ?? m.clubs) : m.clubs
+        metaContinents.current    = m.continents.filter((c: string) => c !== 'Oceania')
         metaContClubPairs.current = m.contClubPairs
-        // Derive valid letters from top3Cache directly (more robust than relying on server field)
         metaLetters.current = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').filter(letter =>
           CLUB_STATS.some(key => (m.top3Cache[`${key}:letter:${letter}`] ?? 0) >= 10)
         )
-        top3CacheRef.current     = m.top3Cache
+        top3CacheRef.current = m.top3Cache
+        if (dataMode === 'euro') {
+          metaEuroClClubs.current   = m.clClubs ?? []
+          metaEuroClubComp.current  = m.clubComp ?? {}
+          metaEuroTop5Comps.current = m.top5Competitions ?? []
+        }
         setMetaReady(true)
-      }).catch(()=>setMetaReady(true)) // on error, allow play with fallback lists
-  },[])
+      }).catch(()=>setMetaReady(true))
+  },[dataMode])
 
   useEffect(()=>{
     const p = new URLSearchParams(window.location.search).get('s')
@@ -1393,7 +1460,7 @@ export default function FootballGolf(){
 
   function nextPickedCategory(dist: number, minReach?: number): Category {
     const clubForDist = dist > 0 ? getClub(dist) : 'driver'
-    if (dist > 0 && dist < 50 && metaClubs.current.length) {
+    if (dataMode === 'pl' && dist > 0 && dist < 50 && metaClubs.current.length) {
       const SHORT_STATS: StatKey[] = ['goals','assists','goals_assists','yellow_cards']
       for (let attempt = 0; attempt < 60; attempt++) {
         const stat = SHORT_STATS[Math.floor(Math.random() * SHORT_STATS.length)]
@@ -1417,6 +1484,10 @@ export default function FootballGolf(){
       top3CacheRef.current,
       minReach,
       metaLetters.current,
+      dataMode === 'euro',
+      metaEuroClClubs.current,
+      metaEuroClubComp.current,
+      metaEuroTop5Comps.current,
     )
     usedLabels.current.add(cat.label)
     if (cat.natFilter) {
@@ -1424,7 +1495,10 @@ export default function FootballGolf(){
       const extras = cont ? [cat.natFilter, cont] : [cat.natFilter]
       recentFilters.current = [...recentFilters.current.slice(-(10 - extras.length)), ...extras]
     } else {
-      const f = cat.clubFilter || cat.continentFilter || (cat.letterFilter ? `letter:${cat.letterFilter}` : undefined)
+      const f = cat.clubFilter
+        ? (cat.clubScope ? `${cat.clubFilter}:${cat.clubScope}` : cat.clubFilter)
+        : cat.competitionFilter ? `comp:${cat.competitionFilter}`
+        : cat.continentFilter || (cat.letterFilter ? `letter:${cat.letterFilter}` : undefined)
       if (f) recentFilters.current = [...recentFilters.current.slice(-9), f]
     }
     recentStats.current = [...recentStats.current.slice(-3), cat.key]
@@ -1602,10 +1676,21 @@ export default function FootballGolf(){
         const p=playerData[name]
         if(!p){ breakdown.push({name,value:0});continue }
         if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
-        if(question.continentFilter && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
+        if(question.continentFilter && !question.clubScope && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
         if(question.letterFilter){ const initial=getSurnameInitial(name); if(initial!==question.letterFilter){ breakdown.push({name,value:0});continue } }
         const cf=question.clubFilter
-        if(cf){
+        const scope=question.clubScope
+        const comp=question.competitionFilter
+        if(cf && scope){
+          const lg=(k:string)=>scope==='league'?(p as any)[k]?.[cf]||0:scope==='cl'?(p as any)['clubCl'+k.slice(4)]?.[cf]||0:((p as any)[k]?.[cf]||0)+((p as any)['clubCl'+k.slice(4)]?.[cf]||0)
+          if(question.key==='goals')              value=lg('clubGoals')
+          else if(question.key==='assists')       value=lg('clubAssists')
+          else if(question.key==='goals_assists') value=lg('clubGoals')+lg('clubAssists')
+          else if(question.key==='appearances')   value=lg('clubGames')
+          else if(question.key==='apps_minus_goals') value=Math.max(0,lg('clubGames')-lg('clubGoals'))
+          else if(question.key==='yellow_cards')  value=lg('clubYellowCards')
+          else if(question.key==='clean_sheets')  value=lg('clubCleanSheets')
+        }else if(cf){
           if(question.key==='goals')              value=p.clubGoals[cf]||0
           else if(question.key==='assists')       value=p.clubAssists[cf]||0
           else if(question.key==='goals_assists') value=(p.clubGoals[cf]||0)+(p.clubAssists[cf]||0)
@@ -1613,6 +1698,19 @@ export default function FootballGolf(){
           else if(question.key==='apps_minus_goals') value=Math.max(0,(p.clubGames[cf]||0)-(p.clubGoals[cf]||0))
           else if(question.key==='yellow_cards')  value=p.clubYellowCards[cf]||0
           else if(question.key==='clean_sheets')  value=p.clubCleanSheets[cf]||0
+        }else if(comp){
+          const getComp=(base:'Goals'|'Assists'|'Games'|'YellowCards'|'CleanSheets')=>{
+            if(comp==='pl') return (p as any)[`pl${base}`]??0
+            if(comp==='cl') return (p as any)[`cl${base}`]??0
+            return (p as any)[`comp${base}`]?.[comp]??0
+          }
+          if(question.key==='goals')              value=getComp('Goals')
+          else if(question.key==='assists')       value=getComp('Assists')
+          else if(question.key==='goals_assists') value=getComp('Goals')+getComp('Assists')
+          else if(question.key==='appearances')   value=getComp('Games')
+          else if(question.key==='apps_minus_goals') value=Math.max(0,getComp('Games')-getComp('Goals'))
+          else if(question.key==='yellow_cards')  value=getComp('YellowCards')
+          else if(question.key==='clean_sheets')  value=getComp('CleanSheets')
         }else{
           if(question.key==='goals')              value=p.goals
           else if(question.key==='assists')       value=p.assists
@@ -1719,10 +1817,22 @@ export default function FootballGolf(){
         const p=playerData[name]
         if(!p){ breakdown.push({name,value:0});continue }
         if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
-        if(question.continentFilter && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
+        if(question.continentFilter && !question.clubScope && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
         if(question.letterFilter){ const initial=getSurnameInitial(name); if(initial!==question.letterFilter){ breakdown.push({name,value:0});continue } }
         const cf=question.clubFilter
-        if(cf){
+        const scope=question.clubScope
+        const comp=question.competitionFilter
+        if(cf && scope){
+          // euro club-scoped question
+          const lg=(k:string)=>scope==='league'?(p as any)[k]?.[cf]||0:scope==='cl'?(p as any)['clubCl'+k.slice(4)]?.[cf]||0:((p as any)[k]?.[cf]||0)+((p as any)['clubCl'+k.slice(4)]?.[cf]||0)
+          if(question.key==='goals')              value=lg('clubGoals')
+          else if(question.key==='assists')       value=lg('clubAssists')
+          else if(question.key==='goals_assists') value=lg('clubGoals')+lg('clubAssists')
+          else if(question.key==='appearances')   value=lg('clubGames')
+          else if(question.key==='apps_minus_goals') value=Math.max(0,lg('clubGames')-lg('clubGoals'))
+          else if(question.key==='yellow_cards')  value=lg('clubYellowCards')
+          else if(question.key==='clean_sheets')  value=lg('clubCleanSheets')
+        }else if(cf){
           if(question.key==='goals')              value=p.clubGoals[cf]||0
           else if(question.key==='assists')       value=p.clubAssists[cf]||0
           else if(question.key==='goals_assists') value=(p.clubGoals[cf]||0)+(p.clubAssists[cf]||0)
@@ -1730,6 +1840,20 @@ export default function FootballGolf(){
           else if(question.key==='apps_minus_goals') value=Math.max(0,(p.clubGames[cf]||0)-(p.clubGoals[cf]||0))
           else if(question.key==='yellow_cards')  value=p.clubYellowCards[cf]||0
           else if(question.key==='clean_sheets')  value=p.clubCleanSheets[cf]||0
+        }else if(comp){
+          // euro competition-scoped question
+          const getComp=(base:'Goals'|'Assists'|'Games'|'YellowCards'|'CleanSheets')=>{
+            if(comp==='pl') return (p as any)[`pl${base}`]??0
+            if(comp==='cl') return (p as any)[`cl${base}`]??0
+            return (p as any)[`comp${base}`]?.[comp]??0
+          }
+          if(question.key==='goals')              value=getComp('Goals')
+          else if(question.key==='assists')       value=getComp('Assists')
+          else if(question.key==='goals_assists') value=getComp('Goals')+getComp('Assists')
+          else if(question.key==='appearances')   value=getComp('Games')
+          else if(question.key==='apps_minus_goals') value=Math.max(0,getComp('Games')-getComp('Goals'))
+          else if(question.key==='yellow_cards')  value=getComp('YellowCards')
+          else if(question.key==='clean_sheets')  value=getComp('CleanSheets')
         }else{
           if(question.key==='goals')              value=p.goals
           else if(question.key==='assists')       value=p.assists
@@ -2538,15 +2662,19 @@ export default function FootballGolf(){
     const ccPairs=top3CacheRef.current?metaContClubPairs.current:[]
     const teeCats=hs.map(hole=>{
       const cl=getClub(hole.distance)
-      const cat=pickCategory(hole.distance,cl,tmpUsed,tmpRecentF,tmpRecentS,metaNations.current,metaClubs.current,metaContinents.current,ccPairs,top3CacheRef.current,undefined,metaLetters.current)
+      const cat=pickCategory(hole.distance,cl,tmpUsed,tmpRecentF,tmpRecentS,metaNations.current,metaClubs.current,metaContinents.current,ccPairs,top3CacheRef.current,undefined,metaLetters.current,dataMode==='euro',metaEuroClClubs.current,metaEuroClubComp.current,metaEuroTop5Comps.current)
       tmpUsed.add(cat.label)
       tmpRecentS.push(cat.key)
       if (cat.natFilter) {
         const cont = CONTINENT_MAP[cat.natFilter]
         tmpRecentF.push(cat.natFilter)
         if (cont) tmpRecentF.push(cont)
+      } else if (cat.clubFilter && cat.clubScope) {
+        tmpRecentF.push(`${cat.clubFilter}:${cat.clubScope}`)
       } else if (cat.clubFilter && !cat.continentFilter) {
         tmpRecentF.push(cat.clubFilter)
+      } else if (cat.competitionFilter) {
+        tmpRecentF.push(`comp:${cat.competitionFilter}`)
       } else if (cat.continentFilter) {
         tmpRecentF.push(cat.continentFilter)
       } else if (cat.letterFilter) {
@@ -2769,11 +2897,13 @@ export default function FootballGolf(){
     const ccPairs = top3CacheRef.current ? metaContClubPairs.current : []
     const teeCats = hs.map(hole => {
       const cl = getClub(hole.distance)
-      const cat = pickCategory(hole.distance, cl, tmpUsed, tmpRecentF, tmpRecentS, metaNations.current, metaClubs.current, metaContinents.current, ccPairs, top3CacheRef.current, undefined, metaLetters.current)
+      const cat = pickCategory(hole.distance, cl, tmpUsed, tmpRecentF, tmpRecentS, metaNations.current, metaClubs.current, metaContinents.current, ccPairs, top3CacheRef.current, undefined, metaLetters.current, dataMode==='euro', metaEuroClClubs.current, metaEuroClubComp.current, metaEuroTop5Comps.current)
       tmpUsed.add(cat.label)
       tmpRecentS.push(cat.key)
       if (cat.natFilter) { const cont = CONTINENT_MAP[cat.natFilter]; tmpRecentF.push(cat.natFilter); if (cont) tmpRecentF.push(cont) }
+      else if (cat.clubFilter && cat.clubScope) { tmpRecentF.push(`${cat.clubFilter}:${cat.clubScope}`) }
       else if (cat.clubFilter && !cat.continentFilter) tmpRecentF.push(cat.clubFilter)
+      else if (cat.competitionFilter) { tmpRecentF.push(`comp:${cat.competitionFilter}`) }
       else if (cat.continentFilter) tmpRecentF.push(cat.continentFilter)
       else if (cat.letterFilter) { tmpRecentF.push(`letter:${cat.letterFilter}`) }
       return cat
@@ -3086,7 +3216,7 @@ export default function FootballGolf(){
 
   if(phase==='club-lobby'&&lobbyClub) return(<><NavBar /><ClubLobbyScreen club={lobbyClub} onBack={()=>setPhase('setup')} /></>)
   if(phase==='tournament-setup'&&pendingTournamentId) return(<><NavBar /><TournamentSetupScreen tournamentId={pendingTournamentId} onPlay={()=>startTournamentGame(pendingTournamentId!)} onBack={()=>setPhase('setup')} /></>)
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={createH2HRoom} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} onTournament={(id)=>{setPendingTournamentId(id);setPhase('tournament-setup')}} playerName={h2hPlayerName} setPlayerName={setH2HPlayerName} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={createH2HRoom} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} onTournament={(id)=>{setPendingTournamentId(id);setPhase('tournament-setup')}} playerName={h2hPlayerName} setPlayerName={setH2HPlayerName} dataMode={dataMode} setDataMode={setDataMode} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -4989,7 +5119,7 @@ function ClubExpandedPanel({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
 }
 
 type MultiMode = 'h2h-1v1'|'h2h-scramble'|'h2h-alt'|'team-scramble'|'team-alt'
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode,metaReady,onTournament,playerName,setPlayerName}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode,metaReady,onTournament,playerName,setPlayerName,dataMode,setDataMode}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
@@ -5002,6 +5132,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   multiMode:MultiMode; setMultiMode:(m:MultiMode)=>void
   onTournament:(id:string)=>void
   playerName:string; setPlayerName:(n:string)=>void
+  dataMode:'pl'|'euro'; setDataMode:(m:'pl'|'euro')=>void
 }){
   const [mode,setMode] = useState<'solo'|'multiplayer'>('solo')
   const [hcpExpanded, setHcpExpanded] = useState(false)
@@ -5179,6 +5310,13 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
               })}
             </div>
           </div>
+          <div style={{marginBottom:20}}>
+            <div style={rowLbl}>Dataset</div>
+            <div style={{display:'flex',gap:6}}>
+              <button onClick={()=>setDataMode('pl')} style={pill(dataMode==='pl')}>Premier League</button>
+              <button onClick={()=>setDataMode('euro')} style={pill(dataMode==='euro')}>Top 5 + CL</button>
+            </div>
+          </div>
           <button className="solo-go" onClick={onStart} disabled={!metaReady}
             style={{width:'100%',background:metaReady?'rgba(34,197,94,0.1)':'rgba(34,197,94,0.05)',color:metaReady?'#22c55e':'rgba(255,255,255,0.3)',border:`2px solid ${metaReady?'rgba(34,197,94,0.5)':'rgba(34,197,94,0.1)'}`,borderRadius:4,padding:'15px 0',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',boxShadow:metaReady?'4px 4px 0 rgba(34,197,94,0.12)':'none'}}>
             {metaReady?'Tee Off →':'Loading…'}
@@ -5259,6 +5397,16 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           placeholder="Your name"
           style={{width:'100%',background:'#0d1627',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,padding:'11px 14px',fontSize:14,fontWeight:600,color:'white',fontFamily:'inherit',marginBottom:10,outline:'none'}}
         />
+        <div style={{display:'flex',gap:6,marginBottom:10}}>
+          <button onClick={()=>setDataMode('pl')}
+            style={{flex:1,background:dataMode==='pl'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:dataMode==='pl'?'#22c55e':'rgba(255,255,255,0.45)',border:`1.5px solid ${dataMode==='pl'?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.08)'}`,borderRadius:4,padding:'9px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}>
+            Premier League
+          </button>
+          <button onClick={()=>setDataMode('euro')}
+            style={{flex:1,background:dataMode==='euro'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:dataMode==='euro'?'#22c55e':'rgba(255,255,255,0.45)',border:`1.5px solid ${dataMode==='euro'?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.08)'}`,borderRadius:4,padding:'9px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}>
+            Top 5 + CL
+          </button>
+        </div>
         <button className="h2h-go" onClick={onH2H} disabled={!metaReady}
           style={{width:'100%',background:metaReady?'rgba(34,197,94,0.1)':'rgba(34,197,94,0.03)',color:metaReady?'#22c55e':'rgba(255,255,255,0.3)',border:`2px solid ${metaReady?'rgba(34,197,94,0.5)':'rgba(34,197,94,0.1)'}`,borderRadius:4,padding:'15px 0',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',marginBottom:10,boxShadow:metaReady?'4px 4px 0 rgba(34,197,94,0.12)':'none'}}>
           {metaReady?'Create game →':'Loading…'}
