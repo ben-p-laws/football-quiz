@@ -962,6 +962,11 @@ export default function FootballGolf(){
   const [confirmedPlayers,setConfirmedPlayers] = useState<(string|null)[]>([null,null,null])
   const [shotResult,setShotResult]       = useState<ShotResult|null>(null)
   const [inputError,setInputError]       = useState('')
+  const [playAlongInputs,setPlayAlongInputs]           = useState(['','',''])
+  const [playAlongConfirmed,setPlayAlongConfirmed]     = useState<(string|null)[]>([null,null,null])
+  const [playAlongSuggestions,setPlayAlongSuggestions] = useState<string[][]>([[],[],[]])
+  const [playAlongResult,setPlayAlongResult]           = useState<ShotResult|null>(null)
+  const [playAlongError,setPlayAlongError]             = useState('')
   const [allPlayerNames,setAllPlayerNames] = useState<string[]>([])
   const [playerData,setPlayerData]       = useState<Record<string,PlayerDataLocal>>({})
   const [namesLoading,setNamesLoading]   = useState(true)
@@ -1122,7 +1127,15 @@ export default function FootballGolf(){
   },[question,h2hStep,h2hWaiting])
 
   useEffect(()=>{
-    if(!h2hWaiting){setH2HWaitPhraseIdx(0);return}
+    if(!h2hWaiting){
+      setH2HWaitPhraseIdx(0)
+      setPlayAlongInputs(['','',''])
+      setPlayAlongConfirmed([null,null,null])
+      setPlayAlongSuggestions([[],[],[]])
+      setPlayAlongResult(null)
+      setPlayAlongError('')
+      return
+    }
     const id=setInterval(()=>setH2HWaitPhraseIdx(i=>(i+1)%5),2200)
     return ()=>clearInterval(id)
   },[h2hWaiting])
@@ -1551,6 +1564,104 @@ export default function FootballGolf(){
     setPlayerInputs(prev=>{ const n=[...prev];n[idx]=name;return n })
     setConfirmedPlayers(prev=>{ const n=[...prev];n[idx]=name;return n })
     setSuggestions(prev=>{ const n=[...prev];n[idx]=[];return n })
+  }
+
+  function onPlayAlongInputChange(idx:number,val:string){
+    setPlayAlongInputs(prev=>{ const n=[...prev];n[idx]=val;return n })
+    setPlayAlongConfirmed(prev=>{ const n=[...prev];n[idx]=null;return n })
+    if(val.length<2){ setPlayAlongSuggestions(prev=>{ const n=[...prev];n[idx]=[];return n });return }
+    const q=normSearch(val)
+    const matches=allPlayerNames.filter((_,i)=>normalisedNames.current[i]?.includes(q)).slice(0,8)
+    setPlayAlongSuggestions(prev=>{ const n=[...prev];n[idx]=matches;return n })
+  }
+
+  function confirmPlayAlongSuggestion(idx:number,name:string){
+    setPlayAlongInputs(prev=>{ const n=[...prev];n[idx]=name;return n })
+    setPlayAlongConfirmed(prev=>{ const n=[...prev];n[idx]=name;return n })
+    setPlayAlongSuggestions(prev=>{ const n=[...prev];n[idx]=[];return n })
+  }
+
+  function computePlayAlongShot(){
+    if(!question||!currentHole) return
+    const named=playAlongConfirmed.filter(Boolean) as string[]
+    if(named.length===0){ setPlayAlongError('Select at least one player');return }
+    setPlayAlongError('')
+    const breakdown:{name:string;value:number}[]=[]
+    let total=0
+    for(const name of named){
+      let value=0
+      if(question.seasonFilter){
+        const p=badLiePlayerData[name]
+        if(p){
+          if(question.key==='goals')             value=p.goals
+          else if(question.key==='assists')      value=p.assists
+          else if(question.key==='yellow_cards') value=p.yellow_cards
+        }
+      }else{
+        const p=playerData[name]
+        if(!p){ breakdown.push({name,value:0});continue }
+        if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
+        if(question.continentFilter && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
+        if(question.letterFilter){ const initial=getSurnameInitial(name); if(initial!==question.letterFilter){ breakdown.push({name,value:0});continue } }
+        const cf=question.clubFilter
+        if(cf){
+          if(question.key==='goals')              value=p.clubGoals[cf]||0
+          else if(question.key==='assists')       value=p.clubAssists[cf]||0
+          else if(question.key==='goals_assists') value=(p.clubGoals[cf]||0)+(p.clubAssists[cf]||0)
+          else if(question.key==='appearances')   value=p.clubGames[cf]||0
+          else if(question.key==='apps_minus_goals') value=Math.max(0,(p.clubGames[cf]||0)-(p.clubGoals[cf]||0))
+          else if(question.key==='yellow_cards')  value=p.clubYellowCards[cf]||0
+          else if(question.key==='clean_sheets')  value=p.clubCleanSheets[cf]||0
+        }else{
+          if(question.key==='goals')              value=p.goals
+          else if(question.key==='assists')       value=p.assists
+          else if(question.key==='goals_assists') value=p.goals+p.assists
+          else if(question.key==='appearances')   value=p.games
+          else if(question.key==='apps_minus_goals') value=Math.max(0,p.games-p.goals)
+          else if(question.key==='yellow_cards')  value=p.yellow_cards
+          else if(question.key==='clean_sheets')  value=p.clean_sheets
+          else{
+            const qk=question.key as string
+            const sgm=qk.match(/^goals_since_(\d+)$/);  if(sgm)  value=p.goalsSince?.[parseInt(sgm[1])]??0
+            const sgam=qk.match(/^ga_since_(\d+)$/);    if(sgam) value=p.gaSince?.[parseInt(sgam[1])]??0
+            const bgm=qk.match(/^goals_before_(\d+)$/); if(bgm)  value=p.goalsBefore?.[parseInt(bgm[1])]??0
+            const bgam=qk.match(/^ga_before_(\d+)$/);   if(bgam) value=p.gaBefore?.[parseInt(bgam[1])]??0
+          }
+        }
+      }
+      breakdown.push({name,value})
+      total+=value
+    }
+    const isClubMaxOOB=total>clubMax
+    let isOOB=isClubMaxOOB
+    let penaltyReason=isClubMaxOOB?`Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`:''
+    let waterDropRemaining:number|undefined
+    if(!isOOB&&!pastPin&&currentHole.hazards.length){
+      const approachPos=currentHole.distance-remaining
+      const newPos=approachPos+total
+      const hit=currentHole.hazards.find(h=>newPos>=h.start&&newPos<=h.end)
+      if(hit){
+        isOOB=true
+        if(currentHole.isIsland&&currentHole.dropZoneYards){
+          waterDropRemaining=currentHole.dropZoneYards
+          penaltyReason=`Water! Drop zone — ${currentHole.dropZoneYards} yds from pin (+1 stroke)`
+        }else{
+          const dropYards=hit.start-1
+          waterDropRemaining=currentHole.distance-dropYards
+          penaltyReason=`Water hazard! Drop at ${dropYards} yds from tee (+1 stroke)`
+        }
+      }
+    }
+    const overshoot=total-remaining
+    if(!isOOB&&currentHole.isIsland&&currentHole.dropZoneYards&&overshoot>20){isOOB=true;waterDropRemaining=currentHole.dropZoneYards;penaltyReason=`Water! Drop zone — ${currentHole.dropZoneYards} yds from pin (+1 stroke)`}
+    if(!isOOB&&overshoot>50){isOOB=true;penaltyReason=`${overshoot} yds past the flag — out of bounds!`}
+    const isHoled=!isOOB&&total===remaining
+    const isGimme=!isOOB&&!isHoled&&Math.abs(overshoot)<=5
+    const approachPosNow=currentHole.distance-remaining
+    const approachPosNew=approachPosNow+total
+    const wasInBunker=!pastPin&&currentHole.bunkers.some(b=>approachPosNow>=b.start&&approachPosNow<=b.end)
+    const isInBunker=!isOOB&&!isHoled&&!isGimme&&!pastPin&&!wasInBunker&&currentHole.bunkers.some(b=>approachPosNew>=b.start&&approachPosNew<=b.end)
+    setPlayAlongResult({total,breakdown,isOOB,isHoled,isGimme,isInBunker,penaltyReason,waterDropRemaining})
   }
 
   function animateShot(fromPos:number, toPos:number, result:ShotResult){
@@ -3327,66 +3438,102 @@ export default function FootballGolf(){
                 <div style={{fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>yards</div>
               </div>
             ) : h2hWaiting ? (
-              <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6}}>
-                {/* Golfer swing animation */}
-                <svg viewBox="0 0 80 100" width="52" height="65" style={{opacity:0.9,flexShrink:0}}>
-                  <style>{`
-                    @keyframes gSwing{0%{transform:rotate(-35deg)}40%{transform:rotate(-35deg)}70%{transform:rotate(55deg)}85%{transform:rotate(50deg)}100%{transform:rotate(-35deg)}}
-                    @keyframes gSwingBody{0%{transform:rotate(0deg)}40%{transform:rotate(-5deg)}70%{transform:rotate(8deg)}100%{transform:rotate(0deg)}}
-                  `}</style>
-                  <ellipse cx="38" cy="96" rx="18" ry="4" fill="rgba(0,0,0,0.3)"/>
-                  <g style={{transformOrigin:'38px 60px',animation:'gSwingBody 1.6s ease-in-out infinite'}}>
-                    <rect x="26" y="6" width="22" height="5" rx="2" fill="#e2e8f0"/>
-                    <rect x="22" y="10" width="28" height="4" rx="1" fill="#e2e8f0"/>
-                    <ellipse cx="37" cy="20" rx="9" ry="10" fill="#f5d0a9"/>
-                    <rect x="34" y="29" width="6" height="5" fill="#f5d0a9"/>
-                    {/* Vertical red & white striped shirt */}
-                    <defs>
-                      <pattern id="vstripe" x="0" y="0" width="6" height="100" patternUnits="userSpaceOnUse">
-                        <rect width="3" height="100" fill="#dc2626"/>
-                        <rect x="3" width="3" height="100" fill="white"/>
-                      </pattern>
-                      <clipPath id="torsoClip"><path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z"/></clipPath>
-                    </defs>
-                    <path d="M27,34 Q37,30 47,34 L50,58 Q37,62 24,58 Z" fill="url(#vstripe)" clipPath="url(#torsoClip)"/>
-                    <path d="M26,57 L22,90 L33,90 L37,70 L41,90 L52,90 L48,57 Z" fill="#1e3a5f"/>
-                    <ellipse cx="26" cy="91" rx="8" ry="4" fill="#1e293b"/>
-                    <ellipse cx="48" cy="91" rx="8" ry="4" fill="#1e293b"/>
-                    <path d="M27,36 Q18,48 20,56" stroke="#f5d0a9" strokeWidth="5" fill="none" strokeLinecap="round"/>
-                    <circle cx="20" cy="57" r="4" fill="#e2e8f0"/>
-                    <g style={{transformOrigin:'47px 38px',animation:'gSwing 1.6s ease-in-out infinite'}}>
-                      <path d="M47,36 Q54,44 52,54" stroke="#f5d0a9" strokeWidth="5" fill="none" strokeLinecap="round"/>
-                      <line x1="52" y1="55" x2="18" y2="88" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round"/>
-                      <rect x="10" y="84" width="12" height="7" rx="2" fill="#64748b"/>
-                    </g>
-                  </g>
-                  <circle cx="14" cy="90" r="4" fill="white"/>
-                </svg>
+              <div style={{flex:1,display:'flex',flexDirection:'column',gap:8}}>
 
-                {/* Rotating phrase */}
-                <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.7)',textAlign:'center'}}>
-                  {(()=>{
-                    const oppN=h2hOppName||'Opp'
-                    const phrases=h2hIFinishedRef.current
-                      ?[`Waiting for ${oppN} to finish…`,`${oppN} still on the course…`,`Come on ${oppN}…`,'Hole not over yet…',`${oppN} taking their time…`]
-                      :[`${oppN} lining up the shot…`,`${oppN} checking the yardage…`,`${oppN} taking their stance…`,`Ball in flight…`,`${oppN} eyeing the fairway…`]
-                    return phrases[h2hWaitPhraseIdx%phrases.length]
-                  })()}
+                {/* Compact waiting banner */}
+                <div style={{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:8}}>
+                  <div style={{flex:1,fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.5)',lineHeight:1.3}}>
+                    {(()=>{
+                      const oppN=h2hOppName||'Opp'
+                      const phrases=h2hIFinishedRef.current
+                        ?[`Waiting for ${oppN} to finish…`,`${oppN} still on the course…`,`Come on ${oppN}…`,'Hole not over yet…',`${oppN} taking their time…`]
+                        :[`${oppN} lining up the shot…`,`${oppN} checking the yardage…`,`${oppN} taking their stance…`,`Ball in flight…`,`${oppN} eyeing the fairway…`]
+                      return phrases[h2hWaitPhraseIdx%phrases.length]
+                    })()}
+                  </div>
+                  {h2hOppRemaining!==null&&(
+                    <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.3)',flexShrink:0}}>{h2hOppRemaining} yds</div>
+                  )}
                 </div>
 
-                {h2hOppRemaining!==null&&(
-                  <div style={{fontSize:11,color:'rgba(255,255,255,0.3)'}}>{h2hOppRemaining} yds to go</div>
+                {/* Play-along — inputs or result */}
+                {!playAlongResult ? (
+                  <div style={{border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px',display:'flex',flexDirection:'column',gap:6}}>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',padding:'2px 4px 0'}}>
+                      Play along — what would you score?
+                    </div>
+                    {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
+                    {[0,1,2].map((idx,i)=>(
+                      <div key={idx}>
+                        {i>0&&<div style={{height:'1px',background:'rgba(255,255,255,0.05)',margin:'0 0 6px'}}/>}
+                        <PlayerInputRow
+                          idx={idx} value={playAlongInputs[idx]}
+                          confirmed={!!playAlongConfirmed[idx]} suggestions={playAlongSuggestions[idx]}
+                          active={idx===0||!!playAlongConfirmed[idx-1]}
+                          onChange={val=>onPlayAlongInputChange(idx,val)}
+                          onConfirm={name=>confirmPlayAlongSuggestion(idx,name)}
+                          onClear={()=>{
+                            setPlayAlongInputs(prev=>{const n=[...prev];n[idx]='';return n})
+                            setPlayAlongConfirmed(prev=>{const n=[...prev];n[idx]=null;return n})
+                            setPlayAlongSuggestions(prev=>{const n=[...prev];n[idx]=[];return n})
+                          }}
+                        />
+                      </div>
+                    ))}
+                    {playAlongError&&<div style={{fontSize:12,color:'#dc2626',fontWeight:700,padding:'0 4px'}}>{playAlongError}</div>}
+                    <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',paddingTop:6,marginTop:2}}>
+                      <button
+                        onClick={computePlayAlongShot}
+                        disabled={playAlongConfirmed.every(p=>!p)}
+                        style={{
+                          width:'100%',background:'transparent',
+                          color:playAlongConfirmed.every(p=>!p)?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.65)',
+                          border:`1px solid ${playAlongConfirmed.every(p=>!p)?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.18)'}`,
+                          borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
+                        }}
+                      >
+                        Try this shot
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:'12px 12px 10px',display:'flex',flexDirection:'column',gap:8}}>
+                    <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                      Your practice shot
+                    </div>
+                    <div style={{display:'flex',alignItems:'baseline',gap:6}}>
+                      <div style={{fontSize:40,fontWeight:900,lineHeight:1,fontVariantNumeric:'tabular-nums',
+                        color:playAlongResult.isOOB?'#ef4444':playAlongResult.isHoled?'#22c55e':'white'}}>
+                        {playAlongResult.total}
+                      </div>
+                      <div style={{fontSize:14,fontWeight:700,color:'rgba(255,255,255,0.5)'}}>yds</div>
+                      {playAlongResult.isHoled&&<div style={{fontSize:12,fontWeight:800,color:'#22c55e'}}>Holed!</div>}
+                      {playAlongResult.isGimme&&<div style={{fontSize:12,fontWeight:700,color:'#86efac'}}>Gimme</div>}
+                      {playAlongResult.isOOB&&<div style={{fontSize:12,fontWeight:700,color:'#ef4444'}}>OOB</div>}
+                    </div>
+                    {playAlongResult.isOOB&&<div style={{fontSize:11,color:'rgba(255,255,255,0.4)',lineHeight:1.4}}>{playAlongResult.penaltyReason}</div>}
+                    <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                      {playAlongResult.breakdown.map(b=>(
+                        <div key={b.name} style={{display:'flex',justifyContent:'space-between',fontSize:12,color:'rgba(255,255,255,0.6)'}}>
+                          <span>{b.name}</span>
+                          <span style={{fontWeight:700,color:b.value>0?'#86efac':'rgba(255,255,255,0.3)'}}>{b.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button
+                      onClick={()=>{
+                        setPlayAlongResult(null)
+                        setPlayAlongInputs(['','',''])
+                        setPlayAlongConfirmed([null,null,null])
+                        setPlayAlongSuggestions([[],[],[]])
+                        setPlayAlongError('')
+                      }}
+                      style={{background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:6,padding:'7px 0',fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.4)',cursor:'pointer',fontFamily:'inherit'}}
+                    >
+                      Try again
+                    </button>
+                  </div>
                 )}
-
-                {/* Their question */}
-                <div style={{width:'100%',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:8,padding:'7px 10px'}}>
-                  <div style={{fontSize:9,fontWeight:700,color:'#6b7fa3',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:3}}>
-                    {strokes===0?'Their question too':'Their question'}
-                  </div>
-                  <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.8)',lineHeight:1.3}}>
-                    {strokes===0 ? question?.label : (h2hOppLastQuestion ?? '—')}
-                  </div>
-                </div>
 
               </div>
             ) : (
