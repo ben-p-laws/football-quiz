@@ -3228,7 +3228,7 @@ export default function FootballGolf(){
                   strokes={strokes}
                   useMeet={courseMode!=='real' || dailyMode}
                   imageUrl={courseMode==='real' && !dailyMode ? (
-                    selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` :
+                    selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=21` :
                     selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` :
                     `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`
                   ) : undefined}
@@ -3464,7 +3464,7 @@ export default function FootballGolf(){
                     isAnimating={isAnimating}
                     strokes={strokes}
                     maxRangePos={!pastPin && club==='driver' && remaining > clubMax && !(selectedCourse==='wii-golf' && currentHole && WII_GOLF_BRANCHES[currentHole.number]) ? ballPos + clubMax : undefined}
-                    imageUrl={isReal ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=20` : selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
+                    imageUrl={isReal ? (selectedCourse==='augusta' ? `/holes/augusta/hole_${String(currentHole.number).padStart(2,'0')}.png?v=21` : selectedCourse==='wii-golf' ? `/holes/wii-golf/wii-golf-${currentHole.number}.png` : `/holes/hole_${String(currentHole.number).padStart(2,'0')}.png`) : undefined}
                     imageRotation={isReal ? (PEBBLE_PHOTO_ROTATIONS[currentHole.number] ?? 0) : undefined}
                     realYScale={cvYScale}
                     realTeePos={isReal ? fracToSVG((selectedCourse==='augusta'?AUGUSTA_POSITIONS:selectedCourse==='wii-golf'?wiiActiveLookup:HOLE_POSITIONS)[currentHole.number].teeFrac, cvYScale!) : undefined}
