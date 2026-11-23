@@ -1020,6 +1020,7 @@ export default function FootballGolf(){
   const [matchScore, setMatchScore] = useState(0)
   const [h2hHoleResults, setH2HHoleResults] = useState<('W'|'L'|'H')[]>([])
   const [h2hError, setH2HError] = useState('')
+  const [h2hLinkCopied, setH2HLinkCopied] = useState(false)
   const [h2hFinishHoleReady, setH2HFinishHoleReady] = useState(false)
   const [h2hIsMyTurn, setH2HIsMyTurn] = useState(true)
   const [h2hOppShotCount, setH2HOppShotCount] = useState(0) // shots opp has taken this hole
@@ -2817,32 +2818,20 @@ export default function FootballGolf(){
   const h2hBtnStyle:React.CSSProperties={background:'#dc2626',color:'white',border:'none',borderRadius:10,padding:'13px 36px',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}
   const h2hSecBtnStyle:React.CSSProperties={...h2hBtnStyle,background:'#1e2d4a'}
 
-  if(h2hStep==='create'){
-    return(<><NavBar />
-      <div style={h2hScreenStyle}>
-        <div style={{textAlign:'center'}}>
-          <div style={{fontSize:24,fontWeight:900,color:'white'}}>Challenge a Friend</div>
-          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6}}>You've set up the course — enter your name to create a room</div>
-        </div>
-        <input style={h2hInputStyle} placeholder="Your name" value={h2hPlayerName} onChange={e=>setH2HPlayerName(e.target.value)} maxLength={20}/>
-        {h2hError&&<div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>{h2hError}</div>}
-        <div style={{display:'flex',gap:10}}>
-          <button style={h2hSecBtnStyle} onClick={()=>setH2HStep('off')}>← Back</button>
-          <button style={h2hBtnStyle} onClick={createH2HRoom} disabled={!metaReady}>{metaReady?'Create Room':'Loading…'}</button>
-        </div>
-      </div>
-    </>)
-  }
-
   if(h2hStep==='join'){
+    const codeFromUrl = h2hJoinInput.length===4
     return(<><NavBar />
       <div style={h2hScreenStyle}>
         <div style={{textAlign:'center'}}>
-          <div style={{fontSize:24,fontWeight:900,color:'white'}}>Join Room</div>
-          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6}}>Enter your name and the room code from your opponent</div>
+          <div style={{fontSize:24,fontWeight:900,color:'white'}}>{codeFromUrl?'Join game':'Join Room'}</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginTop:6,marginBottom:4}}>
+            {codeFromUrl?`Joining room ${h2hJoinInput}`:'Enter your name and the room code from your opponent'}
+          </div>
         </div>
         <input style={h2hInputStyle} placeholder="Your name" value={h2hPlayerName} onChange={e=>setH2HPlayerName(e.target.value)} maxLength={20}/>
-        <input style={{...h2hInputStyle,textTransform:'uppercase',letterSpacing:'0.15em',fontSize:18,fontWeight:900,textAlign:'center'}} placeholder="ROOM CODE" value={h2hJoinInput} onChange={e=>setH2HJoinInput(e.target.value.toUpperCase())} maxLength={6}/>
+        {!codeFromUrl&&(
+          <input style={{...h2hInputStyle,textTransform:'uppercase',letterSpacing:'0.15em',fontSize:18,fontWeight:900,textAlign:'center'}} placeholder="ROOM CODE" value={h2hJoinInput} onChange={e=>setH2HJoinInput(e.target.value.toUpperCase())} maxLength={6}/>
+        )}
         {h2hError&&<div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>{h2hError}</div>}
         <div style={{display:'flex',gap:10}}>
           <button style={h2hSecBtnStyle} onClick={()=>setH2HStep('off')}>← Back</button>
@@ -2861,16 +2850,35 @@ export default function FootballGolf(){
       {slot:'guest',team:'B',label:'Team B P1'},
       {slot:'guest_partner',team:'B',label:'Team B P2'},
     ]
+    const handleCopy=()=>{
+      navigator.clipboard?.writeText(shareUrl).then(()=>{
+        setH2HLinkCopied(true)
+        setTimeout(()=>setH2HLinkCopied(false),2500)
+      })
+    }
+    const whatsappUrl=`https://wa.me/?text=${encodeURIComponent('I\'ve set up a Football Golf game — tap to join: '+shareUrl)}`
     return(<><NavBar />
       <div style={h2hScreenStyle}>
-        <div style={{textAlign:'center'}}>
-          <div style={{fontSize:13,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Room Code</div>
-          <div style={{fontSize:52,fontWeight:900,color:'white',letterSpacing:'0.15em'}}>{h2hRoomId}</div>
-        </div>
-        <div style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:10,padding:'12px 16px',maxWidth:340,width:'100%'}}>
-          <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:4}}>Share link</div>
-          <div style={{fontSize:11,color:'#6b7fa3',wordBreak:'break-all'}}>{shareUrl}</div>
-          <button onClick={()=>navigator.clipboard?.writeText(shareUrl)} style={{marginTop:8,background:'#1e2d4a',border:'none',borderRadius:6,padding:'6px 12px',color:'white',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>Copy link</button>
+        <div style={{textAlign:'center',maxWidth:340,width:'100%'}}>
+          <div style={{fontSize:22,fontWeight:900,color:'white',marginBottom:4}}>Game ready</div>
+          <div style={{fontSize:13,color:'rgba(255,255,255,0.4)',marginBottom:16}}>Send the link to your friend — they tap it to join</div>
+
+          {/* URL display — tappable to copy */}
+          <div onClick={handleCopy}
+            style={{background:'#0d1627',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,padding:'10px 14px',marginBottom:12,cursor:'pointer',textAlign:'left'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',marginBottom:3}}>Game link</div>
+            <div style={{fontSize:12,color:'rgba(255,255,255,0.6)',wordBreak:'break-all',lineHeight:1.4}}>{shareUrl}</div>
+          </div>
+
+          <button onClick={handleCopy}
+            style={{width:'100%',background:h2hLinkCopied?'rgba(34,197,94,0.1)':'#22c55e',color:h2hLinkCopied?'#22c55e':'#0a0f1e',border:h2hLinkCopied?'2px solid rgba(34,197,94,0.5)':'none',borderRadius:4,padding:'14px 0',fontSize:15,fontWeight:900,cursor:'pointer',fontFamily:'inherit',marginBottom:10,boxShadow:h2hLinkCopied?'none':'4px 4px 0 rgba(34,197,94,0.2)'}}>
+            {h2hLinkCopied?'Copied!':'Copy link'}
+          </button>
+          <a href={whatsappUrl} target="_blank" rel="noopener noreferrer"
+            style={{display:'block',width:'100%',background:'#0d1627',color:'rgba(255,255,255,0.6)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,padding:'12px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'inherit',textDecoration:'none',marginBottom:16,boxSizing:'border-box'}}>
+            Open WhatsApp
+          </a>
+          <div style={{fontSize:11,color:'rgba(255,255,255,0.2)'}}>Room code: <span style={{fontWeight:900,letterSpacing:'0.1em'}}>{h2hRoomId}</span></div>
         </div>
         {is2v2Lobby ? (
           <div style={{width:'100%',maxWidth:340,display:'flex',flexDirection:'column',gap:12}}>
@@ -3078,7 +3086,7 @@ export default function FootballGolf(){
 
   if(phase==='club-lobby'&&lobbyClub) return(<><NavBar /><ClubLobbyScreen club={lobbyClub} onBack={()=>setPhase('setup')} /></>)
   if(phase==='tournament-setup'&&pendingTournamentId) return(<><NavBar /><TournamentSetupScreen tournamentId={pendingTournamentId} onPlay={()=>startTournamentGame(pendingTournamentId!)} onBack={()=>setPhase('setup')} /></>)
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={()=>setH2HStep('create')} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} onTournament={(id)=>{setPendingTournamentId(id);setPhase('tournament-setup')}} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={createH2HRoom} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} onTournament={(id)=>{setPendingTournamentId(id);setPhase('tournament-setup')}} playerName={h2hPlayerName} setPlayerName={setH2HPlayerName} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
@@ -4981,7 +4989,7 @@ function ClubExpandedPanel({onViewLobby}:{onViewLobby:(club:ClubInfo)=>void}){
 }
 
 type MultiMode = 'h2h-1v1'|'h2h-scramble'|'h2h-alt'|'team-scramble'|'team-alt'
-function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode,metaReady,onTournament}:{
+function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,numHoles,setNumHoles,tee,setTee,startHole,setStartHole,onStart,onH2H,onJoin,onDaily,onDailyRound,onViewLobby,sharedResult,onDismissShare,multiMode,setMultiMode,metaReady,onTournament,playerName,setPlayerName}:{
   courseMode:'random'|'real'; setCourseMode:(m:'random'|'real')=>void
   selectedCourse:string; setSelectedCourse:(c:string)=>void
   numHoles:number; setNumHoles:(n:any)=>void
@@ -4993,6 +5001,7 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   sharedResult:SharePayload|null; onDismissShare:()=>void
   multiMode:MultiMode; setMultiMode:(m:MultiMode)=>void
   onTournament:(id:string)=>void
+  playerName:string; setPlayerName:(n:string)=>void
 }){
   const [mode,setMode] = useState<'solo'|'multiplayer'>('solo')
   const [hcpExpanded, setHcpExpanded] = useState(false)
@@ -5013,19 +5022,28 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
       .catch(()=>{})
   },[])
 
-  const lbl = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase' as const,letterSpacing:'0.08em',marginBottom:6,textAlign:'center' as const}
-  return(
-    <div style={{width:'100%',height:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'flex-start',gap:8,fontFamily:"'DM Sans',sans-serif",padding:'16px 20px 20px',overflowY:'scroll',overflowX:'hidden',scrollbarGutter:'stable'}}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}`}</style>
+  const [setupStep, setSetupStep] = useState<'home'|'solo'|'vs-friend'>('home')
+  const screenStyle:React.CSSProperties = {width:'100%',minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',fontFamily:"'DM Sans',sans-serif",padding:'0 20px 32px',overflowY:'auto',overflowX:'hidden'}
+  const maxW:React.CSSProperties = {width:'100%',maxWidth:360}
 
-      {/* Title */}
-      <div style={{fontSize:24,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:2}}>Football Golf</div>
+  // ── Home screen ──────────────────────────────────────────────────────────────
+  if(setupStep==='home') return(
+    <div style={screenStyle}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');
+        *{box-sizing:border-box;}
+        .lb-solo:active  { translate: 2px 2px; box-shadow: 2px 2px 0 rgba(34,197,94,0.15) !important; }
+        .lb-rival:active { translate: 2px 2px; box-shadow: 2px 2px 0 rgba(255,255,255,0.06) !important; }
+        .lb-tourn:active { translate: 2px 2px; box-shadow: 2px 2px 0 rgba(195,142,10,0.1) !important; }
+      `}</style>
+      <div style={{...maxW,paddingTop:28,paddingBottom:4}}>
+        <div style={{fontSize:28,fontWeight:900,color:'white',letterSpacing:'-0.5px',lineHeight:1}}>Football Golf</div>
+      </div>
 
-      {/* Shared result banner */}
       {sharedResult&&(
-        <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(99,102,241,0.5)',borderRadius:16,padding:'14px 16px',position:'relative'}}>
+        <div style={{...maxW,marginTop:16,background:'#0d1627',border:'2px solid rgba(34,197,94,0.4)',borderRadius:4,padding:'14px 16px',position:'relative'}}>
           <button onClick={onDismissShare} style={{position:'absolute',top:8,right:10,background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',lineHeight:1}}>✕</button>
-          <div style={{fontSize:10,fontWeight:800,color:'rgba(99,102,241,0.8)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:6}}>Challenge from a friend</div>
+          <div style={{fontSize:11,fontWeight:700,color:'rgba(34,197,94,0.8)',marginBottom:6}}>Challenge from a friend</div>
           <div style={{fontSize:15,fontWeight:800,color:'white',marginBottom:4}}>
             {sharedResult.n} scored <span style={{color:sharedResult.sp<0?'#22c55e':sharedResult.sp>0?'#ef4444':'white'}}>{sharedResult.sp===0?'E':sharedResult.sp>0?`+${sharedResult.sp}`:sharedResult.sp}</span> · {sharedResult.h} holes
           </div>
@@ -5034,8 +5052,63 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       )}
 
-      {/* Handicap + Club cards — side by side */}
-      <div style={{width:'100%',maxWidth:320,display:'flex',gap:8}}>
+      <div style={{...maxW,marginTop:20,display:'flex',flexDirection:'column',gap:8}}>
+
+        {/* Solo — pressed arcade tile, game green */}
+        <button className="lb-solo" onClick={()=>setSetupStep('solo')}
+          style={{background:'rgba(34,197,94,0.06)',border:'2px solid rgba(34,197,94,0.45)',borderRadius:4,padding:'20px 18px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',boxShadow:'4px 4px 0 rgba(34,197,94,0.12)'}}>
+          <div style={{fontSize:20,fontWeight:900,color:'white',letterSpacing:'-0.3px'}}>Solo</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Choose your course and play alone</div>
+        </button>
+
+        {/* vs Friend — high-contrast white press tile */}
+        <button className="lb-rival" onClick={()=>setSetupStep('vs-friend')}
+          style={{background:'#0d1627',border:'2px solid rgba(255,255,255,0.28)',borderRadius:4,padding:'20px 18px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',boxShadow:'4px 4px 0 rgba(255,255,255,0.06)'}}>
+          <div style={{fontSize:20,fontWeight:900,color:'white',letterSpacing:'-0.3px'}}>vs Friend</div>
+          <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Head to head · share a link to play</div>
+        </button>
+
+        {/* Daily — flat secondary tiles, no press shadow */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+          <button onClick={onDaily}
+            style={{background:'#0d1627',border:`1px solid ${dailyPlayed?'rgba(34,197,94,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:4,padding:'14px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:68}}>
+            <div style={{fontSize:13,fontWeight:800,color:dailyPlayed?'#22c55e':'rgba(255,255,255,0.7)'}}>Pin Hunt</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',lineHeight:1.3}}>Daily par 3</div>
+            {dailyPlayed&&<div style={{fontSize:10,fontWeight:700,color:'#22c55e',marginTop:'auto'}}>Played</div>}
+          </button>
+          <button onClick={onDailyRound}
+            style={{background:'#0d1627',border:`1px solid ${dailyRoundPlayed?'rgba(34,197,94,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:4,padding:'14px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:68}}>
+            <div style={{fontSize:13,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'rgba(255,255,255,0.7)'}}>3-Hole Round</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',lineHeight:1.3}}>Daily round</div>
+            {dailyRoundPlayed&&<div style={{fontSize:10,fontWeight:700,color:'#22c55e',marginTop:'auto'}}>Played</div>}
+          </button>
+        </div>
+
+        {/* Tournament — amber press tile, no gradient */}
+        <div className="lb-tourn"
+          style={{background:'#0d1627',border:'2px solid rgba(195,142,10,0.45)',borderRadius:4,padding:'16px 18px',boxShadow:'4px 4px 0 rgba(195,142,10,0.1)',display:'flex',alignItems:'center',gap:12}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:20,fontWeight:900,color:'#d4a017',letterSpacing:'-0.3px'}}>Tournament</div>
+            <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Play the final round of a major</div>
+          </div>
+          <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
+            <div style={{position:'relative'}}>
+              <select value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}
+                style={{background:'rgba(195,142,10,0.1)',color:'#d4a017',border:'1px solid rgba(195,142,10,0.35)',borderRadius:3,padding:'4px 22px 4px 8px',fontSize:11,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
+                {TOURNAMENTS.map(t=>(<option key={t.id} value={t.id}>{t.name}</option>))}
+                <option disabled>More coming soon</option>
+              </select>
+              <div style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(195,142,10,0.5)',fontSize:8}}>▼</div>
+            </div>
+            <button onClick={()=>onTournament(selectedTournament)} disabled={!metaReady}
+              style={{background:metaReady?'#c38a0a':'rgba(195,142,10,0.1)',color:metaReady?'#0a0f1e':'rgba(255,255,255,0.3)',border:'none',borderRadius:3,padding:'5px 10px',fontSize:12,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+              {metaReady?'Start →':'Loading…'}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style={{...maxW,marginTop:16,display:'flex',gap:8}}>
         <div style={{flex:1,minWidth:0}}>
           <HandicapCard globalRank={globalRank} expanded={hcpExpanded} onToggle={()=>{setHcpExpanded(v=>!v);setClubExpanded(false)}} />
         </div>
@@ -5043,199 +5116,157 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
           <ClubSection onViewLobby={onViewLobby} expanded={clubExpanded} onToggle={()=>{setClubExpanded(v=>!v);setHcpExpanded(false)}} />
         </div>
       </div>
-
-      {/* Handicap expanded content — full width, below the row */}
       {hcpExpanded&&(()=>{
-        const hcp = getHandicapData()
-        const rounds:GolfRound[] = typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')?? '[]'):[]
-        return <HandicapExpandedContent hcp={hcp} roundCount={rounds.length} />
+        const hcp=getHandicapData()
+        const rounds:GolfRound[]=typeof window!=='undefined'?JSON.parse(localStorage.getItem('golf_rounds')??'[]'):[]
+        return <div style={maxW}><HandicapExpandedContent hcp={hcp} roundCount={rounds.length} /></div>
       })()}
+      {clubExpanded&&<div style={maxW}><ClubExpandedPanel onViewLobby={onViewLobby} /></div>}
+    </div>
+  )
 
-      {/* Club expanded content — full width, below the row */}
-      {clubExpanded&&<ClubExpandedPanel onViewLobby={onViewLobby} />}
-
-      {/* Tournament card */}
-      {(()=>{
-        return(
-          <div style={{width:'100%',maxWidth:320,background:'linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.03))',border:'2px solid #fbbf24',borderRadius:14,padding:'9px 12px',boxShadow:'0 0 18px rgba(251,191,36,0.12)',display:'flex',alignItems:'center',gap:10}}>
-            <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:10,fontWeight:800,color:'#fbbf24',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:4}}>🏆 Tournament</div>
-              <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',lineHeight:1.4}}>Play the final round of a major and challenge the world's best players.</div>
+  // ── Solo config screen ────────────────────────────────────────────────────────
+  if(setupStep==='solo'){
+    const maxH=courseHoleCount(selectedCourse)
+    const pill=(active:boolean,disabled=false):React.CSSProperties=>({
+      flex:1,background:active?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',
+      color:disabled?'rgba(255,255,255,0.2)':(active?'#22c55e':'rgba(255,255,255,0.55)'),
+      border:`1.5px solid ${active?'rgba(34,197,94,0.45)':(disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.08)')}`,
+      borderRadius:4,padding:'10px 0',fontSize:13,fontWeight:800,cursor:disabled?'not-allowed':'pointer',
+      fontFamily:'inherit',opacity:disabled?0.4:1,
+    })
+    const rowLbl:React.CSSProperties={fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.3)',marginBottom:8}
+    return(
+      <div style={screenStyle}>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}.solo-go:active{translate:2px 2px;box-shadow:2px 2px 0 rgba(34,197,94,0.15)!important}`}</style>
+        <div style={{...maxW,paddingTop:20}}>
+          <button onClick={()=>setSetupStep('home')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:'0 0 20px',display:'block'}}>← Back</button>
+          <div style={{fontSize:22,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:24}}>Solo</div>
+          <div style={{marginBottom:16}}>
+            <div style={rowLbl}>Course type</div>
+            <div style={{display:'flex',gap:6}}>
+              <button onClick={()=>setCourseMode('real')} style={pill(courseMode==='real')}>Real course</button>
+              <button onClick={()=>setCourseMode('random')} style={pill(courseMode==='random')}>Random holes</button>
             </div>
-            <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
-              <div style={{position:'relative'}}>
-                <select value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}
-                  style={{background:'rgba(251,191,36,0.1)',color:'#fbbf24',border:'1px solid rgba(251,191,36,0.4)',borderRadius:7,padding:'4px 22px 4px 8px',fontSize:11,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
-                  {TOURNAMENTS.map(t=>(<option key={t.id} value={t.id}>{t.name}</option>))}
-                  <option disabled>More coming soon</option>
-                </select>
-                <div style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(251,191,36,0.5)',fontSize:8}}>▼</div>
-              </div>
-              <button onClick={()=>onTournament(selectedTournament)} disabled={!metaReady}
-                style={{background:metaReady?'#fbbf24':'rgba(251,191,36,0.1)',color:metaReady?'#0a0f1e':'rgba(255,255,255,0.3)',border:'none',borderRadius:7,padding:'5px 10px',fontSize:12,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
-                {metaReady?'Start →':'Loading…'}
-              </button>
-            </div>
           </div>
-        )
-      })()}
-
-      {/* Daily Challenges card */}
-      <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'10px 12px'}}>
-        <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',marginBottom:8}}>Daily Challenges</div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
-          <button onClick={onDaily} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'9px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:7}}>
-            <span style={{fontSize:16,lineHeight:1}}>⛳</span>
-            <span style={{fontSize:12,fontWeight:900,color:'white'}}>Pin Hunt</span>
-            {dailyPlayed&&<span style={{fontSize:10,fontWeight:800,color:'#22c55e',marginLeft:'auto'}}>✓</span>}
-          </button>
-          <button onClick={onDailyRound} style={{background:'linear-gradient(135deg,#1e3a5f,#0f2744)',border:`1.5px solid ${dailyRoundPlayed?'#22c55e':'#3b82f6'}`,borderRadius:12,padding:'9px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:7}}>
-            <span style={{fontSize:16,lineHeight:1}}>🏌️</span>
-            <span style={{fontSize:12,fontWeight:900,color:'white'}}>3-Hole Round</span>
-            {dailyRoundPlayed&&<span style={{fontSize:10,fontWeight:800,color:'#22c55e',marginLeft:'auto'}}>✓</span>}
-          </button>
-        </div>
-      </div>
-
-
-      {/* Free Play card */}
-      {(()=>{
-        const rowLbl: React.CSSProperties = {fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em',whiteSpace:'nowrap',flexShrink:0,minWidth:46}
-        const row: React.CSSProperties = {display:'flex',alignItems:'center',gap:10}
-        const pill = (active:boolean,disabled=false): React.CSSProperties => ({
-          flex:1,background:active?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',
-          color:disabled?'rgba(255,255,255,0.2)':active?'#22c55e':'rgba(255,255,255,0.6)',
-          border:`1.5px solid ${active?'rgba(34,197,94,0.5)':disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.07)'}`,
-          borderRadius:9,padding:'7px 0',fontSize:13,fontWeight:800,cursor:disabled?'not-allowed':'pointer',
-          fontFamily:'inherit',transition:'all 0.15s',opacity:disabled?0.4:1,
-        })
-        const maxH = courseHoleCount(selectedCourse)
-        return(
-        <div style={{width:'100%',maxWidth:320,background:'#111827',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:16,padding:'10px 12px',display:'flex',flexDirection:'column',gap:9}}>
-          <div style={{fontSize:10,fontWeight:800,color:'rgba(255,255,255,0.3)',textTransform:'uppercase',letterSpacing:'0.08em'}}>Free Play</div>
-
-          {/* Mode row */}
-          <div style={row}>
-            <div style={rowLbl}>Mode</div>
-            <button onClick={()=>setMode('solo')} style={pill(mode==='solo')}>Solo</button>
-            <button onClick={()=>setMode('multiplayer')} style={pill(mode==='multiplayer')}>Multiplayer</button>
-          </div>
-
-          {/* Multiplayer submenu */}
-          {mode==='multiplayer'&&(()=>{
-            const sectionLbl:React.CSSProperties={fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.1em',marginBottom:5}
-            const mpPill=(active:boolean,soon=false):React.CSSProperties=>({
-              flex:1,background:active?'rgba(34,197,94,0.12)':soon?'rgba(255,255,255,0.02)':'rgba(255,255,255,0.04)',
-              color:active?'#22c55e':soon?'rgba(255,255,255,0.2)':'rgba(255,255,255,0.55)',
-              border:`1.5px solid ${active?'rgba(34,197,94,0.5)':soon?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.07)'}`,
-              borderRadius:9,padding:'7px 0',fontSize:11,fontWeight:800,cursor:soon?'default':'pointer',
-              fontFamily:'inherit',transition:'all 0.15s',textAlign:'center' as const,position:'relative' as const,
-            })
-            return(
-              <div style={{background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)',borderRadius:10,padding:'10px 10px 8px',display:'flex',flexDirection:'column',gap:8}}>
-                {/* H2H section */}
-                <div>
-                  <div style={sectionLbl}>Head to Head</div>
-                  <div style={{display:'flex',gap:5,minWidth:0}}>
-                    <button onClick={()=>setMultiMode('h2h-1v1')} style={mpPill(multiMode==='h2h-1v1')}>1v1</button>
-                    <button onClick={()=>setMultiMode('h2h-scramble')} style={mpPill(multiMode==='h2h-scramble',true)}>
-                      2v2 Scramble
-                    </button>
-                    <button onClick={()=>setMultiMode('h2h-alt')} style={mpPill(multiMode==='h2h-alt',true)}>
-                      2v2 Alt Shot
-                    </button>
-                  </div>
-                </div>
-                {/* Divider */}
-                <div style={{height:1,background:'rgba(255,255,255,0.05)'}}/>
-                {/* Team Up section */}
-                <div>
-                  <div style={sectionLbl}>Team Up</div>
-                  <div style={{display:'flex',gap:5}}>
-                    <button onClick={()=>setMultiMode('team-scramble')} style={mpPill(multiMode==='team-scramble')}>
-                      Scramble
-                    </button>
-                    <button onClick={()=>setMultiMode('team-alt')} style={mpPill(multiMode==='team-alt')}>
-                      Alt Shot
-                    </button>
-                    <div style={{flex:1}}/>
-                  </div>
-                </div>
-                {/* Soon badge if applicable */}
-                {(multiMode==='h2h-scramble'||multiMode==='h2h-alt')&&(
-                  <div style={{textAlign:'center',fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.2)',marginTop:-2}}>
-                    Coming soon
-                  </div>
-                )}
-              </div>
-            )
-          })()}
-
-          {/* Type row */}
-          <div style={row}>
-            <div style={rowLbl}>Type</div>
-            <button onClick={()=>setCourseMode('real')} style={pill(courseMode==='real')}>🏌️ Real</button>
-            <button onClick={()=>setCourseMode('random')} style={pill(courseMode==='random')}>🎲 Random</button>
-          </div>
-
-          {/* Course + start hole row (real only) */}
           {courseMode==='real'&&(
-            <div style={{...row,alignItems:'flex-end'}}>
-              <div style={{...rowLbl,alignSelf:'center'}}>Course</div>
-              <div style={{flex:1,position:'relative'}}>
-                <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf' && numHoles===18) setNumHoles(3) }}
-                  style={{width:'100%',background:'rgba(34,197,94,0.12)',color:'#22c55e',border:'1.5px solid rgba(34,197,94,0.5)',borderRadius:9,padding:'7px 32px 7px 10px',fontSize:13,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
+            <div style={{marginBottom:16}}>
+              <div style={rowLbl}>Course</div>
+              <div style={{position:'relative'}}>
+                <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf'&&numHoles===18) setNumHoles(3) }}
+                  style={{width:'100%',background:'rgba(34,197,94,0.08)',color:'#22c55e',border:'2px solid rgba(34,197,94,0.35)',borderRadius:4,padding:'10px 36px 10px 12px',fontSize:14,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
                   {REAL_COURSES.filter(c=>c.available).map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
                   {REAL_COURSES.filter(c=>!c.available).map(c=>(<option key={c.id} value={c.id} disabled>{c.name} (soon)</option>))}
                 </select>
-                <div style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(34,197,94,0.6)',fontSize:9}}>▼</div>
+                <div style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(34,197,94,0.5)',fontSize:10}}>▼</div>
               </div>
-              <div style={{position:'relative',flexShrink:0}}>
-                <div style={{position:'absolute',top:-13,left:'50%',transform:'translateX(-50%)',fontSize:7,fontWeight:800,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'0.06em',whiteSpace:'nowrap'}}>Start Hole</div>
-              <div style={{display:'flex',alignItems:'center',gap:2,background:'rgba(255,255,255,0.04)',border:'1.5px solid rgba(255,255,255,0.07)',borderRadius:9,padding:'3px 4px'}}>
-                <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)}
-                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:4,width:16,height:16,fontSize:10,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
-                <div style={{fontSize:11,fontWeight:900,color:'white',width:18,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>
-                  {String(Math.min(startHole,maxH)).padStart(2,'0')}
+              <div style={{display:'flex',alignItems:'center',gap:10,marginTop:8}}>
+                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>Start hole</div>
+                <div style={{display:'flex',alignItems:'center',gap:3,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,padding:'3px 5px'}}>
+                  <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)} style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:2,width:20,height:20,fontSize:12,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+                  <div style={{fontSize:13,fontWeight:900,color:'white',width:22,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>{String(Math.min(startHole,maxH)).padStart(2,'0')}</div>
+                  <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)} style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:2,width:20,height:20,fontSize:12,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
                 </div>
-                <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)}
-                  style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:4,width:16,height:16,fontSize:10,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
-              </div>
               </div>
             </div>
           )}
-
-          {/* Holes row */}
-          <div style={row}>
+          <div style={{marginBottom:24}}>
             <div style={rowLbl}>Holes</div>
-            {([3,6,9,18] as number[]).map(n=>{
-              const disabled = courseMode==='real' && selectedCourse==='wii-golf' && n===18
-              return(
-                <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={pill(numHoles===n && !disabled, disabled)}>
-                  {n}
-                </button>
-              )
-            })}
+            <div style={{display:'flex',gap:6}}>
+              {([3,6,9,18] as number[]).map(n=>{
+                const disabled=courseMode==='real'&&selectedCourse==='wii-golf'&&n===18
+                return <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={pill(numHoles===n&&!disabled,disabled)}>{n}</button>
+              })}
+            </div>
           </div>
-
-          {/* CTA */}
-          {mode==='solo'
-            ? <button onClick={onStart} disabled={!metaReady} style={{width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:15,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',marginTop:2,opacity:metaReady?1:0.5}}>
-                {metaReady ? 'Tee Off →' : 'Loading…'}
-              </button>
-            : <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
-                <button onClick={onH2H} style={{flex:1,background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                  Create Room
-                </button>
-                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.25)'}}>or</div>
-                <button onClick={onJoin} style={{flex:1,background:'rgba(255,255,255,0.06)',color:'white',border:'1.5px solid rgba(255,255,255,0.08)',borderRadius:10,padding:'12px 0',fontSize:13,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
-                  Join Room
-                </button>
-              </div>
-          }
+          <button className="solo-go" onClick={onStart} disabled={!metaReady}
+            style={{width:'100%',background:metaReady?'rgba(34,197,94,0.1)':'rgba(34,197,94,0.05)',color:metaReady?'#22c55e':'rgba(255,255,255,0.3)',border:`2px solid ${metaReady?'rgba(34,197,94,0.5)':'rgba(34,197,94,0.1)'}`,borderRadius:4,padding:'15px 0',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',boxShadow:metaReady?'4px 4px 0 rgba(34,197,94,0.12)':'none'}}>
+            {metaReady?'Tee Off →':'Loading…'}
+          </button>
         </div>
-        )
-      })()}
+      </div>
+    )
+  }
+
+  // ── vs Friend screen ──────────────────────────────────────────────────────────
+  const chipPill=(active:boolean):React.CSSProperties=>({
+    flex:1,background:active?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',
+    color:active?'#22c55e':'rgba(255,255,255,0.55)',
+    border:`1.5px solid ${active?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.08)'}`,
+    borderRadius:4,padding:'9px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
+  })
+  return(
+    <div style={screenStyle}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}.h2h-go:active{translate:2px 2px;box-shadow:2px 2px 0 rgba(34,197,94,0.12)!important}`}</style>
+      <div style={{...maxW,paddingTop:20}}>
+        <button onClick={()=>setSetupStep('home')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:'0 0 16px',display:'block'}}>← Back</button>
+        <div style={{fontSize:22,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:16}}>vs Friend</div>
+
+        {/* 1v1 — full arcade tile (the only live mode) */}
+        <button onClick={()=>setMultiMode('h2h-1v1')}
+          style={{width:'100%',background:multiMode==='h2h-1v1'?'rgba(34,197,94,0.07)':'#0d1627',border:`2px solid ${multiMode==='h2h-1v1'?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.15)'}`,borderRadius:4,padding:'16px 16px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:10,marginBottom:8,boxShadow:multiMode==='h2h-1v1'?'4px 4px 0 rgba(34,197,94,0.1)':'4px 4px 0 rgba(255,255,255,0.04)'}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:16,fontWeight:900,color:multiMode==='h2h-1v1'?'#22c55e':'white'}}>1v1</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:2}}>Same course, take turns — lowest score wins</div>
+          </div>
+          {multiMode==='h2h-1v1'&&<div style={{width:7,height:7,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>}
+        </button>
+
+        {/* Team modes — compact chips */}
+        <div style={{display:'flex',gap:6,marginBottom:4}}>
+          <button onClick={()=>setMultiMode('team-scramble')} style={chipPill(multiMode==='team-scramble')}>Team Scramble</button>
+          <button onClick={()=>setMultiMode('team-alt')} style={chipPill(multiMode==='team-alt')}>Team Alt Shot</button>
+        </div>
+
+        {/* Coming soon strip */}
+        <div style={{display:'flex',gap:6,marginBottom:16,opacity:0.4}}>
+          <div style={{flex:1,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)',borderRadius:4,padding:'7px 0',fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textAlign:'center'}}>2v2 Scramble</div>
+          <div style={{flex:1,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)',borderRadius:4,padding:'7px 0',fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textAlign:'center'}}>2v2 Alt Shot</div>
+          <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',alignSelf:'center',whiteSpace:'nowrap',flexShrink:0}}>coming soon</div>
+        </div>
+
+        {/* Course + Holes inline */}
+        <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'stretch'}}>
+          <div style={{flex:2,position:'relative'}}>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',marginBottom:4}}>Course</div>
+            <div style={{position:'relative'}}>
+              <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf'&&numHoles===18) setNumHoles(3) }}
+                style={{width:'100%',background:'#0d1627',color:'white',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,padding:'8px 28px 8px 10px',fontSize:12,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
+                {REAL_COURSES.filter(c=>c.available).map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
+                {REAL_COURSES.filter(c=>!c.available).map(c=>(<option key={c.id} value={c.id} disabled>{c.name} (soon)</option>))}
+              </select>
+              <div style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,0.3)',fontSize:9}}>▼</div>
+            </div>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',marginBottom:4}}>Holes</div>
+            <div style={{display:'flex',gap:4}}>
+              {([3,6,9,18] as number[]).map(n=>{
+                const disabled=selectedCourse==='wii-golf'&&n===18
+                return(
+                  <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }}
+                    style={{flex:1,background:(numHoles===n&&!disabled)?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',color:disabled?'rgba(255,255,255,0.1)':(numHoles===n&&!disabled)?'#22c55e':'rgba(255,255,255,0.5)',border:`1px solid ${(numHoles===n&&!disabled)?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:4,padding:'8px 0',fontSize:12,fontWeight:800,cursor:disabled?'default':'pointer',fontFamily:'inherit',opacity:disabled?0.3:1}}>
+                    {n}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        <input
+          value={playerName} onChange={e=>setPlayerName(e.target.value)} maxLength={20}
+          placeholder="Your name"
+          style={{width:'100%',background:'#0d1627',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,padding:'11px 14px',fontSize:14,fontWeight:600,color:'white',fontFamily:'inherit',marginBottom:10,outline:'none'}}
+        />
+        <button className="h2h-go" onClick={onH2H} disabled={!metaReady}
+          style={{width:'100%',background:metaReady?'rgba(34,197,94,0.1)':'rgba(34,197,94,0.03)',color:metaReady?'#22c55e':'rgba(255,255,255,0.3)',border:`2px solid ${metaReady?'rgba(34,197,94,0.5)':'rgba(34,197,94,0.1)'}`,borderRadius:4,padding:'15px 0',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',marginBottom:10,boxShadow:metaReady?'4px 4px 0 rgba(34,197,94,0.12)':'none'}}>
+          {metaReady?'Create game →':'Loading…'}
+        </button>
+        <button onClick={onJoin} style={{width:'100%',background:'transparent',color:'rgba(255,255,255,0.4)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,padding:'12px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+          Join a game
+        </button>
+      </div>
     </div>
   )
 }
