@@ -6,8 +6,16 @@
   --font-body: "Instrument Sans", ui-sans-serif, sans-serif;
   font-family: var(--font-body);
   overflow-x: clip;
+}
+
+/* Centre the content column while letting the background bleed edge-to-edge */
+.wordmark,
+.feat,
+.secRow,
+.gameRow,
+.footer {
   max-width: 640px;
-  margin: 0 auto;
+  margin-inline: auto;
 }
 
 /* ── Wordmark ──────────────────────────────────────────────── */
