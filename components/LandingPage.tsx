@@ -1,13 +1,14 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import NavBar from './NavBar'
 import s from './LandingPage.module.css'
 
 const GAMES = [
   { name: 'Minimise',                    desc: 'Assign each player to their best Premier League stat',    route: '/minimise' },
   { name: 'Around the World in 80 Goals',desc: 'Navigate the world map using your football knowledge',    route: '/around-the-world' },
+  { name: 'Perfect 10',                  desc: 'Draft the perfect player — one stat per round',           route: '/perfect10' },
   { name: 'Stat Clash',                  desc: 'Find the player closest to a Premier League stat target', route: '/stat-clash' },
+  { name: 'FPL Draft',                   desc: 'Draft the ultimate FPL XI, one player per round',         route: '/fpl-draft' },
   { name: 'Casino',                      desc: 'Use football trivia to build your stack',                  route: '/blackjack' },
   { name: 'Footy Countdown',             desc: 'Letters, numbers and conundrum — seven rounds',           route: '/countdown' },
   { name: 'Grid',                        desc: 'Find a Premier League player for each row and column',    route: '/grid' },
@@ -24,11 +25,14 @@ export default function LandingPage() {
 
   return (
     <>
-      <NavBar />
-
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
       <div className={s.lp}>
+
+        {/* ── Wordmark ──────────────────────────────────────────── */}
+        <div className={s.wordmark}>
+          Top<em>Bins</em>
+        </div>
 
         {/* ── Featured game ─────────────────────────────────────── */}
         <section className={s.feat}>
