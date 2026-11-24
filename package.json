@@ -33,6 +33,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.3",
     "h3-js": "^4.5.0",
+    "puppeteer": "^25.18.1",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"

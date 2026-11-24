@@ -9,6 +9,44 @@
   min-height: 100dvh;
   font-family: var(--font-body);
   overflow-x: clip;
+  --font-body: "Instrument Sans", ui-sans-serif, sans-serif;
+}
+
+/* ── Featured today pill ───────────────────────────────────── */
+.featPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent-2);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-sm);
+  position: relative;
+  z-index: 2;
+}
+.featDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-2);
+  flex-shrink: 0;
+}
+.heroTitle {
+  font-family: var(--font-body);
+  font-weight: 800;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: .92;
+  letter-spacing: -0.03em;
+  color: var(--color-ink);
+  text-wrap: balance;
+  margin: 0 0 var(--space-md);
+  overflow-wrap: break-word;
+  min-width: 0;
+  position: relative;
+  z-index: 2;
 }
 
 /* ── Hero ─ Banner posture ─────────────────────────────────── */
@@ -16,20 +54,7 @@
   position: relative;
   isolation: isolate;
   border-bottom: var(--rule-bar) solid var(--color-rule);
-  padding: var(--space-2xl) var(--gutter) var(--space-3xl);
-}
-.hero::after {
-  content: "";
-  position: absolute; inset: 0;
-  pointer-events: none; z-index: 1;
-  background-image:
-    repeating-linear-gradient(to right,
-      color-mix(in oklab, var(--color-crt-r) 4%, transparent) 0 1px,
-      color-mix(in oklab, var(--color-crt-g) 4%, transparent) 1px 2px,
-      color-mix(in oklab, var(--color-crt-b) 4%, transparent) 2px 3px),
-    repeating-linear-gradient(to bottom,
-      transparent 0 2px,
-      color-mix(in oklab, var(--color-shade) 10%, transparent) 2px 3px);
+  padding: var(--space-lg) var(--gutter) var(--space-xl);
 }
 .hero h1 {
   font-family: var(--font-display);
@@ -71,14 +96,12 @@
   font-size: var(--text-md);
   cursor: pointer;
   text-decoration: none;
-  box-shadow: 6px 6px 0 var(--color-accent-2);
-  transition: translate var(--dur-micro) var(--ease-out),
-              box-shadow var(--dur-micro) var(--ease-out);
+  transition: opacity var(--dur-micro) var(--ease-out);
   position: relative;
   z-index: 2;
 }
-.btnEmber:hover { translate: 2px 2px; box-shadow: 4px 4px 0 var(--color-accent-2); }
-.btnEmber:active { translate: 4px 4px; box-shadow: 2px 2px 0 var(--color-accent-2); }
+.btnEmber:hover { opacity: 0.9; }
+.btnEmber:active { opacity: 0.75; }
 .btnEmber:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 3px; }
 
 /* ── Sections ──────────────────────────────────────────────── */
@@ -114,23 +137,20 @@
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  box-shadow: 6px 6px 0 var(--color-accent-2);
-  transition: translate var(--dur-micro) var(--ease-out),
-              box-shadow var(--dur-micro) var(--ease-out);
+  transition: border-color var(--dur-micro) var(--ease-out);
 }
-.gameCard:hover { translate: 2px 2px; box-shadow: 4px 4px 0 var(--color-accent-2); }
-.gameCard:active { translate: 4px 4px; box-shadow: 2px 2px 0 var(--color-accent-2); }
+.gameCard:hover { border-color: rgba(255,255,255,0.18); }
+.gameCard:active { opacity: 0.8; }
 .gameCard:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
 
 .cardHead { padding: var(--space-md) var(--space-lg) var(--space-sm); }
 .cardTitle {
-  font-family: var(--font-display);
-  font-weight: 400;
+  font-family: var(--font-body);
+  font-weight: 800;
   font-size: 1rem;
   line-height: 1.1;
   color: var(--color-ink);
-  text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: -0.02em;
   overflow-wrap: break-word;
   min-width: 0;
 }
@@ -279,16 +299,15 @@
   flex-direction: column;
   transition: border-color var(--dur-micro) var(--ease-out);
 }
-.gameSm:hover { border-color: var(--color-accent); }
+.gameSm:hover { border-color: rgba(255,255,255,0.2); }
 .gameSm:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 4px; }
 .gameSmBody { padding: var(--space-sm) var(--space-md); flex: 1; }
 .gameSmTitle {
-  font-family: var(--font-display);
-  font-weight: 400;
+  font-family: var(--font-body);
+  font-weight: 700;
   font-size: var(--text-md);
   color: var(--color-ink);
-  text-transform: uppercase;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   line-height: 1.1;
   overflow-wrap: break-word;
   min-width: 0;

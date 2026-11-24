@@ -130,13 +130,13 @@ function buildShareText(p: SharePayload, url: string): string {
 
 // ── Label helper ───────────────────────────────────────────────────────────────
 
-function makeLabel(stat: StatKey, f: FilterSpec): string {
+function makeLabel(stat: StatKey, f: FilterSpec, isEuro = false): string {
   const sl = getStatLabel(stat)
-  if (f.k==='all')       return `All-time PL ${sl}`
-  if (f.k==='nat')       return `${f.label} PL ${sl}`
+  if (f.k==='all')       return isEuro ? `All-time League + CL ${sl}` : `All-time PL ${sl}`
+  if (f.k==='nat')       return isEuro ? `${f.label} League + CL ${sl}` : `${f.label} PL ${sl}`
   if (f.k==='club')      return `PL ${sl} for ${f.name}`
-  if (f.k==='cont')      return `${CONTINENT_LABELS[f.name]??f.name} PL ${sl}`
-  if (f.k==='letter')    return `PL ${sl} - Surname ${f.letter}`
+  if (f.k==='cont')      return isEuro ? `${CONTINENT_LABELS[f.name]??f.name} League + CL ${sl}` : `${CONTINENT_LABELS[f.name]??f.name} PL ${sl}`
+  if (f.k==='letter')    return isEuro ? `League + CL ${sl} - Surname ${f.letter}` : `PL ${sl} - Surname ${f.letter}`
   if (f.k==='comp') {
     const cn = COMP_LABELS[f.comp] ?? f.comp
     return `All-time ${cn} ${sl}`
@@ -145,11 +145,13 @@ function makeLabel(stat: StatKey, f: FilterSpec): string {
     const scopeLabel = f.scope==='both' ? 'League + CL' : f.scope==='cl' ? 'CL' : (COMP_LABELS[f.comp] ?? f.comp)
     return `${scopeLabel} ${sl} at ${f.name}`
   }
-  return `${CONTINENT_LABELS[f.continent]??f.continent} PL ${sl} for ${f.club}`
+  return isEuro
+    ? `${CONTINENT_LABELS[f.continent]??f.continent} League + CL ${sl} for ${f.club}`
+    : `${CONTINENT_LABELS[f.continent]??f.continent} PL ${sl} for ${f.club}`
 }
 
-function makeCategoryLabel(stat: StatKey, f: FilterSpec): { label: string; statLabel: string } {
-  return { label: makeLabel(stat, f), statLabel: getStatLabel(stat) }
+function makeCategoryLabel(stat: StatKey, f: FilterSpec, isEuro = false): { label: string; statLabel: string } {
+  return { label: makeLabel(stat, f, isEuro), statLabel: getStatLabel(stat) }
 }
 
 function makeFilterLabel(cat: Category): string {
@@ -265,7 +267,7 @@ function pickCategory(
       if (cont && recentSet.has(cont)) return false
     }
     if ((top3Cache![cacheKeyFor(stat, f)] ?? 0) < threshold) return false
-    return !usedLabels.has(makeLabel(stat, f))
+    return !usedLabels.has(makeLabel(stat, f, !!isEuro))
   }
 
   for (let attempt = 0; attempt < 120; attempt++) {
@@ -282,7 +284,7 @@ function pickCategory(
     if (valid.length === 0) continue
 
     const f = valid[Math.floor(Math.random() * valid.length)]
-    const { label, statLabel } = makeCategoryLabel(stat, f)
+    const { label, statLabel } = makeCategoryLabel(stat, f, !!isEuro)
     const cat: Category = { key:stat, label, statLabel }
     if (f.k==='nat') cat.natFilter = f.code
     if (f.k==='club') cat.clubFilter = f.name
@@ -2943,7 +2945,7 @@ export default function FootballGolf(){
   // ── Render ─────────────────────────────────────────────────────────────────
 
   // H2H screens (take priority over setup)
-  const h2hScreenStyle:React.CSSProperties={minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,fontFamily:"'DM Sans',sans-serif",padding:'24px'}
+  const h2hScreenStyle:React.CSSProperties={minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20,fontFamily:"'Instrument Sans',system-ui,sans-serif",padding:'24px'}
   const h2hInputStyle:React.CSSProperties={background:'#1e2d4a',border:'1px solid #2d3f5e',borderRadius:10,padding:'12px 16px',color:'white',fontSize:16,fontWeight:600,width:'100%',maxWidth:300,fontFamily:'inherit'}
   const h2hBtnStyle:React.CSSProperties={background:'#dc2626',color:'white',border:'none',borderRadius:10,padding:'13px 36px',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}
   const h2hSecBtnStyle:React.CSSProperties={...h2hBtnStyle,background:'#1e2d4a'}
@@ -3228,9 +3230,9 @@ export default function FootballGolf(){
   const displayPos = (isAnimating || !!shotResult || !!bunkerQ || !!bunkerLieResult) ? animBallPos : ballPos
 
   return (
-    <div style={{minHeight:'100dvh',background:'#0a0f1e',fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
+    <div style={{minHeight:'100dvh',background:'#0a0f1e',fontFamily:"'Instrument Sans',system-ui,sans-serif"}}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap');
         * { box-sizing:border-box; }
         input::placeholder { color:rgba(255,255,255,0.35); }
         .fg-input-active::placeholder { color:white; }
@@ -3265,7 +3267,7 @@ export default function FootballGolf(){
       {/* ── Rules overlay ── */}
       {showRules && (
         <div onClick={()=>{setShowRules(false);localStorage.setItem('golf_rules_seen','1')}} style={{position:'fixed',inset:0,zIndex:1200,background:'rgba(0,0,0,0.75)',display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:'#111827',border:'1px solid #1e2d4a',borderRadius:16,padding:'24px 24px 20px',maxWidth:340,width:'100%',fontFamily:"'DM Sans',sans-serif"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:'#111827',border:'1px solid rgba(255,255,255,0.1)',borderRadius:12,padding:'24px 24px 20px',maxWidth:340,width:'100%',fontFamily:"'Instrument Sans',system-ui,sans-serif"}}>
             <div style={{fontSize:17,fontWeight:900,color:'white',marginBottom:16}}>How to play</div>
             {([
               ['👥','Pick up to 3 players per shot'],
@@ -3278,7 +3280,7 @@ export default function FootballGolf(){
                 <div style={{fontSize:14,color:'rgba(255,255,255,0.75)',lineHeight:1.45}}>{text}</div>
               </div>
             ))}
-            <button onClick={()=>{setShowRules(false);localStorage.setItem('golf_rules_seen','1')}} style={{marginTop:4,width:'100%',background:'#dc2626',color:'white',border:'none',borderRadius:10,padding:'12px 0',fontSize:14,fontWeight:900,cursor:'pointer',fontFamily:'inherit'}}>
+            <button onClick={()=>{setShowRules(false);localStorage.setItem('golf_rules_seen','1')}} style={{marginTop:4,width:'100%',background:'#22c55e',color:'#0a0f1e',border:'none',borderRadius:100,padding:'12px 0',fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}>
               Got it →
             </button>
           </div>
@@ -3514,7 +3516,7 @@ export default function FootballGolf(){
             {/* Hole info */}
             <div style={{display:'flex',flexDirection:'column',gap:4,padding:'2px 0 4px',borderBottom:'1px solid rgba(255,255,255,0.07)',paddingBottom:10}}>
               <div style={{display:'flex',alignItems:'center'}}>
-                <div style={{fontSize:12,fontWeight:700,color:'rgba(255,255,255,0.4)',textTransform:'uppercase',letterSpacing:'0.06em'}}>
+                <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'.08em'}}>
                   Hole {currentHole.number} · Par {currentHole.par}
                 </div>
               </div>
@@ -3540,10 +3542,10 @@ export default function FootballGolf(){
               const filterText = makeFilterLabel(question)
               const showBy = !filterText.startsWith('in ') && !filterText.startsWith('All ')
               return (
-                <div style={{background:'rgba(255,255,255,0.04)',borderRadius:10,padding:'8px 12px',textAlign:'left',flexShrink:0,fontSize:17,lineHeight:1.3}}>
+                <div style={{padding:'4px 0 8px',borderBottom:'1px solid rgba(255,255,255,0.07)',flexShrink:0,fontSize:17,lineHeight:1.3}}>
                   <span style={{fontWeight:800,color:'white'}}>{question.statLabel}</span>
-                  {showBy && <span style={{fontWeight:600,color:'white'}}> by </span>}
-                  <span style={{fontWeight:600,color:'white'}}>{showBy ? filterText : ` ${filterText}`}</span>
+                  {showBy && <span style={{fontWeight:500,color:'rgba(255,255,255,0.6)'}}> by </span>}
+                  <span style={{fontWeight:500,color:'rgba(255,255,255,0.6)'}}>{showBy ? filterText : ` ${filterText}`}</span>
                 </div>
               )
             })()}
@@ -3675,8 +3677,8 @@ export default function FootballGolf(){
 
               </div>
             ) : (
-              <div style={{border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px 8px 8px',display:'flex',flexDirection:'column',gap:6}}>
-                <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',padding:'2px 4px 0'}}>Pick up to 3 players</div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.25)',textTransform:'uppercase',letterSpacing:'.08em',paddingBottom:6,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>Pick up to 3 players</div>
                 {namesLoading&&<div style={{fontSize:12,color:'rgba(255,255,255,0.35)',textAlign:'center',padding:'4px 0'}}>Loading players…</div>}
                 {[0,1,2].map((idx,i)=>(
                   <div key={idx}>
@@ -3695,15 +3697,18 @@ export default function FootballGolf(){
                   </div>
                 ))}
                 {inputError&&<div style={{fontSize:12,color:'#dc2626',fontWeight:700,padding:'0 4px'}}>{inputError}</div>}
-                <div style={{borderTop:'1px solid rgba(255,255,255,0.07)',paddingTop:6,marginTop:2}}>
+                <div style={{paddingTop:8}}>
                   <button
                     onClick={submitShot}
                     disabled={confirmedPlayers.every(p=>!p)||isAnimating}
                     style={{
-                      width:'100%',background:confirmedPlayers.every(p=>!p)||isAnimating?'transparent':'#dc2626',
-                      color:'white',border:confirmedPlayers.every(p=>!p)||isAnimating?'1px solid rgba(255,255,255,0.15)':'none',borderRadius:8,padding:'12px 0',
+                      width:'100%',
+                      background:confirmedPlayers.every(p=>!p)||isAnimating?'transparent':'#22c55e',
+                      color:confirmedPlayers.every(p=>!p)||isAnimating?'rgba(255,255,255,0.3)':'#0a0f1e',
+                      border:confirmedPlayers.every(p=>!p)||isAnimating?'1px solid rgba(255,255,255,0.1)':'none',
+                      borderRadius:100,padding:'12px 0',
                       fontSize:14,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
-                      transition:'background 0.2s',display:'block',
+                      transition:'background 0.2s, color 0.2s',display:'block',
                     }}
                   >
                     {isAnimating?'⛳ In flight…':'⛳ Take Shot'}
@@ -3733,7 +3738,7 @@ export default function FootballGolf(){
                   </div>
                 )}
               </div>
-              <button onClick={()=>setShowRules(true)} style={{background:'#1e2d4a',border:'1px solid #2a3d5e',color:'#8899bb',fontSize:12,fontWeight:900,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',width:22,height:22,borderRadius:'50%',flexShrink:0}}>?</button>
+              <button onClick={()=>setShowRules(true)} style={{background:'transparent',border:'1px solid rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.3)',fontSize:11,fontWeight:600,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',width:22,height:22,borderRadius:'50%',flexShrink:0}}>?</button>
             </div>
             {/* Hole view */}
             {currentHole && (()=>{
@@ -5154,25 +5159,26 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   },[])
 
   const [setupStep, setSetupStep] = useState<'home'|'solo'|'vs-friend'>('home')
-  const screenStyle:React.CSSProperties = {width:'100%',minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',fontFamily:"'DM Sans',sans-serif",padding:'0 20px 32px',overflowY:'auto',overflowX:'hidden'}
+  const screenStyle:React.CSSProperties = {width:'100%',minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',fontFamily:"'Instrument Sans',system-ui,sans-serif",padding:'0 20px 32px',overflowY:'auto',overflowX:'hidden'}
   const maxW:React.CSSProperties = {width:'100%',maxWidth:360}
 
   // ── Home screen ──────────────────────────────────────────────────────────────
   if(setupStep==='home') return(
     <div style={screenStyle}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap');
         *{box-sizing:border-box;}
-        .lb-solo:active  { translate: 2px 2px; box-shadow: 2px 2px 0 rgba(34,197,94,0.15) !important; }
-        .lb-rival:active { translate: 2px 2px; box-shadow: 2px 2px 0 rgba(255,255,255,0.06) !important; }
-        .lb-tourn:active { translate: 2px 2px; box-shadow: 2px 2px 0 rgba(195,142,10,0.1) !important; }
+        .lb-row-btn{background:transparent;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit;color:white;padding:0;display:flex;align-items:center;}
+        .lb-row-btn:focus-visible{outline:2px solid #22c55e;outline-offset:2px;border-radius:2px;}
+        .lb-row-btn:active{opacity:.7;}
       `}</style>
       <div style={{...maxW,paddingTop:28,paddingBottom:4}}>
-        <div style={{fontSize:28,fontWeight:900,color:'white',letterSpacing:'-0.5px',lineHeight:1}}>Football Golf</div>
+        <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.3)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Football Golf</div>
+        <div style={{fontSize:34,fontWeight:800,color:'white',letterSpacing:'-0.04em',lineHeight:.93}}>Pick your<br/>game</div>
       </div>
 
       {sharedResult&&(
-        <div style={{...maxW,marginTop:16,background:'#0d1627',border:'2px solid rgba(34,197,94,0.4)',borderRadius:4,padding:'14px 16px',position:'relative'}}>
+        <div style={{...maxW,marginTop:16,background:'#0d1627',border:'1px solid rgba(34,197,94,0.3)',borderRadius:4,padding:'14px 16px',position:'relative'}}>
           <button onClick={onDismissShare} style={{position:'absolute',top:8,right:10,background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',lineHeight:1}}>✕</button>
           <div style={{fontSize:11,fontWeight:700,color:'rgba(34,197,94,0.8)',marginBottom:6}}>Challenge from a friend</div>
           <div style={{fontSize:15,fontWeight:800,color:'white',marginBottom:4}}>
@@ -5183,59 +5189,65 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       )}
 
-      <div style={{...maxW,marginTop:20,display:'flex',flexDirection:'column',gap:8}}>
-
-        {/* Solo — pressed arcade tile, game green */}
-        <button className="lb-solo" onClick={()=>setSetupStep('solo')}
-          style={{background:'rgba(34,197,94,0.06)',border:'2px solid rgba(34,197,94,0.45)',borderRadius:4,padding:'20px 18px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',boxShadow:'4px 4px 0 rgba(34,197,94,0.12)'}}>
-          <div style={{fontSize:20,fontWeight:900,color:'white',letterSpacing:'-0.3px'}}>Solo</div>
-          <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Choose your course and play alone</div>
-        </button>
-
-        {/* vs Friend — high-contrast white press tile */}
-        <button className="lb-rival" onClick={()=>setSetupStep('vs-friend')}
-          style={{background:'#0d1627',border:'2px solid rgba(255,255,255,0.28)',borderRadius:4,padding:'20px 18px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',boxShadow:'4px 4px 0 rgba(255,255,255,0.06)'}}>
-          <div style={{fontSize:20,fontWeight:900,color:'white',letterSpacing:'-0.3px'}}>vs Friend</div>
-          <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Head to head · share a link to play</div>
-        </button>
-
-        {/* Daily — flat secondary tiles, no press shadow */}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
-          <button onClick={onDaily}
-            style={{background:'#0d1627',border:`1px solid ${dailyPlayed?'rgba(34,197,94,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:4,padding:'14px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:68}}>
-            <div style={{fontSize:13,fontWeight:800,color:dailyPlayed?'#22c55e':'rgba(255,255,255,0.7)'}}>Pin Hunt</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',lineHeight:1.3}}>Daily par 3</div>
-            {dailyPlayed&&<div style={{fontSize:10,fontWeight:700,color:'#22c55e',marginTop:'auto'}}>Played</div>}
-          </button>
-          <button onClick={onDailyRound}
-            style={{background:'#0d1627',border:`1px solid ${dailyRoundPlayed?'rgba(34,197,94,0.35)':'rgba(255,255,255,0.07)'}`,borderRadius:4,padding:'14px 12px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:68}}>
-            <div style={{fontSize:13,fontWeight:800,color:dailyRoundPlayed?'#22c55e':'rgba(255,255,255,0.7)'}}>3-Hole Round</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,0.3)',lineHeight:1.3}}>Daily round</div>
-            {dailyRoundPlayed&&<div style={{fontSize:10,fontWeight:700,color:'#22c55e',marginTop:'auto'}}>Played</div>}
-          </button>
+      <div style={{...maxW,marginTop:24}}>
+        <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.25)',letterSpacing:'.08em',textTransform:'uppercase',paddingBottom:10,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
+          Game modes
         </div>
 
-        {/* Tournament — amber press tile, no gradient */}
-        <div className="lb-tourn"
-          style={{background:'#0d1627',border:'2px solid rgba(195,142,10,0.45)',borderRadius:4,padding:'16px 18px',boxShadow:'4px 4px 0 rgba(195,142,10,0.1)',display:'flex',alignItems:'center',gap:12}}>
+        {/* Solo */}
+        <button className="lb-row-btn" onClick={()=>setSetupStep('solo')}
+          style={{borderBottom:'1px solid rgba(255,255,255,.06)',padding:'18px 0',gap:12}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:21,fontWeight:800,color:'white',letterSpacing:'-.02em'}}>Solo round</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:3}}>Choose your course · play alone</div>
+          </div>
+          <div style={{fontSize:9,fontWeight:800,color:'#22c55e',border:'1px solid rgba(34,197,94,.2)',background:'rgba(34,197,94,.1)',borderRadius:3,padding:'2px 6px',letterSpacing:'.06em',textTransform:'uppercase',flexShrink:0}}>Live</div>
+        </button>
+
+        {/* vs Friend */}
+        <button className="lb-row-btn" onClick={()=>setSetupStep('vs-friend')}
+          style={{borderBottom:'1px solid rgba(255,255,255,.06)',padding:'15px 0',gap:12}}>
+          <div style={{flex:1}}>
+            <div style={{fontSize:17,fontWeight:700,color:'white',letterSpacing:'-.02em'}}>vs Friend</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:3}}>Head to head · share a link</div>
+          </div>
+          <div style={{color:'rgba(255,255,255,.2)',fontSize:14,flexShrink:0}}>›</div>
+        </button>
+
+        {/* Tournament */}
+        <div style={{display:'flex',alignItems:'center',padding:'15px 0',borderBottom:'1px solid rgba(255,255,255,.06)',gap:12}}>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:20,fontWeight:900,color:'#d4a017',letterSpacing:'-0.3px'}}>Tournament</div>
-            <div style={{fontSize:12,color:'rgba(255,255,255,0.4)',marginTop:4}}>Play the final round of a major</div>
+            <div style={{fontSize:17,fontWeight:700,color:'white',letterSpacing:'-.02em'}}>Tournament</div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:3}}>Final round of a major</div>
           </div>
           <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
             <div style={{position:'relative'}}>
               <select value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}
-                style={{background:'rgba(195,142,10,0.1)',color:'#d4a017',border:'1px solid rgba(195,142,10,0.35)',borderRadius:3,padding:'4px 22px 4px 8px',fontSize:11,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
+                style={{background:'rgba(255,255,255,.06)',color:'rgba(255,255,255,.65)',border:'1px solid rgba(255,255,255,.12)',borderRadius:3,padding:'4px 22px 4px 8px',fontSize:11,fontWeight:600,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
                 {TOURNAMENTS.map(t=>(<option key={t.id} value={t.id}>{t.name}</option>))}
                 <option disabled>More coming soon</option>
               </select>
-              <div style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(195,142,10,0.5)',fontSize:8}}>▼</div>
+              <div style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,.3)',fontSize:8}}>▼</div>
             </div>
             <button onClick={()=>onTournament(selectedTournament)} disabled={!metaReady}
-              style={{background:metaReady?'#c38a0a':'rgba(195,142,10,0.1)',color:metaReady?'#0a0f1e':'rgba(255,255,255,0.3)',border:'none',borderRadius:3,padding:'5px 10px',fontSize:12,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+              style={{background:metaReady?'rgba(255,255,255,.1)':'transparent',color:metaReady?'rgba(255,255,255,.7)':'rgba(255,255,255,.25)',border:`1px solid ${metaReady?'rgba(255,255,255,.18)':'rgba(255,255,255,.07)'}`,borderRadius:3,padding:'5px 10px',fontSize:12,fontWeight:700,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
               {metaReady?'Start →':'Loading…'}
             </button>
           </div>
+        </div>
+
+        {/* Daily grid */}
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:'rgba(255,255,255,.07)',margin:'0 0 1px'}}>
+          <button onClick={onDaily}
+            style={{background:'#080d18',padding:'13px 14px',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:66}}>
+            <div style={{fontSize:14,fontWeight:700,color:dailyPlayed?'#22c55e':'rgba(255,255,255,.65)'}}>{dailyPlayed?'✓ ':''}Pin Hunt</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,.25)',lineHeight:1.3}}>Daily par 3</div>
+          </button>
+          <button onClick={onDailyRound}
+            style={{background:'#080d18',padding:'13px 14px',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:66}}>
+            <div style={{fontSize:14,fontWeight:700,color:dailyRoundPlayed?'#22c55e':'rgba(255,255,255,.65)'}}>{dailyRoundPlayed?'✓ ':''}3-Hole Round</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,.25)',lineHeight:1.3}}>Daily round</div>
+          </button>
         </div>
       </div>
 
@@ -5259,66 +5271,74 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   // ── Solo config screen ────────────────────────────────────────────────────────
   if(setupStep==='solo'){
     const maxH=courseHoleCount(selectedCourse)
-    const pill=(active:boolean,disabled=false):React.CSSProperties=>({
-      flex:1,background:active?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',
-      color:disabled?'rgba(255,255,255,0.2)':(active?'#22c55e':'rgba(255,255,255,0.55)'),
-      border:`1.5px solid ${active?'rgba(34,197,94,0.45)':(disabled?'rgba(255,255,255,0.03)':'rgba(255,255,255,0.08)')}`,
-      borderRadius:4,padding:'10px 0',fontSize:13,fontWeight:800,cursor:disabled?'not-allowed':'pointer',
+    const tog=(active:boolean,disabled=false):React.CSSProperties=>({
+      flex:1,background:active?'rgba(255,255,255,.12)':'transparent',
+      color:disabled?'rgba(255,255,255,.18)':(active?'white':'rgba(255,255,255,.4)'),
+      border:'none',borderRadius:3,padding:'9px 0',fontSize:13,
+      fontWeight:active?700:400,cursor:disabled?'not-allowed':'pointer',
       fontFamily:'inherit',opacity:disabled?0.4:1,
     })
-    const rowLbl:React.CSSProperties={fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.3)',marginBottom:8}
+    const togWrap:React.CSSProperties={display:'flex',background:'rgba(255,255,255,.06)',borderRadius:5,padding:2,gap:2}
+    const sec:React.CSSProperties={borderBottom:'1px solid rgba(255,255,255,.07)',paddingBottom:14,marginBottom:14}
+    const lbl:React.CSSProperties={fontSize:10,fontWeight:700,color:'rgba(255,255,255,.25)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:9}
     return(
       <div style={screenStyle}>
-        <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}.solo-go:active{translate:2px 2px;box-shadow:2px 2px 0 rgba(34,197,94,0.15)!important}`}</style>
+        <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}`}</style>
         <div style={{...maxW,paddingTop:20}}>
-          <button onClick={()=>setSetupStep('home')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:'0 0 20px',display:'block'}}>← Back</button>
-          <div style={{fontSize:22,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:24}}>Solo</div>
-          <div style={{marginBottom:16}}>
-            <div style={rowLbl}>Course type</div>
-            <div style={{display:'flex',gap:6}}>
-              <button onClick={()=>setCourseMode('real')} style={pill(courseMode==='real')}>Real course</button>
-              <button onClick={()=>setCourseMode('random')} style={pill(courseMode==='random')}>Random holes</button>
+          <button onClick={()=>setSetupStep('home')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',padding:'0 0 20px',display:'block'}}>← Back</button>
+          <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,.3)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:10}}>Football Golf</div>
+          <div style={{fontSize:28,fontWeight:800,color:'white',letterSpacing:'-0.04em',lineHeight:.93,marginBottom:28}}>Solo round</div>
+
+          <div style={sec}>
+            <div style={lbl}>Course type</div>
+            <div style={togWrap}>
+              <button onClick={()=>setCourseMode('real')} style={tog(courseMode==='real')}>Real course</button>
+              <button onClick={()=>setCourseMode('random')} style={tog(courseMode==='random')}>Random holes</button>
             </div>
           </div>
+
           {courseMode==='real'&&(
-            <div style={{marginBottom:16}}>
-              <div style={rowLbl}>Course</div>
+            <div style={sec}>
+              <div style={lbl}>Course</div>
               <div style={{position:'relative'}}>
                 <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf'&&numHoles===18) setNumHoles(3) }}
-                  style={{width:'100%',background:'rgba(34,197,94,0.08)',color:'#22c55e',border:'2px solid rgba(34,197,94,0.35)',borderRadius:4,padding:'10px 36px 10px 12px',fontSize:14,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
+                  style={{width:'100%',background:'rgba(255,255,255,.06)',color:'white',border:'1px solid rgba(255,255,255,.12)',borderRadius:4,padding:'10px 32px 10px 12px',fontSize:14,fontWeight:600,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
                   {REAL_COURSES.filter(c=>c.available).map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
                   {REAL_COURSES.filter(c=>!c.available).map(c=>(<option key={c.id} value={c.id} disabled>{c.name} (soon)</option>))}
                 </select>
-                <div style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(34,197,94,0.5)',fontSize:10}}>▼</div>
+                <div style={{position:'absolute',right:12,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,.3)',fontSize:10}}>▼</div>
               </div>
-              <div style={{display:'flex',alignItems:'center',gap:10,marginTop:8}}>
-                <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.3)'}}>Start hole</div>
-                <div style={{display:'flex',alignItems:'center',gap:3,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,padding:'3px 5px'}}>
-                  <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)} style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:2,width:20,height:20,fontSize:12,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
-                  <div style={{fontSize:13,fontWeight:900,color:'white',width:22,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>{String(Math.min(startHole,maxH)).padStart(2,'0')}</div>
-                  <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)} style={{background:'rgba(255,255,255,0.08)',color:'white',border:'none',borderRadius:2,width:20,height:20,fontSize:12,fontWeight:900,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginTop:10}}>
+                <div style={{fontSize:11,fontWeight:600,color:'rgba(255,255,255,.3)'}}>Start hole</div>
+                <div style={{display:'flex',alignItems:'center',gap:4}}>
+                  <button onClick={()=>setStartHole(startHole===1?maxH:startHole-1)} style={{background:'transparent',color:'rgba(255,255,255,.4)',border:'none',width:24,height:24,fontSize:16,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>‹</button>
+                  <div style={{fontSize:13,fontWeight:700,color:'white',width:22,textAlign:'center',fontVariantNumeric:'tabular-nums'}}>{String(Math.min(startHole,maxH)).padStart(2,'0')}</div>
+                  <button onClick={()=>setStartHole(startHole===maxH?1:startHole+1)} style={{background:'transparent',color:'rgba(255,255,255,.4)',border:'none',width:24,height:24,fontSize:16,cursor:'pointer',fontFamily:'inherit',display:'flex',alignItems:'center',justifyContent:'center'}}>›</button>
                 </div>
               </div>
             </div>
           )}
-          <div style={{marginBottom:24}}>
-            <div style={rowLbl}>Holes</div>
-            <div style={{display:'flex',gap:6}}>
+
+          <div style={sec}>
+            <div style={lbl}>Holes</div>
+            <div style={togWrap}>
               {([3,6,9,18] as number[]).map(n=>{
                 const disabled=courseMode==='real'&&selectedCourse==='wii-golf'&&n===18
-                return <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={pill(numHoles===n&&!disabled,disabled)}>{n}</button>
+                return <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }} style={tog(numHoles===n&&!disabled,disabled)}>{n}</button>
               })}
             </div>
           </div>
-          <div style={{marginBottom:20}}>
-            <div style={rowLbl}>Dataset</div>
-            <div style={{display:'flex',gap:6}}>
-              <button onClick={()=>setDataMode('pl')} style={pill(dataMode==='pl')}>Premier League</button>
-              <button onClick={()=>setDataMode('euro')} style={pill(dataMode==='euro')}>Top 5 + CL</button>
+
+          <div style={{...sec,marginBottom:28}}>
+            <div style={lbl}>Dataset</div>
+            <div style={togWrap}>
+              <button onClick={()=>setDataMode('pl')} style={tog(dataMode==='pl')}>Premier League</button>
+              <button disabled style={{...tog(false),cursor:'default',opacity:.28}}>Top 5 + CL · soon</button>
             </div>
           </div>
-          <button className="solo-go" onClick={onStart} disabled={!metaReady}
-            style={{width:'100%',background:metaReady?'rgba(34,197,94,0.1)':'rgba(34,197,94,0.05)',color:metaReady?'#22c55e':'rgba(255,255,255,0.3)',border:`2px solid ${metaReady?'rgba(34,197,94,0.5)':'rgba(34,197,94,0.1)'}`,borderRadius:4,padding:'15px 0',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',boxShadow:metaReady?'4px 4px 0 rgba(34,197,94,0.12)':'none'}}>
+
+          <button onClick={onStart} disabled={!metaReady}
+            style={{display:'block',width:'100%',padding:'14px 0',background:metaReady?'#22c55e':'rgba(255,255,255,.08)',color:metaReady?'#0a0f1e':'rgba(255,255,255,.25)',border:'none',borderRadius:100,fontSize:15,fontWeight:800,cursor:metaReady?'pointer':'default',fontFamily:'inherit',letterSpacing:'-.01em'}}>
             {metaReady?'Tee Off →':'Loading…'}
           </button>
         </div>
@@ -5327,91 +5347,106 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
   }
 
   // ── vs Friend screen ──────────────────────────────────────────────────────────
-  const chipPill=(active:boolean):React.CSSProperties=>({
-    flex:1,background:active?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',
-    color:active?'#22c55e':'rgba(255,255,255,0.55)',
-    border:`1.5px solid ${active?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.08)'}`,
-    borderRadius:4,padding:'9px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit',
+  const tog2=(active:boolean):React.CSSProperties=>({
+    flex:1,background:active?'rgba(255,255,255,.12)':'transparent',
+    color:active?'white':'rgba(255,255,255,.4)',
+    border:'none',borderRadius:3,padding:'9px 0',fontSize:12,
+    fontWeight:active?700:400,cursor:'pointer',fontFamily:'inherit',
   })
+  const sec2:React.CSSProperties={borderBottom:'1px solid rgba(255,255,255,.07)',paddingBottom:10,marginBottom:10}
+  const lbl2:React.CSSProperties={fontSize:10,fontWeight:700,color:'rgba(255,255,255,.25)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:9}
   return(
     <div style={screenStyle}>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;800;900&display=swap');*{box-sizing:border-box;}.h2h-go:active{translate:2px 2px;box-shadow:2px 2px 0 rgba(34,197,94,0.12)!important}`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap');*{box-sizing:border-box;}`}</style>
       <div style={{...maxW,paddingTop:20}}>
-        <button onClick={()=>setSetupStep('home')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.4)',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit',padding:'0 0 16px',display:'block'}}>← Back</button>
-        <div style={{fontSize:22,fontWeight:900,color:'white',letterSpacing:'-0.5px',marginBottom:16}}>vs Friend</div>
+        <button onClick={()=>setSetupStep('home')} style={{background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',padding:'0 0 20px',display:'block'}}>← Back</button>
+        <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,.3)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:10}}>Football Golf</div>
+        <div style={{fontSize:28,fontWeight:800,color:'white',letterSpacing:'-0.04em',lineHeight:.93,marginBottom:20}}>vs Friend</div>
 
-        {/* 1v1 — full arcade tile (the only live mode) */}
-        <button onClick={()=>setMultiMode('h2h-1v1')}
-          style={{width:'100%',background:multiMode==='h2h-1v1'?'rgba(34,197,94,0.07)':'#0d1627',border:`2px solid ${multiMode==='h2h-1v1'?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.15)'}`,borderRadius:4,padding:'16px 16px',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:10,marginBottom:8,boxShadow:multiMode==='h2h-1v1'?'4px 4px 0 rgba(34,197,94,0.1)':'4px 4px 0 rgba(255,255,255,0.04)'}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:16,fontWeight:900,color:multiMode==='h2h-1v1'?'#22c55e':'white'}}>1v1</div>
-            <div style={{fontSize:11,color:'rgba(255,255,255,0.4)',marginTop:2}}>Same course, take turns — lowest score wins</div>
+        {/* Mode selection */}
+        <div style={sec2}>
+          <div style={lbl2}>Mode</div>
+          <div style={{display:'flex',flexDirection:'column',gap:1,background:'rgba(255,255,255,.07)'}}>
+            <button onClick={()=>setMultiMode('h2h-1v1')}
+              style={{background:'#080d18',padding:'10px 14px',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:multiMode==='h2h-1v1'?700:500,color:multiMode==='h2h-1v1'?'white':'rgba(255,255,255,.55)'}}>1v1</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,.25)',marginTop:2}}>Same course, take turns · lowest score wins</div>
+              </div>
+              {multiMode==='h2h-1v1'&&<div style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>}
+            </button>
+            <button onClick={()=>setMultiMode('team-scramble')}
+              style={{background:'#080d18',padding:'10px 14px',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:multiMode==='team-scramble'?700:500,color:multiMode==='team-scramble'?'white':'rgba(255,255,255,.55)'}}>Team Scramble</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,.25)',marginTop:2}}>Both play every shot · best ball counts</div>
+              </div>
+              {multiMode==='team-scramble'&&<div style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>}
+            </button>
+            <button onClick={()=>setMultiMode('team-alt')}
+              style={{background:'#080d18',padding:'10px 14px',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',alignItems:'center',gap:10}}>
+              <div style={{flex:1}}>
+                <div style={{fontSize:15,fontWeight:multiMode==='team-alt'?700:500,color:multiMode==='team-alt'?'white':'rgba(255,255,255,.55)'}}>Team Alt Shot</div>
+                <div style={{fontSize:10,color:'rgba(255,255,255,.25)',marginTop:2}}>Take turns hitting the same ball</div>
+              </div>
+              {multiMode==='team-alt'&&<div style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>}
+            </button>
           </div>
-          {multiMode==='h2h-1v1'&&<div style={{width:7,height:7,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>}
-        </button>
-
-        {/* Team modes — compact chips */}
-        <div style={{display:'flex',gap:6,marginBottom:4}}>
-          <button onClick={()=>setMultiMode('team-scramble')} style={chipPill(multiMode==='team-scramble')}>Team Scramble</button>
-          <button onClick={()=>setMultiMode('team-alt')} style={chipPill(multiMode==='team-alt')}>Team Alt Shot</button>
+          <div style={{display:'flex',gap:6,marginTop:6,opacity:0.4}}>
+            <div style={{flex:1,background:'rgba(255,255,255,.04)',borderRadius:3,padding:'7px 0',fontSize:11,color:'rgba(255,255,255,.3)',textAlign:'center',fontFamily:'inherit'}}>2v2 Scramble</div>
+            <div style={{flex:1,background:'rgba(255,255,255,.04)',borderRadius:3,padding:'7px 0',fontSize:11,color:'rgba(255,255,255,.3)',textAlign:'center',fontFamily:'inherit'}}>2v2 Alt Shot</div>
+            <div style={{fontSize:10,color:'rgba(255,255,255,.25)',alignSelf:'center',flexShrink:0,paddingRight:4}}>soon</div>
+          </div>
         </div>
 
-        {/* Coming soon strip */}
-        <div style={{display:'flex',gap:6,marginBottom:16,opacity:0.4}}>
-          <div style={{flex:1,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)',borderRadius:4,padding:'7px 0',fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textAlign:'center'}}>2v2 Scramble</div>
-          <div style={{flex:1,background:'rgba(255,255,255,0.02)',border:'1px solid rgba(255,255,255,0.05)',borderRadius:4,padding:'7px 0',fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.4)',textAlign:'center'}}>2v2 Alt Shot</div>
-          <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',alignSelf:'center',whiteSpace:'nowrap',flexShrink:0}}>coming soon</div>
-        </div>
-
-        {/* Course + Holes inline */}
-        <div style={{display:'flex',gap:8,marginBottom:16,alignItems:'stretch'}}>
-          <div style={{flex:2,position:'relative'}}>
-            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',marginBottom:4}}>Course</div>
-            <div style={{position:'relative'}}>
+        {/* Course + Holes */}
+        <div style={sec2}>
+          <div style={lbl2}>Course</div>
+          <div style={{display:'flex',gap:8,alignItems:'flex-start'}}>
+            <div style={{flex:2,position:'relative'}}>
               <select value={selectedCourse} onChange={e=>{ setSelectedCourse(e.target.value); if(e.target.value==='wii-golf'&&numHoles===18) setNumHoles(3) }}
-                style={{width:'100%',background:'#0d1627',color:'white',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,padding:'8px 28px 8px 10px',fontSize:12,fontWeight:700,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
+                style={{width:'100%',background:'rgba(255,255,255,.06)',color:'white',border:'1px solid rgba(255,255,255,.12)',borderRadius:4,padding:'9px 28px 9px 10px',fontSize:12,fontWeight:600,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none'}}>
                 {REAL_COURSES.filter(c=>c.available).map(c=>(<option key={c.id} value={c.id}>{c.name}</option>))}
                 {REAL_COURSES.filter(c=>!c.available).map(c=>(<option key={c.id} value={c.id} disabled>{c.name} (soon)</option>))}
               </select>
-              <div style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,0.3)',fontSize:9}}>▼</div>
+              <div style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,.3)',fontSize:9}}>▼</div>
             </div>
-          </div>
-          <div style={{flex:1}}>
-            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.3)',marginBottom:4}}>Holes</div>
-            <div style={{display:'flex',gap:4}}>
-              {([3,6,9,18] as number[]).map(n=>{
-                const disabled=selectedCourse==='wii-golf'&&n===18
-                return(
-                  <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }}
-                    style={{flex:1,background:(numHoles===n&&!disabled)?'rgba(34,197,94,0.12)':'rgba(255,255,255,0.04)',color:disabled?'rgba(255,255,255,0.1)':(numHoles===n&&!disabled)?'#22c55e':'rgba(255,255,255,0.5)',border:`1px solid ${(numHoles===n&&!disabled)?'rgba(34,197,94,0.4)':'rgba(255,255,255,0.07)'}`,borderRadius:4,padding:'8px 0',fontSize:12,fontWeight:800,cursor:disabled?'default':'pointer',fontFamily:'inherit',opacity:disabled?0.3:1}}>
-                    {n}
-                  </button>
-                )
-              })}
+            <div style={{flex:1}}>
+              <div style={{display:'flex',background:'rgba(255,255,255,.06)',borderRadius:5,padding:2,gap:2}}>
+                {([3,6,9,18] as number[]).map(n=>{
+                  const disabled=selectedCourse==='wii-golf'&&n===18
+                  return(
+                    <button key={n} onClick={()=>{ if(!disabled) setNumHoles(n) }}
+                      style={{flex:1,background:(numHoles===n&&!disabled)?'rgba(255,255,255,.12)':'transparent',color:disabled?'rgba(255,255,255,.12)':(numHoles===n&&!disabled)?'white':'rgba(255,255,255,.4)',border:'none',borderRadius:3,padding:'9px 0',fontSize:12,fontWeight:(numHoles===n&&!disabled)?700:400,cursor:disabled?'default':'pointer',fontFamily:'inherit',opacity:disabled?0.4:1}}>
+                      {n}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
 
-        <input
-          value={playerName} onChange={e=>setPlayerName(e.target.value)} maxLength={20}
-          placeholder="Your name"
-          style={{width:'100%',background:'#0d1627',border:'1px solid rgba(255,255,255,0.1)',borderRadius:4,padding:'11px 14px',fontSize:14,fontWeight:600,color:'white',fontFamily:'inherit',marginBottom:10,outline:'none'}}
-        />
-        <div style={{display:'flex',gap:6,marginBottom:10}}>
-          <button onClick={()=>setDataMode('pl')}
-            style={{flex:1,background:dataMode==='pl'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:dataMode==='pl'?'#22c55e':'rgba(255,255,255,0.45)',border:`1.5px solid ${dataMode==='pl'?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.08)'}`,borderRadius:4,padding:'9px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}>
-            Premier League
-          </button>
-          <button onClick={()=>setDataMode('euro')}
-            style={{flex:1,background:dataMode==='euro'?'rgba(34,197,94,0.1)':'rgba(255,255,255,0.04)',color:dataMode==='euro'?'#22c55e':'rgba(255,255,255,0.45)',border:`1.5px solid ${dataMode==='euro'?'rgba(34,197,94,0.45)':'rgba(255,255,255,0.08)'}`,borderRadius:4,padding:'9px 0',fontSize:12,fontWeight:800,cursor:'pointer',fontFamily:'inherit'}}>
-            Top 5 + CL
-          </button>
+        {/* Name + Dataset */}
+        <div style={sec2}>
+          <div style={lbl2}>Your name</div>
+          <input
+            value={playerName} onChange={e=>setPlayerName(e.target.value)} maxLength={20}
+            placeholder="Enter your name"
+            style={{width:'100%',background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.12)',borderRadius:4,padding:'10px 14px',fontSize:14,fontWeight:500,color:'white',fontFamily:'inherit',outline:'none',marginBottom:14}}
+          />
+          <div style={lbl2}>Dataset</div>
+          <div style={{display:'flex',background:'rgba(255,255,255,.06)',borderRadius:5,padding:2,gap:2}}>
+            <button onClick={()=>setDataMode('pl')} style={tog2(dataMode==='pl')}>Premier League</button>
+            <button disabled style={{...tog2(false),cursor:'default',opacity:.28}}>Top 5 + CL · soon</button>
+          </div>
         </div>
-        <button className="h2h-go" onClick={onH2H} disabled={!metaReady}
-          style={{width:'100%',background:metaReady?'rgba(34,197,94,0.1)':'rgba(34,197,94,0.03)',color:metaReady?'#22c55e':'rgba(255,255,255,0.3)',border:`2px solid ${metaReady?'rgba(34,197,94,0.5)':'rgba(34,197,94,0.1)'}`,borderRadius:4,padding:'15px 0',fontSize:16,fontWeight:900,cursor:metaReady?'pointer':'default',fontFamily:'inherit',marginBottom:10,boxShadow:metaReady?'4px 4px 0 rgba(34,197,94,0.12)':'none'}}>
+
+        <button onClick={onH2H} disabled={!metaReady}
+          style={{display:'block',width:'100%',padding:'14px 0',background:metaReady?'#22c55e':'rgba(255,255,255,.08)',color:metaReady?'#0a0f1e':'rgba(255,255,255,.25)',border:'none',borderRadius:100,fontSize:15,fontWeight:800,cursor:metaReady?'pointer':'default',fontFamily:'inherit',letterSpacing:'-.01em',marginBottom:10}}>
           {metaReady?'Create game →':'Loading…'}
         </button>
-        <button onClick={onJoin} style={{width:'100%',background:'transparent',color:'rgba(255,255,255,0.4)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:4,padding:'12px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>
+        <button onClick={onJoin} style={{width:'100%',background:'transparent',color:'rgba(255,255,255,.35)',border:'none',padding:'10px 0',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'inherit',textAlign:'center'}}>
           Join a game
         </button>
       </div>

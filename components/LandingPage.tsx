@@ -21,16 +21,17 @@ export default function LandingPage() {
     <>
       <NavBar />
 
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bungee&family=Chivo:wght@400;700;900&display=swap');`}</style>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=Bungee&family=Instrument+Sans:wght@400;500;600;700;800&display=swap');`}</style>
 
       <div className={s.lp}>
 
         {/* ── Hero ─────────────────────────────────────────────────── */}
         <section className={s.hero}>
-          <h1>Know your football?</h1>
-          <p className={s.lead}>Eight daily quiz games to settle it.</p>
+          <div className={s.featPill}><span className={s.featDot}></span>Featured today</div>
+          <h1 className={s.heroTitle}>Football<br/>Golf</h1>
+          <p className={s.lead}>Golf, played with football stats. Nine holes, lowest score wins.</p>
           <button className={s.btnEmber} onClick={() => router.push('/football-golf')}>
-            Play today
+            Play Football Golf
           </button>
         </section>
 
