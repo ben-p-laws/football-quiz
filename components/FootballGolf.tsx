@@ -5392,11 +5392,6 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
               {multiMode==='team-alt'&&<div style={{width:6,height:6,borderRadius:'50%',background:'#22c55e',flexShrink:0}}/>}
             </button>
           </div>
-          <div style={{display:'flex',gap:6,marginTop:6,opacity:0.4}}>
-            <div style={{flex:1,background:'rgba(255,255,255,.04)',borderRadius:3,padding:'7px 0',fontSize:11,color:'rgba(255,255,255,.3)',textAlign:'center',fontFamily:'inherit'}}>2v2 Scramble</div>
-            <div style={{flex:1,background:'rgba(255,255,255,.04)',borderRadius:3,padding:'7px 0',fontSize:11,color:'rgba(255,255,255,.3)',textAlign:'center',fontFamily:'inherit'}}>2v2 Alt Shot</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,.25)',alignSelf:'center',flexShrink:0,paddingRight:4}}>soon</div>
-          </div>
         </div>
 
         {/* Course + Holes */}
