@@ -11,11 +11,13 @@ function getClub(dist: number): string {
 }
 
 function filterLabel(f: FilterSpec): string {
-  if (f.k === 'all')    return 'all'
-  if (f.k === 'nat')    return `nat:${f.code}`
-  if (f.k === 'club')   return `club:${f.name}`
-  if (f.k === 'cont')   return `cont:${f.name}`
-  if (f.k === 'letter') return `letter:${f.letter}`
+  if (f.k === 'all')       return 'all'
+  if (f.k === 'nat')       return `nat:${f.code}`
+  if (f.k === 'club')      return `club:${f.name}`
+  if (f.k === 'cont')      return `cont:${f.name}`
+  if (f.k === 'letter')    return `letter:${f.letter}`
+  if (f.k === 'comp')      return `comp:${f.comp}`
+  if (f.k === 'club_euro') return `club_euro:${f.name}:${f.scope}`
   return `cc:${f.continent}×${f.club}`
 }
 
@@ -27,13 +29,13 @@ const BEFORE_KEYS = BEFORE_YEARS.flatMap(y => [`goals_before_${y}`, `ga_before_$
 const CLUB_STATS = ['goals', 'assists', 'goals_assists', 'appearances', 'apps_minus_goals', 'yellow_cards', 'clean_sheets']
 
 function getTypeProbs(club: string): Record<FilterKind, number> {
-  if (club === 'driver') return { nat:20, club:20, cc:23, cont:19, all:5, letter:13 }
-  if (club === 'iron')   return { nat:22, club:22, cc:21, cont:17, all:5, letter:13 }
-  return                        { nat:23, club:23, cc:21, cont:15, all:3, letter:15 }
+  if (club === 'driver') return { nat:20, club:20, cc:23, cont:19, all:5, letter:13, comp:0, club_euro:0 }
+  if (club === 'iron')   return { nat:22, club:22, cc:21, cont:17, all:5, letter:13, comp:0, club_euro:0 }
+  return                        { nat:23, club:23, cc:21, cont:15, all:3, letter:15, comp:0, club_euro:0 }
 }
 
 function sampleKind(probs: Record<FilterKind, number>): FilterKind {
-  const types: FilterKind[] = ['nat','club','cc','cont','all','letter']
+  const types: FilterKind[] = ['nat','club','cc','cont','all','letter','comp','club_euro']
   const total = types.reduce((s, t) => s + probs[t], 0)
   let r = Math.random() * total
   for (const t of types) { r -= probs[t]; if (r <= 0) return t }
@@ -55,12 +57,14 @@ function simulate(
   const probs = getTypeProbs(club)
 
   const filtersByKind: Record<FilterKind, FilterSpec[]> = {
-    all:  [{ k: 'all' }],
-    nat:  nations.map(c => ({ k: 'nat' as const, code: c })),
-    club: clubs.map(c => ({ k: 'club' as const, name: c })),
-    cont: continents.map(c => ({ k: 'cont' as const, name: c })),
-    cc:   contClubPairs.map(([cont, cl]) => ({ k: 'cc' as const, continent: cont, club: cl })),
-    letter: letters.map(l => ({ k: 'letter' as const, letter: l })),
+    all:       [{ k: 'all' }],
+    nat:       nations.map(c => ({ k: 'nat' as const, code: c })),
+    club:      clubs.map(c => ({ k: 'club' as const, name: c })),
+    cont:      continents.map(c => ({ k: 'cont' as const, name: c })),
+    cc:        contClubPairs.map(([cont, cl]) => ({ k: 'cc' as const, continent: cont, club: cl })),
+    letter:    letters.map(l => ({ k: 'letter' as const, letter: l })),
+    comp:      [],
+    club_euro: [],
   }
 
   const isLong = distance > 150
