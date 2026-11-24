@@ -144,19 +144,25 @@ export default function LandingPage() {
           <h2 className={s.sectionHead}>More games</h2>
           <div className={s.more}>
             {[
-              { name: 'Bingo',           desc: 'Fill the achievement grid',                   route: '/bingo' },
-              { name: 'Stat Clash',      desc: 'Find the player closest to a PL stat target', route: '/stat-clash' },
-              { name: 'Casino',          desc: 'Use football trivia to build your stack',      route: '/blackjack' },
-              { name: 'Footy Countdown', desc: 'Letters, numbers and conundrum — 7 rounds',   route: '/countdown' },
-              { name: 'Grid',            desc: 'Find a PL player for each row and column',    route: '/grid' },
-              { name: 'Teammates',       desc: 'Find the player from their PL teammates',     route: '/teammates' },
-              { name: 'Tenable',         desc: 'Build your own top 10 quiz',                  route: '/tenables' },
+              { name: 'Bingo',                desc: 'Fill the achievement grid',                            route: '/bingo' },
+              { name: 'Stat Clash',           desc: 'Find the player closest to a PL stat target',          route: '/stat-clash' },
+              { name: 'Casino',               desc: 'Use football trivia to build your stack',               route: '/blackjack' },
+              { name: 'Footy Countdown',      desc: 'Letters, numbers and conundrum — 7 rounds',            route: '/countdown' },
+              { name: 'Grid',                 desc: 'Find a PL player for each row and column',             route: '/grid' },
+              { name: 'Teammates',            desc: 'Find the player from their PL teammates',              route: '/teammates' },
+              { name: 'Tenable',              desc: 'Build your own top 10 quiz',                           route: '/tenables' },
+              { name: 'Population Circle',    desc: 'Estimate the population inside the circle on the map', route: '/geo/circle',      geo: true },
+              { name: 'Population Challenge', desc: 'Find the city closest in population to the target',    route: '/geo/challenge',   geo: true },
+              { name: 'Population Guesser',   desc: 'Find the mystery city using population clues',         route: '/geo/population',  geo: true },
             ].map(game => (
               <div key={game.route} className={s.gameSm} role="button" tabIndex={0}
                 onClick={() => router.push(game.route)}
                 onKeyDown={e => { if (e.key === 'Enter') router.push(game.route) }}>
                 <div className={s.gameSmBody}>
-                  <div className={s.gameSmTitle}>{game.name}</div>
+                  <div className={s.gameSmTitleRow}>
+                    <div className={s.gameSmTitle}>{game.name}</div>
+                    {'geo' in game && game.geo && <span className={s.chipGeo}>GEO</span>}
+                  </div>
                   <div className={s.gameSmDesc}>{game.desc}</div>
                 </div>
                 <div className={s.gameSmCta}>Play {game.name}</div>
