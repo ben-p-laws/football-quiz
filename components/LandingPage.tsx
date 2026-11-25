@@ -112,6 +112,20 @@ export default function LandingPage() {
               Tee off →
             </button>
           </div>
+
+          {/* Desktop-only gameplay preview (real numbers from player_seasons) */}
+          <div className={s.preview} aria-hidden="true">
+            <div className={s.pvHole}>Hole 12 · Par 3 · 155 yds</div>
+            <div className={s.pvQ}>Premier League goals by Spanish players</div>
+            {[['Fernando Torres', 85], ['David Silva', 60]].map(([n, g]) => (
+              <div key={n} className={s.pvPick}><span>{n}</span><b>{g}</b></div>
+            ))}
+            <div className={s.pvPick + ' ' + s.pvEmpty}><span>Player 3 (optional)</span></div>
+            <div className={s.pvResult}>
+              <span className={s.pvBar}><i style={{ width: '94%' }} /></span>
+              <span>145 yds · <em>on the green</em> ⛳</span>
+            </div>
+          </div>
         </section>
 
         {/* ── Game sections ─────────────────────────────────────── */}
