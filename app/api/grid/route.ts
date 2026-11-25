@@ -91,8 +91,7 @@ type PlayerData = {
   playerCareerGoals: Map<string, number>
 }
 
-const buildPlayerData = unstable_cache(
-  async (): Promise<PlayerData> => {
+async function computePlayerData(): Promise<PlayerData> {
   const supabase = getClient()
   const [seasons, plTables] = await Promise.all([
     fetchAll(supabase, 'player_seasons', 'name_display,year_id,pos,teams_played_for,goals,gk_clean_sheets,games'),
@@ -164,10 +163,38 @@ const buildPlayerData = unstable_cache(
   }
 
   return { teamSeasons, playerPLWins, playerRelegations, playerGoldenBoot, playerGoldenGlove, playerTotalApps, playerCareerGoals }
+}
+
+// unstable_cache stores results as JSON, which turns Maps into {} — so cache plain
+// objects and rebuild the Maps on read (otherwise every cached hit throws "not iterable").
+type Obj<T> = Record<string, T>
+type SerializedPlayerData = { [K in keyof PlayerData]: K extends 'teamSeasons' ? Obj<Obj<number>> : Obj<number> }
+
+const getSerializedPlayerData = unstable_cache(
+  async (): Promise<SerializedPlayerData> => {
+    const d = await computePlayerData()
+    const o = (m: Map<string, number>) => Object.fromEntries(m)
+    return {
+      teamSeasons: Object.fromEntries([...d.teamSeasons].map(([k, v]) => [k, o(v)])),
+      playerPLWins: o(d.playerPLWins), playerRelegations: o(d.playerRelegations),
+      playerGoldenBoot: o(d.playerGoldenBoot), playerGoldenGlove: o(d.playerGoldenGlove),
+      playerTotalApps: o(d.playerTotalApps), playerCareerGoals: o(d.playerCareerGoals),
+    }
   },
-  ['grid-data'],
+  ['grid-data-v2'],
   { revalidate: 86400 }
 )
+
+async function buildPlayerData(): Promise<PlayerData> {
+  const s = await getSerializedPlayerData()
+  const m = (r: Obj<number>) => new Map(Object.entries(r))
+  return {
+    teamSeasons: new Map(Object.entries(s.teamSeasons).map(([k, v]) => [k, m(v)])),
+    playerPLWins: m(s.playerPLWins), playerRelegations: m(s.playerRelegations),
+    playerGoldenBoot: m(s.playerGoldenBoot), playerGoldenGlove: m(s.playerGoldenGlove),
+    playerTotalApps: m(s.playerTotalApps), playerCareerGoals: m(s.playerCareerGoals),
+  }
+}
 
 function getEligiblePlayers(type: string, ref: string | null, data: PlayerData): Map<string, number> {
   const result = new Map<string, number>()
