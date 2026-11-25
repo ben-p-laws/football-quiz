@@ -5160,25 +5160,49 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
 
   const [setupStep, setSetupStep] = useState<'home'|'solo'|'vs-friend'>('home')
   const screenStyle:React.CSSProperties = {width:'100%',minHeight:'calc(100dvh - 56px)',background:'#0a0f1e',display:'flex',flexDirection:'column',alignItems:'center',fontFamily:"'Instrument Sans',system-ui,sans-serif",padding:'0 20px 32px',overflowY:'auto',overflowX:'hidden'}
-  const maxW:React.CSSProperties = {width:'100%',maxWidth:360}
+  const maxW:React.CSSProperties = {width:'100%',maxWidth:420}
 
   // ── Home screen ──────────────────────────────────────────────────────────────
   if(setupStep==='home') return(
-    <div style={screenStyle}>
+    <div style={{...screenStyle,background:'radial-gradient(700px 360px at 50% -80px, rgba(34,197,94,.16), transparent 70%), #0a0f1e'}}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap');
         *{box-sizing:border-box;}
         .lb-row-btn{background:transparent;border:none;width:100%;text-align:left;cursor:pointer;font-family:inherit;color:white;padding:0;display:flex;align-items:center;}
         .lb-row-btn:focus-visible{outline:2px solid #22c55e;outline-offset:2px;border-radius:2px;}
         .lb-row-btn:active{opacity:.7;}
+        .fg-card{--h:150;position:relative;width:100%;display:flex;align-items:center;gap:14px;text-align:left;font-family:inherit;color:white;cursor:pointer;
+          padding:14px;border-radius:16px;border:1px solid rgba(255,255,255,.07);overflow:hidden;
+          background:linear-gradient(100deg,oklch(60% .14 var(--h) / .13),transparent 60%),oklch(16% .04 265);
+          transition:transform .22s cubic-bezier(.16,1,.3,1),border-color .22s,background .22s;}
+        .fg-card:hover{transform:translateY(-2px);border-color:oklch(72% .14 var(--h) / .45);}
+        .fg-card:active{transform:translateY(0);}
+        .fg-card:focus-visible{outline:2px solid #22c55e;outline-offset:2px;}
+        .fg-tile{flex-shrink:0;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px;
+          background:linear-gradient(145deg,oklch(55% .15 var(--h) / .5),oklch(35% .1 var(--h) / .35));border:1px solid oklch(75% .13 var(--h) / .3);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,.08);transition:transform .22s cubic-bezier(.16,1,.3,1);}
+        .fg-card:hover .fg-tile{transform:rotate(-6deg) scale(1.06);}
+        .fg-hero{min-height:150px;align-items:flex-end;padding:18px;
+          background:radial-gradient(120% 100% at 100% 0%,rgba(34,197,94,.35),transparent 60%),linear-gradient(160deg,#123522,#0d1a2a);
+          border-color:rgba(74,222,128,.2);box-shadow:0 18px 40px -18px rgba(34,197,94,.45);}
+        .fg-hero img{position:absolute;right:-8px;top:50%;height:200%;transform:translateY(-50%) rotate(-22deg);pointer-events:none;
+          filter:drop-shadow(0 12px 18px rgba(0,0,0,.45));transition:transform .42s cubic-bezier(.16,1,.3,1);}
+        .fg-hero:hover img{transform:translateY(-51%) rotate(-18deg) scale(1.04);}
+        .fg-daily{--h:150;flex:1;display:flex;flex-direction:column;gap:8px;text-align:left;font-family:inherit;cursor:pointer;padding:14px;border-radius:14px;
+          border:1px solid rgba(255,255,255,.07);background:linear-gradient(160deg,oklch(55% .13 var(--h) / .16),transparent 70%),oklch(16% .04 265);
+          transition:transform .22s cubic-bezier(.16,1,.3,1),border-color .22s;}
+        .fg-daily:hover{transform:translateY(-2px);border-color:oklch(72% .14 var(--h) / .45);}
+        .fg-select{background:rgba(0,0,0,.3);color:#f3e2b3;border:1px solid rgba(201,168,76,.35);border-radius:8px;padding:6px 24px 6px 9px;
+          font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;appearance:none;-webkit-appearance:none;width:100%;}
+        @media (prefers-reduced-motion:reduce){.fg-card,.fg-tile,.fg-hero img,.fg-daily{transition:none}}
       `}</style>
       <div style={{...maxW,paddingTop:28,paddingBottom:4}}>
-        <div style={{fontSize:11,fontWeight:700,color:'rgba(255,255,255,0.3)',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12}}>Football Golf</div>
-        <div style={{fontSize:34,fontWeight:800,color:'white',letterSpacing:'-0.04em',lineHeight:.93}}>Pick your<br/>game</div>
+        <div style={{display:'inline-flex',alignItems:'center',gap:6,fontSize:10,fontWeight:700,color:'#bef264',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:12,background:'rgba(190,242,100,.1)',border:'1px solid rgba(190,242,100,.22)',borderRadius:100,padding:'4px 10px'}}>⛳ Football Golf</div>
+        <div style={{fontSize:36,fontWeight:800,color:'white',letterSpacing:'-0.045em',lineHeight:.92}}>Pick your<br/>game</div>
       </div>
 
       {sharedResult&&(
-        <div style={{...maxW,marginTop:16,background:'#0d1627',border:'1px solid rgba(34,197,94,0.3)',borderRadius:4,padding:'14px 16px',position:'relative'}}>
+        <div style={{...maxW,marginTop:16,background:'#0d1627',border:'1px solid rgba(34,197,94,0.3)',borderRadius:14,padding:'14px 16px',position:'relative'}}>
           <button onClick={onDismissShare} style={{position:'absolute',top:8,right:10,background:'none',border:'none',color:'rgba(255,255,255,0.3)',fontSize:16,cursor:'pointer',lineHeight:1}}>✕</button>
           <div style={{fontSize:11,fontWeight:700,color:'rgba(34,197,94,0.8)',marginBottom:6}}>Challenge from a friend</div>
           <div style={{fontSize:15,fontWeight:800,color:'white',marginBottom:4}}>
@@ -5189,65 +5213,69 @@ function SetupScreen({courseMode,setCourseMode,selectedCourse,setSelectedCourse,
         </div>
       )}
 
-      <div style={{...maxW,marginTop:24}}>
-        <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.25)',letterSpacing:'.08em',textTransform:'uppercase',paddingBottom:10,borderBottom:'1px solid rgba(255,255,255,0.07)'}}>
-          Game modes
-        </div>
+      <div style={{...maxW,marginTop:22,display:'flex',flexDirection:'column',gap:10}}>
 
-        {/* Solo */}
-        <button className="lb-row-btn" onClick={()=>setSetupStep('solo')}
-          style={{borderBottom:'1px solid rgba(255,255,255,.06)',padding:'18px 0',gap:12}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:21,fontWeight:800,color:'white',letterSpacing:'-.02em'}}>Solo round</div>
-            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:3}}>Choose your course · play alone</div>
+        {/* Solo — hero card */}
+        <button className="fg-card fg-hero" onClick={()=>setSetupStep('solo')}>
+          <img src="/holes/augusta/hole_12.png?v=21" alt="" />
+          <div style={{position:'relative',zIndex:1,maxWidth:'62%'}}>
+            <div style={{display:'inline-flex',alignItems:'center',gap:5,fontSize:9,fontWeight:800,color:'#22c55e',border:'1px solid rgba(34,197,94,.3)',background:'rgba(34,197,94,.14)',borderRadius:100,padding:'2px 8px',letterSpacing:'.08em',textTransform:'uppercase',marginBottom:8}}>
+              <span style={{width:5,height:5,borderRadius:'50%',background:'#22c55e'}}/>Live
+            </div>
+            <div style={{fontSize:24,fontWeight:800,letterSpacing:'-.03em',lineHeight:1}}>Solo round</div>
+            <div style={{fontSize:12,color:'rgba(220,252,231,.7)',marginTop:5}}>Augusta, Pebble Beach, Wii Golf or random holes</div>
           </div>
-          <div style={{fontSize:9,fontWeight:800,color:'#22c55e',border:'1px solid rgba(34,197,94,.2)',background:'rgba(34,197,94,.1)',borderRadius:3,padding:'2px 6px',letterSpacing:'.06em',textTransform:'uppercase',flexShrink:0}}>Live</div>
         </button>
 
         {/* vs Friend */}
-        <button className="lb-row-btn" onClick={()=>setSetupStep('vs-friend')}
-          style={{borderBottom:'1px solid rgba(255,255,255,.06)',padding:'15px 0',gap:12}}>
-          <div style={{flex:1}}>
-            <div style={{fontSize:17,fontWeight:700,color:'white',letterSpacing:'-.02em'}}>vs Friend</div>
-            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:3}}>Head to head · share a link</div>
+        <button className="fg-card" style={{'--h':290} as React.CSSProperties} onClick={()=>setSetupStep('vs-friend')}>
+          <span className="fg-tile">⚔️</span>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:16,fontWeight:700,letterSpacing:'-.02em'}}>vs Friend</div>
+            <div style={{fontSize:12,color:'rgba(255,255,255,.45)',marginTop:2}}>Head to head · share a link</div>
           </div>
-          <div style={{color:'rgba(255,255,255,.2)',fontSize:14,flexShrink:0}}>›</div>
+          <div style={{color:'rgba(255,255,255,.3)',fontSize:20,flexShrink:0}}>›</div>
         </button>
 
         {/* Tournament */}
-        <div style={{display:'flex',alignItems:'center',padding:'15px 0',borderBottom:'1px solid rgba(255,255,255,.06)',gap:12}}>
+        <div className="fg-card" style={{'--h':85,cursor:'default',background:'linear-gradient(100deg,rgba(201,168,76,.18),transparent 65%),oklch(16% .04 265)',borderColor:'rgba(201,168,76,.25)'} as React.CSSProperties}>
+          <span className="fg-tile" style={{background:'linear-gradient(145deg,rgba(201,168,76,.55),rgba(120,90,30,.4))',borderColor:'rgba(232,200,120,.35)'}}>🏆</span>
           <div style={{flex:1,minWidth:0}}>
-            <div style={{fontSize:17,fontWeight:700,color:'white',letterSpacing:'-.02em'}}>Tournament</div>
-            <div style={{fontSize:11,color:'rgba(255,255,255,0.3)',marginTop:3}}>Final round of a major</div>
+            <div style={{fontSize:16,fontWeight:700,letterSpacing:'-.02em'}}>Tournament</div>
+            <div style={{fontSize:12,color:'rgba(255,255,255,.45)',marginTop:2}}>Final round of a major</div>
           </div>
-          <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0}}>
+          <div style={{display:'flex',flexDirection:'column',gap:6,flexShrink:0,width:128}}>
             <div style={{position:'relative'}}>
-              <select value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}
-                style={{background:'rgba(255,255,255,.06)',color:'rgba(255,255,255,.65)',border:'1px solid rgba(255,255,255,.12)',borderRadius:3,padding:'4px 22px 4px 8px',fontSize:11,fontWeight:600,fontFamily:'inherit',cursor:'pointer',appearance:'none',WebkitAppearance:'none',width:'100%'}}>
+              <select className="fg-select" value={selectedTournament} onChange={e=>setSelectedTournament(e.target.value)}>
                 {TOURNAMENTS.map(t=>(<option key={t.id} value={t.id}>{t.name}</option>))}
                 <option disabled>More coming soon</option>
               </select>
-              <div style={{position:'absolute',right:6,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(255,255,255,.3)',fontSize:8}}>▼</div>
+              <div style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',pointerEvents:'none',color:'rgba(243,226,179,.5)',fontSize:8}}>▼</div>
             </div>
             <button onClick={()=>onTournament(selectedTournament)} disabled={!metaReady}
-              style={{background:metaReady?'rgba(255,255,255,.1)':'transparent',color:metaReady?'rgba(255,255,255,.7)':'rgba(255,255,255,.25)',border:`1px solid ${metaReady?'rgba(255,255,255,.18)':'rgba(255,255,255,.07)'}`,borderRadius:3,padding:'5px 10px',fontSize:12,fontWeight:700,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
+              style={{background:metaReady?'#c9a84c':'rgba(255,255,255,.06)',color:metaReady?'#0a0f1e':'rgba(255,255,255,.25)',border:'none',borderRadius:8,padding:'7px 10px',fontSize:12,fontWeight:800,cursor:metaReady?'pointer':'default',fontFamily:'inherit',whiteSpace:'nowrap'}}>
               {metaReady?'Start →':'Loading…'}
             </button>
           </div>
         </div>
 
-        {/* Daily grid */}
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:1,background:'rgba(255,255,255,.07)',margin:'0 0 1px'}}>
-          <button onClick={onDaily}
-            style={{background:'#080d18',padding:'13px 14px',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:66}}>
-            <div style={{fontSize:14,fontWeight:700,color:dailyPlayed?'#22c55e':'rgba(255,255,255,.65)'}}>{dailyPlayed?'✓ ':''}Pin Hunt</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,.25)',lineHeight:1.3}}>Daily par 3</div>
-          </button>
-          <button onClick={onDailyRound}
-            style={{background:'#080d18',padding:'13px 14px',border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',display:'flex',flexDirection:'column',gap:4,minHeight:66}}>
-            <div style={{fontSize:14,fontWeight:700,color:dailyRoundPlayed?'#22c55e':'rgba(255,255,255,.65)'}}>{dailyRoundPlayed?'✓ ':''}3-Hole Round</div>
-            <div style={{fontSize:10,color:'rgba(255,255,255,.25)',lineHeight:1.3}}>Daily round</div>
-          </button>
+        {/* Daily */}
+        <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,.35)',letterSpacing:'.08em',textTransform:'uppercase',margin:'8px 2px 0'}}>Today&apos;s challenges</div>
+        <div style={{display:'flex',gap:10}}>
+          {[
+            {label:'Pin Hunt',sub:'Daily par 3',icon:'📍',played:dailyPlayed,onClick:onDaily,h:25},
+            {label:'3-Hole Round',sub:'Daily round',icon:'🗓️',played:dailyRoundPlayed,onClick:onDailyRound,h:200},
+          ].map(d=>(
+            <button key={d.label} className="fg-daily" style={{'--h':d.h} as React.CSSProperties} onClick={d.onClick}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',width:'100%'}}>
+                <span style={{fontSize:22}}>{d.icon}</span>
+                <span style={{fontSize:9,fontWeight:800,letterSpacing:'.07em',textTransform:'uppercase',borderRadius:4,padding:'2px 6px',
+                  color:d.played?'#22c55e':'#0a0f1e',background:d.played?'rgba(34,197,94,.14)':'#d9f99d'}}>{d.played?'✓ Played':'Today'}</span>
+              </div>
+              <div style={{fontSize:15,fontWeight:700,color:'white',letterSpacing:'-.02em'}}>{d.label}</div>
+              <div style={{fontSize:11,color:'rgba(255,255,255,.45)',lineHeight:1.35}}>{d.sub}</div>
+            </button>
+          ))}
         </div>
       </div>
 
