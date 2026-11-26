@@ -6,7 +6,7 @@
     radial-gradient(700px 400px at -10% 20%, oklch(45% 0.15 40 / .10), transparent 70%),
     var(--color-paper);
   min-height: 100dvh;
-  --font-body: "Instrument Sans", ui-sans-serif, sans-serif;
+  --font-body: var(--font-inter), ui-sans-serif, -apple-system, system-ui, sans-serif;
   font-family: var(--font-body);
   overflow-x: clip;
   padding-bottom: var(--space-md);
@@ -29,14 +29,8 @@
   padding: 18px var(--space-md);
 }
 .wordmark {
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--color-ink);
-}
-.wordmark em {
-  font-style: normal;
-  color: var(--color-accent);
+  display: block;
+  margin: 0;
 }
 .topMeta {
   font-size: 11px;

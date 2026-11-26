@@ -1,22 +1,34 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Instrument_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const instrument = Instrument_Sans({
+  variable: "--font-instrument",
   subsets: ["latin"],
+  weight: ["700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "TopBins — Premier League knowledge games",
   description: "Replayable football knowledge games for PL fans. Football Golf, Around the World, Stat Clash, Minimise, Bingo, Grid and more.",
   metadataBase: new URL('https://www.topbinsfooty.com'),
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: '48x48' },
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+    ],
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/site.webmanifest',
+  themeColor: '#E3232C',
   openGraph: {
     title: "TopBins — Premier League knowledge games",
     description: "Replayable football knowledge games for PL fans. Football Golf, Around the World, Stat Clash, Minimise, Bingo, Grid and more.",
@@ -38,10 +50,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${inter.variable} ${instrument.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}<Analytics /></body>
     </html>
   );

@@ -1,4 +1,7 @@
 @theme static {
+  /* Brand colours — v2 */
+  --color-brand-red:      #E3232C;
+  --color-brand-ink:      #17110F;
   --text-xs: 0.8125rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;

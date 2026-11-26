@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import type { CSSProperties, ReactNode } from 'react'
 import s from './LandingPage.module.css'
+import Wordmark from './Wordmark'
 
 type Game = { name: string; desc: string; route: string; hue: number; icon: ReactNode; tag?: string }
 
@@ -82,13 +83,11 @@ export default function LandingPage() {
 
   return (
     <>
-      <style>{`@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&display=swap');`}</style>
-
       <div className={s.lp}>
 
         {/* ── Wordmark ──────────────────────────────────────────── */}
         <header className={s.top}>
-          <div className={s.wordmark}>Top<em>Bins</em></div>
+          <div className={s.wordmark}><Wordmark size={26} /></div>
           <span className={s.topMeta}>{TOTAL} free games</span>
         </header>
 
@@ -159,7 +158,7 @@ export default function LandingPage() {
         {/* ── Footer ───────────────────────────────────────────── */}
         <footer>
           <div className={s.footer}>
-            <span className={s.footerWord}>TopBins</span>
+            <Wordmark size={15} muted />
             <nav className={s.footerLinks} aria-label="Footer navigation">
               <a href="/football-golf">Football Golf</a>
               <a href="/around-the-world">Around the World</a>

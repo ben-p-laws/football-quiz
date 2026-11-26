@@ -1,10 +1,12 @@
 import type { Metadata } from 'next'
 import PopulationGuesser from '@/components/geo/PopulationGuesser'
+import { OG_IMAGE } from '@/lib/og'
 
 export const metadata: Metadata = {
   title: 'Population Guesser — TopBins',
   description: 'Find the mystery city using population clues. Guess cities, track their rank, and narrow it down.',
   openGraph: {
+    images: [OG_IMAGE],
     title: 'Population Guesser — TopBins',
     description: 'Find the mystery city using population clues. Guess cities, track their rank, and narrow it down.',
     url: 'https://www.topbinsfooty.com/geo/population',
@@ -13,6 +15,7 @@ export const metadata: Metadata = {
     type: 'website',
   },
   twitter: {
+    images: [OG_IMAGE],
     card: 'summary_large_image',
     title: 'Population Guesser — TopBins',
     description: 'Find the mystery city using population clues. Guess cities, track their rank, and narrow it down.',

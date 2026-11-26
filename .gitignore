@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local working files (videos, data downloads, design scratch)
+brag-output*/
+simplemaps_worldcities*/
+/brand/
+/brand-kit/
+.hallmark/
+capture-*.mjs
+public/screenshots/audit-*.png
+public/screenshots/screen-football-golf-desktop.png
+skills-lock.json

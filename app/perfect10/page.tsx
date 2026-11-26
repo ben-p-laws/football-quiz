@@ -1,16 +1,17 @@
 import Perfect10 from "@/components/Perfect10"
 import type { Metadata } from 'next'
+import { OG_IMAGE } from '@/lib/og'
 
 export const metadata: Metadata = {
   title: "Perfect 10 — Top Bins",
   openGraph: {
+    images: [OG_IMAGE],
     title: "Perfect 10 — Top Bins",
     description: "Can you draft the perfect player?",
-    images: [{ url: '/api/perfect10-og', width: 1200, height: 630 }],
   },
   twitter: {
+    images: [OG_IMAGE],
     card: 'summary_large_image',
-    images: ['/api/perfect10-og'],
   },
 }
 
