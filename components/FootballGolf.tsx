@@ -1069,6 +1069,7 @@ export default function FootballGolf(){
   const [h2hStep, setH2HStep] = useState<H2HStep>('off')
   const [h2hRoomId, setH2HRoomId] = useState('')
   const [h2hJoinInput, setH2HJoinInput] = useState('')
+  const [h2hCodeFromUrl, setH2HCodeFromUrl] = useState(false)
   const [h2hPlayerName, setH2HPlayerName] = useState(getSavedUsername)
   const [h2hOppName, setH2HOppName] = useState('')
   const [h2hWaiting, setH2HWaiting] = useState(false)
@@ -1214,7 +1215,7 @@ export default function FootballGolf(){
   useEffect(()=>{
     const params=new URLSearchParams(window.location.search)
     const room=params.get('room')
-    if(room){ setH2HJoinInput(room.toUpperCase()); setH2HStep('join') }
+    if(room){ setH2HJoinInput(room.toUpperCase()); setH2HCodeFromUrl(true); setH2HStep('join') }
   },[])
 
   // Simultaneous shot reveal: teammate (scramble) or opp captain (alt tee)
@@ -2700,7 +2701,7 @@ export default function FootballGolf(){
 
   async function joinH2HRoom(){
     const code=(h2hJoinInput||'').toUpperCase().trim()
-    if(code.length<4){setH2HError('Enter a valid room code');return}
+    if(code.length!==6){setH2HError('Room codes are 6 characters');return}
     const pid=h2hPlayerId.current||(()=>{
       const stored=localStorage.getItem('golf_h2h_pid')
       if(stored) return stored
@@ -2951,7 +2952,7 @@ export default function FootballGolf(){
   const h2hSecBtnStyle:React.CSSProperties={...h2hBtnStyle,background:'#1e2d4a'}
 
   if(h2hStep==='join'){
-    const codeFromUrl = h2hJoinInput.length===4
+    const codeFromUrl = h2hCodeFromUrl
     return(<><NavBar />
       <div style={h2hScreenStyle}>
         <div style={{textAlign:'center'}}>
@@ -2962,7 +2963,7 @@ export default function FootballGolf(){
         </div>
         <input style={h2hInputStyle} placeholder="Your name" value={h2hPlayerName} onChange={e=>setH2HPlayerName(e.target.value)} maxLength={20}/>
         {!codeFromUrl&&(
-          <input style={{...h2hInputStyle,textTransform:'uppercase',letterSpacing:'0.15em',fontSize:18,fontWeight:900,textAlign:'center'}} placeholder="ROOM CODE" value={h2hJoinInput} onChange={e=>setH2HJoinInput(e.target.value.toUpperCase())} maxLength={6}/>
+          <input style={{...h2hInputStyle,textTransform:'uppercase',letterSpacing:'0.15em',fontSize:18,fontWeight:900,textAlign:'center'}} placeholder="ROOM CODE" value={h2hJoinInput} onChange={e=>{setH2HJoinInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,''));setH2HError('')}} onKeyDown={e=>e.key==='Enter'&&joinH2HRoom()} maxLength={6} autoCapitalize="characters" autoComplete="off" spellCheck={false}/>
         )}
         {h2hError&&<div style={{fontSize:12,color:'#ef4444',fontWeight:700}}>{h2hError}</div>}
         <div style={{display:'flex',gap:10}}>
@@ -3218,7 +3219,7 @@ export default function FootballGolf(){
 
   if(phase==='club-lobby'&&lobbyClub) return(<><NavBar /><ClubLobbyScreen club={lobbyClub} onBack={()=>setPhase('setup')} /></>)
   if(phase==='tournament-setup'&&pendingTournamentId) return(<><NavBar /><TournamentSetupScreen tournamentId={pendingTournamentId} onPlay={()=>startTournamentGame(pendingTournamentId!)} onBack={()=>setPhase('setup')} /></>)
-  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={createH2HRoom} onJoin={()=>setH2HStep('join')} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} onTournament={(id)=>{setPendingTournamentId(id);setPhase('tournament-setup')}} playerName={h2hPlayerName} setPlayerName={setH2HPlayerName} dataMode={dataMode} setDataMode={setDataMode} /></>)
+  if(phase==='setup') return(<><NavBar /><SetupScreen courseMode={courseMode} setCourseMode={setCourseMode} selectedCourse={selectedCourse} setSelectedCourse={setSelectedCourse} numHoles={numHoles} setNumHoles={setNumHoles} tee={tee} setTee={setTee} startHole={startHole} setStartHole={setStartHole} onStart={startGame} onH2H={createH2HRoom} onJoin={()=>{setH2HCodeFromUrl(false);setH2HJoinInput('');setH2HStep('join')}} onDaily={()=>setPhase('daily-setup')} onDailyRound={()=>setPhase('daily-round-setup')} onViewLobby={club=>{setLobbyClub(club);setPhase('club-lobby')}} sharedResult={sharedResult} onDismissShare={()=>setSharedResult(null)} multiMode={multiMode} setMultiMode={setMultiMode} metaReady={metaReady} onTournament={(id)=>{setPendingTournamentId(id);setPhase('tournament-setup')}} playerName={h2hPlayerName} setPlayerName={setH2HPlayerName} dataMode={dataMode} setDataMode={setDataMode} /></>)
   if(phase==='done')  return <><NavBar /><DoneScreen holes={holes} scores={scores as number[]} numHoles={numHoles} onRestart={()=>setPhase('setup')} /></>
   if(phase==='daily-setup') return <><NavBar /><DailySetupScreen onPlay={startDailyChallenge} onBack={()=>setPhase('setup')} /></>
   if(phase==='daily-done')  return <><NavBar /><DailyDoneScreen result={dailyResult} leaderboard={dailyLeaderboard} playerName={dailyPlayerName} distance={holes[0]?.distance??150} onBack={()=>{setDailyResult(null);setDailyLeaderboard([]);setPhase('setup')}} /></>
