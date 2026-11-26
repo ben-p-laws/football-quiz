@@ -1090,6 +1090,8 @@ export default function FootballGolf(){
   const [h2hOppShots, setH2HOppShots] = useState<{shot:number;question:string;picks:{name:string;value:number}[]}[]>([])
   const [showOppGuesses, setShowOppGuesses] = useState(false)
   const [h2hOppLastQuestion, setH2HOppLastQuestion] = useState<string|null>(null)
+  // Opponent's live question (full category), used for play-along while it's their turn
+  const [h2hOppQ, setH2HOppQ] = useState<(Category&{_hole?:number;_shot?:number})|null>(null)
   // Refs
   const h2hPlayerId    = useRef('')
   const h2hIsHost      = useRef(false)
@@ -1193,12 +1195,22 @@ export default function FootballGolf(){
     if(h2hStep!=='playing'||!question||h2hWaiting||!h2hRoomIdRef.current||!h2hPlayerId.current) return
     void fetch('/api/golf-room',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'previewQuestion',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,questionLabel:question.label}),
+      body:JSON.stringify({action:'previewQuestion',roomId:h2hRoomIdRef.current,playerId:h2hPlayerId.current,questionLabel:question.label,question:{...question,_hole:holeIdx,_shot:strokesRef.current}}),
     }).then(()=>{},()=>{})
   },[question,h2hStep,h2hWaiting])
 
+  // Opponent moved on to a new question: start the play-along afresh
+  useEffect(()=>{
+    setPlayAlongInputs(['','',''])
+    setPlayAlongConfirmed([null,null,null])
+    setPlayAlongSuggestions([[],[],[]])
+    setPlayAlongResult(null)
+    setPlayAlongError('')
+  },[h2hOppQ?.label,h2hOppQ?._shot])
+
   useEffect(()=>{
     if(!h2hWaiting){
+      setH2HOppQ(null)
       setH2HWaitPhraseIdx(0)
       setPlayAlongInputs(['','',''])
       setPlayAlongConfirmed([null,null,null])
@@ -1660,7 +1672,13 @@ export default function FootballGolf(){
   }
 
   function computePlayAlongShot(){
-    if(!question||!currentHole) return
+    const q=h2hOppQ
+    if(!q||!currentHole) return
+    // Score from where the opponent is playing, with the club they'd have
+    const rem=h2hOppRemaining??remaining
+    const pp=h2hOppRemaining!==null?h2hOppPastPin:pastPin
+    const pClub=rem>0?getClub(rem):'driver'
+    const pMax=CLUB_RANGES[pClub][1]
     const named=playAlongConfirmed.filter(Boolean) as string[]
     if(named.length===0){ setPlayAlongError('Select at least one player');return }
     setPlayAlongError('')
@@ -1668,62 +1686,62 @@ export default function FootballGolf(){
     let total=0
     for(const name of named){
       let value=0
-      if(question.seasonFilter){
+      if(q.seasonFilter){
         const p=badLiePlayerData[name]
         if(p){
-          if(question.key==='goals')             value=p.goals
-          else if(question.key==='assists')      value=p.assists
-          else if(question.key==='yellow_cards') value=p.yellow_cards
+          if(q.key==='goals')             value=p.goals
+          else if(q.key==='assists')      value=p.assists
+          else if(q.key==='yellow_cards') value=p.yellow_cards
         }
       }else{
         const p=playerData[name]
         if(!p){ breakdown.push({name,value:0});continue }
-        if(question.natFilter && p.nationality!==question.natFilter){ breakdown.push({name,value:0});continue }
-        if(question.continentFilter && !question.clubScope && CONTINENT_MAP[p.nationality]!==question.continentFilter){ breakdown.push({name,value:0});continue }
-        if(question.letterFilter){ const initial=getSurnameInitial(name); if(initial!==question.letterFilter){ breakdown.push({name,value:0});continue } }
-        const cf=question.clubFilter
-        const scope=question.clubScope
-        const comp=question.competitionFilter
+        if(q.natFilter && p.nationality!==q.natFilter){ breakdown.push({name,value:0});continue }
+        if(q.continentFilter && !q.clubScope && CONTINENT_MAP[p.nationality]!==q.continentFilter){ breakdown.push({name,value:0});continue }
+        if(q.letterFilter){ const initial=getSurnameInitial(name); if(initial!==q.letterFilter){ breakdown.push({name,value:0});continue } }
+        const cf=q.clubFilter
+        const scope=q.clubScope
+        const comp=q.competitionFilter
         if(cf && scope){
           const lg=(k:string)=>scope==='league'?(p as any)[k]?.[cf]||0:scope==='cl'?(p as any)['clubCl'+k.slice(4)]?.[cf]||0:((p as any)[k]?.[cf]||0)+((p as any)['clubCl'+k.slice(4)]?.[cf]||0)
-          if(question.key==='goals')              value=lg('clubGoals')
-          else if(question.key==='assists')       value=lg('clubAssists')
-          else if(question.key==='goals_assists') value=lg('clubGoals')+lg('clubAssists')
-          else if(question.key==='appearances')   value=lg('clubGames')
-          else if(question.key==='apps_minus_goals') value=Math.max(0,lg('clubGames')-lg('clubGoals'))
-          else if(question.key==='yellow_cards')  value=lg('clubYellowCards')
-          else if(question.key==='clean_sheets')  value=lg('clubCleanSheets')
+          if(q.key==='goals')              value=lg('clubGoals')
+          else if(q.key==='assists')       value=lg('clubAssists')
+          else if(q.key==='goals_assists') value=lg('clubGoals')+lg('clubAssists')
+          else if(q.key==='appearances')   value=lg('clubGames')
+          else if(q.key==='apps_minus_goals') value=Math.max(0,lg('clubGames')-lg('clubGoals'))
+          else if(q.key==='yellow_cards')  value=lg('clubYellowCards')
+          else if(q.key==='clean_sheets')  value=lg('clubCleanSheets')
         }else if(cf){
-          if(question.key==='goals')              value=p.clubGoals[cf]||0
-          else if(question.key==='assists')       value=p.clubAssists[cf]||0
-          else if(question.key==='goals_assists') value=(p.clubGoals[cf]||0)+(p.clubAssists[cf]||0)
-          else if(question.key==='appearances')   value=p.clubGames[cf]||0
-          else if(question.key==='apps_minus_goals') value=Math.max(0,(p.clubGames[cf]||0)-(p.clubGoals[cf]||0))
-          else if(question.key==='yellow_cards')  value=p.clubYellowCards[cf]||0
-          else if(question.key==='clean_sheets')  value=p.clubCleanSheets[cf]||0
+          if(q.key==='goals')              value=p.clubGoals[cf]||0
+          else if(q.key==='assists')       value=p.clubAssists[cf]||0
+          else if(q.key==='goals_assists') value=(p.clubGoals[cf]||0)+(p.clubAssists[cf]||0)
+          else if(q.key==='appearances')   value=p.clubGames[cf]||0
+          else if(q.key==='apps_minus_goals') value=Math.max(0,(p.clubGames[cf]||0)-(p.clubGoals[cf]||0))
+          else if(q.key==='yellow_cards')  value=p.clubYellowCards[cf]||0
+          else if(q.key==='clean_sheets')  value=p.clubCleanSheets[cf]||0
         }else if(comp){
           const getComp=(base:'Goals'|'Assists'|'Games'|'YellowCards'|'CleanSheets')=>{
             if(comp==='pl') return (p as any)[`pl${base}`]??0
             if(comp==='cl') return (p as any)[`cl${base}`]??0
             return (p as any)[`comp${base}`]?.[comp]??0
           }
-          if(question.key==='goals')              value=getComp('Goals')
-          else if(question.key==='assists')       value=getComp('Assists')
-          else if(question.key==='goals_assists') value=getComp('Goals')+getComp('Assists')
-          else if(question.key==='appearances')   value=getComp('Games')
-          else if(question.key==='apps_minus_goals') value=Math.max(0,getComp('Games')-getComp('Goals'))
-          else if(question.key==='yellow_cards')  value=getComp('YellowCards')
-          else if(question.key==='clean_sheets')  value=getComp('CleanSheets')
+          if(q.key==='goals')              value=getComp('Goals')
+          else if(q.key==='assists')       value=getComp('Assists')
+          else if(q.key==='goals_assists') value=getComp('Goals')+getComp('Assists')
+          else if(q.key==='appearances')   value=getComp('Games')
+          else if(q.key==='apps_minus_goals') value=Math.max(0,getComp('Games')-getComp('Goals'))
+          else if(q.key==='yellow_cards')  value=getComp('YellowCards')
+          else if(q.key==='clean_sheets')  value=getComp('CleanSheets')
         }else{
-          if(question.key==='goals')              value=p.goals
-          else if(question.key==='assists')       value=p.assists
-          else if(question.key==='goals_assists') value=p.goals+p.assists
-          else if(question.key==='appearances')   value=p.games
-          else if(question.key==='apps_minus_goals') value=Math.max(0,p.games-p.goals)
-          else if(question.key==='yellow_cards')  value=p.yellow_cards
-          else if(question.key==='clean_sheets')  value=p.clean_sheets
+          if(q.key==='goals')              value=p.goals
+          else if(q.key==='assists')       value=p.assists
+          else if(q.key==='goals_assists') value=p.goals+p.assists
+          else if(q.key==='appearances')   value=p.games
+          else if(q.key==='apps_minus_goals') value=Math.max(0,p.games-p.goals)
+          else if(q.key==='yellow_cards')  value=p.yellow_cards
+          else if(q.key==='clean_sheets')  value=p.clean_sheets
           else{
-            const qk=question.key as string
+            const qk=q.key as string
             const sgm=qk.match(/^goals_since_(\d+)$/);  if(sgm)  value=p.goalsSince?.[parseInt(sgm[1])]??0
             const sgam=qk.match(/^ga_since_(\d+)$/);    if(sgam) value=p.gaSince?.[parseInt(sgam[1])]??0
             const bgm=qk.match(/^goals_before_(\d+)$/); if(bgm)  value=p.goalsBefore?.[parseInt(bgm[1])]??0
@@ -1734,12 +1752,12 @@ export default function FootballGolf(){
       breakdown.push({name,value})
       total+=value
     }
-    const isClubMaxOOB=total>clubMax
+    const isClubMaxOOB=total>pMax
     let isOOB=isClubMaxOOB
-    let penaltyReason=isClubMaxOOB?`Exceeded ${CLUB_LABEL[club]} max of ${clubMax} yds`:''
+    let penaltyReason=isClubMaxOOB?`Exceeded ${CLUB_LABEL[pClub]} max of ${pMax} yds`:''
     let waterDropRemaining:number|undefined
-    if(!isOOB&&!pastPin&&currentHole.hazards.length){
-      const approachPos=currentHole.distance-remaining
+    if(!isOOB&&!pp&&currentHole.hazards.length){
+      const approachPos=currentHole.distance-rem
       const newPos=approachPos+total
       const hit=currentHole.hazards.find(h=>newPos>=h.start&&newPos<=h.end)
       if(hit){
@@ -1754,15 +1772,15 @@ export default function FootballGolf(){
         }
       }
     }
-    const overshoot=total-remaining
+    const overshoot=total-rem
     if(!isOOB&&currentHole.isIsland&&currentHole.dropZoneYards&&overshoot>20){isOOB=true;waterDropRemaining=currentHole.dropZoneYards;penaltyReason=`Water! Drop zone — ${currentHole.dropZoneYards} yds from pin (+1 stroke)`}
     if(!isOOB&&overshoot>50){isOOB=true;penaltyReason=`${overshoot} yds past the flag — out of bounds!`}
-    const isHoled=!isOOB&&total===remaining
+    const isHoled=!isOOB&&total===rem
     const isGimme=!isOOB&&!isHoled&&Math.abs(overshoot)<=5
-    const approachPosNow=currentHole.distance-remaining
+    const approachPosNow=currentHole.distance-rem
     const approachPosNew=approachPosNow+total
-    const wasInBunker=!pastPin&&currentHole.bunkers.some(b=>approachPosNow>=b.start&&approachPosNow<=b.end)
-    const isInBunker=!isOOB&&!isHoled&&!isGimme&&!pastPin&&!wasInBunker&&currentHole.bunkers.some(b=>approachPosNew>=b.start&&approachPosNew<=b.end)
+    const wasInBunker=!pp&&currentHole.bunkers.some(b=>approachPosNow>=b.start&&approachPosNow<=b.end)
+    const isInBunker=!isOOB&&!isHoled&&!isGimme&&!pp&&!wasInBunker&&currentHole.bunkers.some(b=>approachPosNew>=b.start&&approachPosNew<=b.end)
     setPlayAlongResult({total,breakdown,isOOB,isHoled,isGimme,isInBunker,penaltyReason,waterDropRemaining})
   }
 
@@ -2505,6 +2523,11 @@ export default function FootballGolf(){
       // Update opp's current question from room config even before they submit
       const previewQ=roomD?.room?.config?.[`currentQ_${h2hOppId.current}`]
       if(previewQ) setH2HOppLastQuestion(previewQ)
+      // Only accept the opponent's question for the shot they're about to play on this hole
+      // (the room can still hold their previous one for a few seconds)
+      const previewObj=roomD?.room?.config?.[`currentQObj_${h2hOppId.current}`] as (Category&{_hole?:number;_shot?:number})|undefined
+      if(previewObj?.label&&previewObj._hole===hi&&(previewObj._shot??-1)>h2hOppShotIdxRef.current)
+        setH2HOppQ(prev=>prev?.label===previewObj.label&&prev?._shot===previewObj._shot?prev:previewObj)
       if(!d) return
       const shots:any[]=d.shots||[]
       // Backfill picks for ALL opp shots (catches race-condition misses and simultaneous-shot gaps)
@@ -3540,11 +3563,20 @@ export default function FootballGolf(){
 
             {/* Stat + Filter strip */}
             {question&&(()=>{
-              const filterText = makeFilterLabel(question)
+              // While the opponent is playing, show their category; mine stays hidden until it's my turn
+              const waitingOnOpp = h2hWaiting && !shotResult && !isAnimating && !bunkerQ && !bunkerLieResult
+              const shownQ = waitingOnOpp ? h2hOppQ : question
+              if(!shownQ) return (
+                <div style={{padding:'4px 0 8px',borderBottom:'1px solid rgba(255,255,255,0.07)',flexShrink:0,fontSize:17,lineHeight:1.3,fontWeight:600,color:'rgba(255,255,255,0.45)'}}>
+                  Waiting for {h2hOppName||'your opponent'}'s category…
+                </div>
+              )
+              const filterText = makeFilterLabel(shownQ)
               const showBy = !filterText.startsWith('in ') && !filterText.startsWith('All ')
               return (
                 <div style={{padding:'4px 0 8px',borderBottom:'1px solid rgba(255,255,255,0.07)',flexShrink:0,fontSize:17,lineHeight:1.3}}>
-                  <span style={{fontWeight:800,color:'white'}}>{question.statLabel}</span>
+                  {waitingOnOpp&&<div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',marginBottom:2}}>{h2hOppName||'Opponent'}'s shot</div>}
+                  <span style={{fontWeight:800,color:'white'}}>{shownQ.statLabel}</span>
                   {showBy && <span style={{fontWeight:500,color:'rgba(255,255,255,0.6)'}}> by </span>}
                   <span style={{fontWeight:500,color:'rgba(255,255,255,0.6)'}}>{showBy ? filterText : ` ${filterText}`}</span>
                 </div>
@@ -3597,8 +3629,8 @@ export default function FootballGolf(){
                   )}
                 </div>
 
-                {/* Play-along — inputs or result */}
-                {!playAlongResult ? (
+                {/* Play-along — on the opponent's category; nothing to play until it arrives */}
+                {!h2hOppQ ? null : !playAlongResult ? (
                   <div style={{border:'1px solid rgba(255,255,255,0.07)',borderRadius:12,padding:'8px',display:'flex',flexDirection:'column',gap:6}}>
                     <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:'0.06em',padding:'2px 4px 0'}}>
                       Play along — what would you score?

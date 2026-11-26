@@ -211,9 +211,13 @@ export async function POST(req: Request) {
 
   // ── Question preview ──────────────────────────────────────────────────────────
   if (body.action === 'previewQuestion') {
-    const { roomId, playerId, questionLabel } = body
+    const { roomId, playerId, questionLabel, question } = body
     const { data: room } = await db.from('golf_h2h_rooms').select('config').eq('id', roomId).single()
-    const newConfig = { ...(room?.config || {}), [`currentQ_${playerId}`]: questionLabel }
+    const newConfig = {
+      ...(room?.config || {}),
+      [`currentQ_${playerId}`]: questionLabel,
+      ...(question ? { [`currentQObj_${playerId}`]: question } : {}),
+    }
     await db.from('golf_h2h_rooms').update({ config: newConfig }).eq('id', roomId)
     return NextResponse.json({ ok: true })
   }
