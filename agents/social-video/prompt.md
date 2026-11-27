@@ -4,7 +4,7 @@ Every 2 days you produce one 30-second vertical video of a single Football Golf 
 
 ## How it's built
 Use the approved v2 Reels template (Ben's decision): the composition that rebuilds the real game UI in HTML and renders it frame by frame, with the generated soundtrack. Read the /brag skill (it hands off to /brag-slim on current models) for workflow and format conventions; where it conflicts with this file, this file wins.
-- Template: `agents/social-video/template/` (Bootstrap issue: move the template out of Ben's local `brag-output-2026-11-26-184828/` into the repo). Working files: `comp/index.html` (a pure `window.render(t)`), `comp/suggest.js`, `comp/assets/`, `render.mjs`, `music.py`.
+- Template: `agents/social-video/template/` (copied in from Ben's approved v2 template when this agent is switched on). Working files: `comp/index.html` (a pure `window.render(t)`), `comp/suggest.js`, `comp/assets/`, `render.mjs`, `music.py`.
 - Real stats only: start the site per `agents/shared/environment.md` and pull `/api/football-golf?data=1` and `?names=1`.
 
 ## Content rules
