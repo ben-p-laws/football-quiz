@@ -1,0 +1,63 @@
+name: Agents backlog labels
+
+# Keeps exactly one status:* label per issue, enforces that only Ben or Luke can
+# approve or reject, records who approved, closes done/rejected issues, and marks
+# issues closed by a merged PR as done.
+on:
+  issues:
+    types: [labeled, closed]
+
+permissions:
+  issues: write
+
+jobs:
+  status:
+    if: github.event.action == 'labeled' && startsWith(github.event.label.name, 'status:')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const APPROVERS = ['ben-p-laws', 'lukelaws01']
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.issue.number
+            const added = context.payload.label.name
+            const actor = context.actor
+
+            if ((added === 'status:approved' || added === 'status:rejected') && !APPROVERS.includes(actor)) {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number, name: added })
+              await github.rest.issues.createComment({ owner, repo, issue_number,
+                body: `Removed \`${added}\`: only @ben-p-laws or @lukelaws01 can approve or reject (set by ${actor}).` })
+              return
+            }
+
+            for (const l of context.payload.issue.labels) {
+              const name = l.name ?? l
+              if (name.startsWith('status:') && name !== added) {
+                await github.rest.issues.removeLabel({ owner, repo, issue_number, name }).catch(() => {})
+              }
+            }
+
+            if (added === 'status:approved' && APPROVERS.includes(actor)) {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body: `Approved by @${actor}. The Builder will pick this up.` })
+            }
+            if (added === 'status:done' || added === 'status:rejected') {
+              await github.rest.issues.update({ owner, repo, issue_number, state: 'closed', state_reason: added === 'status:done' ? 'completed' : 'not_planned' })
+            }
+
+  # An issue closed as completed (e.g. by a merged PR with "Closes #n") becomes status:done.
+  closed:
+    if: github.event.action == 'closed' && github.event.issue.state_reason == 'completed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.issue.number
+            const labels = context.payload.issue.labels.map(l => l.name ?? l)
+            if (!labels.some(l => l.startsWith('status:')) || labels.includes('status:done')) return
+            for (const name of labels.filter(l => l.startsWith('status:'))) {
+              await github.rest.issues.removeLabel({ owner, repo, issue_number, name }).catch(() => {})
+            }
+            await github.rest.issues.addLabels({ owner, repo, issue_number, labels: ['status:done'] })
