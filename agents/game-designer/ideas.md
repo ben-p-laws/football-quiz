@@ -18,7 +18,11 @@ The Game Designer keeps the live copy of this file on the `agent-logs` branch. T
 - Geo (`/geo`): Population Circle (`/geo/circle`), Population Guesser (`/geo/population`), Challenge mode (`/geo/challenge`)
 
 ## Pitched
-(none yet)
+- Copycat, party game where duplicate picks score zero: https://github.com/ben-p-laws/football-quiz/issues/20 (2026-11-27). Room game, pick a player for a stat prompt, any shared pick scores 0.
+- Career Graph: https://github.com/ben-p-laws/football-quiz/issues/21 (2026-11-27). Daily guess-the-player from a per-season PL goals bar chart.
+- Halfway (geo): https://github.com/ben-p-laws/football-quiz/issues/22 (2026-11-27). Tap the great-circle midpoint of two cities.
+- Border Climb (geo): https://github.com/ben-p-laws/football-quiz/issues/23 (2026-11-27). Hop land borders, each country more populous than the last.
+- Hot Right Now (geo, wildcard weather): https://github.com/ben-p-laws/football-quiz/issues/24 (2026-11-27). Rank five cities by live temperature.
 
 ## Rejected
 (none yet)
