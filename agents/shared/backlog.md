@@ -46,17 +46,23 @@ How the verifier will know it's fixed.
 `approved_by` is recorded automatically as a comment when someone approves. The linked PR appears on the issue when the Builder opens it.
 
 ## Commands
+In cloud runs only the REST API works (`gh api ...`). `gh issue list/create/edit` use GraphQL and fail.
 ```bash
+R=repos/ben-p-laws/football-quiz
 # open backlog for an area
-gh issue list --repo ben-p-laws/football-quiz --state open --label area:golf-h2h --json number,title,labels --limit 200
-# everything done or rejected recently (don't re-raise these)
-gh issue list --repo ben-p-laws/football-quiz --state closed --label area:golf-h2h --json number,title,labels,closedAt --limit 200
+gh api "$R/issues?state=open&labels=area:golf-h2h&per_page=100" --paginate --jq '.[] | select(.pull_request|not) | [.number,.title,([.labels[].name]|join(","))] | @tsv'
+# closed (done/rejected) for an area: don't re-raise these
+gh api "$R/issues?state=closed&labels=area:golf-h2h&per_page=100" --paginate --jq '.[] | select(.pull_request|not) | [.number,.title] | @tsv'
 # search before creating
-gh issue list --repo ben-p-laws/football-quiz --state all --search "turn indicator in:title" --json number,title,state
-# create
-gh issue create --repo ben-p-laws/football-quiz --title "..." --body-file body.md --label status:proposed,agent:ux-tester,type:ux,P1,area:golf-h2h
-# comment new evidence on an existing issue
-gh issue comment 123 --repo ben-p-laws/football-quiz --body-file evidence.md
+gh api -X GET search/issues -f q='repo:ben-p-laws/football-quiz is:issue "turn indicator" in:title' --jq '.items[] | [.number,.state,.title] | @tsv'
+# create (body from a file)
+gh api "$R/issues" -f title='...' -F body=@body.md -f 'labels[]=status:proposed' -f 'labels[]=agent:ux-tester' -f 'labels[]=type:ux' -f 'labels[]=P1' -f 'labels[]=area:golf-h2h'
+# change status: add the new label (the agents-labels workflow removes the old one)
+gh api "$R/issues/123/labels" -f 'labels[]=status:in-progress'
+# comment
+gh api "$R/issues/123/comments" -F body=@evidence.md
+# open a PR (Builder)
+gh api "$R/pulls" -f title='...' -f head='claude/123-slug' -f base=main -F body=@pr.md
 ```
 
 ## Evidence files

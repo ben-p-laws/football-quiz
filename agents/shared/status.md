@@ -25,7 +25,8 @@ The issue body holds a JSON block in the hub's existing contract. Replace the wh
 Comments on the status issue are the agent's activity feed (the hub shows the latest few). Post one comment when the run starts (your plan in 2-4 lines), at most a few at milestones, and one summary comment at the end.
 
 ```bash
-N=$(gh issue list --repo ben-p-laws/football-quiz --label agent-status --search "Agent status: ux-tester in:title" --json number --jq '.[0].number')
-gh issue edit "$N" --repo ben-p-laws/football-quiz --body-file status.md
-gh issue comment "$N" --repo ben-p-laws/football-quiz --body "Starting: ..."
+R=repos/ben-p-laws/football-quiz
+N=$(gh api "$R/issues?state=open&labels=agent-status&per_page=50" --jq '.[] | select(.title=="Agent status: ux-tester") | .number')
+gh api -X PATCH "$R/issues/$N" -F body=@status.md
+gh api "$R/issues/$N/comments" -f body='Starting: ...'
 ```
