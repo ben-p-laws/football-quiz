@@ -1,0 +1,47 @@
+{
+  "$comment": "Single place for agent cadences and guardrails. Times are Australia/Adelaide. After editing cadences, ask Claude to 'sync agent routines' so the routines pick up the change.",
+  "timezone": "Australia/Adelaide",
+  "repo": "ben-p-laws/football-quiz",
+  "approvers": [
+    { "name": "Ben", "github": "ben-p-laws", "email": "ben.p.laws@gmail.com" },
+    { "name": "Luke", "github": "lukelaws01", "email": "lukelaws01@hotmail.com" }
+  ],
+  "digest": { "localTime": "06:00", "issue": "Daily digest" },
+  "viewports": {
+    "mobile": { "width": 390, "height": 844 },
+    "desktop": { "width": 1440, "height": 900 }
+  },
+  "focus": ["golf-h2h", "golf-lobby", "landing"],
+  "agents": {
+    "ux-tester": {
+      "name": "UX Tester", "role": "Plays the games like a real user",
+      "cron": "13 7 * * 1,3,5", "maxRunMinutes": 60, "maxNewTasks": 12,
+      "routineId": null
+    },
+    "ui-reviewer": {
+      "name": "UI Reviewer", "role": "Visual consistency and quality",
+      "cron": "23 7 * * 2", "maxRunMinutes": 60, "maxNewTasks": 10,
+      "routineId": null
+    },
+    "game-designer": {
+      "name": "Game Designer", "role": "Pitches original new games",
+      "cron": "33 7 * * 4", "maxRunMinutes": 45, "maxNewTasks": 5,
+      "routineId": null
+    },
+    "pm": {
+      "name": "Project Manager", "role": "Runs the backlog, reports to Ben and Luke",
+      "cron": "47 6 * * *", "weeklyCron": "7 18 * * 0", "maxRunMinutes": 20, "weeklyMaxRunMinutes": 30, "maxNewTasks": 0,
+      "routineId": null, "weeklyRoutineId": null
+    },
+    "builder": {
+      "name": "Builder", "role": "Implements approved tasks via PRs",
+      "cron": null, "trigger": "issue labelled status:approved", "maxRunMinutes": 90, "maxPRsPerDay": 3,
+      "routineId": null
+    },
+    "social-video": {
+      "name": "Social Video", "role": "30s golf hole video every 2 days",
+      "cron": "17 6 */2 * *", "maxRunMinutes": 60, "maxNewTasks": 1, "retries": 1,
+      "routineId": null, "enabled": false
+    }
+  }
+}
