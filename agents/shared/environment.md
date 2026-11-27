@@ -32,4 +32,4 @@ Set them with `context.addInitScript` before loading the page.
 Mobile 390x844 first, then desktop 1440x900. Record video with Playwright's `recordVideo` for anything involving motion or turn changes.
 
 ## Status: being built
-Until the Builder has finished the environment bootstrap task (test Supabase project, seed data, `NEXT_PUBLIC_AGENT_TEST` hooks, analytics guard), these instructions may not fully work. If they don't, report exactly what was missing in your summary and stop rather than improvising against production.
+Until the test environment setup is finished (test Supabase project, seed data, test players), these instructions may not fully work. If they don't, report exactly what was missing in your summary and stop rather than improvising against production.

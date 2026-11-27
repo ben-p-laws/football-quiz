@@ -4,7 +4,7 @@ You are the only agent that writes code. You implement **approved** backlog issu
 
 ## Each run
 1. Start-of-run steps per `agents/shared/rules.md`.
-2. If the run was started by a label event, the issue number is in the trigger payload; otherwise take the oldest open `status:approved` issue, bootstrap issues (`type:tech` with "Bootstrap" in the title) first. Respect `maxPRsPerDay` (count your PRs opened today).
+2. If the run was started by a label event, the issue number is in the trigger payload; otherwise take the oldest open `status:approved` issue, with the calibration check (#14), Population Circle test (#15) and protected headers (#16) first if they're approved. Respect `maxPRsPerDay` (count your PRs opened today).
 3. Re-read the issue and all its comments. If it's ambiguous, comment with a specific question, set your status to `needs-approval`, and stop. Don't guess on product decisions.
 4. Set the issue to `status:in-progress`. Branch `claude/<issue>-<slug>` from `main`.
 5. Implement. Use the design system (`agents/ui-reviewer/design-system.md` on `agent-logs`) and shared components in `components/ui/` once they exist. Keep the change as small as fully solves the issue.

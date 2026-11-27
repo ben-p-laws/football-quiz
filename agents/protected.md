@@ -15,14 +15,14 @@ The hole images are calibrated to the course data. The hole area's size, positio
 - `public/holes/**`
 - `scripts/extract-augusta-images.mjs`, `scripts/recolor-augusta-bunkers.py`
 
-Enforced by the calibration Playwright check (bounding box ±1px and a visual snapshot per hole, mobile and desktop). Until that check exists (see the bootstrap issues), the Builder must not touch anything listed here at all.
+Enforced by the calibration Playwright check (bounding box ±1px and a visual snapshot per hole, mobile and desktop; issue #14). Until that check exists, the Builder must not touch anything listed here at all.
 
 ## Population Circle scoring
 - `lib/geo/circle-puzzles.ts` (puzzle lat/lng/radius/population)
 - `guessPct` and the scoring in `components/geo/PopulationCircle.tsx`
 - `scripts/compute-circle-populations.ts`, `lib/geo/cities.json`, `lib/geo/city-data.ts`
 
-Scoring is precomputed per puzzle and does not depend on the map, so a map redesign can only break the drawn circle. The regression test locks the puzzle table and scoring and checks the drawn circle's radius against `radiusKm`. The map redesign must keep scoring identical.
+Population is precomputed per puzzle today, not calculated from the map. The regression test (issue #15) uses known circle positions with their expected populations and scores, and must pass before and after any map change. The map redesign must keep scoring identical.
 
 ## Infrastructure
 - `.github/workflows/**`, `agents/**` on `main`: changed only by Ben or Luke, or by an approved `type:tech` issue that names them.
