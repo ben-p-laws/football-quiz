@@ -208,6 +208,11 @@ export const register: Register = on => {
           chat: [...a.chat, { who: 'you', text: `${label === 'status:approved' ? 'Approved' : 'Rejected'}: #${approvalId} ${ap?.action ?? ''}`, at: t }],
         }))
         $.ui.toast(`#${approvalId} ${label === 'status:approved' ? 'approved' : 'rejected'}`)
+        // Approving starts the Builder straight away (Luke's GitHub approvals are picked up by its daily run).
+        const builderRoutine = (await read($, links))['builder']?.routineId
+        if (label === 'status:approved' && builderRoutine) {
+          await $.prompt.submit({ text: `Issue #${approvalId} was just approved. Start the Builder: call RemoteTrigger with action "run" and trigger_id "${builderRoutine}", then confirm in one line.` })
+        }
       } catch (err) {
         $.ui.toast(`Couldn't update #${approvalId}: ${String(err instanceof Error ? err.message : err)}`)
       }
